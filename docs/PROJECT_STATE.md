@@ -114,7 +114,7 @@ Measured against accepted Personal Release `v0.1.0` source commit `8e913dcddfdec
 - stability RSS start/end: `34,256 -> 30,544 KiB` (`-3,712 KiB`, no sustained memory growth);
 - stability thread start/end: `4 -> 5`, max `7`.
 
-Measurement windows and sample counts matched the contracts exactly enough for acceptance: idle `60.017 s / 60 samples`, hover `60.018 s / 60 samples`, stability `600.013 s / 120 samples`.
+Measurement windows and sample counts matched the contracts: idle `60.017 s / 60 samples`, hover `60.018 s / 60 samples`, stability `600.013 s / 120 samples`.
 
 Initial CPU/RSS/thread budgets are documented in `PERFORMANCE.md` as conservative **target-Mac acceptance ceilings**, not shared-runner CI thresholds. The main M1 optimization comparison target is hover CPU/resource behavior because the current global `.mouseMoved` observer is active there.
 
