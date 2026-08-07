@@ -19,11 +19,14 @@ def _command_text(args: list[str]) -> str:
     return result.stdout.strip()
 
 
-def _source_commit() -> str:
-    value = _command_text(["/usr/bin/git", "rev-parse", "HEAD"])
+def _validated_commit(value: str) -> str:
     if len(value) != 40 or any(character not in "0123456789abcdefABCDEF" for character in value):
         raise ValueError(f"unexpected Git commit: {value!r}")
     return value.lower()
+
+
+def _measurement_tool_commit() -> str:
+    return _validated_commit(_command_text(["/usr/bin/git", "rev-parse", "HEAD"]))
 
 
 def _macos_version() -> str:
@@ -86,6 +89,7 @@ def measure(
     interval_seconds: float,
     app: pathlib.Path | None,
     attach_pid: int | None,
+    source_commit: str | None,
 ) -> dict[str, object]:
     validate_config(
         scenario,
@@ -95,6 +99,9 @@ def measure(
         app,
         attach_pid,
     )
+
+    tool_commit = _measurement_tool_commit()
+    measured_source_commit = _validated_commit(source_commit) if source_commit is not None else tool_commit
 
     launched: subprocess.Popen[bytes] | None = None
     if app is not None:
@@ -135,10 +142,11 @@ def measure(
         ended_at = _utc_now()
         summary = summarize_samples(samples)
 
-        result: dict[str, object] = {
+        return {
             "schemaVersion": 1,
             "scenario": scenario,
-            "sourceCommit": _source_commit(),
+            "sourceCommit": measured_source_commit,
+            "measurementToolCommit": tool_commit,
             "platform": {
                 "macOSVersion": _macos_version(),
                 "modelIdentifier": _hardware_model(),
@@ -153,7 +161,6 @@ def measure(
             "sampleCount": len(samples),
             "summary": summary,
         }
-        return result
     finally:
         if launched is not None:
             _terminate_launched(launched)
@@ -168,6 +175,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--warmup-seconds", type=float, default=10)
     parser.add_argument("--duration-seconds", type=float, required=True)
     parser.add_argument("--interval-seconds", type=float, required=True)
+    parser.add_argument(
+        "--source-commit",
+        help="40-character commit for the measured app; defaults to the harness checkout HEAD",
+    )
     parser.add_argument("--output", required=True, type=pathlib.Path)
     return parser
 
@@ -182,6 +193,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             interval_seconds=args.interval_seconds,
             app=args.app,
             attach_pid=args.attach_pid,
+            source_commit=args.source_commit,
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
