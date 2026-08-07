@@ -10,6 +10,7 @@ import statistics
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 
 
 _RUNTIME_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -26,6 +27,8 @@ _RUNTIME_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 _ALLOWED_SCENARIOS = {"idle", "hover", "stability"}
+_SIZE_METRICS = ("appSizeBytes", "dmgSizeBytes", "executableSizeBytes")
+_BASELINE_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -179,6 +182,21 @@ def _metric_number(mapping: dict[str, object], key: str, label: str) -> float:
     return numeric
 
 
+def _metric_integer(mapping: dict[str, object], key: str, label: str) -> int:
+    if key not in mapping:
+        raise ValueError(f"{label} is missing metric {key}")
+    value = mapping[key]
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{label} metric {key} must be a non-negative integer")
+    return value
+
+
+def _mapping_value(mapping: dict[str, object], key: str, label: str) -> dict[str, object]:
+    if key not in mapping or not isinstance(mapping[key], dict):
+        raise ValueError(f"{label} must contain object {key}")
+    return mapping[key]  # type: ignore[return-value]
+
+
 def compare_summary_to_budget(summary: dict[str, object], budget: dict[str, object]) -> list[str]:
     if not budget:
         raise ValueError("budget must contain at least one metric")
@@ -189,6 +207,63 @@ def compare_summary_to_budget(summary: dict[str, object], budget: dict[str, obje
         actual = _metric_number(summary, key, "summary")
         if actual > limit:
             violations.append(f"{key}: actual {actual:g} exceeds budget {limit:g}")
+    return violations
+
+
+def compare_size_summary_to_baseline(
+    summary: dict[str, object], baseline: dict[str, object]
+) -> list[str]:
+    schema_version = baseline.get("schemaVersion")
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int):
+        raise ValueError("baseline schemaVersion must be an integer")
+    if schema_version != _BASELINE_SCHEMA_VERSION:
+        raise ValueError(
+            f"unsupported baseline schemaVersion {schema_version}; expected {_BASELINE_SCHEMA_VERSION}"
+        )
+
+    size = _mapping_value(baseline, "size", "baseline")
+    baseline_summary = _mapping_value(size, "summary", "baseline size")
+    budget = _mapping_value(size, "budget", "baseline size")
+    ceilings = _mapping_value(budget, "absoluteCeilingBytes", "baseline size budget")
+
+    expected_metrics = set(_SIZE_METRICS)
+    if set(baseline_summary) != expected_metrics:
+        raise ValueError("baseline size summary must contain exactly the required size metrics")
+    if set(ceilings) != expected_metrics:
+        raise ValueError("baseline size absolute ceilings must contain exactly the required size metrics")
+
+    regression_value = budget.get("maxRegressionPercent")
+    if isinstance(regression_value, bool) or not isinstance(regression_value, (int, float)):
+        raise ValueError("baseline size maxRegressionPercent must be numeric")
+    regression_float = float(regression_value)
+    if not math.isfinite(regression_float) or regression_float < 0:
+        raise ValueError("baseline size maxRegressionPercent must be finite and non-negative")
+    regression_percent = Decimal(str(regression_value))
+
+    violations: list[str] = []
+    for key in _SIZE_METRICS:
+        actual = _metric_integer(summary, key, "size summary")
+        baseline_bytes = _metric_integer(baseline_summary, key, "baseline size summary")
+        absolute_ceiling = _metric_integer(ceilings, key, "baseline size absolute ceilings")
+        if baseline_bytes <= 0:
+            raise ValueError(f"baseline size summary metric {key} must be positive")
+        if absolute_ceiling < baseline_bytes:
+            raise ValueError(f"baseline size absolute ceiling for {key} cannot be below baseline")
+
+        relative_ceiling = (
+            Decimal(baseline_bytes) * (Decimal(100) + regression_percent) / Decimal(100)
+        )
+
+        if actual > absolute_ceiling:
+            violations.append(
+                f"{key}: actual {actual} exceeds absolute ceiling {absolute_ceiling}"
+            )
+        if Decimal(actual) > relative_ceiling:
+            violations.append(
+                f"{key}: actual {actual} exceeds {regression_value:g}% regression allowance "
+                f"from baseline {baseline_bytes}"
+            )
+
     return violations
 
 
@@ -251,6 +326,26 @@ def _check_budget_command(summary_path: pathlib.Path, budget_path: pathlib.Path)
     return 0
 
 
+def _check_size_budget_command(summary_path: pathlib.Path, baseline_path: pathlib.Path) -> int:
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+        if not isinstance(summary, dict) or not isinstance(baseline, dict):
+            raise ValueError("size summary and baseline must be JSON objects")
+        violations = compare_size_summary_to_baseline(summary, baseline)
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
+        print(f"Release size budget check failed: {error}", file=sys.stderr)
+        return 1
+
+    if violations:
+        for violation in violations:
+            print(violation, file=sys.stderr)
+        return 1
+
+    print("Release size budget checks passed.")
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="NotchHub deterministic performance policy")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -266,6 +361,12 @@ def _build_parser() -> argparse.ArgumentParser:
     budget_parser.add_argument("--summary", required=True, type=pathlib.Path)
     budget_parser.add_argument("--budget", required=True, type=pathlib.Path)
 
+    size_budget_parser = subparsers.add_parser(
+        "check-size-budget", help="compare deterministic release artifact sizes to the canonical baseline"
+    )
+    size_budget_parser.add_argument("--summary", required=True, type=pathlib.Path)
+    size_budget_parser.add_argument("--baseline", required=True, type=pathlib.Path)
+
     return parser
 
 
@@ -277,6 +378,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _summarize_command(args.input, args.output)
     if args.command == "check-budget":
         return _check_budget_command(args.summary, args.budget)
+    if args.command == "check-size-budget":
+        return _check_size_budget_command(args.summary, args.baseline)
     raise AssertionError(f"Unhandled command: {args.command}")
 
 
