@@ -31,7 +31,7 @@ public enum NotchGeometry {
         let detectedNotch = detectedHardwareNotch(in: input)
         let centerX = detectedNotch?.midX ?? input.frame.midX
         let hardwareWidth = detectedNotch?.width ?? 0
-        let compactWidth = max(minimumCompactWidth, hardwareWidth)
+        let compactWidth = detectedNotch?.width ?? minimumCompactWidth
         let compactHeight = max(input.safeAreaTop, fallbackCompactHeight)
 
         let compactFrame = CGRect(
