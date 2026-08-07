@@ -48,7 +48,7 @@ Public source visibility means arbitrary contributors may propose code through f
 
 `scripts/release_policy.py validate-public-ci`, its unit tests, and `scripts/security-audit.sh` enforce this boundary. A change that needs additional CI authority must be reviewed as a security architecture change rather than silently widening PR permissions.
 
-Release workflows are not part of untrusted PR execution. They remain manual, exact-`main` publication paths. Trusted Release secrets stay behind the `release` environment and are never made available to ordinary PR CI.
+Release workflows are not part of untrusted PR execution. They remain manual, exact-`main` publication paths. The current Personal Release path uses no custom repository/Apple secrets. The optional Trusted Release workflow is deliberately dormant: it references `environment: release`, but no GitHub Environment or Apple signing/notarization secrets are currently configured. If that tier is adopted later, the environment, protection rules, and secrets must be provisioned and reviewed before first use.
 
 ## Distribution trust tiers
 
@@ -80,7 +80,16 @@ Personal Release contains no Apple Developer secrets and must not reference `not
 
 ### Trusted Release — optional future tier
 
-`.github/workflows/trusted-release.yml` retains the stronger future path for low-friction distribution if Apple Developer Program membership later becomes worthwhile:
+`.github/workflows/trusted-release.yml` retains the stronger future path for low-friction distribution if Apple Developer Program membership later becomes worthwhile. It is **not currently operational** because no GitHub `release` environment or Apple signing/notarization secrets are configured.
+
+Future activation requires an explicit setup/review step before the first run:
+
+- create the GitHub `release` environment;
+- configure appropriate environment protection rules;
+- provision Developer ID and notarization credentials only as environment-scoped secrets;
+- verify the workflow still fails closed before publishing any artifact.
+
+Once activated, the tier requires:
 
 - Developer ID Application signing;
 - Hardened Runtime + App Sandbox verification;
@@ -134,4 +143,4 @@ Security checks are defense-in-depth and do not prove absence of vulnerabilities
 
 ## Validation
 
-Every PR runs deterministic release-policy tests, public-CI boundary tests, performance-policy tests/audit, `scripts/security-audit.sh`, compile/test/package checks, entitlement/signature verification, performance-tool bundle-isolation checks, and macOS 26 compatibility. CI performance smoke validates harness compatibility/schema only and never treats noisy runner CPU/RSS/thread values as a tight security/performance gate. Personal Release repeats the complete release/security baseline before publication and adds checksum/provenance validation. Trusted Release, when eventually used, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
+Every PR runs deterministic release-policy tests, public-CI boundary tests, performance-policy tests/audit, `scripts/security-audit.sh`, compile/test/package checks, entitlement/signature verification, performance-tool bundle-isolation checks, and macOS 26 compatibility. CI performance smoke validates harness compatibility/schema only and never treats noisy runner CPU/RSS/thread values as a tight security/performance gate. Personal Release repeats the complete release/security baseline before publication and adds checksum/provenance validation. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
