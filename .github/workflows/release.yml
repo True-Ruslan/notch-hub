@@ -25,16 +25,20 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Validate release source and quality baseline
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           RELEASE_TAG="v$VERSION"
+          MAIN_SHA="$(git rev-parse refs/remotes/origin/main)"
 
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             test "$GITHUB_REF_NAME" = "$RELEASE_TAG"
+            test "$GITHUB_SHA" = "$MAIN_SHA"
           else
             test "$GITHUB_REF_NAME" = "main"
+            test "$GITHUB_SHA" = "$MAIN_SHA"
           fi
 
           echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
