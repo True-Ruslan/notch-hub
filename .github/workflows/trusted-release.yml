@@ -1,0 +1,232 @@
+name: Trusted Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: trusted-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Sign, notarize and publish trusted build
+    runs-on: macos-26
+    timeout-minutes: 35
+    environment: release
+
+    steps:
+      - name: Checkout accepted main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Validate source and immutable release state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          test "$GITHUB_REF_NAME" = "main"
+          MAIN_SHA="$(git rev-parse refs/remotes/origin/main)"
+          test "$GITHUB_SHA" = "$MAIN_SHA"
+
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          RELEASE_TAG="v$VERSION"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
+            echo "Release tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          TAG_ERROR="$RUNNER_TEMP/notchhub-trusted-tag-check.err"
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>"$TAG_ERROR"
+          TAG_STATUS=$?
+          set -e
+          if [[ "$TAG_STATUS" -eq 0 ]]; then
+            echo "Remote release tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if ! grep -q 'HTTP 404' "$TAG_ERROR"; then
+            cat "$TAG_ERROR" >&2
+            echo "Could not prove that remote tag $RELEASE_TAG is absent." >&2
+            exit 1
+          fi
+
+          RELEASE_ERROR="$RUNNER_TEMP/notchhub-trusted-release-check.err"
+          set +e
+          gh release view "$RELEASE_TAG" >/dev/null 2>"$RELEASE_ERROR"
+          RELEASE_STATUS=$?
+          set -e
+          if [[ "$RELEASE_STATUS" -eq 0 ]]; then
+            echo "GitHub Release already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if ! grep -Eqi 'release not found|HTTP 404' "$RELEASE_ERROR"; then
+            cat "$RELEASE_ERROR" >&2
+            echo "Could not prove that GitHub Release $RELEASE_TAG is absent." >&2
+            exit 1
+          fi
+
+      - name: Run complete quality and security baseline
+        run: |
+          set -euo pipefail
+          sw_vers
+          swift --version
+          swift package describe
+          (cd scripts && python3 -m unittest -v test_release_policy.py)
+          swift format lint --recursive --strict --configuration .swift-format Sources Tests Package.swift
+          plutil -lint Resources/Info.plist Resources/NotchHub.entitlements
+          bash -n scripts/*.sh
+          ./scripts/security-audit.sh
+          swift build -Xswiftc -warnings-as-errors
+          swift test --parallel --enable-code-coverage
+
+      - name: Import Developer ID Application certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$CERT_P12_BASE64"
+          test -n "$CERT_PASSWORD"
+
+          CERT_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/notchhub-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+
+          printf '%s' "$CERT_P12_BASE64" | base64 --decode > "$CERT_PATH"
+          chmod 600 "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+          CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -n 1)"
+          test -n "$CODE_SIGN_IDENTITY"
+          echo "CODE_SIGN_IDENTITY=$CODE_SIGN_IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Build Developer ID signed DMG
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: ./scripts/build-dmg.sh
+
+      - name: Verify Developer ID artifact before notarization
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          APP="build/NotchHub.app"
+
+          test "$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")" = "$VERSION"
+          test "$(plutil -extract CFBundleVersion raw "$APP/Contents/Info.plist")" = "${{ github.run_number }}"
+
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign --verify --verbose=2 build/NotchHub.dmg
+          codesign -dv --verbose=4 "$APP" 2> build/codesign-details.txt
+          cat build/codesign-details.txt
+          grep -q 'Authority=Developer ID Application:' build/codesign-details.txt
+          grep -Eq 'flags=.*runtime' build/codesign-details.txt
+
+          codesign --display --entitlements - --xml "$APP" | tee build/effective-entitlements.plist
+          plutil -lint build/effective-entitlements.plist
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          with Path('build/effective-entitlements.plist').open('rb') as handle:
+              entitlements = plistlib.load(handle)
+
+          expected = {'com.apple.security.app-sandbox': True}
+          if entitlements != expected:
+              raise SystemExit(f'Unexpected effective entitlements: {entitlements!r}')
+          PY
+
+      - name: Notarize and staple DMG
+        env:
+          NOTARY_PRIVATE_KEY: ${{ secrets.APPLE_NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$NOTARY_PRIVATE_KEY"
+          test -n "$NOTARY_KEY_ID"
+          test -n "$NOTARY_ISSUER_ID"
+
+          NOTARY_KEY_PATH="$RUNNER_TEMP/AuthKey_${NOTARY_KEY_ID}.p8"
+          printf '%s' "$NOTARY_PRIVATE_KEY" > "$NOTARY_KEY_PATH"
+          chmod 600 "$NOTARY_KEY_PATH"
+
+          xcrun notarytool submit build/NotchHub.dmg \
+            --key "$NOTARY_KEY_PATH" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --wait \
+            --output-format json | tee build/notarization.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path('build/notarization.json').read_text(encoding='utf-8'))
+          if payload.get('status') != 'Accepted':
+              raise SystemExit(f"Notarization was not accepted: {payload}")
+          PY
+
+          xcrun stapler staple build/NotchHub.dmg
+          xcrun stapler validate build/NotchHub.dmg
+
+      - name: Gatekeeper assessment and checksum
+        run: |
+          set -euo pipefail
+          MOUNT_DIR="$(mktemp -d)"
+          cleanup() {
+            hdiutil detach "$MOUNT_DIR" >/dev/null 2>&1 || true
+            rmdir "$MOUNT_DIR" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          hdiutil attach -nobrowse -readonly -mountpoint "$MOUNT_DIR" build/NotchHub.dmg
+          spctl --assess --type execute --verbose=4 "$MOUNT_DIR/NotchHub.app" 2>&1 | tee build/gatekeeper.txt
+          grep -q 'source=Notarized Developer ID' build/gatekeeper.txt
+          codesign --verify --deep --strict "$MOUNT_DIR/NotchHub.app"
+          hdiutil detach "$MOUNT_DIR"
+          trap - EXIT
+          rmdir "$MOUNT_DIR"
+
+          shasum -a 256 build/NotchHub.dmg > build/NotchHub.dmg.sha256
+          cat build/NotchHub.dmg.sha256
+
+      - name: Recheck immutable release state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
+            echo "Release tag appeared during build: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "GitHub Release appeared during build: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+      - name: Publish immutable Trusted Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            build/NotchHub.dmg \
+            build/NotchHub.dmg.sha256 \
+            --target "$GITHUB_SHA" \
+            --title "NotchHub $RELEASE_TAG — Trusted build" \
+            --generate-notes
