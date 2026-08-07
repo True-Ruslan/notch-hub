@@ -12,6 +12,7 @@ import time
 from collections.abc import Sequence
 
 from performance_policy import (
+    count_ps_thread_rows,
     parse_ps_sample,
     summarize_samples,
     summarize_stability_samples,
@@ -47,19 +48,39 @@ def _hardware_model() -> str | None:
 
 
 def _sample_process(pid: int):
-    result = subprocess.run(
-        ["/bin/ps", "-p", str(pid), "-o", "%cpu=", "-o", "rss=", "-o", "thcount="],
+    metrics = subprocess.run(
+        ["/bin/ps", "-p", str(pid), "-o", "%cpu=", "-o", "rss="],
         check=False,
         capture_output=True,
         text=True,
     )
-    if result.returncode != 0:
-        message = result.stderr.strip() or result.stdout.strip() or f"ps exited {result.returncode}"
-        raise RuntimeError(f"process sampling failed for pid {pid}: {message}")
-    line = result.stdout.strip()
-    if not line:
-        raise RuntimeError(f"process {pid} produced no ps sample; it may have exited")
-    return parse_ps_sample(line)
+    if metrics.returncode != 0:
+        message = metrics.stderr.strip() or metrics.stdout.strip() or f"ps exited {metrics.returncode}"
+        raise RuntimeError(f"process CPU/RSS sampling failed for pid {pid}: {message}")
+
+    metric_line = metrics.stdout.strip()
+    metric_fields = metric_line.split()
+    if len(metric_fields) != 2:
+        raise RuntimeError(
+            f"process CPU/RSS sampling returned unexpected output for pid {pid}: {metric_line!r}"
+        )
+
+    threads = subprocess.run(
+        ["/bin/ps", "-M", str(pid)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if threads.returncode != 0:
+        message = threads.stderr.strip() or threads.stdout.strip() or f"ps -M exited {threads.returncode}"
+        raise RuntimeError(f"process thread sampling failed for pid {pid}: {message}")
+
+    try:
+        thread_count = count_ps_thread_rows(threads.stdout)
+    except ValueError as error:
+        raise RuntimeError(f"process thread sampling returned invalid output for pid {pid}: {error}") from error
+
+    return parse_ps_sample(f"{metric_fields[0]} {metric_fields[1]} {thread_count}")
 
 
 def _app_executable(app: pathlib.Path) -> pathlib.Path:
