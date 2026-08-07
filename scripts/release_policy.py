@@ -68,6 +68,7 @@ _FORBIDDEN_PUBLIC_CI_FRAGMENTS = (
     "secrets.",
     "self-hosted",
     "permissions: write-all",
+    "id-token: write",
     "persist-credentials: true",
 )
 
