@@ -23,17 +23,13 @@ protocol NotchHapticPerforming: AnyObject {
 final class NotchInteractionCoordinator {
     static let defaultDwellSeconds: TimeInterval = 0.12
 
-    private struct PendingActivation {
-        let generation: UInt64
-        let cancellation: any NotchActivationCancellation
-    }
-
     private let model: NotchPanelModel
     private let scheduler: any NotchActivationScheduling
     private let haptics: any NotchHapticPerforming
     private let dwellSeconds: TimeInterval
 
-    private var pendingActivation: PendingActivation?
+    private var pendingCancellation: (any NotchActivationCancellation)?
+    private var pendingGeneration: UInt64?
     private var generation: UInt64 = 0
     private var isInvalidated = false
 
@@ -43,7 +39,6 @@ final class NotchInteractionCoordinator {
         haptics: any NotchHapticPerforming,
         dwellSeconds: TimeInterval = NotchInteractionCoordinator.defaultDwellSeconds
     ) {
-        precondition(dwellSeconds.isFinite && dwellSeconds >= 0)
         self.model = model
         self.scheduler = scheduler
         self.haptics = haptics
@@ -92,37 +87,35 @@ final class NotchInteractionCoordinator {
     }
 
     private func scheduleActivationIfNeeded() {
-        guard pendingActivation == nil else {
+        guard pendingCancellation == nil else {
             return
         }
 
         generation &+= 1
         let scheduledGeneration = generation
-        let cancellation = scheduler.schedule(after: dwellSeconds) { [weak self] in
+        pendingGeneration = scheduledGeneration
+        pendingCancellation = scheduler.schedule(after: dwellSeconds) { [weak self] in
             self?.completeActivation(generation: scheduledGeneration)
         }
-        pendingActivation = PendingActivation(
-            generation: scheduledGeneration,
-            cancellation: cancellation
-        )
     }
 
     private func cancelPendingActivation() {
-        pendingActivation?.cancellation.cancel()
-        pendingActivation = nil
+        pendingCancellation?.cancel()
+        pendingCancellation = nil
+        pendingGeneration = nil
     }
 
     private func completeActivation(generation scheduledGeneration: UInt64) {
         guard
             !isInvalidated,
-            let pendingActivation,
-            pendingActivation.generation == scheduledGeneration,
+            pendingGeneration == scheduledGeneration,
             model.presentation == .compact
         else {
             return
         }
 
-        self.pendingActivation = nil
+        pendingCancellation = nil
+        pendingGeneration = nil
         model.setHovered(true)
         haptics.performExpansionHaptic()
     }
