@@ -26,12 +26,12 @@ M0 code is merged into protected `main`.
 
 ## R0.1 — Personal Release foundation
 
-Status: **IN PROGRESS** (`PR #3`)
+Status: **PUBLISHED; downloaded-release acceptance pending**
 Target: `v0.1.0 — Personal build`
 
 Purpose: publish versioned personal-use builds through GitHub Releases without paid Apple Developer membership while preserving security, provenance, and immutable history.
 
-Exit criteria:
+Completed publication guarantees:
 
 - deterministic release-policy tests are green;
 - `Personal Release` workflow is manual-only and accepts only exact protected `main`;
@@ -41,17 +41,18 @@ Exit criteria:
 - existing tags/releases cannot be overwritten (`--clobber`/release upload prohibited);
 - future `Trusted Release` workflow is separately named and cannot overwrite Personal versions;
 - release docs clearly explain standard Finder / Privacy & Security → Open Anyway path without weakening Gatekeeper;
-- `CHANGELOG.md`, `PROJECT_STATE`, `TESTING`, `SECURITY`, architecture, and release docs match the candidate;
-- protected PR CI is green;
-- PR is squash-merged;
-- manual `Personal Release` workflow successfully publishes `v0.1.0`;
-- `NH-PERSONAL-RELEASE-001` passes on the target MacBook/macOS 26.6.
+- protected implementation PR was squash-merged;
+- manual `Personal Release` workflow published `v0.1.0` from the accepted `main` commit.
+
+Remaining exit criterion:
+
+- `NH-PERSONAL-RELEASE-001` passes on the target MacBook/macOS 26.6 using the DMG downloaded from GitHub Releases.
 
 Apple Developer Program membership is **not** a blocker. Developer ID/notarization is intentionally deferred to an optional future Trusted Release tier.
 
 ## P0 — Performance Foundation
 
-Status: **NEXT after Personal `v0.1.0` publication**
+Status: **NEXT after Personal `v0.1.0` downloaded-release acceptance**
 
 Purpose: make CPU, RAM, threads, wakeups/background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
 
@@ -72,8 +73,16 @@ Detailed approved plan: `docs/superpowers/plans/2026-08-07-performance-foundatio
 
 Status: after P0 baseline
 
+Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
+
 - measure and investigate replacing global `.mouseMoved` observation with reliable `NSTrackingArea`/window-local tracking;
 - accept replacement only if notch/hover correctness stays PASS and measured resource/input-observation profile is equal or better;
+- add a short, cancellable **hover dwell delay** before compact → expanded activation so normal pointer transit through the notch (including movement toward another display) does not immediately open the panel;
+- initial dwell candidate: **120 ms**, to be tuned from real MacBook evidence within roughly 100–150 ms rather than hardcoded blindly;
+- implement dwell as event-driven single pending work item: no polling, no repeating timer, deterministic cancellation/race tests;
+- provide **one trackpad haptic event on a successful user-initiated compact → expanded transition** through public `NSHapticFeedbackManager.defaultPerformer`;
+- no haptic on cancelled/quick transit, duplicate pointer events, expanded retention, collapse, programmatic/layout transitions, or stale callbacks;
+- haptic must respect macOS/current-device/user settings and must not introduce private APIs, synthetic input, Accessibility, custom drivers, or retry loops;
 - click/pin interaction policy;
 - tuned expansion/collapse animation and reduced-motion behavior;
 - gesture model (hover/click/scroll/swipe) designed independently while benchmarking public NotchNook behavior;
@@ -81,9 +90,9 @@ Status: after P0 baseline
 - fullscreen/Space behavior;
 - screen-configuration change handling;
 - notchless-screen mode decision/prototype;
-- expanded automated + real-hardware acceptance matrix.
+- expanded automated + real-hardware acceptance matrix, including `NH-HOVER-DELAY-001/002` and `NH-HAPTIC-001/002`.
 
-No `CGEventTap`, Accessibility, Input Monitoring, or broader capture merely for hover convenience.
+No `CGEventTap`, Accessibility, Input Monitoring, or broader capture merely for hover convenience or haptic feedback.
 
 ## M2 — Shelf
 

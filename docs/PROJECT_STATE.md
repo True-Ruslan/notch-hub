@@ -1,10 +1,9 @@
 # Project state
 
 Last updated: 2026-08-07
-Current version: `0.1.0` (Personal Release candidate; tag not published yet)
+Current version: `0.1.0` (Personal Release published; downloaded-release acceptance pending)
 Primary physical target: macOS `26.6`
 Protected branch: `main`
-Current implementation PR: #3 `Personal Release v0.1.0`
 
 ## Product
 
@@ -35,22 +34,22 @@ M0 includes:
 - zero third-party Swift runtime dependencies;
 - no direct runtime network/WebKit, subprocess/shell, dynamic loading, telemetry, or broad global input monitoring;
 - global observation restricted to `mouseMoved` only;
-- strict CI, macOS 26 compatibility, warnings-as-errors, security audit, 10/10 Swift regression tests, release DMG packaging/integrity checks;
+- strict CI, macOS 26 compatibility, warnings-as-errors, security audit, Swift regression tests, release DMG packaging/integrity checks;
 - RED→GREEN evidence for both real-hardware defect cycles.
 
 M0 integration PR #1 was squash-merged. Approved Personal Release + Performance Foundation design/plans were subsequently merged through docs PR #2.
 
-## Current milestone — R0.1 Personal Release
+## R0.1 Personal Release
 
-Status: **implementation/verification in PR #3**.
+Status: **PUBLISHED; downloaded-release acceptance pending**.
 
 The Apple Developer Program dependency is intentionally deferred because NotchHub is currently personal-use software. This is a deliberate product decision, not an accidental missing credential.
 
-Current supported versioned distribution will therefore be **Personal Release**:
+Current supported versioned distribution is therefore **Personal Release**:
 
 - manual GitHub Actions publication from exact protected `main`;
 - ad-hoc app signature;
-- App Sandbox and Hardened Runtime remain mandatory;
+- App Sandbox and Hardened Runtime mandatory;
 - complete correctness/security CI rerun before publication;
 - SHA-256 + machine-readable provenance metadata;
 - explicit `Personal build — not notarized` warning;
@@ -58,11 +57,13 @@ Current supported versioned distribution will therefore be **Personal Release**:
 - no Gatekeeper disabling/quarantine-bypass/custom-root instructions;
 - immutable tag/release; no `--clobber`/asset replacement.
 
+`v0.1.0` has been published and its tag points exactly to accepted merge commit `8e913dcddfdec7d9aa920df8c37afb23b8c40884`.
+
 A separate `Trusted Release` workflow retains Developer ID/notarization for a future new version if paid Apple membership becomes worthwhile. It cannot replace an existing Personal version.
 
-## PR #3 TDD / automated evidence so far
+## Personal Release automated evidence
 
-Release infrastructure is being developed through deterministic RED→GREEN tests:
+Release infrastructure was developed through deterministic RED→GREEN tests:
 
 1. RED: release-policy tests failed because `release_policy.py` did not exist.
 2. GREEN candidate exposed a real policy bug: safe text `Do not disable Gatekeeper` was falsely classified as a bypass instruction; the rule was corrected rather than weakening tests.
@@ -70,19 +71,13 @@ Release infrastructure is being developed through deterministic RED→GREEN test
 4. RED: Personal Release workflow contract failed because `personal-release.yml` was absent; GREEN after fail-closed manual workflow implementation.
 5. RED: tier-separation contract failed because `trusted-release.yml` was absent; GREEN after trusted workflow was separated and legacy `release.yml` removed.
 6. RED: trust-boundary tests failed because executable `validate_personal_release_workflow` did not exist; GREEN after the validator and security-audit integration were added.
+7. Security review found a fail-closed weakness in the future Trusted pre-publish recheck; a RED test was added before the final remote tag/release error-classification fix.
 
-Latest targeted checks on the current code before this documentation state update:
-
-- macOS 26 compatibility: PASS;
-- release-policy tests: PASS;
-- executable security baseline including release-tier boundaries: PASS;
-- existing M0 Swift/security behavior remains unchanged by PR #3 (no `Sources/` changes).
-
-Final full CI on the documentation-complete PR head is still required before merge.
+Pre-merge PR #3 verification passed macOS 26 compatibility, release-policy tests, executable security baseline, warnings-as-errors, Swift tests, DMG packaging, signature/Hardened Runtime/App Sandbox/system-library/integrity checks, and artifact upload.
 
 ## Personal Release assets and guarantees
 
-Planned `v0.1.0` GitHub Release assets:
+Published `v0.1.0` GitHub Release is designed to contain:
 
 - `NotchHub.dmg`;
 - `NotchHub.dmg.sha256`;
@@ -91,6 +86,8 @@ Planned `v0.1.0` GitHub Release assets:
 Versioned release notes: `docs/releases/v0.1.0.md`.
 
 The release does **not** claim Apple identity/notarization trust.
+
+The remaining distribution acceptance is `NH-PERSONAL-RELEASE-001`: install and launch the DMG downloaded from GitHub Releases on the target MacBook/macOS 26.6 using only the standard macOS approval path.
 
 ## Security baseline
 
@@ -109,7 +106,7 @@ The release does **not** claim Apple identity/notarization trust.
 
 ## Performance/resource-efficiency requirement
 
-Performance is now a first-class product requirement alongside security. The approved Performance Foundation plan will execute immediately after Personal `v0.1.0` publication and before feature-heavy M1.
+Performance is a first-class product requirement alongside security. The approved Performance Foundation plan executes after Personal `v0.1.0` downloaded-release acceptance and before feature-heavy M1.
 
 It will establish:
 
@@ -123,20 +120,40 @@ It will establish:
 
 Approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 
+## Approved M1 interaction requirements
+
+Two additional UX requirements are now part of the M1 contract and must be implemented test-first after P0:
+
+1. **Delayed hover activation**
+   - compact → expanded must not happen immediately on first pointer entry;
+   - use a short cancellable dwell/debounce, initial candidate `120 ms`, tuned from real-hardware evidence around `100–150 ms`;
+   - quick pointer transit through the notch, especially while moving to another display, must cancel activation and leave the panel compact;
+   - event-driven only: no polling/repeating timer, at most one pending activation task, deterministic cancellation/race tests.
+
+2. **Trackpad haptic feedback on successful expansion**
+   - use public AppKit `NSHapticFeedbackManager.defaultPerformer`;
+   - emit exactly one haptic request only for a completed user-initiated `compact -> expanded` transition;
+   - no feedback for quick/cancelled hover, duplicate movement, expanded retention, collapse, layout/programmatic transitions, or stale callbacks;
+   - respect macOS/current-device/accessibility/user settings; no private APIs, synthetic input, custom drivers, Accessibility hacks, audio imitation, or retry loop.
+
+Authoritative spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
+
+Planned acceptance IDs: `NH-HOVER-DELAY-001`, `NH-HOVER-DELAY-002`, `NH-HAPTIC-001`, `NH-HAPTIC-002`.
+
 ## Known limitations
 
-- `v0.1.0` Personal Release is not yet published;
-- ad-hoc Personal Release will lack Apple Developer identity/notarization and may require standard macOS first-launch approval;
+- downloaded `v0.1.0` Personal Release acceptance is still pending;
+- ad-hoc Personal Release lacks Apple Developer identity/notarization and may require standard macOS first-launch approval;
 - performance baseline/budgets have not yet been measured;
 - current global `.mouseMoved` observer is security-narrow but its resource cost is not yet baselined;
+- current M0 hover activation remains immediate; M1 will add the approved cancellable dwell;
+- current M0 build has no expansion haptic; M1 will add public AppKit haptic feedback after successful deliberate hover;
 - active-display migration, final Spaces/fullscreen policy, animation tuning, and final product UI belong to M1;
 - feature modules including Yandex Music are not implemented yet.
 
 ## Next optimal step
 
-1. Complete PR #3 documentation and final CI.
-2. Review PR #3 diff/security boundaries; mark Ready and squash-merge into protected `main` only when all checks are green.
-3. Run **Personal Release** workflow manually on `main`; it must publish immutable `v0.1.0 — Personal build` with DMG/checksum/provenance.
-4. Run `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6. Do not replace `v0.1.0` if acceptance fails; fix and increment the version.
-5. Begin Performance Foundation (P0), establish real target-Mac resource baseline and evidence-based budgets.
-6. Only then start feature-heavy M1, beginning with measured investigation of local tracking vs the current global `mouseMoved` monitor.
+1. Complete `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6 using the DMG downloaded from GitHub Releases.
+2. Begin Performance Foundation (P0), establish real target-Mac resource baseline and evidence-based budgets.
+3. Start M1 with TDD, including measured investigation of local tracking vs current global `mouseMoved`, then implement delayed hover + haptic behavior according to `docs/specs/M1_NOTCH_INTERACTION.md`.
+4. Preserve all existing security, performance, notch geometry, hover retention, and release guarantees while expanding interaction behavior.

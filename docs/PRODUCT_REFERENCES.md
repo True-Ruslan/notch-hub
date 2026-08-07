@@ -37,7 +37,7 @@ Useful differentiators for the personal build:
 - **Snippets + Translator:** first-class text productivity modules;
 - **developer-oriented modules later:** GitHub/CI, timers, clipboard and system/dev status only when they can be added with a narrow security boundary;
 - **testable interaction core:** deterministic pointer/geometry policies and explicit real-hardware acceptance IDs;
-- **GitHub Releases:** signed/notarized personal distribution with reproducible release history.
+- **GitHub Releases:** immutable Personal Releases are ad-hoc signed, Sandbox/Hardened Runtime verified, checksum/provenance backed, and explicitly not notarized; Developer ID/notarized Trusted Release remains an optional future tier.
 
 ## UI principles derived from references, not copied from them
 
