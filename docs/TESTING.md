@@ -14,7 +14,7 @@ Current CI validates:
 
 1. Swift package structure.
 2. deterministic Personal/Trusted release-policy unit/static tests.
-3. deterministic performance-policy/parser/aggregation tests.
+3. deterministic performance-policy/parser/aggregation/budget tests.
 4. project-configured strict Swift formatting.
 5. shell/plist syntax.
 6. executable repository security baseline (`scripts/security-audit.sh`).
@@ -30,8 +30,10 @@ Current CI validates:
 16. exact effective App Sandbox entitlement verification.
 17. linked-library inspection (system libraries only at the current milestone).
 18. DMG integrity with `hdiutil verify`.
-19. short development-harness compatibility/schema smoke on a shared runner, with no CPU/RAM magnitude gate.
-20. artifact upload.
+19. deterministic executable/app/DMG byte-size capture.
+20. fail-closed comparison of candidate artifact sizes against `performance/baseline-v0.1.0.json`.
+21. short development-harness compatibility/schema smoke on a shared runner, with no CPU/RAM magnitude gate.
+22. artifact upload.
 
 Do not lower assertions, delete useful tests, weaken security/release/performance policy, or weaken production behavior merely to make CI green.
 
@@ -72,7 +74,7 @@ Future capabilities that legitimately require a currently forbidden surface must
 
 ## Performance test boundary
 
-`PERFORMANCE.md` is authoritative for runtime resource policy, accepted target-Mac values, budgets, and methodology.
+`PERFORMANCE.md` is authoritative for runtime resource policy, accepted target-Mac values, budgets, and methodology. `performance/baseline-v0.1.0.json` is the canonical machine-readable baseline.
 
 `scripts/test_performance_policy.py` and `scripts/performance_policy.py` deterministically cover:
 
@@ -82,9 +84,14 @@ Future capabilities that legitimately require a currently forbidden surface must
 - median/max aggregation without inventing empty measurements;
 - stability start/end/quartile evidence;
 - baseline-harness configuration validation;
-- deterministic budget comparison and malformed/non-finite input rejection.
+- deterministic flat runtime-budget comparison and malformed/non-finite input rejection;
+- release-size budget success below both limits;
+- named absolute-ceiling failure;
+- named relative-regression failure;
+- fail-closed baseline schema/version and required-metric validation;
+- fail-closed `check-size-budget` CLI behavior.
 
-`scripts/perf-baseline.py` is development/release tooling only. CI runs only a short compatibility/schema smoke and must not enforce runner CPU/RSS/thread values. Canonical runtime values come from the target MacBook/macOS 26.6 under the stable scenarios below.
+`scripts/perf-baseline.py` is development/release tooling only. CI runs only a short compatibility/schema smoke and must not enforce runner CPU/RSS/thread values. Canonical runtime values come from the target MacBook/macOS 26.6 under the stable scenarios below. Artifact sizes are deterministic enough to be enforced in shared CI.
 
 ## Test design
 
@@ -113,10 +120,10 @@ No arbitrary global code-coverage percentage is used. Coverage instrumentation i
 | `NH-PERF-IDLE-001` | Accepted Personal Release, 10 s warmup then untouched compact mode for 60 s sampled every 1 s | Stable idle CPU/RSS/thread summary; no app-initiated periodic work discovered by policy/review | Sampling automated on target Mac; interaction/manual environment control |
 | `NH-PERF-HOVER-001` | 60 s sampler while repeating documented 5-second expand/retain/collapse cycle | Active summary captured without synthesized input; accepted hover behavior remains intact | Sampling automated; interaction manual |
 | `NH-PERF-STABILITY-001` | 10 min untouched run sampled every 5 s | No unexplained sustained RSS/thread growth | Sampling automated on target Mac; interpretation reviewed |
-| `NH-PERF-SIZE-001` | Accepted release executable/app/DMG | Exact byte sizes recorded in canonical baseline | Deterministic local/release metadata |
+| `NH-PERF-SIZE-001` | Accepted release executable/app/DMG | Exact byte sizes recorded in canonical baseline and later candidates kept within reviewed budget | Release metadata + shared-CI deterministic gate |
 | `NH-PERF-STATE-001` | Exactly 100,000 pure pointer/presentation decisions | Correct final/count invariants with no retained history/state growth API; no wall-clock assertion | Fully automated Swift test |
 
-Runtime baseline values and initial target-Mac ceilings are now documented in `PERFORMANCE.md`. Shared runner CPU/RAM/thread values are never substituted for this acceptance. The canonical `performance/baseline-v0.1.0.json` remains intentionally absent until exact immutable-release size metadata is incorporated.
+All P0 baseline inputs are accepted. Shared runner CPU/RAM/thread values are never substituted for target-Mac acceptance. Canonical values and budgets are stored in `performance/baseline-v0.1.0.json` and explained in `PERFORMANCE.md`.
 
 ## M1 delayed-hover and haptic contract
 
@@ -214,7 +221,21 @@ Accepted Personal Release `v0.1.0` (`8e913dcddfdec7d9aa920df8c37afb23b8c40884`) 
 
 Initial target-Mac CPU/RSS/thread ceilings are recorded in `PERFORMANCE.md` with conservative headroom and are not used as shared-runner CI thresholds.
 
-`NH-PERF-SIZE-001` remains pending exact immutable-release `build-metadata.json` values before the canonical baseline JSON and deterministic size gate can be finalized.
+### 2026-08-07 — cycle 6 / P0 size baseline and budget gate
+
+Immutable `v0.1.0` release metadata supplied the exact `NH-PERF-SIZE-001` baseline:
+
+- executable: `220,560 B`;
+- app aggregate: `223,555 B`;
+- DMG: `73,955 B`;
+- source commit: `8e913dcddfdec7d9aa920df8c37afb23b8c40884`;
+- DMG SHA-256: `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`.
+
+RED CI #91 failed exactly because the new release-size comparison API did not yet exist. GREEN CI #94 then passed **22/22 Python performance-policy tests**, security/policy audits, **11/11 Swift tests**, packaging/signature/Sandbox/Hardened Runtime/DMG checks, deterministic size capture, the new release-size budget gate, harness smoke, and artifact upload.
+
+CI #94 candidate sizes were executable `214,016 B`, app `217,012 B`, DMG `73,378 B`; all passed the canonical 15% relative allowance and absolute ceilings.
+
+**P0 Performance Foundation acceptance: PASS.**
 
 ## Personal Release TDD evidence
 
