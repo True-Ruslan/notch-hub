@@ -85,7 +85,7 @@ Pre-merge PR #3 verification passed macOS 26 compatibility, release-policy tests
 
 ## Current milestone — P0 Performance Foundation
 
-Status: **IN PROGRESS in PR #5**.
+Status: **IN PROGRESS in PR #5; runtime target-Mac baseline accepted, exact release sizes pending**.
 
 Performance is a first-class product requirement alongside security. P0 executes before feature-heavy M1.
 
@@ -97,22 +97,36 @@ Implemented/in review in PR #5:
 - strict `/bin/ps` CPU/RSS/thread parser and median/max aggregation;
 - deterministic budget-comparison helpers with malformed/non-finite input rejection;
 - development-only `scripts/perf-baseline.py` with explicit measured-app/tooling provenance separation;
+- Darwin-compatible thread measurement using `ps -M` after CI exposed unsupported `thcount`;
+- exact full-window sampling and stability start/end/quartile evidence;
 - deterministic `NH-PERF-STATE-001` 100,000-transition Swift stress coverage without wall-clock assertions;
 - CI integration for policy tests/audit, deterministic artifact sizes, development-tool isolation, and a short harness compatibility/schema smoke;
 - security audit enforcement proving performance tooling is not referenced/copied into runtime packaging;
 - stable `NH-PERF-IDLE-001`, `NH-PERF-HOVER-001`, `NH-PERF-STABILITY-001`, `NH-PERF-SIZE-001`, and `NH-PERF-STATE-001` contracts.
 
+### Accepted target-Mac runtime measurements
+
+Measured against accepted Personal Release `v0.1.0` source commit `8e913dcddfdec7d9aa920df8c37afb23b8c40884` on macOS 26.6 / `Mac16,8`, using tooling commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0`:
+
+- `NH-PERF-IDLE-001`: **BASELINE ACCEPTED** — CPU median/max `0.0% / 0.7%`, RSS median/max `33,648 / 33,808 KiB`, threads median/max `4 / 4`;
+- `NH-PERF-HOVER-001`: **BASELINE ACCEPTED** — CPU median/max `5.95% / 22.3%`, RSS median/max `38,456 / 38,816 KiB`, threads median/max `6 / 7`;
+- `NH-PERF-STABILITY-001`: **BASELINE ACCEPTED** — CPU median/max `0.0% / 6.8%`, RSS median/max `30,992 / 34,384 KiB`, threads median/max `3 / 7`;
+- stability RSS start/end: `34,256 -> 30,544 KiB` (`-3,712 KiB`, no sustained memory growth);
+- stability thread start/end: `4 -> 5`, max `7`.
+
+Measurement windows and sample counts matched the contracts exactly enough for acceptance: idle `60.017 s / 60 samples`, hover `60.018 s / 60 samples`, stability `600.013 s / 120 samples`.
+
+Initial CPU/RSS/thread budgets are documented in `PERFORMANCE.md` as conservative **target-Mac acceptance ceilings**, not shared-runner CI thresholds. The main M1 optimization comparison target is hover CPU/resource behavior because the current global `.mouseMoved` observer is active there.
+
 Still required before P0 acceptance:
 
-1. final PR #5 automated CI/review on the completed tooling changes;
-2. canonical macOS 26.6 idle/hover/stability measurements against accepted Personal Release `v0.1.0`;
-3. exact accepted-release executable/app/DMG sizes;
-4. review measurement stability/noise;
-5. create `performance/baseline-v0.1.0.json` with summarized non-sensitive values;
-6. derive evidence-based budgets only from those measurements;
-7. add only reproducible budget gates to CI, then complete final review/merge.
+1. obtain exact immutable `v0.1.0` `build-metadata.json` values for `NH-PERF-SIZE-001`;
+2. create complete `performance/baseline-v0.1.0.json` containing runtime summaries, exact release sizes, and budgets;
+3. derive and add only reproducible artifact-size budget gates to CI;
+4. run final PR #5 automated CI and independent change review;
+5. merge only after all correctness/security/performance gates are green.
 
-Authoritative policy: `PERFORMANCE.md`.
+Authoritative policy and accepted runtime values: `PERFORMANCE.md`.
 Approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 
 ## Security baseline
@@ -153,8 +167,9 @@ Planned acceptance IDs: `NH-HOVER-DELAY-001`, `NH-HOVER-DELAY-002`, `NH-HAPTIC-0
 
 ## Known limitations
 
-- P0 canonical target-Mac performance baseline/budgets are not yet accepted;
-- current global `.mouseMoved` observer is security-narrow but its resource cost is not yet baselined;
+- P0 exact accepted-release size baseline and deterministic size budget gate are still pending;
+- initial target-Mac runtime budgets come from one canonical run per scenario and intentionally include conservative headroom; future accepted repeated measurements may tighten them;
+- current global `.mouseMoved` observer is security-narrow but hover baseline shows materially higher active CPU than idle, making M1 tracking investigation worthwhile;
 - current M0 hover activation remains immediate; M1 will add the approved cancellable dwell;
 - current M0 build has no expansion haptic; M1 will add public AppKit haptic feedback after successful deliberate hover;
 - active-display migration, final Spaces/fullscreen policy, animation tuning, and final product UI belong to M1;
@@ -163,8 +178,7 @@ Planned acceptance IDs: `NH-HOVER-DELAY-001`, `NH-HOVER-DELAY-002`, `NH-HAPTIC-0
 
 ## Next optimal step
 
-1. Finish automated verification of PR #5 P0 tooling.
-2. Run the documented `NH-PERF-IDLE-001`, `NH-PERF-HOVER-001`, `NH-PERF-STABILITY-001`, and `NH-PERF-SIZE-001` measurements on the target MacBook/macOS 26.6 against accepted `v0.1.0`.
-3. Review the measurements, commit summarized baseline values, and derive honest budgets.
-4. Complete P0 review/merge only when correctness/security/performance gates are green.
-5. Start M1 with measured investigation of local tracking versus the current global `mouseMoved`, followed by delayed hover + haptic work under `docs/specs/M1_NOTCH_INTERACTION.md`.
+1. Complete `NH-PERF-SIZE-001` from immutable Personal Release `v0.1.0` build metadata.
+2. Commit the complete canonical `performance/baseline-v0.1.0.json` and deterministic artifact-size budget gate.
+3. Run final PR #5 CI and independent change review, then merge P0 if clean.
+4. Start M1 with measured investigation of local tracking versus the current global `mouseMoved`, followed by delayed hover + haptic work under `docs/specs/M1_NOTCH_INTERACTION.md`.
