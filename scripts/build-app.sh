@@ -49,7 +49,6 @@ plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS_DIR/Info.plis
 if command -v codesign >/dev/null 2>&1; then
     sign_args=(
         --force
-        --deep
         --options runtime
         --entitlements "$ENTITLEMENTS_FILE"
         --sign "$SIGN_IDENTITY"
@@ -59,6 +58,8 @@ if command -v codesign >/dev/null 2>&1; then
         sign_args+=(--timestamp)
     fi
 
+    # Sign only the top-level app. If nested code is introduced later, sign it
+    # explicitly from the innermost component outward before signing the app.
     codesign "${sign_args[@]}" "$APP_DIR"
 fi
 
