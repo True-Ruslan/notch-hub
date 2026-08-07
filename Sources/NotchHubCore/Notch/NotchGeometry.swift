@@ -62,9 +62,9 @@ public enum NotchGeometry {
 
     static func detectedHardwareNotch(in input: ScreenGeometryInput) -> CGRect? {
         guard input.safeAreaTop > 0,
-              let left = input.auxiliaryTopLeftArea,
-              let right = input.auxiliaryTopRightArea,
-              right.minX > left.maxX
+            let left = input.auxiliaryTopLeftArea,
+            let right = input.auxiliaryTopRightArea,
+            right.minX > left.maxX
         else {
             return nil
         }
