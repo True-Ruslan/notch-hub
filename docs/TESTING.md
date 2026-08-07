@@ -2,30 +2,56 @@
 
 ## Goal
 
-Automate every deterministic behavior that can be validated reliably in CI. Manual acceptance is reserved for behavior that depends on physical MacBook notch geometry, real pointer feel, macOS permission surfaces, third-party applications, or final visual quality.
+Automate every deterministic behavior that can be validated reliably in CI. Manual acceptance is reserved for behavior that depends on physical MacBook notch geometry, real pointer feel, exact macOS permission surfaces, third-party applications, Gatekeeper trust on a real downloaded build, or final visual quality.
 
-A green pipeline is necessary but is not treated as proof of physical-device UX.
+A green pipeline is necessary but is not treated as proof of physical-device UX. Conversely, manual success does not replace deterministic automated coverage that can reasonably exist.
 
 ## Required CI gate
 
-The protected-branch check is `Build, test and package`. It validates:
+The protected-branch check is `Build, test and package`. It is intentionally dependent on the separate `macOS 26 compatibility` job, so the protected check cannot become successful when the macOS 26 build/test layer fails.
+
+The CI path validates:
 
 1. Swift package structure.
-2. Swift formatting.
+2. project-configured strict Swift formatting.
 3. shell and plist syntax.
-4. debug compilation.
-5. the full Swift test suite with coverage instrumentation.
-6. release application/DMG packaging.
-7. bundle version stamping.
-8. ad-hoc code-signature verification.
-9. DMG integrity with `hdiutil verify`.
-10. artifact upload.
+4. repository security baseline (`scripts/security-audit.sh`).
+5. macOS 26 compilation with warnings as errors.
+6. macOS 26 full Swift unit-test suite.
+7. packaging-runner debug compilation with warnings as errors.
+8. full Swift test suite with coverage instrumentation.
+9. release application/DMG packaging.
+10. semantic version/build-number stamping.
+11. ad-hoc code-signature verification.
+12. Hardened Runtime flag verification.
+13. effective App Sandbox entitlement verification.
+14. linked-library inspection (only system libraries allowed at M0).
+15. DMG integrity with `hdiutil verify`.
+16. artifact upload.
 
-Do not lower assertions, delete useful tests, or weaken production behavior merely to make CI green.
+Do not lower assertions, delete useful tests, weaken security policy, or weaken production behavior merely to make CI green.
+
+## Security test boundary
+
+The repository security baseline is executable and fails closed when an unreviewed high-risk capability is introduced. At M0 it verifies, among other things:
+
+- zero external Swift runtime dependencies;
+- no runtime subprocess/shell execution APIs;
+- no direct network/WebKit surface;
+- no dynamic code loading/private-symbol bridging primitives;
+- no global keyboard event monitoring;
+- no embedded common credential/private-key formats;
+- exactly the expected sandbox entitlement set;
+- no dangerous Hardened Runtime exception entitlements;
+- no LaunchAgents/LaunchDaemons/privileged-helper surfaces;
+- immutable full-SHA GitHub Action references;
+- no `pull_request_target` workflows.
+
+These checks are intentionally conservative. When a future feature legitimately needs a currently forbidden capability, change the security policy and audit rule explicitly in the same reviewed PR rather than bypassing the check.
 
 ## Test design
 
-Prefer pure deterministic policies for geometry and state transitions. AppKit/SwiftUI wiring should be thin and delegate decisions to testable code.
+Prefer pure deterministic policies for geometry, parsing, permissions state, module state, and transitions. AppKit/SwiftUI wiring should be thin and delegate decisions to testable code.
 
 Tests should:
 
@@ -34,9 +60,12 @@ Tests should:
 - avoid mocks unless an OS or third-party boundary cannot reasonably be exercised;
 - avoid arbitrary sleeps in unit tests;
 - include boundary cases for screen geometry and pointer regions;
-- reproduce a reported regression before its production fix is written.
+- reproduce a reported regression before its production fix is written;
+- test failures and denied/absent permission states, not only happy paths;
+- verify that destructive-looking UI operations do not mutate/delete external data unless explicitly designed to do so;
+- prefer deterministic fakes/adapters around OS/third-party boundaries over network/media integration in unit tests.
 
-No arbitrary global coverage percentage is used at this stage. A high number can reward meaningless tests. Coverage instrumentation is enabled so untested deterministic logic can be identified as the codebase grows; thresholds may be introduced later per stable core component.
+No arbitrary global coverage percentage is used at this stage. A high number can reward meaningless tests. Coverage instrumentation is enabled so untested deterministic logic can be identified as the codebase grows; component-specific thresholds may be introduced after stable module boundaries exist.
 
 ## Real-hardware acceptance matrix
 
@@ -45,10 +74,13 @@ Record results in `docs/PROJECT_STATE.md` using these stable IDs.
 | ID | Scenario | Expected result | Automation |
 | --- | --- | --- | --- |
 | `NH-BOOT-001` | Install/open CI-produced DMG | App launches without crashing and panel appears | Packaging automated; launch UX manual |
+| `NH-OS26-001` | Run current accepted test build on target macOS 26.6 | App launches, sandboxed runtime remains functional, no unexpected permission prompt/error | macOS 26 CI build/test automated; exact 26.6 hardware/UI manual |
 | `NH-NOTCH-001` | Observe compact panel on a MacBook with hardware notch | Panel is centered/aligned with the physical notch and does not cover unexpected menu-bar areas | Geometry unit-tested; physical alignment manual |
 | `NH-HOVER-001` | Move pointer into compact activation region and hold it for at least 3 seconds | Exactly one expansion; no compact/expanded oscillation | Pointer policy unit-tested; actual AppKit events manual |
 | `NH-HOVER-002` | Move pointer around inside the expanded panel, including outside the original compact width | Panel remains expanded | Pointer retention unit-tested; event delivery manual |
 | `NH-HOVER-003` | Move pointer clearly outside expanded panel/retention margin | Panel collapses once and stays compact | Pointer policy unit-tested; animation feel manual |
+| `NH-SANDBOX-001` | Run the App Sandbox build and exercise hover/normal panel use | No crash; no unexpected security/permission prompt; no loss of required pointer behavior | Entitlement/signing automated; physical runtime manual |
+| `NH-GATEKEEPER-001` | Download a stable GitHub Release DMG and open normally | Gatekeeper identifies/notarizes the Developer ID build without “unidentified developer” workaround | Release workflow signs/notarizes/staples/assesses; quarantine/download UX manual once per release pipeline change |
 | `NH-SPACE-001` | Switch Spaces / fullscreen app | Panel behavior matches documented policy | Planned M1 |
 | `NH-DISPLAY-001` | Connect/move between displays | Panel migrates correctly and uses target display geometry | Planned M1 |
 
@@ -61,4 +93,8 @@ Record results in `docs/PROJECT_STATE.md` using these stable IDs.
 - Root cause: raw SwiftUI `onHover` events were treated as authoritative while the same state transition animated/resized the hosting `NSPanel`, allowing transient hover exits to feed back into presentation state.
 - Regression coverage: `NotchPointerPolicyTests.expandedPointerInsideExpandedRetentionRegionStaysExpanded` was added RED first and failed with `.compact` instead of `.expanded`.
 - Automated fix validation: PASS in CI after replacing raw view-hover authority with screen-space pointer-region policy.
-- Real-hardware retest of the fixed DMG: PENDING.
+- Real-hardware retest of the fixed sandbox/Hardened Runtime DMG: PENDING.
+
+## Release validation
+
+PR artifacts are ad-hoc test builds. Stable releases additionally require the release workflow gates described in `docs/RELEASING.md`: Developer ID signing, Hardened Runtime/App Sandbox verification, Apple notarization, stapling, Gatekeeper assessment, and SHA-256 checksum publication.

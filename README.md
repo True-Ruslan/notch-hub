@@ -8,7 +8,7 @@ NotchHub turns the area around the camera housing into a compact panel for every
 
 Current development version: **0.1.0 (unreleased)**.
 
-M0 engineering foundation is in progress. The app already has the native panel shell, deterministic notch geometry, stable screen-space pointer policy, automated tests, CI, and installable DMG packaging. Real-hardware hover acceptance for the latest fix is still pending; see the project state before merging or releasing.
+M0 engineering foundation is in progress. The app already has the native panel shell, deterministic notch geometry, stable screen-space pointer policy, automated tests, macOS 26 compatibility CI, App Sandbox/Hardened Runtime packaging, executable security gates, and DMG generation. Real-hardware hover acceptance for the latest fix is still pending on the primary target, **macOS 26.6**; read project state before merging or releasing.
 
 Source-of-truth documents:
 
@@ -17,11 +17,15 @@ Source-of-truth documents:
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architectural boundaries
 - [`docs/TESTING.md`](docs/TESTING.md) — automated gates and manual acceptance IDs
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — TDD, commits, versioning, documentation policy
+- [`SECURITY.md`](SECURITY.md) — threat model, security invariants, and security-review contract
+- [`docs/RELEASING.md`](docs/RELEASING.md) — Developer ID/notarized GitHub Release setup
+- [`docs/PRODUCT_REFERENCES.md`](docs/PRODUCT_REFERENCES.md) — independent public product/UI research
 - [`CHANGELOG.md`](CHANGELOG.md) — notable changes
 
 ## Requirements
 
-- macOS 14+
+- macOS 14+ deployment target
+- primary current real-hardware target: macOS 26.6
 - Xcode / Swift 6 toolchain for development
 
 End users install a normal macOS `.dmg`; development tools are not required after installation.
@@ -31,6 +35,7 @@ End users install a normal macOS `.dmg`; development tools are not required afte
 ```bash
 swift build
 swift test --parallel
+./scripts/security-audit.sh
 ```
 
 Behavior changes and bug fixes follow RED → GREEN → REFACTOR. See `docs/DEVELOPMENT.md` before changing production behavior.
@@ -42,26 +47,43 @@ Build an ad-hoc signed application bundle:
 open build/NotchHub.app
 ```
 
-Build a DMG installer:
+Build a DMG test installer:
 
 ```bash
 ./scripts/build-dmg.sh
 ```
 
-The resulting file is `build/NotchHub.dmg`. `VERSION` is stamped into the application bundle at packaging time.
+The result is `build/NotchHub.dmg`. Test builds are ad-hoc signed but still enable App Sandbox and Hardened Runtime so the security-sensitive packaging path is exercised continuously.
+
+## Security model
+
+The M0 runtime intentionally has:
+
+- App Sandbox enabled;
+- Hardened Runtime enabled without dangerous exceptions;
+- zero third-party Swift runtime dependencies;
+- no telemetry/analytics/licensing backend;
+- no direct network/WebKit surface;
+- no runtime subprocess/shell execution;
+- no dynamic code/plugin loading;
+- no global keyboard monitoring.
+
+CI enforces this baseline. Future capabilities that require broader permissions or attack surface must change `SECURITY.md` and the executable security gate explicitly in the same reviewed PR.
 
 ## Architecture
 
 The app is written in Swift 6 using SwiftUI for UI and AppKit for panel/window integration. Hardware-notch measurements and pointer-region decisions are isolated in deterministic policies so they can be unit-tested instead of being buried in view callbacks.
 
-The media layer will be provider-based. Yandex Music is the primary compatibility target; any use of private macOS MediaRemote APIs will remain isolated behind an adapter and will not leak into the rest of the application.
+The media layer will be provider-based. Yandex Music is the primary compatibility target. A private MediaRemote fallback is allowed only after a focused security/compatibility review and may not weaken Hardened Runtime/library validation.
 
 ## Distribution
 
-CI produces an ad-hoc signed DMG suitable for personal testing. Developer ID signing and notarization are deferred until broader distribution or warning-free installation on other Macs is needed.
+PR CI produces a sandboxed/Hardened Runtime ad-hoc DMG for testing. **Stable builds are published through GitHub Releases**, not chat attachments.
+
+The prepared Release workflow is fail-closed and requires Developer ID signing plus Apple notarization/stapling before it will publish `NotchHub.dmg` and its SHA-256 checksum. One-time Apple credentials must be configured directly in the GitHub `release` environment; see `docs/RELEASING.md` and never send signing keys/certificates through chat.
 
 Release tags use `v<SemVer>`, for example `v0.1.0`, and must match the repository-root `VERSION` file.
 
 ## Privacy
 
-The baseline app is local-only and makes no network requests. Future modules must document any additional permissions or network use explicitly.
+The baseline app is local-only and makes no direct network requests. Future modules must document any additional permission, external process, private API, or network use explicitly before implementation.
