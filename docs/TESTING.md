@@ -68,7 +68,7 @@ Future capabilities that legitimately require a currently forbidden surface must
 
 ## Test design
 
-Prefer pure deterministic policies for geometry, parsing, permissions, state, transitions, release rules, and AppKit/SwiftUI boundary configuration. AppKit/SwiftUI/GitHub orchestration should be thin around tested policies.
+Prefer pure deterministic policies for geometry, parsing, permissions, state, transitions, release rules, time-dependent interaction decisions, and AppKit/SwiftUI boundary configuration. AppKit/SwiftUI/GitHub orchestration should be thin around tested policies.
 
 Tests should:
 
@@ -80,9 +80,29 @@ Tests should:
 - reproduce reported deterministic regressions before fixes where practical;
 - never fabricate a RED phase if a behavior is already correctly testable;
 - prefer deterministic fake adapters around external boundaries over live services;
+- inject a monotonic clock/scheduler for dwell/debounce behavior instead of waiting in real time;
+- inject a haptic output abstraction so tests assert request count/reason without requiring physical trackpad vibration;
 - never use noisy shared-runner timing values as tight performance gates.
 
 No arbitrary global code-coverage percentage is used. Coverage instrumentation is enabled to find untested deterministic logic; component-specific thresholds may be introduced only where they remain meaningful.
+
+## M1 delayed-hover and haptic contract
+
+Authoritative interaction specification: `docs/specs/M1_NOTCH_INTERACTION.md`.
+
+Before implementation, RED-first tests must prove at minimum:
+
+- pointer transit shorter than the dwell threshold does not expand and emits zero haptic requests;
+- deliberate hover expands only when the threshold completes;
+- one successful user-initiated `compact -> expanded` transition emits exactly one haptic request;
+- repeated `mouseMoved` events do not create duplicate pending work or duplicate haptics;
+- a cancelled dwell cannot fire later from a stale callback;
+- re-entry starts a fresh dwell instead of reusing elapsed time;
+- expanded retention does not retrigger haptic feedback;
+- collapse followed by a new deliberate hover may produce one new haptic;
+- controller teardown/state invalidation cancels pending dwell work.
+
+The implementation must remain event-driven: no polling, no repeating timer, and at most one pending activation task/timer. Physical haptic feel remains a real-device acceptance concern because macOS may legitimately suppress trackpad feedback depending on current hardware, touch state, accessibility, and user preferences.
 
 ## Real-hardware / distribution acceptance matrix
 
@@ -98,6 +118,10 @@ Record results in `docs/PROJECT_STATE.md`.
 | `NH-HOVER-003` | Move outside retention region | Content and actual panel frame collapse once and remain compact | Policy/sizing ownership automated; physical window behavior manual |
 | `NH-SANDBOX-001` | Exercise normal panel in Sandbox build | No crash/unexpected permission/loss of behavior | Entitlement/signing automated; runtime manual |
 | `NH-PERSONAL-RELEASE-001` | Download versioned Personal Release from GitHub | Published SHA-256 matches; installation uses only standard Finder / Privacy & Security approval; app opens on macOS 26.6; accepted notch/hover scenarios remain PASS | Release policy/checksum/provenance automated; downloaded quarantine/trust path + hardware behavior manual once for first personal pipeline/version |
+| `NH-HOVER-DELAY-001` | Move pointer through notch toward another display without intentionally stopping | Transit completes before dwell threshold; panel stays compact; zero haptic feedback | Deterministic injected-clock cancellation test; real cross-display pointer feel manual |
+| `NH-HOVER-DELAY-002` | Deliberately hover over compact notch | Panel expands once after a short perceptible-but-fast dwell, with no flicker/oscillation | State/time policy automated; final dwell tuning manual |
+| `NH-HAPTIC-001` | Deliberately hover using a compatible Force Touch trackpad while touching it | Exactly one short tactile event accompanies the successful expansion | Haptic request count/reason automated through fake performer; physical tactile result manual |
+| `NH-HAPTIC-002` | Quick/cancelled hover, retention movement, and collapse | No haptic feedback | Deterministic policy/output tests automated; physical negative check manual |
 | `NH-GATEKEEPER-TRUSTED-001` | Future: download Trusted Release | Gatekeeper identifies `Notarized Developer ID` without personal-build approval workaround | Trusted workflow automated; normal downloaded path manual when tier is first adopted |
 | `NH-SPACE-001` | Switch Spaces/fullscreen | Behavior matches M1 policy | Planned M1 |
 | `NH-DISPLAY-001` | Connect/move between displays | Correct target-display geometry/migration | Planned M1 |
@@ -144,6 +168,7 @@ PR #3 records release-policy RED/GREEN evidence independently from app runtime:
 - versioned release-note integration test failed until `docs/releases/v0.1.0.md` existed;
 - Personal Release workflow contract failed until `.github/workflows/personal-release.yml` existed;
 - tier-separation test failed until `trusted-release.yml` existed and legacy `release.yml` was removed;
-- trust-boundary tests failed until the executable workflow validator existed.
+- trust-boundary tests failed until the executable workflow validator existed;
+- final Trusted pre-publish recheck received an additional RED-first fail-closed regression test before its fix.
 
-Final Personal Release publication and `NH-PERSONAL-RELEASE-001` remain pending until PR #3 is merged into protected `main`.
+`v0.1.0` Personal Release has been published from the accepted `main` commit. `NH-PERSONAL-RELEASE-001` remains pending until the downloaded GitHub Release DMG is accepted on the target MacBook.
