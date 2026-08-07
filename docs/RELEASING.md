@@ -73,15 +73,24 @@ A failed post-download acceptance does not permit replacing the existing release
 
 ## 2. Trusted Release — optional future tier
 
-Workflow: **Actions → Trusted Release → Run workflow**.
+Workflow scaffold: **Actions → Trusted Release**.
+
+Trusted Release is intentionally **not configured or operational today**. No GitHub Environments are currently configured and no Apple signing/notarization secrets are provisioned. The workflow file references `environment: release` as the future trust boundary, but GitHub requires the environment to be created before use.
 
 Do not configure or run this workflow until Apple Developer Program membership is intentionally adopted. It remains isolated from Personal Release.
+
+Before the first future Trusted Release run:
+
+1. create the GitHub environment `release`;
+2. configure appropriate environment protection rules;
+3. add the Apple signing/notarization credentials only as environment-scoped secrets;
+4. review the workflow and security policy again on the then-current GitHub/Apple toolchain;
+5. publish only a new version that does not collide with an existing Personal Release tag.
 
 Trusted Release additionally requires:
 
 - Developer ID Application certificate/private key;
 - Apple notarization credentials;
-- GitHub environment `release`;
 - Developer ID app + DMG signing;
 - Hardened Runtime and Sandbox verification;
 - `notarytool` acceptance;
