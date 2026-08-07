@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    name: Build, test and package
+    runs-on: macos-15
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          xcode-select -p
+          swift --version
+
+      - name: Validate package
+        run: swift package describe
+
+      - name: Build debug
+        run: swift build
+
+      - name: Test
+        run: swift test --parallel
+
+      - name: Build release DMG
+        run: ./scripts/build-dmg.sh
+
+      - name: Verify app bundle
+        run: |
+          test -x build/NotchHub.app/Contents/MacOS/NotchHub
+          test -f build/NotchHub.app/Contents/Info.plist
+          test -f build/NotchHub.dmg
+          codesign --verify --deep --strict build/NotchHub.app
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: NotchHub-dmg
+          path: build/NotchHub.dmg
+          if-no-files-found: error
