@@ -48,6 +48,16 @@ forbidden_source_patterns=(
     '\.keyDown'
     '\.keyUp'
     '\.flagsChanged'
+    '\.leftMouseDown'
+    '\.leftMouseUp'
+    '\.rightMouseDown'
+    '\.rightMouseUp'
+    '\.otherMouseDown'
+    '\.otherMouseUp'
+    '\.leftMouseDragged'
+    '\.rightMouseDragged'
+    '\.otherMouseDragged'
+    '\.scrollWheel'
 )
 
 for pattern in "${forbidden_source_patterns[@]}"; do

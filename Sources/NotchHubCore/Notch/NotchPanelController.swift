@@ -63,12 +63,7 @@ public final class NotchPanelController: NSObject {
     }
 
     private func configurePointerMonitoring() {
-        let mask: NSEvent.EventTypeMask = [
-            .mouseMoved,
-            .leftMouseDragged,
-            .rightMouseDragged,
-            .otherMouseDragged
-        ]
+        let mask: NSEvent.EventTypeMask = .mouseMoved
 
         localPointerMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
             let pointer = NSEvent.mouseLocation
