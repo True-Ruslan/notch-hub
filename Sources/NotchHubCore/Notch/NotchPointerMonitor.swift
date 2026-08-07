@@ -21,7 +21,11 @@ final class NotchPointerMonitor {
     private var globalMonitor: Any?
     private var isStarted = false
 
-    init(backend: any NotchEventMonitorBackend = AppKitNotchEventMonitorBackend()) {
+    convenience init() {
+        self.init(backend: AppKitNotchEventMonitorBackend())
+    }
+
+    init(backend: any NotchEventMonitorBackend) {
         self.backend = backend
     }
 
