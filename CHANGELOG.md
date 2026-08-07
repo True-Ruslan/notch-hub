@@ -17,7 +17,7 @@ The project follows [Semantic Versioning](https://semver.org/). The version unde
 - App Sandbox with a deliberately minimal entitlement set.
 - Hardened Runtime signing for test and stable builds.
 - Root `SECURITY.md` threat/security policy and executable `scripts/security-audit.sh` CI baseline.
-- Security gates that keep M0 free of third-party Swift dependencies, runtime shell/subprocess execution, direct network/WebKit APIs, dynamic code loading, global keyboard monitoring, dangerous Hardened Runtime exceptions, persistence helpers, mutable GitHub Action references, and `pull_request_target`.
+- Security gates that keep M0 free of third-party Swift dependencies, runtime shell/subprocess execution, direct network/WebKit APIs, dynamic code loading, global keyboard/button/drag/scroll/modifier monitoring, dangerous Hardened Runtime exceptions, persistence helpers, mutable GitHub Action references, and `pull_request_target`.
 - GitHub Actions pinned to immutable full commit SHAs.
 - Semantic `VERSION` stamping and CI build numbers.
 - GitHub Release workflow for Developer ID signing, Apple notarization, stapling, Gatekeeper assessment, and SHA-256 checksum publication.
@@ -31,11 +31,12 @@ The project follows [Semantic Versioning](https://semver.org/). The version unde
 
 ### Testing
 
-- Added a regression test that first failed on the bootstrap implementation and proves an expanded panel remains expanded while the pointer is still inside its expanded retention region.
-- Verified the RED test failed for the expected behavior mismatch before the hover production fix was added.
+- Added a RED-first regression test proving an expanded panel remains expanded while the pointer stays inside the expanded retention region.
 - Added exact macOS 26.6 real-hardware acceptance IDs while keeping GitHub-hosted macOS 26 testing as an automated major-version compatibility layer.
-- Recorded the second macOS 26.6 hardware acceptance cycle: OS launch PASS, stable hover/retention PASS, minor notch-width mismatch FAIL, and expanded-window-shell collapse FAIL.
-- Added RED-first regression coverage for both second-cycle failures. Commit `c518326` produced exactly two expected failures on macOS 26 CI; GREEN commit `3bb1bbb` raised the suite to **10/10 PASS** in CI run #19.
+- Recorded cycle 2 real-hardware defects: minor compact-notch width mismatch and expanded-window-shell collapse failure.
+- Added RED-first regression coverage for both cycle-2 failures. Commit `c518326` produced exactly two expected failures on macOS 26 CI; GREEN commit `3bb1bbb` raised the suite to **10/10 PASS**.
+- Final corrected-build hardware retest on macOS 26.6: `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, and `NH-HOVER-003` all **PASS**.
+- **M0 engineering foundation accepted on real hardware.**
 
 ### Security
 
