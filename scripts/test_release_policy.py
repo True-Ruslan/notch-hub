@@ -7,6 +7,7 @@ from release_policy import (
     parse_semver,
     release_tag,
     validate_personal_release_notes,
+    validate_personal_release_workflow,
 )
 
 
@@ -148,6 +149,7 @@ class ReleasePolicyTests(unittest.TestCase):
         workflow_path = REPOSITORY_ROOT / ".github" / "workflows" / "personal-release.yml"
         self.assertTrue(workflow_path.is_file(), f"missing personal release workflow: {workflow_path}")
         workflow = workflow_path.read_text(encoding="utf-8")
+        validate_personal_release_workflow(workflow)
 
         required_fragments = (
             "name: Personal Release",
@@ -176,19 +178,24 @@ class ReleasePolicyTests(unittest.TestCase):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, workflow)
 
-        forbidden_fragments = (
-            "notarytool",
-            "Developer ID Application",
-            "APPLE_DEVELOPER_ID",
-            "APPLE_NOTARY",
-            "environment: release",
-            "--clobber",
-            "xattr",
-            "spctl --master-disable",
+    def test_personal_release_workflow_rejects_trust_boundary_weakening(self):
+        safe = (REPOSITORY_ROOT / ".github" / "workflows" / "personal-release.yml").read_text(encoding="utf-8")
+        validate_personal_release_workflow(safe)
+
+        mutations = (
+            safe + "\n# --clobber\n",
+            safe + "\n# notarytool\n",
+            safe + "\n# Developer ID Application\n",
+            safe + "\n# APPLE_DEVELOPER_ID_P12_BASE64\n",
+            safe + "\n# APPLE_NOTARY_KEY_P8\n",
+            safe + "\n# environment: release\n",
+            safe + "\n# xattr -dr com.apple.quarantine /Applications/NotchHub.app\n",
+            safe + "\n# spctl --master-disable\n",
         )
-        for fragment in forbidden_fragments:
-            with self.subTest(fragment=fragment):
-                self.assertNotIn(fragment, workflow)
+        for mutation in mutations:
+            with self.subTest(mutation=mutation.rsplit("\n", 2)[-2]):
+                with self.assertRaises(ValueError):
+                    validate_personal_release_workflow(mutation)
 
     def test_trusted_release_workflow_is_separate_fail_closed_tier(self):
         workflows = REPOSITORY_ROOT / ".github" / "workflows"
