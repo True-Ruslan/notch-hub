@@ -60,6 +60,9 @@ jobs:
       - name: Release policy tests
         run: (cd scripts && python3 -m unittest -v test_release_policy.py)
 
+      - name: Performance policy tests
+        run: (cd scripts && python3 -m unittest -v test_performance_policy.py)
+
       - name: Validate sources, scripts and security baseline
         run: |
           swift format lint --recursive --strict --configuration .swift-format Sources Tests Package.swift
