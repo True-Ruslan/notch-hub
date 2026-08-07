@@ -4,7 +4,8 @@ Last updated: 2026-08-07
 Current version: `0.1.0` (Personal Release published and accepted)
 Primary physical target: macOS `26.6`
 Protected branch: `main`
-Current implementation PR: #5 `Performance Foundation`
+P0 completion PR: #5 `Performance Foundation`
+Next milestone: M1 `Notch Core hardening and interaction`
 
 ## Product
 
@@ -81,52 +82,69 @@ Release infrastructure was developed through deterministic RED→GREEN tests:
 6. RED: trust-boundary tests failed because executable `validate_personal_release_workflow` did not exist; GREEN after the validator and security-audit integration were added.
 7. Security review found a fail-closed weakness in the future Trusted pre-publish recheck; a RED test was added before the final remote tag/release error-classification fix.
 
-Pre-merge PR #3 verification passed macOS 26 compatibility, release-policy tests, executable security baseline, warnings-as-errors, Swift tests, DMG packaging, signature/Hardened Runtime/App Sandbox/system-library/integrity checks, and artifact upload.
+## P0 Performance Foundation
 
-## Current milestone — P0 Performance Foundation
+Status: **ACCEPTED**.
 
-Status: **IN PROGRESS in PR #5; runtime target-Mac baseline accepted, exact release sizes pending**.
+Performance/resource efficiency is a first-class product requirement alongside security. P0 establishes deterministic CI policy plus real target-hardware evidence before feature-heavy M1 work.
 
-Performance is a first-class product requirement alongside security. P0 executes before feature-heavy M1.
-
-Implemented/in review in PR #5:
+Implemented and accepted:
 
 - root `PERFORMANCE.md` event-driven/resource-efficiency contract;
-- RED→GREEN deterministic performance-policy tests;
-- runtime source scanner for unreviewed busy loops, timers, sleeps, and display links;
+- runtime source scanner for unreviewed busy loops, repeating timers, sleeps, and display links;
 - strict `/bin/ps` CPU/RSS/thread parser and median/max aggregation;
-- deterministic budget-comparison helpers with malformed/non-finite input rejection;
-- development-only `scripts/perf-baseline.py` with explicit measured-app/tooling provenance separation;
-- Darwin-compatible thread measurement using `ps -M` after CI exposed unsupported `thcount`;
+- Darwin thread measurement via `ps -M` after CI exposed unsupported `thcount`;
 - exact full-window sampling and stability start/end/quartile evidence;
+- development-only `scripts/perf-baseline.py` with explicit measured-app/tooling provenance separation;
 - deterministic `NH-PERF-STATE-001` 100,000-transition Swift stress coverage without wall-clock assertions;
-- CI integration for policy tests/audit, deterministic artifact sizes, development-tool isolation, and a short harness compatibility/schema smoke;
-- security audit enforcement proving performance tooling is not referenced/copied into runtime packaging;
-- stable `NH-PERF-IDLE-001`, `NH-PERF-HOVER-001`, `NH-PERF-STABILITY-001`, `NH-PERF-SIZE-001`, and `NH-PERF-STATE-001` contracts.
+- canonical `performance/baseline-v0.1.0.json`;
+- target-Mac CPU/RSS/thread acceptance ceilings;
+- exact immutable-release artifact-size baseline;
+- fail-closed release-size budget checker with schema validation, 15% relative allowance, and independent absolute ceilings;
+- shared-CI artifact-size regression gate;
+- security audit proving development measurement tooling is not referenced/copied into runtime packaging.
 
-### Accepted target-Mac runtime measurements
+### Accepted target-Mac runtime baseline
 
 Measured against accepted Personal Release `v0.1.0` source commit `8e913dcddfdec7d9aa920df8c37afb23b8c40884` on macOS 26.6 / `Mac16,8`, using tooling commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0`:
 
-- `NH-PERF-IDLE-001`: **BASELINE ACCEPTED** — CPU median/max `0.0% / 0.7%`, RSS median/max `33,648 / 33,808 KiB`, threads median/max `4 / 4`;
-- `NH-PERF-HOVER-001`: **BASELINE ACCEPTED** — CPU median/max `5.95% / 22.3%`, RSS median/max `38,456 / 38,816 KiB`, threads median/max `6 / 7`;
-- `NH-PERF-STABILITY-001`: **BASELINE ACCEPTED** — CPU median/max `0.0% / 6.8%`, RSS median/max `30,992 / 34,384 KiB`, threads median/max `3 / 7`;
-- stability RSS start/end: `34,256 -> 30,544 KiB` (`-3,712 KiB`, no sustained memory growth);
-- stability thread start/end: `4 -> 5`, max `7`.
+- `NH-PERF-IDLE-001`: **PASS / BASELINE ACCEPTED** — CPU median/max `0.0% / 0.7%`, RSS median/max `33,648 / 33,808 KiB`, threads median/max `4 / 4`;
+- `NH-PERF-HOVER-001`: **PASS / BASELINE ACCEPTED** — CPU median/max `5.95% / 22.3%`, RSS median/max `38,456 / 38,816 KiB`, threads median/max `6 / 7`;
+- `NH-PERF-STABILITY-001`: **PASS / BASELINE ACCEPTED** — CPU median/max `0.0% / 6.8%`, RSS median/max `30,992 / 34,384 KiB`, threads median/max `3 / 7`;
+- stability RSS start/end: `34,256 -> 30,544 KiB` (`-3,712 KiB`), so no sustained memory growth was observed;
+- stability thread start/end: `4 -> 5`, max `7`, with no runaway accumulation.
 
 Measurement windows and sample counts matched the contracts: idle `60.017 s / 60 samples`, hover `60.018 s / 60 samples`, stability `600.013 s / 120 samples`.
 
-Initial CPU/RSS/thread budgets are documented in `PERFORMANCE.md` as conservative **target-Mac acceptance ceilings**, not shared-runner CI thresholds. The main M1 optimization comparison target is hover CPU/resource behavior because the current global `.mouseMoved` observer is active there.
+### Accepted immutable-release size baseline
 
-Still required before P0 acceptance:
+Published `v0.1.0` `build-metadata.json`:
 
-1. obtain exact immutable `v0.1.0` `build-metadata.json` values for `NH-PERF-SIZE-001`;
-2. create complete `performance/baseline-v0.1.0.json` containing runtime summaries, exact release sizes, and budgets;
-3. derive and add only reproducible artifact-size budget gates to CI;
-4. run final PR #5 automated CI and independent change review;
-5. merge only after all correctness/security/performance gates are green.
+- executable: `220,560 B`;
+- app aggregate: `223,555 B`;
+- DMG: `73,955 B`;
+- build number: `1`;
+- publication runner: macOS `26.5.2`;
+- Xcode: `26.6` build `17F113`;
+- Swift: `6.3.3`;
+- DMG SHA-256: `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`.
 
-Authoritative policy and accepted runtime values: `PERFORMANCE.md`.
+The publication runner OS is build provenance only; runtime acceptance remains the target MacBook/macOS 26.6.
+
+### P0 RED→GREEN and integrated CI evidence
+
+- RED CI #54: performance test module absent as intended.
+- RED CI #73: stability summarizer absent as intended.
+- integration RED CI #75: Darwin runner rejected `ps ... thcount`; thread measurement was corrected to `ps -M` rather than dropping the metric.
+- RED CI #91: new size-budget tests failed exactly because `compare_size_summary_to_baseline` did not exist.
+- GREEN CI #94: macOS 26 compatibility PASS; 12/12 release-policy tests PASS; 22/22 performance-policy tests PASS; performance/security audits PASS; warnings-as-errors PASS; 11/11 Swift tests PASS; packaging/signature/Hardened Runtime/exact Sandbox/system-library/DMG checks PASS; deterministic artifact-size capture PASS; canonical release-size budget gate PASS; harness compatibility smoke PASS; artifacts uploaded.
+
+CI #94 candidate sizes were executable `214,016 B`, app `217,012 B`, DMG `73,378 B`; all are below the accepted `v0.1.0` baseline and its enforced budgets.
+
+Runtime CPU/RSS/thread limits remain target-Mac acceptance gates; noisy shared runners never substitute for target-hardware evidence. Artifact byte sizes are deterministic enough to be enforced in shared CI.
+
+Authoritative policy: `PERFORMANCE.md`.
+Canonical baseline: `performance/baseline-v0.1.0.json`.
 Approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 
 ## Security baseline
@@ -147,7 +165,7 @@ Approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 
 ## Approved M1 interaction requirements
 
-Two additional UX requirements are part of the M1 contract and must be implemented test-first after P0:
+Two additional UX requirements are part of the M1 contract and must be implemented test-first:
 
 1. **Delayed hover activation**
    - compact → expanded must not happen immediately on first pointer entry;
@@ -162,12 +180,10 @@ Two additional UX requirements are part of the M1 contract and must be implement
    - respect macOS/current-device/accessibility/user settings; no private APIs, synthetic input, custom drivers, Accessibility hacks, audio imitation, or retry loop.
 
 Authoritative spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
-
 Planned acceptance IDs: `NH-HOVER-DELAY-001`, `NH-HOVER-DELAY-002`, `NH-HAPTIC-001`, `NH-HAPTIC-002`.
 
 ## Known limitations
 
-- P0 exact accepted-release size baseline and deterministic size budget gate are still pending;
 - initial target-Mac runtime budgets come from one canonical run per scenario and intentionally include conservative headroom; future accepted repeated measurements may tighten them;
 - current global `.mouseMoved` observer is security-narrow but hover baseline shows materially higher active CPU than idle, making M1 tracking investigation worthwhile;
 - current M0 hover activation remains immediate; M1 will add the approved cancellable dwell;
@@ -178,7 +194,7 @@ Planned acceptance IDs: `NH-HOVER-DELAY-001`, `NH-HOVER-DELAY-002`, `NH-HAPTIC-0
 
 ## Next optimal step
 
-1. Complete `NH-PERF-SIZE-001` from immutable Personal Release `v0.1.0` build metadata.
-2. Commit the complete canonical `performance/baseline-v0.1.0.json` and deterministic artifact-size budget gate.
-3. Run final PR #5 CI and independent change review, then merge P0 if clean.
-4. Start M1 with measured investigation of local tracking versus the current global `mouseMoved`, followed by delayed hover + haptic work under `docs/specs/M1_NOTCH_INTERACTION.md`.
+1. Complete final independent review and merge PR #5 if all final checks remain green.
+2. Start M1 by capturing current global `.mouseMoved` behavior behind deterministic tests/adapter boundaries.
+3. Investigate reliable window-local `NSTrackingArea`/AppKit tracking and accept it only if notch behavior remains correct and target-Mac resource/input-observation evidence is equal or better than the P0 hover baseline.
+4. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`, preserving event-driven/no-polling and security constraints.
