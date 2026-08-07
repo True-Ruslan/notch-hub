@@ -6,14 +6,14 @@ NotchHub is a native, local-first macOS productivity hub that uses the area arou
 
 The project prioritizes:
 
-- native macOS behavior and low idle overhead;
+- native macOS behavior and very low continuous overhead;
 - explicit module boundaries;
 - deterministic, testable core logic;
 - security-by-default with App Sandbox and Hardened Runtime;
 - minimal permissions/entitlements;
 - no telemetry and no direct network dependency unless a feature is explicitly reviewed to require one;
 - graceful behavior on displays without a hardware notch;
-- stable operation on the primary current target, macOS 26.6.
+- stable operation on the primary target, macOS 26.6.
 
 ## Technology
 
@@ -21,10 +21,11 @@ The project prioritizes:
 - SwiftUI for view composition
 - AppKit for window/panel behavior and macOS integration
 - Swift Package Manager for builds and tests
-- GitHub Actions for CI, macOS 26 compatibility, security gates, and release packaging
+- Python standard-library policy tooling for deterministic release/performance development checks
+- GitHub Actions for CI, macOS 26 compatibility, security gates, packaging, and release publication
 
 Minimum deployment target: macOS 14.
-Primary current physical acceptance target: macOS 26.6.
+Primary physical acceptance target: macOS 26.6.
 
 ## Runtime structure
 
@@ -39,22 +40,17 @@ NotchHubApp
           -> NotchRootView             # SwiftUI rendering only
 ```
 
-Hardware/interaction decisions are intentionally moved out of view callbacks. `NotchGeometry` and `NotchPointerPolicy` are deterministic logic that can be unit-tested without a physical MacBook notch.
+Hardware/interaction decisions are intentionally moved out of view callbacks. `NotchGeometry` and `NotchPointerPolicy` are deterministic and unit-testable without a physical MacBook notch.
 
-The first hardware regression proved why this boundary matters: resizing an `NSPanel` from SwiftUI `onHover` created a feedback loop. The corrected architecture reads current pointer location at the AppKit boundary and delegates the state decision to the pure screen-space pointer policy.
+The first hardware regression proved why this boundary matters: resizing an `NSPanel` directly from raw SwiftUI `onHover` feedback created an oscillation loop. The corrected controller reads pointer location at the AppKit boundary and delegates the state decision to pure screen-space policy. `NSHostingView.sizingOptions = []` keeps actual window geometry owned by AppKit rather than SwiftUI content sizing.
 
 ## Window and pointer strategy
 
-The UI is hosted in a borderless, non-activating `NSPanel`. The panel:
+The UI is hosted in a borderless, non-activating `NSPanel`. It floats above normal windows, can join Spaces, can be a fullscreen auxiliary window, and does not place NotchHub in the Dock (`LSUIElement` + accessory activation policy).
 
-- floats above normal application windows;
-- can join all Spaces;
-- can appear as a fullscreen auxiliary window;
-- does not place NotchHub in the Dock (`LSUIElement` + accessory activation policy).
+The panel has explicit `compact` and `expanded` states. Current global observation is deliberately restricted to `mouseMoved`, with no persisted pointer history and no keyboard/button/scroll/drag monitoring.
 
-The panel has `compact` and `expanded` states.
-
-Pointer monitoring is intentionally narrow: the controller observes mouse movement/drag event classes and reads only `NSEvent.mouseLocation`. It does not monitor global key events and does not store pointer history/event data. Security policy/CI prohibit keyboard event masks in runtime sources.
+Performance Foundation will measure the real cost of that global movement observer before M1. M1 will prefer a reliable `NSTrackingArea`/window-local design if it preserves all accepted hover semantics and measurably reduces idle/wakeup cost. Correctness is not traded away merely to remove the global monitor.
 
 ## Notch geometry
 
@@ -64,21 +60,15 @@ On supported MacBook displays, the camera housing is inferred from:
 - `NSScreen.auxiliaryTopLeftArea`;
 - `NSScreen.auxiliaryTopRightArea`.
 
-If those values do not describe a notch, NotchHub falls back to a centered top panel. A dedicated polished notchless handler is an M1 product decision rather than an accidental fallback.
+Real hardware uses the exact detected notch width. A centered fallback width is used only when no hardware notch is detected. A polished notchless mode remains an M1 product decision.
 
 ## Security architecture
 
-The default distributed/test app is signed with:
+The current app is App Sandbox + Hardened Runtime with no dangerous exception entitlements. M0 has zero external Swift runtime dependencies, no runtime subprocess/shell execution, no direct network/WebKit API, no dynamic plug-in loading, and no telemetry/licensing service. `scripts/security-audit.sh` makes these invariants executable CI gates.
 
-- App Sandbox entitlement enabled;
-- Hardened Runtime enabled;
-- no dangerous runtime exception entitlements.
+Future modules keep sensitive access behind narrow adapters and explicit permission state machines. See root `SECURITY.md`.
 
-At M0 there are zero external Swift runtime dependencies, no subprocess/shell execution, no direct network/WebKit API, no dynamic plug-in loading, and no telemetry/licensing service. `scripts/security-audit.sh` makes these current invariants executable CI gates.
-
-Future modules must keep sensitive access behind narrow adapters and explicit permission state machines. See root `SECURITY.md` for the authoritative security contract.
-
-## Feature modules
+## Feature-module boundaries
 
 Planned modules are isolated behind feature-specific services/adapters:
 
@@ -91,7 +81,7 @@ Planned modules are isolated behind feature-specific services/adapters:
 
 ### Shelf
 
-Use sandbox-compatible user-selected/security-scoped file access. The app stores references/bookmarks necessary for the shelf, not broad filesystem authority. Shelf removal is semantically distinct from deleting the source file.
+Use sandbox-compatible user-selected/security-scoped file access. Store only references/bookmarks needed for the Shelf; removing an item from Shelf is distinct from deleting its source file.
 
 ### Snippets
 
@@ -99,46 +89,60 @@ Store locally inside the sandbox container. Copy-to-clipboard is the safe baseli
 
 ### Calendar / Translator
 
-Prefer Apple public frameworks and explicit permission/availability states. A denied permission or unavailable model/language is a normal product state, not an exceptional crash path.
+Prefer public Apple frameworks and explicit permission/availability states. A denied permission or unavailable model/language is a normal product state, not a crash path.
 
 ### Yandex Music
 
-Yandex Music is the primary media target. The media module will depend on a provider protocol so UI/state never depends directly on a private mechanism.
+Yandex Music is the primary media target. The media UI depends on a provider protocol rather than a private mechanism directly.
 
 Provider preference order:
 
 1. sandbox-compatible/public supported integration;
 2. narrow app-specific integration that does not expand unrelated permissions;
-3. isolated MediaRemote/private-API fallback for the personal build only after explicit security and macOS 26.6 compatibility review.
+3. isolated MediaRemote/private-API fallback for the personal build only after explicit security, compatibility, and resource-cost review.
 
-A media fallback may not disable Hardened Runtime/library validation, execute external code, introduce general keyboard monitoring, or silently add network/telemetry behavior.
+A media fallback may not disable Hardened Runtime/library validation, execute external code, introduce general input monitoring, or silently add network/telemetry behavior.
 
 ## Product/UI references
 
-Public products such as NotchNook can inform interaction research (gesture ergonomics, multi-monitor/notchless presentation, module density) but are not implementation dependencies. NotchHub does not copy proprietary code/assets or pixel-match private UI. See `docs/PRODUCT_REFERENCES.md`.
+Public products such as NotchNook inform interaction research (gesture ergonomics, multi-monitor/notchless presentation, module density) but are not implementation dependencies. NotchHub does not copy proprietary code/assets or pixel-match private UI. See `docs/PRODUCT_REFERENCES.md`.
 
 ## Distribution architecture
 
-There are two deliberately different artifact classes:
+There are three deliberately distinct artifact classes.
 
-### PR/test artifact
+### CI test artifact
 
-- built automatically in CI;
-- App Sandbox + Hardened Runtime enabled;
+- automatic on PR/main CI;
+- App Sandbox + Hardened Runtime;
 - ad-hoc signed;
-- packaged as DMG and integrity-checked;
-- expected to trigger normal Gatekeeper trust limitations because it is not Developer ID/notarized;
-- used only for real-hardware development acceptance.
+- DMG integrity checked;
+- unversioned development artifact;
+- may trigger normal Gatekeeper trust warnings.
 
-### Stable GitHub Release
+### Personal Release — current default
 
-- built from accepted `main`/matching `VERSION`;
-- Developer ID Application signed with secure timestamp;
-- DMG signed;
-- submitted to Apple notarization using `notarytool`;
-- notarization ticket stapled/validated;
-- app Gatekeeper-assessed from the mounted DMG;
-- SHA-256 checksum generated;
-- published automatically to GitHub Releases only after all gates succeed.
+- manually dispatched from the exact protected `main` commit;
+- strict `VERSION`/versioned-notes policy;
+- repeats format, security, warnings-as-errors, full tests, packaging, signature, entitlement, system-library, and DMG checks;
+- explicitly verifies `Signature=adhoc` + Hardened Runtime + exact Sandbox entitlement;
+- generates SHA-256 and machine-readable build provenance;
+- publishes `NotchHub.dmg`, `NotchHub.dmg.sha256`, and `build-metadata.json` through an immutable `v<SemVer>` GitHub Release;
+- release title/notes explicitly say `Personal build` / not notarized;
+- cannot overwrite an existing tag/release;
+- requires no Apple credentials and never disables Gatekeeper.
 
-Release credentials exist only as GitHub `release` environment secrets and must never enter source, logs, issues, chat, or artifacts. See `docs/RELEASING.md`.
+### Trusted Release — optional future tier
+
+- manual future-only path behind GitHub `release` environment;
+- Developer ID Application signing;
+- Apple notarization + stapling;
+- Gatekeeper assessment;
+- checksum publication;
+- cannot overwrite a Personal Release or any existing version.
+
+The annual Apple Developer Program dependency is intentionally deferred while NotchHub remains personal-use software. See `docs/RELEASING.md`.
+
+## Release policy tooling
+
+`scripts/release_policy.py` is intentionally small and standard-library-only. Unit tests cover strict SemVer/tag rules, trust-label requirements, unsafe Gatekeeper-bypass text, immutable workflow boundaries, and provenance metadata validation. GitHub Actions orchestrates these tested policies rather than embedding all policy logic as untestable shell text.

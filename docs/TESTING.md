@@ -2,38 +2,54 @@
 
 ## Goal
 
-Automate every deterministic behavior that can be validated reliably in CI. Manual acceptance is reserved for behavior that depends on physical MacBook notch geometry, real pointer feel, exact macOS permission surfaces, third-party applications, Gatekeeper trust on a downloaded build, or final visual quality.
+Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer feel, exact macOS trust/permission surfaces, third-party app integration, and other behavior CI cannot honestly reproduce.
 
-A green pipeline is necessary but is not treated as proof of physical-device UX. Conversely, manual success does not replace deterministic automated coverage that can reasonably exist.
+A green pipeline is necessary but is not proof of real-device UX. Conversely, manual success never replaces deterministic automated coverage that can reasonably exist.
 
 ## Required CI gate
 
-The protected-branch check is `Build, test and package`. It depends on the separate `macOS 26 compatibility` job, so the protected check cannot become successful if the macOS 26 layer fails.
+Protected-branch check: `Build, test and package`, dependent on `macOS 26 compatibility`.
 
-The CI path validates:
+Current CI validates:
 
 1. Swift package structure.
-2. project-configured strict Swift formatting.
-3. shell and plist syntax.
-4. repository security baseline (`scripts/security-audit.sh`).
-5. macOS 26 compilation with warnings as errors.
-6. macOS 26 full Swift unit-test suite.
-7. packaging-runner compilation with warnings as errors.
-8. full Swift test suite with coverage instrumentation.
-9. release application/DMG packaging.
-10. semantic version/build-number stamping.
-11. ad-hoc code-signature verification.
-12. Hardened Runtime flag verification.
-13. effective App Sandbox entitlement verification.
-14. linked-library inspection (system libraries only at M0).
-15. DMG integrity with `hdiutil verify`.
-16. artifact upload.
+2. deterministic Personal/Trusted release-policy unit/static tests.
+3. project-configured strict Swift formatting.
+4. shell/plist syntax.
+5. executable repository security baseline (`scripts/security-audit.sh`).
+6. macOS 26 compilation with warnings as errors.
+7. macOS 26 complete Swift test suite.
+8. packaging-runner compilation with warnings as errors.
+9. complete Swift tests with coverage instrumentation.
+10. release app/DMG packaging.
+11. semantic version/build-number stamping.
+12. ad-hoc code-signature verification.
+13. Hardened Runtime verification.
+14. exact effective App Sandbox entitlement verification.
+15. linked-library inspection (system libraries only at the current milestone).
+16. DMG integrity with `hdiutil verify`.
+17. artifact upload.
 
-Do not lower assertions, delete useful tests, weaken security policy, or weaken production behavior merely to make CI green.
+Do not lower assertions, delete useful tests, weaken security/release policy, or weaken production behavior merely to make CI green.
+
+## Release-policy test boundary
+
+`scripts/test_release_policy.py` and `scripts/release_policy.py` cover deterministic distribution rules:
+
+- strict release SemVer/tag derivation;
+- versioned Personal Release notes exist and lead with the mandatory not-notarized warning;
+- unsafe Gatekeeper-bypass instructions are rejected;
+- provenance/build metadata has an exact schema and validated source/checksum/size inputs;
+- Personal Release requires manual `main` publication, ad-hoc signature verification, Sandbox/Hardened Runtime, checksum/provenance, and immutable `gh release create` semantics;
+- Personal Release rejects Apple signing/notary secrets, `environment: release`, `--clobber`, release uploads, or Gatekeeper-bypass commands;
+- Trusted Release remains a separate Developer ID/notarization tier;
+- ambiguous legacy `release.yml` is prohibited.
+
+The same Personal Release boundary is rechecked by `scripts/security-audit.sh` so a workflow cannot bypass unit tests simply by being omitted from the normal test command.
 
 ## Security test boundary
 
-At M0 the executable security baseline verifies, among other things:
+The executable security baseline verifies, among other things:
 
 - zero external Swift runtime dependencies;
 - no runtime subprocess/shell execution APIs;
@@ -45,75 +61,72 @@ At M0 the executable security baseline verifies, among other things:
 - no dangerous Hardened Runtime exception entitlements;
 - no LaunchAgents/LaunchDaemons/privileged-helper surfaces;
 - immutable full-SHA GitHub Action references;
-- no `pull_request_target` workflows.
+- no `pull_request_target` workflows;
+- explicit Personal/Trusted release-tier boundaries and immutable release assets.
 
-Future capabilities that legitimately require a currently forbidden surface must update security policy and tests explicitly in the same reviewed PR.
+Future capabilities that legitimately require a currently forbidden surface must update policy and tests explicitly in the same reviewed PR.
 
 ## Test design
 
-Prefer pure deterministic policies for geometry, parsing, permissions state, module state, transitions, and AppKit/SwiftUI boundary configuration. AppKit/SwiftUI wiring should be thin and delegate decisions to testable code.
+Prefer pure deterministic policies for geometry, parsing, permissions, state, transitions, release rules, and AppKit/SwiftUI boundary configuration. AppKit/SwiftUI/GitHub orchestration should be thin around tested policies.
 
 Tests should:
 
 - state one behavior in the name;
-- assert externally meaningful state/results;
-- avoid mocks unless an OS or third-party boundary cannot reasonably be exercised;
+- assert externally meaningful results;
+- avoid mocks unless an OS/third-party boundary cannot reasonably be exercised;
 - avoid arbitrary sleeps in unit tests;
-- include boundary cases for screen geometry and pointer regions;
-- reproduce a reported regression before its production fix is written;
-- test denied/absent/error states, not only happy paths;
-- verify that destructive-looking UI operations do not mutate/delete external data unless explicitly designed to do so;
-- prefer deterministic fakes/adapters around OS/third-party boundaries over network/media integration in unit tests.
+- include boundary/error/denied cases;
+- reproduce reported deterministic regressions before fixes where practical;
+- never fabricate a RED phase if a behavior is already correctly testable;
+- prefer deterministic fake adapters around external boundaries over live services;
+- never use noisy shared-runner timing values as tight performance gates.
 
-No arbitrary global coverage percentage is used at this stage. Coverage instrumentation is enabled so untested deterministic logic can be identified as the codebase grows; component-specific thresholds may be introduced after stable module boundaries exist.
+No arbitrary global code-coverage percentage is used. Coverage instrumentation is enabled to find untested deterministic logic; component-specific thresholds may be introduced only where they remain meaningful.
 
-## Real-hardware acceptance matrix
+## Real-hardware / distribution acceptance matrix
 
-Record results in `docs/PROJECT_STATE.md` using these stable IDs.
+Record results in `docs/PROJECT_STATE.md`.
 
 | ID | Scenario | Expected result | Automation |
 | --- | --- | --- | --- |
-| `NH-BOOT-001` | Install/open CI-produced DMG | App launches without crashing and panel appears | Packaging automated; launch UX manual |
-| `NH-OS26-001` | Run current accepted test build on target macOS 26.6 | App launches, sandboxed runtime remains functional, no unexpected permission prompt/error | macOS 26 CI build/test automated; exact 26.6 hardware/UI manual |
-| `NH-NOTCH-001` | Observe compact panel on a MacBook with hardware notch | Panel is centered and compact width matches the physical notch | Exact geometry unit-tested; physical alignment manual |
-| `NH-HOVER-001` | Move pointer into compact activation region and hold for at least 3 seconds | Exactly one expansion; no compact/expanded oscillation | Pointer policy unit-tested; actual AppKit event delivery manual |
-| `NH-HOVER-002` | Move pointer around inside the expanded panel | Panel remains expanded | Pointer retention unit-tested; event delivery manual |
-| `NH-HOVER-003` | Move pointer clearly outside expanded panel/retention margin | Content and actual `NSPanel` frame collapse once to compact geometry and stay compact | Pointer policy + hosting sizing ownership automated; physical animation/window behavior manual |
-| `NH-SANDBOX-001` | Run App Sandbox build and exercise normal panel use | No crash, unexpected permission prompt, or loss of required pointer behavior | Entitlement/signing automated; physical runtime manual |
-| `NH-GATEKEEPER-001` | Download a stable GitHub Release DMG and open normally | Gatekeeper accepts the Developer ID/notarized build without an unidentified-developer workaround | Release workflow signs/notarizes/staples/assesses; quarantine/download UX manual once per release-pipeline change |
-| `NH-SPACE-001` | Switch Spaces / fullscreen app | Panel behavior matches documented policy | Planned M1 |
-| `NH-DISPLAY-001` | Connect/move between displays | Panel migrates correctly and uses target display geometry | Planned M1 |
+| `NH-BOOT-001` | Install/open CI-produced DMG | App launches and panel appears | Packaging automated; launch UX manual |
+| `NH-OS26-001` | Run accepted test build on target macOS 26.6 | App launches, sandboxed runtime works, no unexpected permission prompt | macOS 26 CI automated; exact 26.6 hardware manual |
+| `NH-NOTCH-001` | Observe compact panel on hardware-notch MacBook | Center/width match physical notch | Geometry unit-tested; physical alignment manual |
+| `NH-HOVER-001` | Enter compact activation region and hold >=3 s | One expansion; no oscillation | Pointer policy unit-tested; AppKit delivery manual |
+| `NH-HOVER-002` | Move within expanded panel | Remains expanded | Retention unit-tested; AppKit delivery manual |
+| `NH-HOVER-003` | Move outside retention region | Content and actual panel frame collapse once and remain compact | Policy/sizing ownership automated; physical window behavior manual |
+| `NH-SANDBOX-001` | Exercise normal panel in Sandbox build | No crash/unexpected permission/loss of behavior | Entitlement/signing automated; runtime manual |
+| `NH-PERSONAL-RELEASE-001` | Download versioned Personal Release from GitHub | Published SHA-256 matches; installation uses only standard Finder / Privacy & Security approval; app opens on macOS 26.6; accepted notch/hover scenarios remain PASS | Release policy/checksum/provenance automated; downloaded quarantine/trust path + hardware behavior manual once for first personal pipeline/version |
+| `NH-GATEKEEPER-TRUSTED-001` | Future: download Trusted Release | Gatekeeper identifies `Notarized Developer ID` without personal-build approval workaround | Trusted workflow automated; normal downloaded path manual when tier is first adopted |
+| `NH-SPACE-001` | Switch Spaces/fullscreen | Behavior matches M1 policy | Planned M1 |
+| `NH-DISPLAY-001` | Connect/move between displays | Correct target-display geometry/migration | Planned M1 |
 
 ## Acceptance history
 
-### 2026-08-07 — cycle 1, bootstrap build
+### 2026-08-07 — cycle 1
 
-- `NH-BOOT-001`: PASS enough to run the application.
+- `NH-BOOT-001`: PASS enough to run application.
 - `NH-HOVER-001`: FAIL — compact/expanded oscillation.
-- RED: `eb4fb4d` produced the expected failing regression.
-- GREEN: `eff9bde` replaced raw SwiftUI `onHover` authority with deterministic screen-space pointer policy.
+- RED `eb4fb4d`: expected failing retention regression.
+- GREEN `eff9bde`: raw SwiftUI hover authority replaced by deterministic screen-space policy.
 
-### 2026-08-07 — cycle 2, sandbox/Hardened Runtime build
+### 2026-08-07 — cycle 2
 
-Target MacBook, macOS 26.6:
+Target MacBook/macOS 26.6:
 
 - `NH-OS26-001`: PASS.
-- `NH-NOTCH-001`: FAIL (minor) — compact panel a few pixels wider than hardware notch.
+- `NH-NOTCH-001`: FAIL — compact panel a few pixels too wide.
 - `NH-HOVER-001`: PASS.
 - `NH-HOVER-002`: PASS.
-- `NH-HOVER-003`: FAIL — compact content appeared while the black window shell remained expanded.
-- `NH-SANDBOX-001`: prior report was interpreted as PASS by matrix order; the source message duplicated the final label, and that ambiguity is retained in `PROJECT_STATE.md`.
+- `NH-HOVER-003`: FAIL — compact content while expanded black panel frame remained.
+- `NH-SANDBOX-001`: earlier report was inferred as PASS by matrix order because the source message repeated the last label; that ambiguity remains documented rather than rewritten.
 
-Automated proof:
+RED `c518326` produced exactly the two intended CI failures (`180` vs `176`; hosting sizing options `7` vs empty). GREEN `3bb1bbb` fixed both. CI then reached **10/10 PASS** plus full security/package gates.
 
-- RED `c518326`: added `hardwareNotchWidthIsNotInflatedByFallbackMinimum` and `hostingViewDoesNotOwnWindowSizing` before fixes.
-- macOS 26 CI failed exactly those two tests: `180` vs expected `176`, and hosting sizing options raw value `7` vs expected empty.
-- GREEN `3bb1bbb`: real-notch width uses the detected hardware width and `NSHostingView.sizingOptions = []`.
-- CI run #19: **10/10 tests PASS** plus full format/security/signing/Hardened Runtime/App Sandbox/system-library/DMG validation.
+### 2026-08-07 — cycle 3 / M0 final acceptance
 
-### 2026-08-07 — cycle 3, corrected build / M0 final acceptance
-
-Target MacBook, macOS 26.6:
+Target MacBook/macOS 26.6:
 
 - `NH-NOTCH-001`: **PASS**.
 - `NH-HOVER-001`: **PASS**.
@@ -122,8 +135,15 @@ Target MacBook, macOS 26.6:
 
 **M0 mandatory physical acceptance: PASS.**
 
-This closes both cycle-2 defects without removing or weakening their regression tests.
+## Personal Release TDD evidence
 
-## Release validation
+PR #3 records release-policy RED/GREEN evidence independently from app runtime:
 
-PR artifacts are ad-hoc test builds. Stable releases additionally require the gates in `docs/RELEASING.md`: Developer ID signing, Hardened Runtime/App Sandbox verification, Apple notarization, stapling, Gatekeeper assessment, and SHA-256 checksum publication.
+- initial release policy tests failed because `release_policy.py` was absent;
+- first implementation exposed and fixed a false-positive Gatekeeper rule (`Do not disable Gatekeeper` must be allowed while actual bypass instructions are forbidden);
+- versioned release-note integration test failed until `docs/releases/v0.1.0.md` existed;
+- Personal Release workflow contract failed until `.github/workflows/personal-release.yml` existed;
+- tier-separation test failed until `trusted-release.yml` existed and legacy `release.yml` was removed;
+- trust-boundary tests failed until the executable workflow validator existed.
+
+Final Personal Release publication and `NH-PERSONAL-RELEASE-001` remain pending until PR #3 is merged into protected `main`.

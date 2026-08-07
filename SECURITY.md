@@ -1,82 +1,99 @@
 # Security Policy
 
-NotchHub is a personal native macOS utility that runs continuously near the system UI. Security and privacy are product requirements, not release-afterthoughts.
+NotchHub is a personal native macOS utility that may run continuously near system UI. Security, privacy, correctness, and resource efficiency are product requirements rather than release-afterthoughts.
 
-## System and scope
+## Protected assets and trust boundaries
 
-Covered runtime surfaces:
+Protected assets include the user's Mac, local files, clipboard/snippet content, calendar data, media metadata, credentials stored elsewhere on the machine, and release integrity.
 
-- the NotchHub application bundle and Swift sources;
-- AppKit/SwiftUI panel and pointer interaction;
-- local application storage;
-- future Shelf file references, snippets/clipboard, EventKit calendar, Translation, and Yandex Music/media integration;
-- build, signing, notarization, and GitHub Release workflows.
+Treat as untrusted or potentially attacker-controlled: dropped file URLs/metadata, clipboard text, calendar strings, third-party media metadata/artwork, future network responses, GitHub pull-request content, and dependency/update proposals.
 
-The primary protected assets are the user's Mac, local files, clipboard/snippet content, calendar data, media metadata, credentials stored elsewhere on the machine, and the integrity of released binaries.
+Important trust boundaries are App Sandbox/entitlements, macOS permissions, other applications such as Yandex Music, user-selected files, GitHub Actions, and—only for the optional trusted distribution tier—Apple signing/notarization credentials.
 
-## Threat model and trust boundaries
+## Runtime security invariants
 
-Treat the following as untrusted or potentially attacker-controlled:
+These properties hold unless an explicit reviewed security decision changes them:
 
-- file URLs and metadata dropped into Shelf;
-- clipboard contents and pasted text;
-- calendar/event strings;
-- media metadata/artwork supplied by third-party applications;
-- filenames and document contents selected by the user;
-- future external/network responses if a module ever needs network access;
-- GitHub pull-request content and dependency/update proposals;
-- build inputs other than immutable trusted toolchain components.
-
-Important trust boundaries include macOS permissions/entitlements, App Sandbox, the process boundary of other applications such as Yandex Music, files explicitly selected by the user, GitHub Actions, Apple Developer signing credentials, and Apple notarization.
-
-## Security invariants
-
-These properties must hold unless an explicit reviewed security decision changes them:
-
-1. **Local-first and no telemetry.** The baseline application makes no direct network requests, contains no analytics/telemetry SDK, licensing client, advertising code, or remote-control channel.
-2. **Sandbox by default.** Stable builds use App Sandbox. New entitlements must be the minimum required for a concrete feature and documented in the same PR.
+1. **Local-first and no telemetry.** No analytics, telemetry, advertising, licensing backend, remote-control channel, or direct network requests in the baseline app.
+2. **Sandbox by default.** App Sandbox remains enabled. New entitlements require a concrete feature, least-privilege justification, tests, and documentation in the same PR.
 3. **Hardened Runtime without dangerous exceptions.** Do not enable JIT, unsigned executable memory, DYLD environment variables, disabled library validation, or `get-task-allow` in distributed builds.
-4. **No subprocess or shell execution.** Runtime code must not invoke `Process`, `NSTask`, shells, package managers, scripts, or arbitrary executables without an explicit architecture/security review.
-5. **No dynamic code loading or plug-in execution.** Runtime code must not use `dlopen`, `dlsym`, downloaded executable content, unsigned plug-ins, or self-modifying/JIT code.
-6. **No global keyboard/button/scroll monitoring.** The M0 pointer interaction observes only the `mouseMoved` event class needed to determine notch hover state. Keystrokes, modifier keys, button events, drag events, and scrolling must not be globally captured unless a later feature explicitly changes this reviewed policy.
-7. **Minimize observed input.** Pointer monitors must not persist event contents, coordinates, histories, or behavioral telemetry. The current implementation reads only current pointer location to resolve UI state.
-8. **User-selected file access only.** Shelf should use App Sandbox user-selected access/security-scoped mechanisms rather than broad filesystem entitlements. Removing an item from Shelf must never delete the source file unless a future explicit delete feature is separately designed and confirmed.
-9. **No bundled secrets.** API keys, Developer ID certificates, App Store Connect keys, passwords, tokens, or private keys must never be committed or embedded in the app. Release credentials live only in GitHub encrypted secrets/environment secrets.
-10. **Immutable CI dependencies.** GitHub Actions used by workflows are pinned to full commit SHAs. `pull_request_target` is prohibited.
-11. **Third-party runtime dependencies require review.** M0 intentionally has zero external Swift package dependencies. Adding one requires a security/supply-chain review, documented rationale, license check, and explicit baseline update.
-12. **Signed and notarized stable releases.** User-facing GitHub Releases must be Developer ID signed, Hardened Runtime enabled, notarized by Apple, stapled, and accompanied by a SHA-256 checksum. Ad-hoc signed PR artifacts are test builds only and must not be presented as trusted stable releases.
-13. **No silent privilege escalation.** Accessibility, Screen Recording, Automation/Apple Events, camera, microphone, Full Disk Access, Input Monitoring, or other sensitive permissions may be requested only for a feature that cannot reasonably work without them, after documenting why and providing a degraded mode where possible.
-14. **Private APIs are isolated and optional.** If Yandex Music support ultimately needs MediaRemote/private APIs, that code must be isolated behind a provider boundary, must not disable Hardened Runtime/library validation, must not execute external code, and must have a documented fallback/failure mode.
-15. **Updates must be authenticated.** Do not implement self-update until the update channel verifies cryptographic provenance/signatures. Until then, GitHub Releases are the distribution source.
+4. **No runtime shell/subprocess execution.** Runtime sources do not invoke `Process`, `NSTask`, shells, package managers, scripts, or arbitrary executables without a dedicated architecture/security review.
+5. **No dynamic code loading.** No `dlopen`, `dlsym`, downloaded executable content, unsigned plug-ins, JIT, or self-modifying code.
+6. **No broad global input capture.** The current M0 implementation observes only global `mouseMoved` to resolve notch hover. Keyboard, modifier, button, drag, and scroll event classes remain prohibited unless a later reviewed feature changes the policy.
+7. **Minimize observed input.** Pointer events/coordinates/history are not persisted or used as telemetry.
+8. **User-selected file access only.** Future Shelf work uses sandbox-compatible user-selected/security-scoped access rather than broad filesystem authority. Removing from Shelf must not delete the source file.
+9. **No bundled secrets.** API keys, passwords, certificates, private keys, tokens, and signing material never enter the repository/app bundle.
+10. **Immutable CI dependencies.** External GitHub Actions are pinned to full 40-character commit SHAs. `pull_request_target` is prohibited.
+11. **Third-party runtime dependencies require review.** M0 has zero external Swift runtime dependencies. Adding one requires security/supply-chain/license review and an explicit baseline change.
+12. **No silent privilege escalation.** Accessibility, Screen Recording, Automation/Apple Events, camera, microphone, Full Disk Access, Input Monitoring, or similarly sensitive permissions require a feature-specific security decision and degraded mode where feasible.
+13. **Private APIs are isolated and optional.** A future Yandex Music MediaRemote fallback must stay behind a provider boundary and may not disable Sandbox/Hardened Runtime/library validation or add general input capture.
+14. **Updates require authenticated provenance.** No self-updater/background updater exists. GitHub Releases are the deliberate manual update source until an authenticated updater is separately designed.
 
-## Reportable findings and severity context
+## Distribution trust tiers
 
-Treat as security findings, among others:
+### CI test artifact
 
-- arbitrary command/code execution;
-- unsafe deserialization/parsing that reaches privileged operations;
-- broad or undocumented file access;
-- credential/token leakage;
-- hidden telemetry/network calls;
-- keystroke collection;
-- sandbox or Hardened Runtime bypass/disablement;
-- untrusted dylib/plugin loading;
-- release-workflow compromise or mutable action references;
-- signing/notarization bypasses that allow an untrusted artifact to be published as stable;
-- insecure temporary-file handling with meaningful local impact;
-- permission requests materially broader than the feature needs.
+PR/main CI produces an ad-hoc signed DMG with App Sandbox and Hardened Runtime enabled. It is a development artifact, may trigger normal Gatekeeper trust warnings, and is not a versioned release.
 
-Severity is based on realistic reachability and impact to the user's Mac/data. A local utility with persistent presence near system UI has a high bar for code execution, input capture, persistence, and release-chain issues.
+### Personal Release — current supported tier
 
-## Known limitations and accepted risk
+The current personal-use distribution is a versioned GitHub Release produced by `.github/workflows/personal-release.yml` from the exact protected `main` commit.
 
-- M0 test artifacts are ad-hoc signed and therefore do not receive normal Gatekeeper trust. They are explicitly non-release artifacts.
-- The app currently uses a global `NSEvent` monitor for the `mouseMoved` event class only. Apple documents global event monitors as observational; key-related monitoring has additional Accessibility requirements. Keyboard, mouse-button, drag, and scroll event classes are prohibited by repository policy and CI baseline at M0. This movement-only monitor remains subject to real-device privacy/behavior validation.
-- Yandex Music integration is not implemented. No private MediaRemote dependency is currently present.
-- CodeQL and GitHub Dependency Review availability depends on GitHub repository/product entitlement. For this private user-owned repository, repository-local security gates must not assume those paid/public-repository features are available.
+Mandatory properties:
 
-## Security validation
+- ad-hoc application signature;
+- App Sandbox enabled with the reviewed entitlement set;
+- Hardened Runtime enabled;
+- complete correctness/security CI baseline;
+- system-library-only linkage at the current milestone;
+- DMG integrity check;
+- SHA-256 checksum;
+- machine-readable provenance/build metadata;
+- explicit `Personal build — not notarized` release labeling;
+- immutable tag/release: existing versions/assets are never overwritten;
+- manual `workflow_dispatch` only.
 
-Every PR runs `scripts/security-audit.sh` plus compile/test/package checks. Stable releases additionally verify Developer ID signing, Hardened Runtime, App Sandbox entitlements, Apple notarization/stapling, Gatekeeper assessment, and DMG checksum generation.
+Accepted limitation: this tier does **not** provide an Apple-verified developer identity or Apple notarization. macOS may require Finder **Open** or **System Settings → Privacy & Security → Open Anyway** on first launch. The project must never recommend globally disabling Gatekeeper, stripping quarantine recursively, or installing a custom trusted root merely to suppress that warning.
 
-Security checks are defense-in-depth; they do not prove absence of vulnerabilities. Material new capability or permission changes require a focused manual security review in addition to tests.
+Personal Release contains no Apple Developer secrets and must not reference `notarytool`, Developer ID, or the GitHub `release` environment.
+
+### Trusted Release — optional future tier
+
+`.github/workflows/trusted-release.yml` retains the stronger future path for public/low-friction distribution if Apple Developer Program membership later becomes worthwhile:
+
+- Developer ID Application signing;
+- Hardened Runtime + App Sandbox verification;
+- Apple notarization;
+- stapling;
+- Gatekeeper assessment;
+- checksum publication.
+
+Trusted Release is a separate tier and may not overwrite an already published Personal Release version/tag. A new trusted artifact therefore requires a new version if that version was already released personally.
+
+## Release supply-chain invariants
+
+`scripts/release_policy.py`, its unit tests, and `scripts/security-audit.sh` enforce release boundaries. In particular:
+
+- Personal Release contains no custom GitHub secrets/Apple credentials;
+- neither release workflow may use `--clobber`;
+- the ambiguous legacy `.github/workflows/release.yml` must not exist;
+- versioned personal release notes must lead with the trust warning and must not include Gatekeeper-bypass instructions;
+- release workflows must remain full-SHA pinned for external actions;
+- published tags/releases are immutable.
+
+## Reportable security findings
+
+Treat as security findings, among others: arbitrary command/code execution; broad/undocumented file access; credential leakage; hidden network/telemetry; keystroke collection; Sandbox/Hardened Runtime weakening; untrusted dylib/plugin loading; release-workflow compromise; mutable action references; false claims of Apple trust; insecure temporary-file handling with realistic impact; or permissions materially broader than a feature requires.
+
+Security checks are defense-in-depth and do not prove absence of vulnerabilities. Material new capability, permission, dependency, private-API use, or release-chain change requires focused review in addition to tests.
+
+## Known accepted risks
+
+- Personal/CI artifacts are ad-hoc signed and therefore lack Apple Developer identity/notarization trust.
+- The current global `NSEvent` monitor observes only `mouseMoved`. Performance Foundation/M1 will measure its cost and investigate reliable window-local tracking without expanding permissions.
+- Yandex Music integration is not yet implemented; no MediaRemote/private dependency exists.
+- Some GitHub advanced security products may be unavailable for this private personal repository; repository-local gates therefore cannot depend on paid GitHub security features.
+
+## Validation
+
+Every PR runs deterministic release-policy tests, `scripts/security-audit.sh`, compile/test/package checks, entitlement/signature verification, and macOS 26 compatibility. Personal Release repeats the complete baseline before publication and adds checksum/provenance validation. Trusted Release, when eventually used, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.

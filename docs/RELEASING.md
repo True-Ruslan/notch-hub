@@ -1,66 +1,111 @@
 # Releasing NotchHub
 
-Stable releases are distributed through GitHub Releases. Chat attachments and raw CI artifacts are for development/testing only.
+Versioned builds are distributed through GitHub Releases. Chat attachments and raw CI artifacts are development/testing only.
 
-## Release trust model
+NotchHub currently supports a **Personal Release** tier for private use without paid Apple Developer membership. A separate **Trusted Release** tier remains available for the future if Developer ID/notarization becomes worthwhile.
 
-A stable release must pass all of the following:
+## 1. Personal Release — current default
 
-1. protected-branch CI, including macOS 26 compatibility;
-2. required real-hardware acceptance recorded in `docs/PROJECT_STATE.md`;
-3. Developer ID Application signing;
-4. Hardened Runtime with no dangerous exception entitlements;
-5. App Sandbox with the reviewed minimal entitlement set;
-6. Apple notarization via `notarytool`;
-7. notarization ticket stapled to the DMG and validated;
-8. Gatekeeper assessment of the app from the mounted DMG;
-9. SHA-256 checksum published beside the DMG.
+Workflow: **Actions → Personal Release → Run workflow**, branch `main`.
 
-Apple Developer Program membership is required to obtain a Developer ID certificate. Apple notarization requires Developer ID signing and Hardened Runtime.
+Personal Release intentionally uses an ad-hoc application signature. It is **not** Developer ID signed and **not** Apple-notarized. App Sandbox and Hardened Runtime remain enabled and verified.
 
-## One-time Apple setup
+Before publication the workflow requires:
 
-Do not send certificates, private keys, passwords, or App Store Connect keys through chat, issues, commits, or pull requests.
+1. selected ref is exactly current protected `main`;
+2. strict `VERSION`/SemVer and versioned release-notes policy;
+3. target tag/release does not already exist;
+4. Swift package/format/security policy checks;
+5. warnings-as-errors build;
+6. complete Swift tests with coverage instrumentation;
+7. ad-hoc release app + DMG build;
+8. bundle identifier/version/build checks;
+9. strict code-signature verification and explicit `Signature=adhoc` check;
+10. Hardened Runtime verification;
+11. exact effective App Sandbox entitlement verification;
+12. system-library-only linkage at the current milestone;
+13. `hdiutil verify` on the DMG;
+14. SHA-256 generation;
+15. machine-readable provenance/build metadata;
+16. a second tag/release absence check immediately before publication.
 
-1. Join the Apple Developer Program if the account is not already enrolled.
-2. Create a **Developer ID Application** certificate in the Apple Developer account/Xcode.
-3. Export the certificate plus its private key from Keychain Access as a password-protected `.p12`.
-4. Create an App Store Connect API key that can use the Apple notarization service and download the `.p8` key once.
+Published assets:
 
-## GitHub release environment
+- `NotchHub.dmg`
+- `NotchHub.dmg.sha256`
+- `build-metadata.json`
 
-Create an environment named `release` in repository settings. Store these as **environment secrets**:
+The title is `NotchHub v<version> — Personal build`, and the first release-note section must be `Personal build — not notarized`.
 
-- `APPLE_DEVELOPER_ID_P12_BASE64` — base64 text of the exported `.p12` file;
-- `APPLE_DEVELOPER_ID_P12_PASSWORD` — password used when exporting the `.p12`;
-- `APPLE_NOTARY_KEY_P8` — complete contents of the App Store Connect `.p8` private key;
-- `APPLE_NOTARY_KEY_ID` — App Store Connect key ID;
-- `APPLE_NOTARY_ISSUER_ID` — App Store Connect issuer ID.
+### Immutability
 
-On macOS, create the base64 value locally without uploading the certificate anywhere else:
+A published tag/version is immutable. The workflow never uses `gh release upload --clobber`. If a build is wrong, fix it in a PR, increment `VERSION`, prepare new versioned release notes, and publish a new version.
+
+The workflow is manual-only (`workflow_dispatch`). A push/tag does not automatically publish a Personal Release.
+
+## Safe first launch of a Personal Release
+
+The absence of Developer ID/notarization means macOS may block or warn on the first launch of a downloaded copy. This is expected and is not treated as a product/security failure for the personal tier.
+
+Safe flow:
+
+1. Download `NotchHub.dmg` and `NotchHub.dmg.sha256` from the GitHub Release.
+2. Optionally verify the checksum in Terminal:
 
 ```bash
-base64 -i DeveloperID.p12 | pbcopy
+shasum -a 256 NotchHub.dmg
+cat NotchHub.dmg.sha256
 ```
 
-Paste the result directly into the GitHub environment secret.
+The hashes must match exactly.
 
-For additional release-chain protection, configure the `release` environment to require manual approval before a job can access its secrets if the GitHub plan/settings offer that control.
+3. Open the DMG and move `NotchHub.app` to Applications.
+4. In Finder, use **Open** on `NotchHub.app`.
+5. If macOS still blocks it, open **System Settings → Privacy & Security → Open Anyway**, then confirm the standard macOS prompt.
 
-## Publishing
+Do **not** disable Gatekeeper, run `spctl --master-disable`, recursively remove quarantine attributes, or install a custom trusted root merely to suppress this warning.
 
-After the accepted release commit is on `main` and `VERSION`/`CHANGELOG.md` are correct:
+## Personal Release acceptance
 
-1. Open **Actions → Release → Run workflow**.
-2. Run it against `main`.
-3. The workflow derives the tag from `VERSION`, signs the app and DMG, notarizes/staples it, verifies Gatekeeper, creates a SHA-256 checksum, creates the `v<version>` tag if needed, and publishes the GitHub Release.
+Use `NH-PERSONAL-RELEASE-001` from `docs/TESTING.md`. It verifies the normally downloaded GitHub Release, checksum, standard macOS approval path, and accepted notch/hover behavior on the target MacBook/macOS 26.6.
 
-A tag push matching `v*` also invokes the same workflow, but manual dispatch is the preferred personal-project flow because all signing/notarization gates are visible in one place.
+A failed post-download acceptance does not permit replacing the existing release artifact. Fix and increment the version.
 
-## Failed release
+## 2. Trusted Release — optional future tier
 
-A failed signing, notarization, stapling, Gatekeeper, checksum, or security check must fail closed: do not publish or manually upload the rejected artifact as a stable release. Fix the root cause in a PR and run the release workflow again from the corrected `main` commit.
+Workflow: **Actions → Trusted Release → Run workflow**.
 
-## Test builds
+Do not configure or run this workflow until Apple Developer Program membership is intentionally adopted. It remains isolated from Personal Release.
 
-PR CI continues to produce an ad-hoc signed `NotchHub.dmg`. It enables Hardened Runtime and App Sandbox so security-sensitive packaging stays exercised, but it is **not** Developer ID signed/notarized and therefore may trigger Gatekeeper warnings. This distinction is intentional.
+Trusted Release additionally requires:
+
+- Developer ID Application certificate/private key;
+- Apple notarization credentials;
+- GitHub environment `release`;
+- Developer ID app + DMG signing;
+- Hardened Runtime and Sandbox verification;
+- `notarytool` acceptance;
+- stapling/validation;
+- Gatekeeper assessment showing `source=Notarized Developer ID`.
+
+It also refuses to publish if the same tag/release already exists. Therefore a Personal Release version can never later be silently replaced by a trusted artifact; a new trusted build needs a new version.
+
+### Future Apple setup
+
+If this tier becomes useful, never send certificates/private keys/passwords through chat, issues, commits, or PRs. Store only in the GitHub `release` environment:
+
+- `APPLE_DEVELOPER_ID_P12_BASE64`
+- `APPLE_DEVELOPER_ID_P12_PASSWORD`
+- `APPLE_NOTARY_KEY_P8`
+- `APPLE_NOTARY_KEY_ID`
+- `APPLE_NOTARY_ISSUER_ID`
+
+The annual Apple Developer Program dependency is intentionally deferred for the current personal-use project.
+
+## CI test artifacts
+
+Normal PR/main CI still produces `NotchHub-dmg`. It is ad-hoc signed with Sandbox/Hardened Runtime and exists only for development/hardware acceptance. It is not a versioned GitHub Release and has no release immutability/provenance claim beyond the Actions run that produced it.
+
+## Failed release workflow
+
+Any failed policy, test, security, packaging, signature, entitlement, provenance, checksum, notarization (trusted tier), or publication precondition must fail closed. Fix the root cause in a PR. Never bypass a failed gate with a manually uploaded replacement artifact under the same version.
