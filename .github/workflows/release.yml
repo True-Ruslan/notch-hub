@@ -101,7 +101,17 @@ jobs:
           codesign --display --entitlements - --xml "$APP" | tee build/effective-entitlements.plist
           plutil -lint build/effective-entitlements.plist
           plutil -p build/effective-entitlements.plist
-          test "$(plutil -extract com.apple.security.app-sandbox raw build/effective-entitlements.plist)" = "true"
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          with Path('build/effective-entitlements.plist').open('rb') as handle:
+              entitlements = plistlib.load(handle)
+
+          expected = {'com.apple.security.app-sandbox': True}
+          if entitlements != expected:
+              raise SystemExit(f'Unexpected effective entitlements: {entitlements!r}')
+          PY
 
       - name: Notarize and staple DMG
         env:
