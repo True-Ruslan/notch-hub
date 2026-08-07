@@ -8,14 +8,14 @@ NotchHub turns the area around the camera housing into a compact panel for every
 
 Current development version: **0.1.0 (unreleased)**.
 
-M0 engineering foundation is in progress. The app already has the native panel shell, deterministic notch geometry, stable screen-space pointer policy, automated tests, macOS 26 compatibility CI, App Sandbox/Hardened Runtime packaging, executable security gates, and DMG generation. Real-hardware hover acceptance for the latest fix is still pending on the primary target, **macOS 26.6**; read project state before merging or releasing.
+**M0 engineering foundation is accepted on real hardware (target MacBook, macOS 26.6).** The native panel shell, exact hardware-notch geometry, stable screen-space pointer policy, App Sandbox/Hardened Runtime baseline, automated tests, CI, and installable DMG packaging are in place. Trusted `v0.1.0` publication is intentionally pending Apple Developer signing/notarization credentials.
 
 Source-of-truth documents:
 
 - [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md) — exact current state and next step
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — milestones and exit criteria
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architectural boundaries
-- [`docs/TESTING.md`](docs/TESTING.md) — automated gates and manual acceptance IDs
+- [`docs/TESTING.md`](docs/TESTING.md) — automated gates and manual acceptance IDs/history
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — TDD, commits, versioning, documentation policy
 - [`SECURITY.md`](SECURITY.md) — threat model, security invariants, and security-review contract
 - [`docs/RELEASING.md`](docs/RELEASING.md) — Developer ID/notarized GitHub Release setup
@@ -72,7 +72,7 @@ CI enforces this baseline. Future capabilities that require broader permissions 
 
 ## Architecture
 
-The app is written in Swift 6 using SwiftUI for UI and AppKit for panel/window integration. Hardware-notch measurements and pointer-region decisions are isolated in deterministic policies so they can be unit-tested instead of being buried in view callbacks.
+The app is written in Swift 6 using SwiftUI for UI and AppKit for panel/window integration. Hardware-notch measurements, pointer-region decisions, and AppKit/SwiftUI sizing ownership are isolated so deterministic behavior can be regression-tested instead of being buried in view callbacks.
 
 The media layer will be provider-based. Yandex Music is the primary compatibility target. A private MediaRemote fallback is allowed only after a focused security/compatibility review and may not weaken Hardened Runtime/library validation.
 
