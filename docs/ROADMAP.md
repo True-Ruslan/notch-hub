@@ -2,9 +2,11 @@
 
 ## M0 — Engineering foundation
 
-Status: in progress
+Status: **ACCEPTED**
 Target release: `v0.1.0`
 Primary real-hardware target: macOS `26.6`
+
+Completed:
 
 - Swift 6 package structure
 - native macOS app bootstrap
@@ -12,7 +14,7 @@ Primary real-hardware target: macOS `26.6`
 - compact/expanded panel state
 - stable pointer activation/retention policy
 - automated unit/regression tests
-- TDD and commit/documentation policy
+- RED → GREEN TDD and commit/documentation policy
 - strict formatting + warnings-as-errors gates
 - macOS 26 compatibility CI
 - executable security baseline and root `SECURITY.md`
@@ -25,19 +27,21 @@ Primary real-hardware target: macOS `26.6`
 - Semantic Versioning and `CHANGELOG.md`
 - Developer ID + Apple notarization GitHub Release workflow
 - project architecture/state/testing/releasing/product-reference documentation
+- real-hardware macOS 26.6 acceptance of exact notch width and hover/collapse behavior
 
-Exit criteria:
+M0 exit criteria achieved:
 
-- protected required check `Build, test and package` is green and therefore its required macOS 26 compatibility dependency is green;
+- protected required CI gate and macOS 26 dependency are green;
 - CI produces and verifies an installable sandboxed/Hardened Runtime DMG;
-- `NH-OS26-001`, `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, `NH-HOVER-003`, and `NH-SANDBOX-001` pass on the target MacBook/macOS 26.6;
-- any acceptance regression has RED-first automated coverage wherever deterministic;
-- `PROJECT_STATE`, `TESTING`, `SECURITY`, and `CHANGELOG` match the accepted build;
-- Apple Developer release credentials are configured directly in the GitHub `release` environment;
-- only then merge the bootstrap PR and publish signed/notarized `v0.1.0` through GitHub Releases;
-- `NH-GATEKEEPER-001` validates the first stable release downloaded through the normal user path.
+- mandatory physical scenarios `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, and `NH-HOVER-003` pass on the target MacBook/macOS 26.6;
+- reported deterministic regressions have RED-first automated coverage;
+- `PROJECT_STATE`, `TESTING`, `SECURITY`, `ROADMAP`, and `CHANGELOG` describe the accepted build.
+
+Release trust is deliberately a separate gate from M0 code acceptance. `v0.1.0` must not be published as a trusted stable release until Apple Developer credentials are configured directly in the GitHub `release` environment and the prepared workflow passes Developer ID signing, notarization, stapling, Gatekeeper assessment, and checksum publication. `NH-GATEKEEPER-001` then validates the normal downloaded release path.
 
 ## M1 — Notch Core
+
+Status: next
 
 - tuned expansion/collapse animation and interaction feel
 - click/pin interaction policy
@@ -47,7 +51,7 @@ Exit criteria:
 - screen-configuration change handling
 - notchless-screen handler mode decision/prototype
 - reduced-motion behavior
-- expand the real-hardware acceptance matrix for display/Space/gesture scenarios
+- expand real-hardware acceptance for display/Space/gesture scenarios
 - automate AppKit interaction seams further where stable event injection/testing is trustworthy
 
 ## M2 — Shelf
@@ -109,6 +113,6 @@ Exit criteria:
 
 - validate Developer ID/notarization pipeline on recurring releases
 - reproducible release metadata and checksums
-- authenticated update-channel design decision (do not add self-update before signature/provenance verification exists)
+- authenticated update-channel design decision (no self-update before signature/provenance verification exists)
 - periodic dependency/action/toolchain security review
 - focused security review before expanding runtime permissions or network surface
