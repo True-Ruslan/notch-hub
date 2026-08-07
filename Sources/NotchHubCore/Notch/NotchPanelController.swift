@@ -6,19 +6,26 @@ import SwiftUI
 public final class NotchPanelController: NSObject {
     private let panel: NSPanel
     private let model: NotchPanelModel
+    private let interactionCoordinator: NotchInteractionCoordinator
+    private let pointerMonitor: NotchPointerMonitor
     private var layout: NotchLayout
     private var cancellables = Set<AnyCancellable>()
-    private var localPointerMonitor: Any?
-    private var globalPointerMonitor: Any?
 
     public override init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let geometry = ScreenGeometryInput(screen: screen)
         let resolvedLayout = NotchGeometry.layout(for: geometry)
         let model = NotchPanelModel()
+        let interactionCoordinator = NotchInteractionCoordinator(
+            model: model,
+            scheduler: MainQueueNotchActivationScheduler(),
+            haptics: AppKitNotchHapticPerformer()
+        )
 
         self.layout = resolvedLayout
         self.model = model
+        self.interactionCoordinator = interactionCoordinator
+        self.pointerMonitor = NotchPointerMonitor()
         self.panel = NSPanel(
             contentRect: resolvedLayout.compactFrame,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -34,7 +41,13 @@ public final class NotchPanelController: NSObject {
 
     public func show() {
         panel.orderFrontRegardless()
-        updatePresentation(for: NSEvent.mouseLocation)
+        updateInteraction(for: NSEvent.mouseLocation)
+    }
+
+    func invalidate() {
+        pointerMonitor.invalidate()
+        interactionCoordinator.invalidate()
+        cancellables.removeAll()
     }
 
     private func configurePanel() {
@@ -61,31 +74,13 @@ public final class NotchPanelController: NSObject {
     }
 
     private func configurePointerMonitoring() {
-        let mask: NSEvent.EventTypeMask = .mouseMoved
-
-        localPointerMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
-            let pointer = NSEvent.mouseLocation
-            Task { @MainActor [weak self] in
-                self?.updatePresentation(for: pointer)
-            }
-            return event
-        }
-
-        globalPointerMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] _ in
-            let pointer = NSEvent.mouseLocation
-            Task { @MainActor [weak self] in
-                self?.updatePresentation(for: pointer)
-            }
+        pointerMonitor.start { [weak self] pointer in
+            self?.updateInteraction(for: pointer)
         }
     }
 
-    private func updatePresentation(for pointer: CGPoint) {
-        let target = NotchPointerPolicy.presentation(
-            current: model.presentation,
-            pointer: pointer,
-            layout: layout
-        )
-        model.setHovered(target == .expanded)
+    private func updateInteraction(for pointer: CGPoint) {
+        interactionCoordinator.pointerMoved(to: pointer, layout: layout)
     }
 
     private func apply(_ presentation: NotchPresentation) {
