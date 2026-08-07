@@ -32,11 +32,11 @@ CI may fail on reproducible invariants, including:
 - deterministic policy or parser regressions;
 - lifecycle/state behavior that can be proven without wall-clock timing;
 - development performance tooling being copied or referenced into the shipped app bundle;
-- artifact-size regressions after a stable baseline and budget exist.
+- artifact-size regressions against the canonical baseline.
 
 Shared GitHub runners must **not** enforce tight CPU, RSS, thread, wakeup, or energy thresholds. Their load and hardware are too variable for honest release gates.
 
-`scripts/performance_policy.py` and `scripts/test_performance_policy.py` provide the deterministic scanner, process-sample parser/aggregation, and budget-comparison helpers. `scripts/perf-baseline.py` is development/release tooling only and is never bundled into NotchHub.
+`scripts/performance_policy.py` and `scripts/test_performance_policy.py` provide the deterministic scanner, process-sample parser/aggregation, runtime budget comparison, and fail-closed release-size budget checker. `scripts/perf-baseline.py` is development/release tooling only and is never bundled into NotchHub.
 
 ## Target-Mac measurement harness
 
@@ -50,7 +50,7 @@ Its JSON output also records scenario configuration, macOS version, a generic ha
 
 It deliberately does **not** record usernames, home paths, file names/content, clipboard/snippet content, window titles, pointer coordinates/history, calendar/media data, serial numbers, or telemetry identifiers.
 
-Raw local measurement outputs under `build/` are development artifacts and are not committed. Only reviewed aggregate baseline values may enter `performance/`.
+Raw local measurement outputs under `build/` are development artifacts and are not committed. Only reviewed aggregate baseline values enter `performance/`.
 
 ## Stable performance scenarios
 
@@ -90,9 +90,11 @@ Record exact bytes for:
 
 Run exactly 100,000 deterministic pointer/presentation policy decisions in Swift test code. Assert behavior/state invariants only; do not use elapsed wall-clock time as a CI threshold.
 
-## Accepted v0.1.0 runtime baseline — 2026-08-07
+## Accepted v0.1.0 baseline — 2026-08-07
 
-The first canonical runtime measurements were collected by attaching the P0 harness at tooling commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0` to the already accepted Personal Release `v0.1.0` source commit `8e913dcddfdec7d9aa920df8c37afb23b8c40884` on macOS 26.6, model family `Mac16,8`.
+Canonical baseline: `performance/baseline-v0.1.0.json`.
+
+The runtime measurements were collected by attaching the P0 harness at tooling commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0` to the already accepted Personal Release `v0.1.0` source commit `8e913dcddfdec7d9aa920df8c37afb23b8c40884` on macOS 26.6, model family `Mac16,8`.
 
 Measurement quality checks passed:
 
@@ -119,7 +121,17 @@ Stability-specific evidence:
 
 The 10-minute run therefore shows no sustained RSS accumulation. The working set decreases rather than grows, while thread count stays small with bounded transient variation. Idle median CPU is zero. Hover is intentionally the heavier path and is the key comparison baseline for the M1 investigation of the current global `.mouseMoved` monitor versus reliable window-local tracking.
 
-`NH-PERF-SIZE-001` remains pending until exact `build-metadata.json` values from the immutable `v0.1.0` GitHub Release are incorporated. Current PR/CI artifact sizes are useful reproducibility evidence but are not substituted for the exact accepted-release size baseline.
+### Accepted release artifact sizes
+
+`NH-PERF-SIZE-001` is sourced from the immutable GitHub Release `v0.1.0` `build-metadata.json`, not from a later CI rebuild. Provenance matches source commit `8e913dcddfdec7d9aa920df8c37afb23b8c40884`, Personal build `1`, release DMG SHA-256 `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`, Xcode 26.6, and Swift 6.3.3.
+
+| Artifact | Accepted baseline |
+| --- | ---: |
+| Executable | `220,560 B` |
+| `.app` aggregate regular-file bytes | `223,555 B` |
+| DMG | `73,955 B` |
+
+The release was built on the publication runner recorded as macOS 26.5.2; this is release-build provenance and is distinct from the runtime acceptance target macOS 26.6.
 
 ## Initial target-Mac budgets
 
@@ -151,6 +163,33 @@ Budget derivation intentionally rounds upward from observed values instead of fi
 - stability allows up to 8 MiB positive RSS drift over ten minutes even though the accepted baseline drift is negative, preventing a one-run baseline from becoming an unrealistically tight leak detector.
 
 Crossing a target-Mac ceiling blocks acceptance until investigated. A material regression should still be investigated even below a ceiling, especially if M1 changes pointer observation. Shared GitHub runners continue to validate only deterministic policy/schema/package behavior.
+
+## Deterministic artifact-size budget
+
+Artifact byte sizes are reproducible enough to enforce in shared CI, unlike runtime CPU/RSS/thread measurements.
+
+Two independent constraints are recorded in the canonical baseline and both must pass:
+
+1. **Relative regression allowance:** no artifact may grow more than `15%` from the accepted `v0.1.0` baseline without an explicit baseline/budget review.
+2. **Absolute safety ceiling:** `120%` of the accepted size, rounded upward to the next 4 KiB boundary.
+
+| Artifact | Baseline | 15% relative threshold | Absolute ceiling |
+| --- | ---: | ---: | ---: |
+| Executable | `220,560 B` | `253,644 B` | `266,240 B` |
+| `.app` | `223,555 B` | `257,088 B` maximum whole-byte value | `270,336 B` |
+| DMG | `73,955 B` | `85,048 B` maximum whole-byte value | `90,112 B` |
+
+The relative gate is intentionally tighter for the current baseline. The separate absolute ceiling is retained as a fail-closed hard cap and makes the budget contract explicit rather than encoding only a percentage.
+
+CI records the actual candidate sizes in `build/perf-size.json` and executes:
+
+```bash
+python3 scripts/performance_policy.py check-size-budget \
+  --summary build/perf-size.json \
+  --baseline performance/baseline-v0.1.0.json
+```
+
+The checker rejects unsupported baseline schema versions, missing required size metrics, non-integer byte sizes, non-finite/negative regression settings, and malformed ceilings. Tests independently cover relative-limit and absolute-limit failures.
 
 ## Canonical commands
 
@@ -188,30 +227,32 @@ python3 scripts/perf-baseline.py \
   --output build/perf-stability.json
 ```
 
-If more than one process matches, identify the PID of the accepted installed Personal Release explicitly rather than measuring an arbitrary process.
+If more than one process matches, identify the PID of the accepted installed release explicitly rather than measuring an arbitrary process.
+
+For a future release candidate, run the same stable scenario and compare its `summary` with the corresponding flat `budget` object in `performance/baseline-v0.1.0.json` using `scripts/performance_policy.py check-budget`. Stability drift is also reviewed from `stabilitySummary` because start/end growth is not a plain sample maximum.
 
 ## Baseline and budgets
 
 Canonical baseline file: `performance/baseline-v0.1.0.json`.
 
-The runtime portion is accepted from the measurements above. The canonical JSON is created only after `NH-PERF-SIZE-001` supplies exact accepted-release executable/app/DMG byte sizes, so downstream tooling never sees a misleadingly incomplete canonical baseline.
+It is complete and records:
 
-The initial numerical CPU/RSS/thread ceilings above are target-Mac acceptance gates. Artifact-size limits may become deterministic CI gates after the exact accepted-release sizes are incorporated.
+1. accepted release/source/build provenance;
+2. target Mac/runtime measurement provenance and configuration;
+3. idle/hover/stability summaries and stability growth evidence;
+4. exact immutable-release executable/app/DMG byte sizes;
+5. target-Mac runtime acceptance ceilings;
+6. deterministic relative and absolute artifact-size budgets.
 
-For each accepted metric, the baseline records:
+CPU/RSS/thread ceilings remain target-Mac acceptance gates. Artifact-size limits are deterministic shared-CI gates.
 
-1. the measured baseline and observed maximum/range;
-2. an absolute ceiling above the accepted measurements;
-3. a documented regression allowance;
-4. whether the metric is a deterministic CI gate or target-Mac acceptance gate.
-
-If future repeated measurements show that a threshold is unstable, methodology or the threshold is corrected from evidence rather than weakening tests merely to obtain green status.
+If future repeated measurements show that a runtime threshold is unstable, methodology or the threshold is corrected from evidence rather than weakening tests merely to obtain green status. Intentional feature growth that needs more artifact-size budget requires an explicit reviewed baseline/budget update; CI must never silently widen it.
 
 ## Regression policy
 
 After the first baseline is accepted:
 
-- reproducible artifact-size limits may become CI gates;
+- deterministic artifact-size limits are CI gates;
 - deterministic scanner/state/lifecycle invariants remain mandatory CI gates;
 - CPU/RSS/thread comparisons remain target-Mac evidence unless a future measurement method proves sufficiently stable for automation;
 - material regression requires investigation before acceptance, even when an absolute ceiling is not crossed.
