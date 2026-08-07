@@ -210,12 +210,39 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
           if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
             echo "Release tag appeared during build: $RELEASE_TAG" >&2
             exit 1
           fi
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+
+          TAG_ERROR="$RUNNER_TEMP/notchhub-trusted-tag-recheck.err"
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>"$TAG_ERROR"
+          TAG_STATUS=$?
+          set -e
+          if [[ "$TAG_STATUS" -eq 0 ]]; then
+            echo "Remote release tag appeared during build: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if ! grep -q 'HTTP 404' "$TAG_ERROR"; then
+            cat "$TAG_ERROR" >&2
+            echo "Could not prove that remote tag $RELEASE_TAG is absent." >&2
+            exit 1
+          fi
+
+          RELEASE_ERROR="$RUNNER_TEMP/notchhub-trusted-release-recheck.err"
+          set +e
+          gh release view "$RELEASE_TAG" >/dev/null 2>"$RELEASE_ERROR"
+          RELEASE_STATUS=$?
+          set -e
+          if [[ "$RELEASE_STATUS" -eq 0 ]]; then
             echo "GitHub Release appeared during build: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if ! grep -Eqi 'release not found|HTTP 404' "$RELEASE_ERROR"; then
+            cat "$RELEASE_ERROR" >&2
+            echo "Could not prove that GitHub Release $RELEASE_TAG is absent." >&2
             exit 1
           fi
 
