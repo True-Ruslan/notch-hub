@@ -16,7 +16,30 @@ NotchNook is tracked as a public product/UI reference only. NotchHub remains an 
 
 M0 — Engineering foundation.
 
-Status: in progress. The first real-hardware hover regression has a RED-first automated regression test and production fix, but the fixed DMG still requires physical retest on macOS 26.6 before M0 acceptance.
+Status: in progress. **All deterministic automated M0 gates are green.** The first real-hardware hover regression has RED-first automated coverage and a production fix. The remaining blocker before accepting M0/merging PR #1 is a physical retest of the latest sandboxed/Hardened Runtime DMG on the target MacBook running macOS 26.6.
+
+## Latest automated validation
+
+The latest code/tooling state passed the complete CI pipeline before this documentation-only state update:
+
+- GitHub `macos-26` compatibility job: PASS;
+- runner observed: macOS 26.5.2, Xcode 26.6, Swift 6.3.3;
+- macOS 26 build with warnings-as-errors: PASS;
+- macOS 26 full unit/regression suite: PASS;
+- strict Swift format: PASS;
+- `scripts/security-audit.sh`: PASS;
+- macOS 15 packaging-runner build with warnings-as-errors: PASS;
+- full test suite with coverage instrumentation: **8/8 PASS**;
+- release-mode app/DMG build: PASS;
+- code signature verification: PASS;
+- Hardened Runtime (`runtime` CodeDirectory flag): PASS;
+- effective signed App Sandbox entitlement (`com.apple.security.app-sandbox=true`): PASS;
+- effective entitlement set contains only the expected M0 sandbox entitlement: PASS;
+- linked runtime libraries restricted to system locations: PASS;
+- DMG integrity (`hdiutil verify`): PASS;
+- GitHub Actions artifact upload: PASS.
+
+The GitHub runner is deliberately only a near-target automated compatibility layer. Exact macOS 26.6 + physical-notch behavior remains a real-device acceptance check.
 
 ## Implemented
 
@@ -31,6 +54,7 @@ Status: in progress. The first real-hardware hover regression has a RED-first au
 - fallback geometry for non-notch displays
 - compact/expanded panel state
 - screen-space pointer activation/retention policy with hysteresis between compact and expanded regions
+- M0 global pointer observation reduced to `mouseMoved` only; no button, drag, scroll, modifier, or keyboard event classes are monitored
 
 ### Tests and CI
 
@@ -49,8 +73,10 @@ Status: in progress. The first real-hardware hover regression has a RED-first au
 - Hardened Runtime enabled even for ad-hoc PR builds
 - zero third-party Swift runtime dependencies at M0
 - repository security policy in `SECURITY.md`
-- executable `scripts/security-audit.sh` gate that rejects silent addition of runtime shell/subprocess execution, direct network/WebKit APIs, dynamic code loading, global keyboard monitoring, dangerous Hardened Runtime exceptions, persistence helpers, credential-like material, mutable GitHub Action references, and `pull_request_target`
+- executable `scripts/security-audit.sh` gate that rejects silent addition of runtime shell/subprocess execution, direct network/WebKit APIs, dynamic code loading, keyboard/button/drag/scroll global-event classes, dangerous Hardened Runtime exceptions, persistence helpers, credential-like material, mutable GitHub Action references, and `pull_request_target`
 - GitHub Actions pinned to immutable full commit SHAs
+- code signing avoids `--deep` during signing; recursive `--deep --strict` remains verification-only
+- release workflow accepts a tag only when it points to the current protected `main`
 - no telemetry, analytics, licensing client, or direct network requests in the baseline app
 
 ### Versioning and distribution
@@ -69,8 +95,9 @@ The first CI-produced DMG launched on the target MacBook, but hover behavior exp
 - `NH-HOVER-001`: FAIL on bootstrap build — repeated compact/expanded oscillation while hovering.
 - Root cause confirmed in code: SwiftUI `onHover` directly controlled presentation while the resulting presentation change resized/animated the same `NSPanel`, creating a feedback path through transient hover exits.
 - TDD RED commit: `eb4fb4d` (`test: reproduce hover retention regression`). CI failed exactly on `expandedPointerInsideExpandedRetentionRegionStaysExpanded` with `.compact` instead of `.expanded`.
-- GREEN fix commit: `eff9bde` (`fix: stabilize notch hover retention`). CI passed build, all 8 tests, release DMG packaging, bundle verification, and artifact upload.
-- Fixed-DMG physical retest: PENDING.
+- GREEN fix commit: `eff9bde` (`fix: stabilize notch hover retention`). Automated regression validation is now PASS.
+- Latest build additionally enables App Sandbox/Hardened Runtime and limits global event observation to `mouseMoved` only.
+- Latest fixed/security-hardened DMG physical retest: **PENDING**.
 
 See `docs/TESTING.md` for stable acceptance scenario IDs and the test/manual boundary.
 
@@ -95,7 +122,7 @@ An Apple Developer Program membership is required to obtain Developer ID signing
 - stable Developer ID/notarized release cannot be executed until Apple release secrets are configured;
 - Yandex Music integration is planned but not implemented in M0;
 - Spaces/fullscreen and multi-display behavior are not yet accepted;
-- GitHub `macos-26` CI verifies the macOS 26 platform line, not the exact physical macOS 26.6 hardware/UI environment; exact 26.6 acceptance remains a real-device check.
+- GitHub `macos-26` CI currently runs macOS 26.5.2 with Xcode 26.6, not the exact physical macOS 26.6 hardware/UI environment; exact 26.6 acceptance remains a real-device check.
 
 ## Quality and security policy
 
@@ -104,15 +131,16 @@ An Apple Developer Program membership is required to obtain Developer ID signing
 - Deterministic production decisions belong in pure/testable code; AppKit/SwiftUI wiring stays thin.
 - CI may not be weakened to hide a product defect or security warning.
 - Manual testing is reserved for unavoidable physical/OS/permission/third-party behavior and is tracked by stable scenario IDs.
-- Security-sensitive capability, entitlement, permission, dependency, or release-chain changes require documentation in the same PR.
+- Security-sensitive capability, entitlement, permission, dependency, event-observation scope, or release-chain changes require documentation in the same PR.
 - Notable changes update `CHANGELOG.md`.
 - Architectural/product/test/security decisions update the relevant docs in the same PR.
 
 ## Next optimal step
 
-1. Make the expanded security/compatibility CI fully green on both macOS 26 and the packaging runner.
-2. Download the newest PR DMG from GitHub Actions and rerun `NH-OS26-001`, `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, and `NH-HOVER-003` on macOS 26.6.
+1. Download the newest `NotchHub-dmg` artifact from PR #1 → latest successful CI run in GitHub Actions.
+2. On the target MacBook/macOS 26.6 run `NH-OS26-001`, `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, `NH-HOVER-003`, and `NH-SANDBOX-001`.
 3. Record the physical results. If required M0 checks pass, mark PR #1 ready and merge by squash.
 4. Configure the GitHub `release` environment with Apple credentials per `docs/RELEASING.md`.
 5. Run the Release workflow to publish signed/notarized `v0.1.0` on GitHub Releases.
-6. Start M1 with display-change handling, active-screen migration, fullscreen/Spaces behavior, animation tuning, and expanded UI/gesture design based on independent product research.
+6. Run `NH-GATEKEEPER-001` once against the normally downloaded stable release.
+7. Start M1 with display-change handling, active-screen migration, fullscreen/Spaces behavior, animation tuning, and expanded UI/gesture design based on independent product research.
