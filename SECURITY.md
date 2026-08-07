@@ -6,9 +6,9 @@ NotchHub is a personal native macOS utility that may run continuously near syste
 
 Protected assets include the user's Mac, local files, clipboard/snippet content, calendar data, media metadata, credentials stored elsewhere on the machine, and release integrity.
 
-Treat as untrusted or potentially attacker-controlled: dropped file URLs/metadata, clipboard text, calendar strings, third-party media metadata/artwork, future network responses, GitHub pull-request content, and dependency/update proposals.
+Treat as untrusted or potentially attacker-controlled: dropped file URLs/metadata, clipboard text, calendar strings, third-party media metadata/artwork, future network responses, GitHub pull-request content, forked repository code, and dependency/update proposals.
 
-Important trust boundaries are App Sandbox/entitlements, macOS permissions, other applications such as Yandex Music, user-selected files, GitHub Actions, and—only for the optional trusted distribution tier—Apple signing/notarization credentials.
+Important trust boundaries are App Sandbox/entitlements, macOS permissions, other applications such as Yandex Music, user-selected files, public GitHub pull-request CI, release workflows/environments, and—only for the optional trusted distribution tier—Apple signing/notarization credentials.
 
 ## Runtime security invariants
 
@@ -29,6 +29,26 @@ These properties hold unless an explicit reviewed security decision changes them
 13. **Private APIs are isolated and optional.** A future Yandex Music MediaRemote fallback must stay behind a provider boundary and may not disable Sandbox/Hardened Runtime/library validation or add general input capture.
 14. **Updates require authenticated provenance.** No self-updater/background updater exists. GitHub Releases are the deliberate manual update source until an authenticated updater is separately designed.
 15. **Performance measurement is not runtime telemetry.** `scripts/perf-baseline.py`, `scripts/performance_policy.py`, raw measurements, and related policy tooling are development/release assets only. They must never be copied into the app bundle, invoked from `Sources`, or used to create a shipped background monitoring channel.
+16. **Untrusted public PRs are unprivileged.** Ordinary pull-request CI must remain `contents: read`, secret-free, GitHub-hosted, without OIDC/write permissions, without persisted checkout credentials, and without a privileged trigger such as `pull_request_target` or `workflow_run`.
+
+## Public repository / fork CI boundary
+
+Public source visibility means arbitrary contributors may propose code through forks. Such code is untrusted even when the change appears small.
+
+`.github/workflows/ci.yml` is the only workflow intended to execute ordinary pull-request code. Its executable policy requires:
+
+- ordinary `pull_request` triggering;
+- explicit `permissions: contents: read`;
+- no repository `secrets.*` references;
+- no self-hosted runner;
+- no `write` permission or `permissions: write-all`;
+- no OIDC `id-token: write` authority;
+- `actions/checkout` with `persist-credentials: false`;
+- no `pull_request_target` or `workflow_run` privilege bridge.
+
+`scripts/release_policy.py validate-public-ci`, its unit tests, and `scripts/security-audit.sh` enforce this boundary. A change that needs additional CI authority must be reviewed as a security architecture change rather than silently widening PR permissions.
+
+Release workflows are not part of untrusted PR execution. They remain manual, exact-`main` publication paths. Trusted Release secrets stay behind the `release` environment and are never made available to ordinary PR CI.
 
 ## Distribution trust tiers
 
@@ -60,7 +80,7 @@ Personal Release contains no Apple Developer secrets and must not reference `not
 
 ### Trusted Release — optional future tier
 
-`.github/workflows/trusted-release.yml` retains the stronger future path for public/low-friction distribution if Apple Developer Program membership later becomes worthwhile:
+`.github/workflows/trusted-release.yml` retains the stronger future path for low-friction distribution if Apple Developer Program membership later becomes worthwhile:
 
 - Developer ID Application signing;
 - Hardened Runtime + App Sandbox verification;
@@ -80,7 +100,8 @@ Trusted Release is a separate tier and may not overwrite an already published Pe
 - the ambiguous legacy `.github/workflows/release.yml` must not exist;
 - versioned personal release notes must lead with the trust warning and must not include Gatekeeper-bypass instructions;
 - release workflows must remain full-SHA pinned for external actions;
-- published tags/releases are immutable.
+- published tags/releases are immutable;
+- untrusted fork PR CI cannot acquire release publication authority.
 
 ## Performance/security boundary
 
@@ -94,19 +115,23 @@ P0 adds development measurement tooling without changing runtime authority:
 
 A future need for shipped resource monitoring would be a separate security/privacy architecture decision, not an extension of P0 tooling.
 
+## Public-readiness audit
+
+`docs/PUBLIC_READINESS.md` records the pre-publication history/workflow audit and mandatory post-visibility checks. Repository visibility must not be treated as safely changed until those post-transition settings checks pass.
+
 ## Reportable security findings
 
 Treat as security findings, among others: arbitrary command/code execution; broad/undocumented file access; credential leakage; hidden network/telemetry; keystroke collection; Sandbox/Hardened Runtime weakening; untrusted dylib/plugin loading; release-workflow compromise; mutable action references; false claims of Apple trust; insecure temporary-file handling with realistic impact; or permissions materially broader than a feature requires.
 
-Security checks are defense-in-depth and do not prove absence of vulnerabilities. Material new capability, permission, dependency, private-API use, or release-chain change requires focused review in addition to tests.
+Security checks are defense-in-depth and do not prove absence of vulnerabilities. Material new capability, permission, dependency, private-API use, CI authority, or release-chain change requires focused review in addition to tests.
 
 ## Known accepted risks
 
 - Personal/CI artifacts are ad-hoc signed and therefore lack Apple Developer identity/notarization trust.
 - The current global `NSEvent` monitor observes only `mouseMoved`. P0 establishes its canonical resource baseline; M1 will investigate reliable window-local tracking only if correctness and measured resource evidence support replacement without expanding permissions.
 - Yandex Music integration is not yet implemented; no MediaRemote/private dependency exists.
-- Some GitHub advanced security products may be unavailable for this private personal repository; repository-local gates therefore cannot depend on paid GitHub security features.
+- Repository-local security gates intentionally do not depend on paid GitHub security products; public visibility does not make those external products a correctness prerequisite.
 
 ## Validation
 
-Every PR runs deterministic release-policy tests, performance-policy tests/audit, `scripts/security-audit.sh`, compile/test/package checks, entitlement/signature verification, performance-tool bundle-isolation checks, and macOS 26 compatibility. CI performance smoke validates harness compatibility/schema only and never treats noisy runner CPU/RSS/thread values as a tight security/performance gate. Personal Release repeats the complete release/security baseline before publication and adds checksum/provenance validation. Trusted Release, when eventually used, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
+Every PR runs deterministic release-policy tests, public-CI boundary tests, performance-policy tests/audit, `scripts/security-audit.sh`, compile/test/package checks, entitlement/signature verification, performance-tool bundle-isolation checks, and macOS 26 compatibility. CI performance smoke validates harness compatibility/schema only and never treats noisy runner CPU/RSS/thread values as a tight security/performance gate. Personal Release repeats the complete release/security baseline before publication and adds checksum/provenance validation. Trusted Release, when eventually used, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
