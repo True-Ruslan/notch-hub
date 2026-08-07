@@ -1,5 +1,4 @@
 import json
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -9,6 +8,9 @@ from release_policy import (
     release_tag,
     validate_personal_release_notes,
 )
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
 class ReleasePolicyTests(unittest.TestCase):
@@ -50,6 +52,12 @@ class ReleasePolicyTests(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             validate_personal_release_notes(unsafe, "0.1.0")
+
+    def test_repository_contains_valid_notes_for_current_version(self):
+        version = (REPOSITORY_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        notes_path = REPOSITORY_ROOT / "docs" / "releases" / f"v{version}.md"
+        self.assertTrue(notes_path.is_file(), f"missing versioned release notes: {notes_path}")
+        validate_personal_release_notes(notes_path.read_text(encoding="utf-8"), version)
 
     def test_build_metadata_has_exact_personal_release_schema(self):
         metadata = build_metadata(
