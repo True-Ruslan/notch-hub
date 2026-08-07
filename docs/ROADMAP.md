@@ -49,11 +49,11 @@ Apple Developer Program membership is **not** a blocker. Developer ID/notarizati
 
 ## P0 — Performance Foundation
 
-Status: **IN PROGRESS (`PR #5`) — runtime baseline accepted; exact immutable-release size baseline pending**
+Status: **ACCEPTED**
 
 Purpose: make CPU, RAM, threads, wakeups/background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
 
-Implemented/in review:
+Completed:
 
 - root `PERFORMANCE.md` contract;
 - deterministic CI audit against unreviewed polling/timers/sleeps/display links/busy loops;
@@ -63,10 +63,13 @@ Implemented/in review:
 - reproducible macOS 26.6 scenario contracts for idle, hover/active, stability, artifact size, and deterministic state stress;
 - 100,000-transition pure Swift state/pointer stress coverage with no wall-clock threshold;
 - CI runner compatibility/schema smoke without CPU/RAM magnitude gating;
-- deterministic release-candidate size metadata;
 - security/package checks proving performance tooling is not bundled as runtime telemetry;
 - accepted macOS 26.6 runtime baseline against immutable Personal Release `v0.1.0`;
-- conservative evidence-based CPU/RSS/thread target-Mac ceilings documented in `PERFORMANCE.md`.
+- exact immutable `v0.1.0` release sizes from published `build-metadata.json`;
+- complete machine-readable `performance/baseline-v0.1.0.json`;
+- conservative evidence-based CPU/RSS/thread target-Mac ceilings;
+- RED→GREEN fail-closed release-size checker covering relative allowance, absolute ceiling, schema mismatch, and missing metrics;
+- deterministic shared-CI artifact-size gate with 15% relative allowance plus independent absolute ceilings.
 
 Accepted runtime evidence:
 
@@ -75,20 +78,23 @@ Accepted runtime evidence:
 - `NH-PERF-STABILITY-001`: CPU median/max `0.0% / 6.8%`, RSS max `34,384 KiB`, threads max `7`;
 - 10-minute stability RSS `34,256 -> 30,544 KiB`, delta `-3,712 KiB`, so no sustained RSS accumulation was observed.
 
-Remaining P0 exit criteria:
+Accepted size evidence:
 
-- exact immutable `v0.1.0` executable/app/DMG values are consumed from release `build-metadata.json` for `NH-PERF-SIZE-001`;
-- complete `performance/baseline-v0.1.0.json` records summarized runtime measurements, exact size values, budgets, and measurement configuration;
-- only deterministic/reproducible artifact-size budgets are enforced in shared CI;
-- final PR #5 CI and independent review are green;
-- P0 PR is merged.
+- executable: `220,560 B`;
+- app aggregate: `223,555 B`;
+- DMG: `73,955 B`;
+- release source commit: `8e913dcddfdec7d9aa920df8c37afb23b8c40884`;
+- published DMG SHA-256: `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`.
+
+P0 keeps runtime CPU/RSS/thread thresholds on the target Mac and enforces only deterministic/reproducible artifact-size budgets in shared CI.
 
 Detailed approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 Authoritative runtime policy and accepted values: root `PERFORMANCE.md`.
+Machine-readable baseline: `performance/baseline-v0.1.0.json`.
 
 ## M1 — Notch Core hardening and interaction
 
-Status: after P0 baseline
+Status: **NEXT**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
