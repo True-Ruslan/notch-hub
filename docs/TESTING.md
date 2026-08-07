@@ -51,7 +51,7 @@ These checks are intentionally conservative. When a future feature legitimately 
 
 ## Test design
 
-Prefer pure deterministic policies for geometry, parsing, permissions state, module state, and transitions. AppKit/SwiftUI wiring should be thin and delegate decisions to testable code.
+Prefer pure deterministic policies for geometry, parsing, permissions state, module state, transitions, and AppKit/SwiftUI boundary configuration. AppKit/SwiftUI wiring should be thin and delegate decisions to testable code.
 
 Tests should:
 
@@ -75,10 +75,10 @@ Record results in `docs/PROJECT_STATE.md` using these stable IDs.
 | --- | --- | --- | --- |
 | `NH-BOOT-001` | Install/open CI-produced DMG | App launches without crashing and panel appears | Packaging automated; launch UX manual |
 | `NH-OS26-001` | Run current accepted test build on target macOS 26.6 | App launches, sandboxed runtime remains functional, no unexpected permission prompt/error | macOS 26 CI build/test automated; exact 26.6 hardware/UI manual |
-| `NH-NOTCH-001` | Observe compact panel on a MacBook with hardware notch | Panel is centered/aligned with the physical notch and does not cover unexpected menu-bar areas | Geometry unit-tested; physical alignment manual |
+| `NH-NOTCH-001` | Observe compact panel on a MacBook with hardware notch | Panel is centered and its compact width matches the physical notch rather than a fallback width | Exact detected geometry unit-tested; physical alignment manual |
 | `NH-HOVER-001` | Move pointer into compact activation region and hold it for at least 3 seconds | Exactly one expansion; no compact/expanded oscillation | Pointer policy unit-tested; actual AppKit events manual |
 | `NH-HOVER-002` | Move pointer around inside the expanded panel, including outside the original compact width | Panel remains expanded | Pointer retention unit-tested; event delivery manual |
-| `NH-HOVER-003` | Move pointer clearly outside expanded panel/retention margin | Panel collapses once and stays compact | Pointer policy unit-tested; animation feel manual |
+| `NH-HOVER-003` | Move pointer clearly outside expanded panel/retention margin | Panel content and actual `NSPanel` frame both collapse once to compact geometry and stay compact | Pointer policy + hosting sizing ownership automated; physical AppKit/window animation manual |
 | `NH-SANDBOX-001` | Run the App Sandbox build and exercise hover/normal panel use | No crash; no unexpected security/permission prompt; no loss of required pointer behavior | Entitlement/signing automated; physical runtime manual |
 | `NH-GATEKEEPER-001` | Download a stable GitHub Release DMG and open normally | Gatekeeper identifies/notarizes the Developer ID build without “unidentified developer” workaround | Release workflow signs/notarizes/staples/assesses; quarantine/download UX manual once per release pipeline change |
 | `NH-SPACE-001` | Switch Spaces / fullscreen app | Panel behavior matches documented policy | Planned M1 |
@@ -86,14 +86,32 @@ Record results in `docs/PROJECT_STATE.md` using these stable IDs.
 
 ## Known acceptance history
 
-### 2026-08-07 — bootstrap build
+### 2026-08-07 — cycle 1, bootstrap build
 
 - `NH-BOOT-001`: PASS enough to reach the running panel in the supplied screen recording.
 - `NH-HOVER-001`: FAIL. The panel repeatedly oscillated between compact and expanded states during hover.
 - Root cause: raw SwiftUI `onHover` events were treated as authoritative while the same state transition animated/resized the hosting `NSPanel`, allowing transient hover exits to feed back into presentation state.
 - Regression coverage: `NotchPointerPolicyTests.expandedPointerInsideExpandedRetentionRegionStaysExpanded` was added RED first and failed with `.compact` instead of `.expanded`.
-- Automated fix validation: PASS in CI after replacing raw view-hover authority with screen-space pointer-region policy.
-- Real-hardware retest of the fixed sandbox/Hardened Runtime DMG: PENDING.
+- Automated fix validation: PASS after replacing raw view-hover authority with screen-space pointer-region policy.
+
+### 2026-08-07 — cycle 2, sandbox/Hardened Runtime build
+
+Target MacBook, macOS 26.6:
+
+- `NH-OS26-001`: PASS.
+- `NH-NOTCH-001`: FAIL (minor) — compact panel appeared a few pixels wider than the hardware notch.
+- `NH-HOVER-001`: PASS.
+- `NH-HOVER-002`: PASS.
+- `NH-HOVER-003`: FAIL — the view switched to its compact dot, but the black window shell remained expanded after pointer exit.
+- `NH-SANDBOX-001`: reported as PASS by matrix order; the final user line repeated the `NH-HOVER-003` label, so this interpretation is explicitly documented rather than hidden.
+
+Automated regression proof:
+
+- RED commit `c518326` added `hardwareNotchWidthIsNotInflatedByFallbackMinimum` and `hostingViewDoesNotOwnWindowSizing` before the fixes.
+- macOS 26 CI compiled successfully, then failed exactly those two tests: compact width `180` vs expected `176`, and hosting sizing options `rawValue 7` vs expected empty.
+- GREEN commit `3bb1bbb` changed real-notch compact width to the detected hardware width and disabled `NSHostingView` sizing ownership with `sizingOptions = []`.
+- CI run #19: **10/10 tests PASS**, plus format/security/warnings/signing/Hardened Runtime/App Sandbox/system-dylib/DMG gates PASS.
+- Corrected-DMG hardware retest: PENDING for `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, and `NH-HOVER-003`.
 
 ## Release validation
 

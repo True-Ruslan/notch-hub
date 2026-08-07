@@ -11,7 +11,7 @@ The project follows [Semantic Versioning](https://semver.org/). The version unde
 - Swift 6 / Swift Package Manager native macOS application foundation.
 - AppKit `NSPanel` shell with hardware-notch geometry derived from public `NSScreen` APIs.
 - Compact and expanded presentation states.
-- Deterministic geometry, panel-state, and pointer-retention tests.
+- Deterministic geometry, panel-state, pointer-retention, exact-notch-width, and hosting-view-sizing tests.
 - TDD/commit/documentation policy and stable real-hardware acceptance scenario IDs.
 - Strict Swift formatting, warnings-as-errors, coverage-instrumented tests, and dedicated macOS 26 CI compatibility validation.
 - App Sandbox with a deliberately minimal entitlement set.
@@ -26,16 +26,20 @@ The project follows [Semantic Versioning](https://semver.org/). The version unde
 ### Fixed
 
 - Prevented the hover resize feedback loop observed during the first real-hardware acceptance test. Pointer state is now resolved against stable compact/expanded screen-space regions instead of trusting SwiftUI `onHover` events generated while the panel itself is resizing.
+- Real hardware notch widths are no longer inflated to the 180 pt fallback minimum; the fallback is now used only on displays without a detected hardware notch.
+- Disabled `NSHostingView` window-sizing ownership so expanded SwiftUI content cannot leave the `NSPanel` frame stuck at expanded dimensions after the model has collapsed to compact content.
 
 ### Testing
 
 - Added a regression test that first failed on the bootstrap implementation and proves an expanded panel remains expanded while the pointer is still inside its expanded retention region.
 - Verified the RED test failed for the expected behavior mismatch before the hover production fix was added.
 - Added exact macOS 26.6 real-hardware acceptance IDs while keeping GitHub-hosted macOS 26 testing as an automated major-version compatibility layer.
+- Recorded the second macOS 26.6 hardware acceptance cycle: OS launch PASS, stable hover/retention PASS, minor notch-width mismatch FAIL, and expanded-window-shell collapse FAIL.
+- Added RED-first regression coverage for both second-cycle failures. Commit `c518326` produced exactly two expected failures on macOS 26 CI; GREEN commit `3bb1bbb` raised the suite to **10/10 PASS** in CI run #19.
 
 ### Security
 
-- Stable releases are now fail-closed: they cannot publish unless Developer ID signing, Hardened Runtime, App Sandbox entitlements, Apple notarization/stapling, and Gatekeeper assessment all succeed.
+- Stable releases are fail-closed: they cannot publish unless Developer ID signing, Hardened Runtime, App Sandbox entitlements, Apple notarization/stapling, and Gatekeeper assessment all succeed.
 - PR DMGs remain explicitly ad-hoc test artifacts and are not represented as trusted stable releases.
 
 [Unreleased]: https://github.com/True-Ruslan/notch-hub/compare/v0.1.0...HEAD
