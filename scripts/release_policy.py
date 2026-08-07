@@ -71,6 +71,7 @@ _FORBIDDEN_PUBLIC_CI_FRAGMENTS = (
     "id-token: write",
     "persist-credentials: true",
 )
+_FORBIDDEN_PUBLIC_WORKFLOW_TRIGGERS = ("pull_request_target:", "workflow_run:")
 
 
 def parse_semver(value: str) -> tuple[int, int, int]:
@@ -144,6 +145,18 @@ def validate_public_ci_workflow(text: str) -> None:
 
     if re.search(r"(?m)^\s+[A-Za-z0-9_-]+:\s*write\s*$", text):
         raise ValueError("public pull-request CI must not grant write permissions")
+
+
+def validate_public_workflow_triggers(workflows: dict[str, str]) -> None:
+    """Reject repository-wide privileged event bridges that can cross PR trust boundaries."""
+    if not workflows:
+        raise ValueError("workflow set must not be empty")
+
+    for name in sorted(workflows):
+        text = workflows[name]
+        for trigger in _FORBIDDEN_PUBLIC_WORKFLOW_TRIGGERS:
+            if trigger in text:
+                raise ValueError(f"{name} contains prohibited public-repository trigger: {trigger}")
 
 
 def _positive_build_number(value: str) -> int:
@@ -221,6 +234,18 @@ def _cmd_validate_public_ci(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_validate_public_workflows(args: argparse.Namespace) -> int:
+    workflow_dir = Path(args.directory)
+    workflows = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in sorted(workflow_dir.glob("*.y*ml"))
+        if path.is_file()
+    }
+    validate_public_workflow_triggers(workflows)
+    print("Public repository workflow trigger policy passed.")
+    return 0
+
+
 def _cmd_metadata(args: argparse.Namespace) -> int:
     metadata = build_metadata(
         version=args.version,
@@ -257,6 +282,12 @@ def _parser() -> argparse.ArgumentParser:
     )
     public_ci.add_argument("--workflow", required=True)
     public_ci.set_defaults(handler=_cmd_validate_public_ci)
+
+    public_workflows = subparsers.add_parser(
+        "validate-public-workflows", help="validate repository-wide public workflow trigger boundaries"
+    )
+    public_workflows.add_argument("--directory", required=True, type=Path)
+    public_workflows.set_defaults(handler=_cmd_validate_public_workflows)
 
     metadata = subparsers.add_parser("metadata", help="write deterministic release metadata JSON")
     metadata.add_argument("--version", required=True)
