@@ -6,6 +6,11 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ## [Unreleased]
 
+### Changed
+
+- Updated repository state after publication of immutable Personal Release `v0.1.0`; downloaded-release acceptance `NH-PERSONAL-RELEASE-001` remains pending on the target MacBook/macOS 26.6.
+- Documented approved M1 delayed-hover activation and public AppKit haptic requirements, including event-driven/no-polling constraints and stable hardware acceptance IDs.
+
 ## [0.1.0] - 2026-08-07
 
 ### Added
@@ -46,7 +51,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Final corrected-build hardware retest on macOS 26.6: `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, and `NH-HOVER-003` all **PASS**.
 - **M0 engineering foundation accepted and merged.**
 - Personal Release infrastructure developed with explicit RED→GREEN evidence for missing policy helper, versioned notes, workflow contract, Trusted/Personal tier separation, and executable trust-boundary validation.
-- Personal Release publication itself remains pending until the release-preparation PR is merged into protected `main`.
+- Immutable Personal Release `v0.1.0` was published from accepted protected `main`; downloaded-release acceptance `NH-PERSONAL-RELEASE-001` remains pending.
 
 ### Security
 
