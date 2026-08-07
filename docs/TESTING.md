@@ -72,13 +72,15 @@ Future capabilities that legitimately require a currently forbidden surface must
 
 ## Performance test boundary
 
-`PERFORMANCE.md` is authoritative for runtime resource policy and target-Mac methodology.
+`PERFORMANCE.md` is authoritative for runtime resource policy, accepted target-Mac values, budgets, and methodology.
 
 `scripts/test_performance_policy.py` and `scripts/performance_policy.py` deterministically cover:
 
 - forbidden unreviewed polling/timer/sleep/display-link primitives in runtime Swift sources;
 - strict `/bin/ps` CPU/RSS/thread sample parsing;
+- Darwin `ps -M` thread-row parsing;
 - median/max aggregation without inventing empty measurements;
+- stability start/end/quartile evidence;
 - baseline-harness configuration validation;
 - deterministic budget comparison and malformed/non-finite input rejection.
 
@@ -114,7 +116,7 @@ No arbitrary global code-coverage percentage is used. Coverage instrumentation i
 | `NH-PERF-SIZE-001` | Accepted release executable/app/DMG | Exact byte sizes recorded in canonical baseline | Deterministic local/release metadata |
 | `NH-PERF-STATE-001` | Exactly 100,000 pure pointer/presentation decisions | Correct final/count invariants with no retained history/state growth API; no wall-clock assertion | Fully automated Swift test |
 
-Canonical baseline and numerical budgets are added only after the target-Mac measurements are reviewed. Shared runner CPU/RAM/thread values are never substituted for this acceptance.
+Runtime baseline values and initial target-Mac ceilings are now documented in `PERFORMANCE.md`. Shared runner CPU/RAM/thread values are never substituted for this acceptance. The canonical `performance/baseline-v0.1.0.json` remains intentionally absent until exact immutable-release size metadata is incorporated.
 
 ## M1 delayed-hover and haptic contract
 
@@ -199,6 +201,20 @@ Downloaded immutable GitHub Personal Release `v0.1.0` on the target MacBook/macO
 - accepted `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, `NH-HOVER-003` behavior on the downloaded release: **PASS**.
 
 **R0.1 Personal Release acceptance: PASS.**
+
+### 2026-08-07 — cycle 5 / P0 runtime baseline
+
+Accepted Personal Release `v0.1.0` (`8e913dcddfdec7d9aa920df8c37afb23b8c40884`) on target macOS 26.6 / `Mac16,8`, measured using P0 tooling commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0`:
+
+- `NH-PERF-IDLE-001`: **BASELINE ACCEPTED** — 60 samples / `60.017 s`; CPU median/max `0.0% / 0.7%`; RSS median/max `33,648 / 33,808 KiB`; threads `4 / 4`;
+- `NH-PERF-HOVER-001`: **BASELINE ACCEPTED** — 60 samples / `60.018 s`; CPU median/max `5.95% / 22.3%`; RSS median/max `38,456 / 38,816 KiB`; threads `6 / 7`;
+- `NH-PERF-STABILITY-001`: **BASELINE ACCEPTED** — 120 samples / `600.013 s`; CPU median/max `0.0% / 6.8%`; RSS median/max `30,992 / 34,384 KiB`; threads `3 / 7`;
+- stability RSS `34,256 -> 30,544 KiB`, delta `-3,712 KiB`: **no sustained RSS growth detected**;
+- stability threads `4 -> 5`, max `7`: bounded transient behavior; no runaway thread accumulation detected.
+
+Initial target-Mac CPU/RSS/thread ceilings are recorded in `PERFORMANCE.md` with conservative headroom and are not used as shared-runner CI thresholds.
+
+`NH-PERF-SIZE-001` remains pending exact immutable-release `build-metadata.json` values before the canonical baseline JSON and deterministic size gate can be finalized.
 
 ## Personal Release TDD evidence
 
