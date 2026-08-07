@@ -8,9 +8,9 @@ NotchHub turns the area around the camera housing into a compact panel for every
 
 Current version: **0.1.0 — Personal build**.
 
-**M0 engineering foundation and R0.1 Personal Release are accepted and merged. P0 Performance Foundation has accepted evidence and is at its final PR review/merge gate.** Immutable `v0.1.0` was published from protected `main` without paid Apple Developer membership and subsequently passed downloaded-release acceptance on the primary MacBook/macOS 26.6 target, including checksum/install/launch and accepted notch/hover behavior.
+**M0 engineering foundation and R0.1 Personal Release are accepted and merged. P0 Performance Foundation has complete accepted evidence and is at the final PR #5 exact-head CI/review/merge gate.** Immutable `v0.1.0` was published from protected `main` without paid Apple Developer membership and subsequently passed downloaded-release acceptance on the primary MacBook/macOS 26.6 target, including checksum/install/launch and accepted notch/hover behavior.
 
-P0 now has a complete canonical `v0.1.0` performance baseline: target-Mac idle/hover/10-minute stability measurements, exact immutable-release executable/app/DMG sizes, target-Mac CPU/RSS/thread acceptance ceilings, and a deterministic release-size regression gate in CI. After PR #5 passes final exact-head CI/read-only review and is merged, the next development milestone is **M1 Notch Core hardening and interaction**.
+P0 now has a complete canonical `v0.1.0` performance baseline: target-Mac idle/hover/10-minute stability measurements, exact immutable-release executable/app/DMG sizes, target-Mac CPU/RSS/thread acceptance ceilings, and a deterministic release-size regression gate in CI. After PR #5 is merged, the next development milestone is **M1 Notch Core hardening and interaction**.
 
 Source-of-truth documents:
 
