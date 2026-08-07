@@ -133,4 +133,35 @@ if errors:
     raise SystemExit('\n'.join(errors))
 PY
 
+# 8. Release-tier security policy. Personal distribution intentionally has no Apple
+# credentials/notarization authority and must never be silently upgraded, weakened,
+# or made mutable. The future trusted tier is separate and cannot overwrite versions.
+PERSONAL_WORKFLOW=".github/workflows/personal-release.yml"
+TRUSTED_WORKFLOW=".github/workflows/trusted-release.yml"
+[[ -f "$PERSONAL_WORKFLOW" ]] || fail "missing Personal Release workflow"
+[[ -f "$TRUSTED_WORKFLOW" ]] || fail "missing Trusted Release workflow"
+[[ ! -e .github/workflows/release.yml ]] || fail "ambiguous legacy release.yml must not exist"
+
+python3 scripts/release_policy.py validate-workflow --workflow "$PERSONAL_WORKFLOW" || \
+    fail "Personal Release workflow violated its trust boundary"
+
+VERSION="$(tr -d '[:space:]' < VERSION)"
+NOTES="docs/releases/v$VERSION.md"
+python3 scripts/release_policy.py validate-notes --version "$VERSION" --notes "$NOTES" || \
+    fail "Personal Release notes violated trust-labeling policy"
+
+if grep -RIn --include='*release.yml' -- '--clobber' .github/workflows; then
+    fail "release workflows must never replace existing release assets"
+fi
+
+if ! grep -q 'environment: release' "$TRUSTED_WORKFLOW"; then
+    fail "Trusted Release must remain behind the release environment"
+fi
+if ! grep -q 'notarytool' "$TRUSTED_WORKFLOW"; then
+    fail "Trusted Release must retain Apple notarization"
+fi
+if ! grep -q 'Developer ID Application' "$TRUSTED_WORKFLOW"; then
+    fail "Trusted Release must retain Developer ID verification"
+fi
+
 echo "Security baseline checks passed."
