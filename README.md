@@ -10,7 +10,7 @@ Current version: **0.1.0 — Personal build**.
 
 **M0 engineering foundation and R0.1 Personal Release are accepted.** Immutable `v0.1.0` was published from protected `main` without paid Apple Developer membership and subsequently passed downloaded-release acceptance on the primary MacBook/macOS 26.6 target, including checksum/install/launch and accepted notch/hover behavior.
 
-Current development milestone: **P0 Performance Foundation**. PR #5 is establishing deterministic no-polling/resource policy, development-only process measurement tooling, stable target-Mac scenarios, and evidence-based CPU/RSS/thread/size budgets before feature-heavy M1.
+Current development milestone: **P0 Performance Foundation**. PR #5 has established the deterministic no-polling/resource policy and development-only measurement tooling. Canonical macOS 26.6 runtime baselines for idle, hover, and 10-minute stability are accepted; exact immutable-release artifact sizes remain the last measurement input before the canonical baseline JSON and reproducible size gate can be finalized.
 
 Source-of-truth documents:
 
@@ -20,7 +20,7 @@ Source-of-truth documents:
 - [`docs/TESTING.md`](docs/TESTING.md) — automated/manual acceptance contracts and history
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — TDD, commits, versioning, documentation policy
 - [`SECURITY.md`](SECURITY.md) — threat model/security invariants/release trust boundary
-- [`PERFORMANCE.md`](PERFORMANCE.md) — runtime resource policy, measurement methodology, and budget rules
+- [`PERFORMANCE.md`](PERFORMANCE.md) — resource-efficiency invariants, accepted target-Mac baseline values, budgets, and regression policy
 - [`docs/RELEASING.md`](docs/RELEASING.md) — Personal Release and optional future Trusted Release
 - [`docs/PRODUCT_REFERENCES.md`](docs/PRODUCT_REFERENCES.md) — independent product/UI research
 - [`docs/specs/M1_NOTCH_INTERACTION.md`](docs/specs/M1_NOTCH_INTERACTION.md) — approved delayed-hover and haptic interaction contract
@@ -40,7 +40,8 @@ Installed users need only the `.dmg`/`.app`, not development tools.
 ```bash
 swift build
 swift test --parallel
-(cd scripts && python3 -m unittest -v test_release_policy.py test_performance_policy.py)
+(cd scripts && python3 -m unittest -v test_release_policy.py)
+(cd scripts && python3 -m unittest -v test_performance_policy.py)
 python3 scripts/performance_policy.py audit Sources
 ./scripts/security-audit.sh
 ```
@@ -76,17 +77,16 @@ CI enforces this baseline. Future capabilities that require broader permissions/
 
 NotchHub is intended to stay available continuously, so low resource consumption is a product requirement rather than a later optimization pass.
 
-P0 Performance Foundation establishes:
+P0 currently provides:
 
-- deterministic rejection of unreviewed polling/repeating timers/sleep loops/display links/busy loops in runtime sources;
-- a development-only process metric harness that is prohibited from app packaging and is never runtime telemetry;
-- stable idle/active/stability CPU, RSS, thread, state-stress, and artifact-size scenarios;
-- target-Mac measurements on macOS 26.6 before numerical budgets are chosen;
-- evidence-based budgets rather than arbitrary targets;
-- no tight CPU/RAM/thread thresholds from noisy shared GitHub runners;
-- a measurement baseline before deciding whether replacing global `.mouseMoved` with local tracking is actually beneficial.
+- deterministic prohibition of unreviewed polling/repeating timers/busy loops in runtime sources;
+- development-only metric tooling that is never shipped as telemetry;
+- accepted macOS 26.6 runtime baselines for idle, active hover, and 10-minute stability;
+- conservative target-Mac CPU/RSS/thread ceilings derived from those measurements;
+- shared-runner CI checks only for reproducible policy/schema/package behavior, never tight CPU/RAM thresholds;
+- a measured reason to investigate replacing global `.mouseMoved` in M1: hover CPU is materially higher than untouched idle while idle/stability remain near-zero median CPU.
 
-See `PERFORMANCE.md`.
+Exact immutable-release executable/app/DMG sizes are still required before P0's canonical baseline JSON and deterministic size regression gate are complete.
 
 ## Distribution
 
@@ -112,10 +112,10 @@ A separately isolated `Trusted Release` workflow preserves Developer ID + Apple 
 
 ## Architecture
 
-SwiftUI handles composition; AppKit handles window/panel integration. Geometry, pointer decisions, sizing authority, and resource-policy rules are isolated/testable instead of hidden in UI callbacks.
+SwiftUI handles composition; AppKit handles window/panel integration. Geometry, pointer decisions, and sizing authority are isolated/testable instead of hidden in UI callbacks.
 
 Yandex Music integration will use a provider boundary. A MediaRemote/private fallback is allowed only after focused security, compatibility, and performance review and may not weaken Sandbox/Hardened Runtime/library validation.
 
 ## Privacy
 
-The baseline app is local-only and makes no direct network requests. Performance measurements are development/release activities, not telemetry, and record only process-level aggregate resource data plus non-sensitive platform/source provenance. Future modules must document any added permission, external process, private API, network use, persistence, cache, or resource-monitoring behavior before implementation.
+The baseline app is local-only and makes no direct network requests. Future modules must document any added permission, external process, private API, network use, persistence, cache, or resource-monitoring behavior before implementation.
