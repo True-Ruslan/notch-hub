@@ -9,6 +9,7 @@ from release_policy import (
     validate_personal_release_notes,
     validate_personal_release_workflow,
     validate_public_ci_workflow,
+    validate_public_workflow_triggers,
 )
 
 
@@ -256,6 +257,22 @@ class ReleasePolicyTests(unittest.TestCase):
             with self.subTest(mutation=mutation[-80:]):
                 with self.assertRaises(ValueError):
                     validate_public_ci_workflow(mutation)
+
+    def test_repository_workflows_reject_privileged_untrusted_trigger_bridges(self):
+        workflow_dir = REPOSITORY_ROOT / ".github" / "workflows"
+        workflows = {
+            path.name: path.read_text(encoding="utf-8")
+            for path in sorted(workflow_dir.glob("*.y*ml"))
+        }
+        validate_public_workflow_triggers(workflows)
+
+        for trigger in ("pull_request_target:", "workflow_run:"):
+            with self.subTest(trigger=trigger):
+                mutated = workflows | {
+                    "bridge.yml": f"name: Bridge\non:\n  {trigger}\npermissions:\n  contents: write\n"
+                }
+                with self.assertRaises(ValueError):
+                    validate_public_workflow_triggers(mutated)
 
     def test_trusted_release_has_no_untrusted_automatic_trigger(self):
         workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "trusted-release.yml").read_text(encoding="utf-8")
