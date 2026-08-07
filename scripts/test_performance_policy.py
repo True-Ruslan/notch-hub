@@ -10,6 +10,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from performance_policy import (
     ProcessSample,
+    compare_size_summary_to_baseline,
     compare_summary_to_budget,
     count_ps_thread_rows,
     find_runtime_policy_violations,
@@ -247,6 +248,127 @@ class BudgetComparisonTests(unittest.TestCase):
             compare_summary_to_budget({"cpuMaxPercent": 1.0}, {"rssMaxKiB": 10})
         with self.assertRaises(ValueError):
             compare_summary_to_budget({"cpuMaxPercent": math.nan}, {"cpuMaxPercent": 1.0})
+
+
+class ReleaseSizeBudgetTests(unittest.TestCase):
+    @staticmethod
+    def baseline(*, regression_percent=15.0, executable_ceiling=200, app_ceiling=300, dmg_ceiling=100):
+        return {
+            "schemaVersion": 1,
+            "size": {
+                "summary": {
+                    "executableSizeBytes": 100,
+                    "appSizeBytes": 200,
+                    "dmgSizeBytes": 50,
+                },
+                "budget": {
+                    "maxRegressionPercent": regression_percent,
+                    "absoluteCeilingBytes": {
+                        "executableSizeBytes": executable_ceiling,
+                        "appSizeBytes": app_ceiling,
+                        "dmgSizeBytes": dmg_ceiling,
+                    },
+                },
+            },
+        }
+
+    def test_size_budget_accepts_values_below_relative_and_absolute_limits(self):
+        summary = {
+            "executableSizeBytes": 114,
+            "appSizeBytes": 220,
+            "dmgSizeBytes": 55,
+        }
+        self.assertEqual([], compare_size_summary_to_baseline(summary, self.baseline()))
+
+    def test_size_budget_reports_absolute_ceiling_violation(self):
+        summary = {
+            "executableSizeBytes": 121,
+            "appSizeBytes": 200,
+            "dmgSizeBytes": 50,
+        }
+        baseline = self.baseline(regression_percent=100.0, executable_ceiling=120)
+        violations = compare_size_summary_to_baseline(summary, baseline)
+        self.assertEqual(1, len(violations))
+        self.assertIn("executableSizeBytes", violations[0])
+        self.assertIn("absolute ceiling", violations[0])
+
+    def test_size_budget_reports_relative_regression_violation(self):
+        summary = {
+            "executableSizeBytes": 116,
+            "appSizeBytes": 200,
+            "dmgSizeBytes": 50,
+        }
+        baseline = self.baseline(regression_percent=15.0, executable_ceiling=200)
+        violations = compare_size_summary_to_baseline(summary, baseline)
+        self.assertEqual(1, len(violations))
+        self.assertIn("executableSizeBytes", violations[0])
+        self.assertIn("15% regression allowance", violations[0])
+
+    def test_size_budget_fails_closed_on_schema_or_required_metric_mismatch(self):
+        summary = {
+            "executableSizeBytes": 100,
+            "appSizeBytes": 200,
+            "dmgSizeBytes": 50,
+        }
+        bad_schema = self.baseline()
+        bad_schema["schemaVersion"] = 2
+        with self.assertRaises(ValueError):
+            compare_size_summary_to_baseline(summary, bad_schema)
+
+        missing_metric = self.baseline()
+        del missing_metric["size"]["summary"]["dmgSizeBytes"]
+        with self.assertRaises(ValueError):
+            compare_size_summary_to_baseline(summary, missing_metric)
+
+    def test_check_size_budget_cli_is_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            summary_path = root / "summary.json"
+            baseline_path = root / "baseline.json"
+            summary_path.write_text(
+                '{"executableSizeBytes": 114, "appSizeBytes": 220, "dmgSizeBytes": 55}\n',
+                encoding="utf-8",
+            )
+            baseline_path.write_text(
+                __import__("json").dumps(self.baseline()),
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(
+                    0,
+                    main(
+                        [
+                            "check-size-budget",
+                            "--summary",
+                            str(summary_path),
+                            "--baseline",
+                            str(baseline_path),
+                        ]
+                    ),
+                )
+            self.assertIn("Release size budget checks passed.", stdout.getvalue())
+
+            summary_path.write_text(
+                '{"executableSizeBytes": 116, "appSizeBytes": 220, "dmgSizeBytes": 55}\n',
+                encoding="utf-8",
+            )
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual(
+                    1,
+                    main(
+                        [
+                            "check-size-budget",
+                            "--summary",
+                            str(summary_path),
+                            "--baseline",
+                            str(baseline_path),
+                        ]
+                    ),
+                )
+            self.assertIn("regression allowance", stderr.getvalue())
 
 
 if __name__ == "__main__":
