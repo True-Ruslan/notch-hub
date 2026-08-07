@@ -103,8 +103,9 @@ for forbidden_path in LaunchAgents LaunchDaemons PrivilegedHelperTools; do
     fi
 done
 
-# 7. Workflow supply-chain policy: external actions must be immutable full SHAs,
-# and pull_request_target is prohibited for this repository.
+# 7. Workflow supply-chain and public-fork policy. External actions must be immutable
+# full SHAs, privileged PR/workflow_run bridges are prohibited repository-wide, and
+# ordinary PR CI must stay read-only without repository secrets or self-hosted runners.
 python3 <<'PY'
 from pathlib import Path
 import re
@@ -113,8 +114,6 @@ workflow_dir = Path('.github/workflows')
 errors = []
 for path in sorted(workflow_dir.glob('*.y*ml')):
     text = path.read_text(encoding='utf-8')
-    if 'pull_request_target:' in text:
-        errors.append(f'{path}: pull_request_target is prohibited')
     for line_no, line in enumerate(text.splitlines(), 1):
         match = re.search(r'\buses:\s*([^\s#]+)', line)
         if not match:
@@ -132,6 +131,14 @@ for path in sorted(workflow_dir.glob('*.y*ml')):
 if errors:
     raise SystemExit('\n'.join(errors))
 PY
+
+python3 scripts/release_policy.py validate-public-workflows --directory .github/workflows || \
+    fail "repository workflow triggers violated the public-repository trust boundary"
+
+CI_WORKFLOW=".github/workflows/ci.yml"
+[[ -f "$CI_WORKFLOW" ]] || fail "missing CI workflow"
+python3 scripts/release_policy.py validate-public-ci --workflow "$CI_WORKFLOW" || \
+    fail "ordinary pull-request CI violated the public-repository trust boundary"
 
 # 8. Release-tier security policy. Personal distribution intentionally has no Apple
 # credentials/notarization authority and must never be silently upgraded, weakened,

@@ -14,16 +14,20 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Development-only `scripts/perf-baseline.py` for CPU/RSS/thread sampling with explicit measured-app/tooling provenance and no user-content/pointer/clipboard telemetry.
 - Deterministic `NH-PERF-STATE-001` Swift coverage exercising exactly 100,000 pointer/presentation policy decisions without wall-clock thresholds.
 - CI performance-policy enforcement, release-candidate size metadata, canonical size-regression gate, harness compatibility/schema smoke, and explicit proof that measurement tooling is not bundled into `NotchHub.app`.
+- MIT `LICENSE` for public source distribution.
+- `docs/PUBLIC_READINESS.md` recording the repository-history audit, public-fork CI boundary, and mandatory post-visibility checks.
+- Deterministic public pull-request CI validation that rejects write authority, repository secrets, self-hosted runners, privileged triggers, OIDC/write permissions, and persisted checkout credentials.
 
 ### Changed
 
 - Downloaded immutable Personal Release `v0.1.0` completed `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6; R0.1 is accepted.
-- Performance Foundation P0 has complete accepted evidence and is at its final PR #5 review/merge gate before becoming merged project state.
+- Performance Foundation P0 was accepted and squash-merged to `main` as `a056aa74bad5d8e193eb4c76a76e6c910344bd09` after exact-head CI and final review.
 - Accepted target-Mac runtime baselines for idle, hover, and 10-minute stability against immutable `v0.1.0`; idle/stability median CPU is `0.0%`, stability RSS decreased by `3,712 KiB`, and no sustained memory/thread growth was detected.
 - Accepted exact `v0.1.0` artifact sizes: executable `220,560 B`, app `223,555 B`, DMG `73,955 B`.
 - Defined conservative initial CPU/RSS/thread target-Mac acceptance ceilings from the measured baseline while keeping noisy shared-runner resource values out of CI thresholds.
 - Added deterministic shared-CI size limits: 15% relative regression allowance from the accepted baseline plus independent absolute ceilings derived at 120% and rounded upward to 4 KiB boundaries.
 - Documented approved M1 delayed-hover activation and public AppKit haptic requirements, including event-driven/no-polling constraints and stable hardware acceptance IDs.
+- Prepared repository policy/documentation for public source visibility while keeping runtime `Sources/` and application entitlements unchanged.
 
 ## [0.1.0] - 2026-08-07
 

@@ -8,6 +8,8 @@ from release_policy import (
     release_tag,
     validate_personal_release_notes,
     validate_personal_release_workflow,
+    validate_public_ci_workflow,
+    validate_public_workflow_triggers,
 )
 
 
@@ -232,6 +234,54 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertIn("notchhub-trusted-release-recheck.err", workflow)
         self.assertGreaterEqual(workflow.count("Could not prove that remote tag $RELEASE_TAG is absent."), 2)
         self.assertGreaterEqual(workflow.count("Could not prove that GitHub Release $RELEASE_TAG is absent."), 2)
+
+    def test_public_ci_workflow_is_safe_for_untrusted_fork_pull_requests(self):
+        workflow_path = REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
+        workflow = workflow_path.read_text(encoding="utf-8")
+        validate_public_ci_workflow(workflow)
+
+    def test_public_ci_policy_rejects_privileged_or_secret_bearing_pull_request_ci(self):
+        safe = (REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        validate_public_ci_workflow(safe)
+
+        mutations = (
+            safe.replace("contents: read", "contents: write", 1),
+            safe + "\n# pull_request_target:\n",
+            safe + "\n# ${{ secrets.SOME_TOKEN }}\n",
+            safe + "\n# runs-on: self-hosted\n",
+            safe + "\n# permissions: write-all\n",
+            safe + "\n# id-token: write\n",
+            safe + "\n# uses: ./.github/workflows/privileged.yml\n",
+            safe.replace("persist-credentials: false", "persist-credentials: true", 1),
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation[-80:]):
+                with self.assertRaises(ValueError):
+                    validate_public_ci_workflow(mutation)
+
+    def test_repository_workflows_reject_alternate_untrusted_trigger_bridges(self):
+        workflow_dir = REPOSITORY_ROOT / ".github" / "workflows"
+        workflows = {
+            path.name: path.read_text(encoding="utf-8")
+            for path in sorted(workflow_dir.glob("*.y*ml"))
+        }
+        validate_public_workflow_triggers(workflows)
+
+        for trigger in ("pull_request:", "pull_request_target:", "workflow_run:"):
+            with self.subTest(trigger=trigger):
+                mutated = workflows | {
+                    "bridge.yml": f"name: Bridge\non:\n  {trigger}\npermissions:\n  contents: write\n"
+                }
+                with self.assertRaises(ValueError):
+                    validate_public_workflow_triggers(mutated)
+
+    def test_trusted_release_has_no_untrusted_automatic_trigger(self):
+        workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "trusted-release.yml").read_text(encoding="utf-8")
+        trigger_prefix = workflow.split("permissions:", maxsplit=1)[0]
+        self.assertIn("workflow_dispatch:", trigger_prefix)
+        self.assertNotRegex(trigger_prefix, r"(?m)^\s{2}(?:pull_request|pull_request_target|push|workflow_run):\s*$")
+        self.assertIn('test "$GITHUB_REF_NAME" = "main"', workflow)
+        self.assertIn("environment: release", workflow)
 
 
 if __name__ == "__main__":
