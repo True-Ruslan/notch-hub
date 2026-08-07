@@ -88,11 +88,11 @@ Runtime CPU/RSS/thread limits remain target-Mac acceptance gates. Shared GitHub 
 
 ## P0.1 Public repository readiness
 
-Status: **PUBLIC; repository-settings verification pending**.
+Status: **PUBLIC; three repository-settings/UI checks pending**.
 
 PR #6 completed the public-source audit/hardening with exact-head CI #139 fully green and no final review blocker, then squash-merged to `main` as `23500e099a0f8b2738f1157c6ae3be71c89df6e1`.
 
-GitHub repository metadata now reports `visibility=public`. Public-source preparation introduced no runtime or entitlement changes.
+GitHub repository metadata reports `visibility=public`. Public-source preparation introduced no runtime or entitlement changes. The first post-public PR CI (#141) also completed successfully through the ordinary public `pull_request` path with the full security/performance/Swift/package gate set.
 
 Completed evidence:
 
@@ -102,18 +102,20 @@ Completed evidence:
 - deterministic public-CI policy keeps untrusted PR execution on the single ordinary `ci.yml` path;
 - public PR CI requires `contents: read`, no secrets, no self-hosted runner, no OIDC/write authority, and no persisted checkout credentials;
 - repository-wide policy rejects alternate `pull_request` workflows plus `pull_request_target`/`workflow_run` bridges and reusable-workflow hops from public PR CI;
-- Personal/Trusted release publication remains isolated from untrusted PR execution;
+- Personal Release publication remains isolated from untrusted PR execution;
+- Trusted Release is intentionally unconfigured: no GitHub Environments exist and no Apple signing/notarization secrets are provisioned; its `release` environment requirement becomes applicable only if that optional tier is deliberately adopted;
 - `v0.1.0` tag remains addressable and its versioned release documentation remains intact;
 - repository metadata retains squash-only integration (`allow_squash_merge=true`, merge/rebase commits disabled).
 
-Still requiring direct GitHub Settings verification because the connected API does not expose these account/repository settings:
+Still requiring direct GitHub Settings/UI verification because the connected API does not expose these settings/assets:
 
 - active branch protection/branch ruleset for `main` and required CI checks;
 - Actions default workflow token permissions and fork-PR approval/settings;
-- `release` environment protection/secrets isolation;
 - published `v0.1.0` Release assets/checksum/provenance UI after the visibility transition.
 
-Public readiness is not marked fully accepted until those settings are confirmed. GitHub documents that a private → public transition can alter ruleset state, so this check is intentional rather than assumed.
+The previous `release` environment verification item is now **N/A**: the current supported tier is Personal Release, no GitHub Environments exist, and Trusted Release is explicitly dormant until future Apple Developer adoption.
+
+Public readiness is not marked fully accepted until the three remaining checks are confirmed. GitHub documents that a private → public transition can alter ruleset state, so this check is intentional rather than assumed.
 
 ## Security baseline
 
@@ -135,12 +137,12 @@ Authoritative M1 spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
 - initial target-Mac runtime ceilings are based on one canonical run per scenario and intentionally include conservative headroom;
 - current global `.mouseMoved` path remains until M1 proves a reliable equal-or-better local alternative;
-- public repository Settings verification is still pending before P0.1 is fully accepted;
+- three public repository Settings/UI checks remain before P0.1 is fully accepted;
 - active-display migration, Spaces/fullscreen policy, animation tuning, product modules, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Verify the remaining post-public GitHub Settings gates listed above.
+1. Verify the three remaining post-public GitHub Settings/UI gates listed above.
 2. Record P0.1 as accepted once those checks pass.
 3. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
 4. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.
