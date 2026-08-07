@@ -190,6 +190,34 @@ class ReleasePolicyTests(unittest.TestCase):
             with self.subTest(fragment=fragment):
                 self.assertNotIn(fragment, workflow)
 
+    def test_trusted_release_workflow_is_separate_fail_closed_tier(self):
+        workflows = REPOSITORY_ROOT / ".github" / "workflows"
+        trusted_path = workflows / "trusted-release.yml"
+        ambiguous_path = workflows / "release.yml"
+
+        self.assertTrue(trusted_path.is_file(), f"missing trusted release workflow: {trusted_path}")
+        self.assertFalse(ambiguous_path.exists(), f"ambiguous legacy workflow must be removed: {ambiguous_path}")
+
+        workflow = trusted_path.read_text(encoding="utf-8")
+        required_fragments = (
+            "name: Trusted Release",
+            "environment: release",
+            "Developer ID Application",
+            "notarytool",
+            "stapler",
+            "source=Notarized Developer ID",
+            "APPLE_DEVELOPER_ID_P12_BASE64",
+            "APPLE_NOTARY_KEY_P8",
+            "gh release view",
+            "git rev-parse -q --verify",
+            "gh release create",
+        )
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, workflow)
+
+        self.assertNotIn("--clobber", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
