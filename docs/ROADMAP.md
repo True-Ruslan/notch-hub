@@ -49,7 +49,7 @@ Apple Developer Program membership is **not** a blocker. Developer ID/notarizati
 
 ## P0 — Performance Foundation
 
-Status: **IN PROGRESS (`PR #5`)**
+Status: **IN PROGRESS (`PR #5`) — runtime baseline accepted; exact immutable-release size baseline pending**
 
 Purpose: make CPU, RAM, threads, wakeups/background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
 
@@ -59,24 +59,32 @@ Implemented/in review:
 - deterministic CI audit against unreviewed polling/timers/sleeps/display links/busy loops;
 - standard-library process-metric parser/aggregation and budget-comparison tests;
 - development-only target-Mac baseline harness with explicit source/tool provenance;
+- Darwin-compatible thread measurement through `ps -M` and stability start/end/quartile evidence;
 - reproducible macOS 26.6 scenario contracts for idle, hover/active, stability, artifact size, and deterministic state stress;
 - 100,000-transition pure Swift state/pointer stress coverage with no wall-clock threshold;
 - CI runner compatibility/schema smoke without CPU/RAM magnitude gating;
 - deterministic release-candidate size metadata;
-- security/package checks proving performance tooling is not bundled as runtime telemetry.
+- security/package checks proving performance tooling is not bundled as runtime telemetry;
+- accepted macOS 26.6 runtime baseline against immutable Personal Release `v0.1.0`;
+- conservative evidence-based CPU/RSS/thread target-Mac ceilings documented in `PERFORMANCE.md`.
+
+Accepted runtime evidence:
+
+- `NH-PERF-IDLE-001`: CPU median/max `0.0% / 0.7%`, RSS max `33,808 KiB`, threads max `4`;
+- `NH-PERF-HOVER-001`: CPU median/max `5.95% / 22.3%`, RSS max `38,816 KiB`, threads max `7`;
+- `NH-PERF-STABILITY-001`: CPU median/max `0.0% / 6.8%`, RSS max `34,384 KiB`, threads max `7`;
+- 10-minute stability RSS `34,256 -> 30,544 KiB`, delta `-3,712 KiB`, so no sustained RSS accumulation was observed.
 
 Remaining P0 exit criteria:
 
-- completed PR #5 CI/review is green;
-- canonical `NH-PERF-IDLE-001`, `NH-PERF-HOVER-001`, `NH-PERF-STABILITY-001`, and `NH-PERF-SIZE-001` measurements are collected on the target MacBook/macOS 26.6 against accepted `v0.1.0`;
-- measurement noise/stability is reviewed before thresholds are chosen;
-- `performance/baseline-v0.1.0.json` records only summarized non-sensitive measurements/configuration;
-- evidence-based CPU/RAM/thread/size budgets are derived from the accepted baseline rather than invented;
-- only deterministic/reproducible budgets (especially artifact size) are enforced in shared CI;
-- P0 final review is green and the PR is merged.
+- exact immutable `v0.1.0` executable/app/DMG values are consumed from release `build-metadata.json` for `NH-PERF-SIZE-001`;
+- complete `performance/baseline-v0.1.0.json` records summarized runtime measurements, exact size values, budgets, and measurement configuration;
+- only deterministic/reproducible artifact-size budgets are enforced in shared CI;
+- final PR #5 CI and independent review are green;
+- P0 PR is merged.
 
 Detailed approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
-Authoritative runtime policy: root `PERFORMANCE.md`.
+Authoritative runtime policy and accepted values: root `PERFORMANCE.md`.
 
 ## M1 — Notch Core hardening and interaction
 
@@ -84,7 +92,7 @@ Status: after P0 baseline
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
-- measure and investigate replacing global `.mouseMoved` observation with reliable `NSTrackingArea`/window-local tracking;
+- measure and investigate replacing global `.mouseMoved` observation with reliable `NSTrackingArea`/window-local tracking, using the accepted P0 hover resource baseline as the comparison point;
 - accept replacement only if notch/hover correctness stays PASS and measured resource/input-observation profile is equal or better;
 - add a short, cancellable **hover dwell delay** before compact → expanded activation so normal pointer transit through the notch (including movement toward another display) does not immediately open the panel;
 - initial dwell candidate: **120 ms**, to be tuned from real MacBook evidence within roughly 100–150 ms rather than hardcoded blindly;
