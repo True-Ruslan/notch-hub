@@ -10,7 +10,7 @@ Current version: **0.1.0 — Personal build**.
 
 **M0 engineering foundation, R0.1 Personal Release, and P0 Performance Foundation are accepted and merged.** P0 was squash-merged into `main` as `a056aa74bad5d8e193eb4c76a76e6c910344bd09` after target-Mac performance acceptance, exact-head CI, and final review.
 
-The current repository hardening step prepares NotchHub for public source visibility without changing runtime behavior or entitlements. Public pull-request CI is intentionally unprivileged and cannot use repository secrets or write authority. After that transition, the next development milestone is **M1 Notch Core hardening and interaction**.
+The source repository is now **public**. Public-readiness hardening was squash-merged as `23500e099a0f8b2738f1157c6ae3be71c89df6e1`; repository-content security gates are accepted, while a small set of GitHub Settings checks remains to be verified directly after the visibility transition. Public pull-request CI is intentionally unprivileged and cannot use repository secrets or write authority. The next product milestone after those settings checks is **M1 Notch Core hardening and interaction**.
 
 Source-of-truth documents:
 
@@ -72,7 +72,7 @@ Current runtime intentionally has:
 - no global keyboard/button/drag/scroll/modifier monitoring;
 - global observation currently limited to `mouseMoved`, without persisted pointer history.
 
-Public/fork pull requests execute only the ordinary `pull_request` CI path with explicit `contents: read`, no repository secrets, no self-hosted runners, no OIDC/write permission, and checkout credentials disabled. `pull_request_target` remains prohibited. Release publication is isolated in manual trusted-main workflows.
+Public/fork pull requests execute only the ordinary `pull_request` CI path with explicit `contents: read`, no repository secrets, no self-hosted runners, no OIDC/write permission, and checkout credentials disabled. `pull_request_target` and `workflow_run` privilege bridges are prohibited repository-wide; alternate PR workflows and reusable-workflow hops from public PR CI are also rejected by executable policy. Release publication is isolated in manual trusted-main workflows.
 
 CI enforces these baselines. Future capabilities that require broader permissions/attack surface must change `SECURITY.md`, executable policy, tests, and relevant docs in the same reviewed PR.
 
