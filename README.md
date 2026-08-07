@@ -6,11 +6,11 @@ NotchHub turns the area around the camera housing into a compact panel for every
 
 ## Status
 
-Current version candidate: **0.1.0 — Personal build**.
+Current version: **0.1.0 — Personal build**.
 
-**M0 engineering foundation is accepted and merged**, including real-hardware acceptance on the primary MacBook/macOS 26.6 target. PR #3 is preparing the first immutable GitHub Personal Release without requiring paid Apple Developer membership. It keeps App Sandbox, Hardened Runtime, strict CI/security gates, checksum/provenance, and explicit not-notarized labeling.
+**M0 engineering foundation is accepted and merged**, including real-hardware acceptance on the primary MacBook/macOS 26.6 target. Immutable Personal Release `v0.1.0` has been published from accepted protected `main` without requiring paid Apple Developer membership. It keeps App Sandbox, Hardened Runtime, strict CI/security gates, checksum/provenance, and explicit not-notarized labeling. The remaining R0.1 gate is downloaded-release acceptance `NH-PERSONAL-RELEASE-001` on the target MacBook.
 
-After `v0.1.0` is published/accepted, the next milestone is **Performance Foundation**: reproducible target-Mac CPU/RAM/thread/background-work baseline and evidence-based resource budgets before feature-heavy M1.
+After downloaded `v0.1.0` acceptance, the next milestone is **Performance Foundation**: reproducible target-Mac CPU/RAM/thread/background-work baseline and evidence-based resource budgets before feature-heavy M1.
 
 Source-of-truth documents:
 
@@ -22,6 +22,7 @@ Source-of-truth documents:
 - [`SECURITY.md`](SECURITY.md) — threat model/security invariants/release trust boundary
 - [`docs/RELEASING.md`](docs/RELEASING.md) — Personal Release and optional future Trusted Release
 - [`docs/PRODUCT_REFERENCES.md`](docs/PRODUCT_REFERENCES.md) — independent product/UI research
+- [`docs/specs/M1_NOTCH_INTERACTION.md`](docs/specs/M1_NOTCH_INTERACTION.md) — approved delayed-hover and haptic interaction contract
 - [`docs/superpowers/plans/2026-08-07-performance-foundation.md`](docs/superpowers/plans/2026-08-07-performance-foundation.md) — approved performance plan
 - [`CHANGELOG.md`](CHANGELOG.md) — notable changes
 
