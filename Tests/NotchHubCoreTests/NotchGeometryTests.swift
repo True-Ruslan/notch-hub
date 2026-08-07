@@ -21,6 +21,22 @@ struct NotchGeometryTests {
     }
 
     @Test
+    func hardwareNotchWidthIsNotInflatedByFallbackMinimum() {
+        let input = ScreenGeometryInput(
+            frame: CGRect(x: 0, y: 0, width: 1512, height: 982),
+            safeAreaTop: 37,
+            auxiliaryTopLeftArea: CGRect(x: 0, y: 945, width: 668, height: 37),
+            auxiliaryTopRightArea: CGRect(x: 844, y: 945, width: 668, height: 37)
+        )
+
+        let layout = NotchGeometry.layout(for: input, minimumCompactWidth: 180)
+
+        #expect(layout.hasHardwareNotch)
+        #expect(layout.hardwareNotchWidth == 176)
+        #expect(layout.compactFrame.width == 176)
+    }
+
+    @Test
     func fallsBackToCenteredPanelOnDisplayWithoutNotch() {
         let input = ScreenGeometryInput(
             frame: CGRect(x: 1920, y: 0, width: 1920, height: 1080),

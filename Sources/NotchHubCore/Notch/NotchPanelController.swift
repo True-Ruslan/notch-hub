@@ -48,9 +48,7 @@ public final class NotchPanelController: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isMovable = false
         panel.acceptsMouseMovedEvents = true
-
-        let rootView = NotchRootView(model: model)
-        panel.contentView = NSHostingView(rootView: rootView)
+        panel.contentView = NotchHostingViewFactory.make(model: model)
     }
 
     private func bindModel() {
