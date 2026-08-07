@@ -16,7 +16,7 @@ For behavior changes and bug fixes, use RED → GREEN → REFACTOR:
 
 A regression test must fail against the broken behavior before the fix is considered covered. Do not write tests whose only purpose is to satisfy a coverage number.
 
-Performance behavior follows the same honesty rule: prefer deterministic policy/state/lifecycle tests to flaky wall-clock assertions. CPU/RSS/thread/energy numbers are accepted from the documented target-Mac methodology in `PERFORMANCE.md`, not invented from shared-runner noise.
+For performance work, deterministic policy, parser, state, lifecycle, and schema behavior belongs in automated tests. Physical CPU/RSS/thread acceptance belongs to the documented target-Mac scenarios; shared runner resource values are evidence for compatibility only, never substituted for target hardware.
 
 ### Commits
 
@@ -28,7 +28,7 @@ Use small, intention-revealing commits. Preferred Conventional Commit prefixes:
 - `refactor:` behavior-preserving internal change
 - `docs:` documentation only
 - `chore:` tooling, CI, packaging, maintenance
-- `perf:` evidence-backed performance/resource change or accepted baseline update
+- `perf:` measured performance baseline or resource-efficiency change
 
 Do not mix unrelated refactors with a bug fix. A useful bug-fix history normally shows the regression test separately from the production fix.
 
@@ -39,11 +39,11 @@ Do not mix unrelated refactors with a bug fix. A useful bug-fix history normally
 Before marking a PR ready:
 
 - required automated checks are green;
-- release-policy and performance-policy tests/audits are green;
 - `CHANGELOG.md` is updated for notable behavior changes;
 - `docs/PROJECT_STATE.md` reflects the actual state and remaining manual work;
 - unavoidable manual acceptance is explicitly listed rather than silently assumed;
-- resource-sensitive runtime changes include the relevant `PERFORMANCE.md` scenario/baseline comparison rather than a claim based on intuition.
+- performance changes that affect runtime cost are compared against the accepted target-Mac baseline where applicable;
+- noisy shared-runner CPU/RSS/thread measurements are never promoted into tight gates merely to increase automation coverage.
 
 ## Versioning
 
@@ -57,31 +57,16 @@ NotchHub uses Semantic Versioning (`MAJOR.MINOR.PATCH`). The current target vers
 
 Release tags use `v<version>`, for example `v0.1.0`. The release workflow rejects a tag that does not match `VERSION`.
 
-## Local verification
-
-Use the same deterministic policy layers as CI:
-
-```bash
-(cd scripts && python3 -m unittest -v test_release_policy.py test_performance_policy.py)
-python3 scripts/performance_policy.py audit Sources
-./scripts/security-audit.sh
-swift build -Xswiftc -warnings-as-errors
-swift test --parallel --enable-code-coverage
-```
-
-Target-Mac performance acceptance commands are intentionally documented separately in `PERFORMANCE.md`; they are not normal unit-test commands and must not be replaced by shared-runner CPU/RAM thresholds.
-
 ## Documentation contract
 
 The repository is the hand-off source of truth for a new development session:
 
 - `README.md` — product and build entry point.
-- `SECURITY.md` — threat model, permission and release trust boundaries.
-- `PERFORMANCE.md` — runtime resource policy, target-Mac methodology, baseline, budgets, and regression rules.
 - `docs/ARCHITECTURE.md` — architectural boundaries and decisions.
 - `docs/ROADMAP.md` — milestones and exit criteria.
 - `docs/PROJECT_STATE.md` — exact current state, accepted/manual-tested items, known limitations, and next step.
 - `docs/TESTING.md` — automated gates and manual acceptance scenario IDs.
+- `PERFORMANCE.md` — runtime resource policy, target-Mac methodology, accepted baseline values, and budgets.
 - `CHANGELOG.md` — notable changes by release.
 
-Update the relevant files in the same PR when a decision, limitation, acceptance result, performance baseline/budget, or roadmap status changes.
+Update the relevant files in the same PR when a decision, limitation, acceptance result, roadmap status, or accepted resource baseline changes.
