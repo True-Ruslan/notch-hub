@@ -7,7 +7,7 @@ Primary physical target: macOS `26.6`
 Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
-Next product milestone after post-public settings verification: M1 `Notch Core hardening and interaction`
+Next product milestone: M1 `Notch Core hardening and interaction`
 
 ## Product
 
@@ -88,13 +88,13 @@ Runtime CPU/RSS/thread limits remain target-Mac acceptance gates. Shared GitHub 
 
 ## P0.1 Public repository readiness
 
-Status: **PUBLIC; three repository-settings/UI checks pending**.
+Status: **ACCEPTED**.
 
 PR #6 completed the public-source audit/hardening with exact-head CI #139 fully green and no final review blocker, then squash-merged to `main` as `23500e099a0f8b2738f1157c6ae3be71c89df6e1`.
 
 GitHub repository metadata reports `visibility=public`. Public-source preparation introduced no runtime or entitlement changes. The first post-public PR CI (#141) also completed successfully through the ordinary public `pull_request` path with the full security/performance/Swift/package gate set.
 
-Completed evidence:
+Accepted evidence:
 
 - complete short pre-public `main` history and accessible PR #1–#5 diffs/discussions reviewed with no secret value/private-key material found;
 - no separate open/closed Issues existed at transition time;
@@ -105,25 +105,20 @@ Completed evidence:
 - Personal Release publication remains isolated from untrusted PR execution;
 - Trusted Release is intentionally unconfigured: no GitHub Environments exist and no Apple signing/notarization secrets are provisioned; its `release` environment requirement becomes applicable only if that optional tier is deliberately adopted;
 - `v0.1.0` tag remains addressable and its versioned release documentation remains intact;
-- repository metadata retains squash-only integration (`allow_squash_merge=true`, merge/rebase commits disabled).
+- repository metadata retains squash-only integration (`allow_squash_merge=true`, merge/rebase commits disabled);
+- direct post-public verification confirmed the active `main` protection/ruleset and required CI checks;
+- direct post-public verification confirmed Actions default workflow token permissions and fork-PR settings;
+- direct post-public verification confirmed the published `v0.1.0` Release assets, checksum, and provenance remain intact.
 
-Still requiring direct GitHub Settings/UI verification because the connected API does not expose these settings/assets:
+The `release` environment verification item is **N/A**: the current supported tier is Personal Release, no GitHub Environments exist, and Trusted Release is explicitly dormant until future Apple Developer adoption.
 
-- active branch protection/branch ruleset for `main` and required CI checks;
-- Actions default workflow token permissions and fork-PR approval/settings;
-- published `v0.1.0` Release assets/checksum/provenance UI after the visibility transition.
-
-The previous `release` environment verification item is now **N/A**: the current supported tier is Personal Release, no GitHub Environments exist, and Trusted Release is explicitly dormant until future Apple Developer adoption.
-
-Public readiness is not marked fully accepted until the three remaining checks are confirmed. GitHub documents that a private → public transition can alter ruleset state, so this check is intentional rather than assumed.
+P0.1 is complete. Any future change to repository visibility, Actions authority, branch/ruleset protection, release workflow trust, or credential handling requires a fresh focused review.
 
 ## Security baseline
 
 `SECURITY.md` is authoritative. Public-source preparation adds no runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, or broader global input capture. Public fork PR code must remain confined to unprivileged CI.
 
 ## Approved M1 interaction requirements
-
-After public-readiness settings verification:
 
 - investigate replacing global `.mouseMoved` with reliable window-local AppKit tracking, accepting it only if correctness and target-Mac resource evidence are equal or better than the P0 baseline;
 - add a cancellable hover dwell, initial candidate `120 ms`, without polling/repeating timers;
@@ -137,12 +132,11 @@ Authoritative M1 spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
 - initial target-Mac runtime ceilings are based on one canonical run per scenario and intentionally include conservative headroom;
 - current global `.mouseMoved` path remains until M1 proves a reliable equal-or-better local alternative;
-- three public repository Settings/UI checks remain before P0.1 is fully accepted;
 - active-display migration, Spaces/fullscreen policy, animation tuning, product modules, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Verify the three remaining post-public GitHub Settings/UI gates listed above.
-2. Record P0.1 as accepted once those checks pass.
-3. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
-4. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.
+1. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
+2. Accept a local tracking replacement only if correctness stays PASS and target-Mac resource/input-observation evidence is equal or better than the P0 baseline.
+3. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.
+4. Continue with M1 multi-display, Spaces/fullscreen, animation, and gesture hardening after the core interaction path is proven.
