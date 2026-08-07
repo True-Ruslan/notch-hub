@@ -1,3 +1,5 @@
+import contextlib
+import io
 import math
 import pathlib
 import sys
@@ -10,6 +12,7 @@ from performance_policy import (
     ProcessSample,
     compare_summary_to_budget,
     find_runtime_policy_violations,
+    main,
     parse_ps_sample,
     summarize_samples,
     validate_config,
@@ -80,6 +83,23 @@ class RuntimePerformancePolicyTests(unittest.TestCase):
             self.assertTrue(violations[0].startswith("A.swift:1:"))
             self.assertTrue(violations[1].startswith("B.swift:1:"))
 
+    def test_audit_cli_returns_success_for_clean_sources_and_failure_for_violation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            swift_file = root / "Feature.swift"
+            swift_file.write_text("func eventDriven() {}\n", encoding="utf-8")
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(0, main(["audit", str(root)]))
+            self.assertIn("Performance policy checks passed.", stdout.getvalue())
+
+            swift_file.write_text("while true { }\n", encoding="utf-8")
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual(1, main(["audit", str(root)]))
+            self.assertIn("unbounded busy loop", stderr.getvalue())
+
 
 class ProcessMetricTests(unittest.TestCase):
     def test_parse_ps_sample_accepts_exact_three_field_format(self):
@@ -148,6 +168,7 @@ class BaselineConfigTests(unittest.TestCase):
             ("idle", 10, 60, 1, None, None),
             ("idle", 10, 60, 1, pathlib.Path("app"), 1234),
             ("idle", 10, 60, 1, None, 0),
+            ("idle", math.nan, 60, 1, pathlib.Path("app"), None),
         )
         for args in cases:
             with self.subTest(args=args):
