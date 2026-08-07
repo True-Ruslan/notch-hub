@@ -49,11 +49,11 @@ Apple Developer Program membership is **not** a blocker. Developer ID/notarizati
 
 ## P0 — Performance Foundation
 
-Status: **ACCEPTED**
+Status: **ACCEPTED EVIDENCE; PR #5 FINAL REVIEW/MERGE GATE**
 
 Purpose: make CPU, RAM, threads, wakeups/background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
 
-Completed:
+Completed evidence:
 
 - root `PERFORMANCE.md` contract;
 - deterministic CI audit against unreviewed polling/timers/sleeps/display links/busy loops;
@@ -88,13 +88,15 @@ Accepted size evidence:
 
 P0 keeps runtime CPU/RSS/thread thresholds on the target Mac and enforces only deterministic/reproducible artifact-size budgets in shared CI.
 
+Exit gate remaining: final CI on exact PR head, independent read-only review, then squash-merge PR #5 if clean. No additional target-Mac measurements are required for P0.
+
 Detailed approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 Authoritative runtime policy and accepted values: root `PERFORMANCE.md`.
 Machine-readable baseline: `performance/baseline-v0.1.0.json`.
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **NEXT**
+Status: **NEXT AFTER P0 MERGE**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
