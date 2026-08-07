@@ -26,12 +26,12 @@ M0 code is merged into protected `main`.
 
 ## R0.1 — Personal Release foundation
 
-Status: **PUBLISHED; downloaded-release acceptance pending**
+Status: **ACCEPTED**
 Target: `v0.1.0 — Personal build`
 
 Purpose: publish versioned personal-use builds through GitHub Releases without paid Apple Developer membership while preserving security, provenance, and immutable history.
 
-Completed publication guarantees:
+Completed:
 
 - deterministic release-policy tests are green;
 - `Personal Release` workflow is manual-only and accepts only exact protected `main`;
@@ -42,40 +42,65 @@ Completed publication guarantees:
 - future `Trusted Release` workflow is separately named and cannot overwrite Personal versions;
 - release docs clearly explain standard Finder / Privacy & Security → Open Anyway path without weakening Gatekeeper;
 - protected implementation PR was squash-merged;
-- manual `Personal Release` workflow published `v0.1.0` from the accepted `main` commit.
-
-Remaining exit criterion:
-
-- `NH-PERSONAL-RELEASE-001` passes on the target MacBook/macOS 26.6 using the DMG downloaded from GitHub Releases.
+- manual `Personal Release` workflow published immutable `v0.1.0` from accepted `main`;
+- `NH-PERSONAL-RELEASE-001` passed on the target MacBook/macOS 26.6 using the downloaded GitHub Release DMG.
 
 Apple Developer Program membership is **not** a blocker. Developer ID/notarization is intentionally deferred to an optional future Trusted Release tier.
 
 ## P0 — Performance Foundation
 
-Status: **NEXT after Personal `v0.1.0` downloaded-release acceptance**
+Status: **ACCEPTED EVIDENCE; PR #5 FINAL REVIEW/MERGE GATE**
 
 Purpose: make CPU, RAM, threads, wakeups/background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
 
-Planned:
+Completed evidence:
 
 - root `PERFORMANCE.md` contract;
-- deterministic CI audit against unreviewed polling/timers/busy loops;
-- standard-library process-metric parser/aggregation tests;
-- development-only target-Mac baseline harness;
-- reproducible macOS 26.6 scenarios for idle, hover/active, stability, and artifact size;
-- evidence-based budgets derived from real measurements, never arbitrary guesses;
-- CI gates for deterministic/reproducible resource invariants (especially artifact size), while noisy CPU/RAM thresholds remain target-Mac acceptance rather than shared-runner gates;
-- prove performance tooling is never bundled as telemetry/runtime monitoring.
+- deterministic CI audit against unreviewed polling/timers/sleeps/display links/busy loops;
+- standard-library process-metric parser/aggregation and budget-comparison tests;
+- development-only target-Mac baseline harness with explicit source/tool provenance;
+- Darwin-compatible thread measurement through `ps -M` and stability start/end/quartile evidence;
+- reproducible macOS 26.6 scenario contracts for idle, hover/active, stability, artifact size, and deterministic state stress;
+- 100,000-transition pure Swift state/pointer stress coverage with no wall-clock threshold;
+- CI runner compatibility/schema smoke without CPU/RAM magnitude gating;
+- security/package checks proving performance tooling is not bundled as runtime telemetry;
+- accepted macOS 26.6 runtime baseline against immutable Personal Release `v0.1.0`;
+- exact immutable `v0.1.0` release sizes from published `build-metadata.json`;
+- complete machine-readable `performance/baseline-v0.1.0.json`;
+- conservative evidence-based CPU/RSS/thread target-Mac ceilings;
+- RED→GREEN fail-closed release-size checker covering relative allowance, absolute ceiling, schema mismatch, and missing metrics;
+- deterministic shared-CI artifact-size gate with 15% relative allowance plus independent absolute ceilings.
+
+Accepted runtime evidence:
+
+- `NH-PERF-IDLE-001`: CPU median/max `0.0% / 0.7%`, RSS max `33,808 KiB`, threads max `4`;
+- `NH-PERF-HOVER-001`: CPU median/max `5.95% / 22.3%`, RSS max `38,816 KiB`, threads max `7`;
+- `NH-PERF-STABILITY-001`: CPU median/max `0.0% / 6.8%`, RSS max `34,384 KiB`, threads max `7`;
+- 10-minute stability RSS `34,256 -> 30,544 KiB`, delta `-3,712 KiB`, so no sustained RSS accumulation was observed.
+
+Accepted size evidence:
+
+- executable: `220,560 B`;
+- app aggregate: `223,555 B`;
+- DMG: `73,955 B`;
+- release source commit: `8e913dcddfdec7d9aa920df8c37afb23b8c40884`;
+- published DMG SHA-256: `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`.
+
+P0 keeps runtime CPU/RSS/thread thresholds on the target Mac and enforces only deterministic/reproducible artifact-size budgets in shared CI.
+
+Exit gate remaining: final CI on exact PR head, independent read-only review, then squash-merge PR #5 if clean. No additional target-Mac measurements are required for P0.
 
 Detailed approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
+Authoritative runtime policy and accepted values: root `PERFORMANCE.md`.
+Machine-readable baseline: `performance/baseline-v0.1.0.json`.
 
 ## M1 — Notch Core hardening and interaction
 
-Status: after P0 baseline
+Status: **NEXT AFTER P0 MERGE**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
-- measure and investigate replacing global `.mouseMoved` observation with reliable `NSTrackingArea`/window-local tracking;
+- measure and investigate replacing global `.mouseMoved` observation with reliable `NSTrackingArea`/window-local tracking, using the accepted P0 hover resource baseline as the comparison point;
 - accept replacement only if notch/hover correctness stays PASS and measured resource/input-observation profile is equal or better;
 - add a short, cancellable **hover dwell delay** before compact → expanded activation so normal pointer transit through the notch (including movement toward another display) does not immediately open the panel;
 - initial dwell candidate: **120 ms**, to be tuned from real MacBook evidence within roughly 100–150 ms rather than hardcoded blindly;

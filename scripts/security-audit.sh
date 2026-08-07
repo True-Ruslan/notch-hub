@@ -164,4 +164,17 @@ if ! grep -q 'Developer ID Application' "$TRUSTED_WORKFLOW"; then
     fail "Trusted Release must retain Developer ID verification"
 fi
 
+# 9. Performance tooling is development/release-only. The runtime remains event-driven,
+# and the sampler/policy scripts must never become an in-app telemetry or subprocess surface.
+python3 scripts/performance_policy.py audit Sources || \
+    fail "runtime performance policy violated"
+
+if grep -RInE --include='*.swift' 'perf-baseline|performance_policy|test_performance_policy' Sources Resources 2>/dev/null; then
+    fail "development performance tooling referenced by runtime/resources"
+fi
+
+if grep -InE 'perf-baseline|performance_policy|test_performance_policy' scripts/build-app.sh scripts/build-dmg.sh; then
+    fail "application packaging must not copy or invoke development performance tooling"
+fi
+
 echo "Security baseline checks passed."

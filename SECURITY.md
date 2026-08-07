@@ -28,6 +28,7 @@ These properties hold unless an explicit reviewed security decision changes them
 12. **No silent privilege escalation.** Accessibility, Screen Recording, Automation/Apple Events, camera, microphone, Full Disk Access, Input Monitoring, or similarly sensitive permissions require a feature-specific security decision and degraded mode where feasible.
 13. **Private APIs are isolated and optional.** A future Yandex Music MediaRemote fallback must stay behind a provider boundary and may not disable Sandbox/Hardened Runtime/library validation or add general input capture.
 14. **Updates require authenticated provenance.** No self-updater/background updater exists. GitHub Releases are the deliberate manual update source until an authenticated updater is separately designed.
+15. **Performance measurement is not runtime telemetry.** `scripts/perf-baseline.py`, `scripts/performance_policy.py`, raw measurements, and related policy tooling are development/release assets only. They must never be copied into the app bundle, invoked from `Sources`, or used to create a shipped background monitoring channel.
 
 ## Distribution trust tiers
 
@@ -81,6 +82,18 @@ Trusted Release is a separate tier and may not overwrite an already published Pe
 - release workflows must remain full-SHA pinned for external actions;
 - published tags/releases are immutable.
 
+## Performance/security boundary
+
+P0 adds development measurement tooling without changing runtime authority:
+
+- the runtime source audit rejects unreviewed polling/timer/sleep/display-link primitives;
+- the sampler may use development-side subprocesses to query `/bin/ps`, but runtime Swift sources remain prohibited from spawning processes;
+- the sampler records process CPU/RSS/thread aggregates plus non-sensitive source/platform provenance only;
+- it does not record usernames, file/content data, clipboard/snippets, window titles, pointer history, serial numbers, or network telemetry identifiers;
+- CI verifies the performance tooling is absent from `NotchHub.app` packaging.
+
+A future need for shipped resource monitoring would be a separate security/privacy architecture decision, not an extension of P0 tooling.
+
 ## Reportable security findings
 
 Treat as security findings, among others: arbitrary command/code execution; broad/undocumented file access; credential leakage; hidden network/telemetry; keystroke collection; Sandbox/Hardened Runtime weakening; untrusted dylib/plugin loading; release-workflow compromise; mutable action references; false claims of Apple trust; insecure temporary-file handling with realistic impact; or permissions materially broader than a feature requires.
@@ -90,10 +103,10 @@ Security checks are defense-in-depth and do not prove absence of vulnerabilities
 ## Known accepted risks
 
 - Personal/CI artifacts are ad-hoc signed and therefore lack Apple Developer identity/notarization trust.
-- The current global `NSEvent` monitor observes only `mouseMoved`. Performance Foundation/M1 will measure its cost and investigate reliable window-local tracking without expanding permissions.
+- The current global `NSEvent` monitor observes only `mouseMoved`. P0 establishes its canonical resource baseline; M1 will investigate reliable window-local tracking only if correctness and measured resource evidence support replacement without expanding permissions.
 - Yandex Music integration is not yet implemented; no MediaRemote/private dependency exists.
 - Some GitHub advanced security products may be unavailable for this private personal repository; repository-local gates therefore cannot depend on paid GitHub security features.
 
 ## Validation
 
-Every PR runs deterministic release-policy tests, `scripts/security-audit.sh`, compile/test/package checks, entitlement/signature verification, and macOS 26 compatibility. Personal Release repeats the complete baseline before publication and adds checksum/provenance validation. Trusted Release, when eventually used, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
+Every PR runs deterministic release-policy tests, performance-policy tests/audit, `scripts/security-audit.sh`, compile/test/package checks, entitlement/signature verification, performance-tool bundle-isolation checks, and macOS 26 compatibility. CI performance smoke validates harness compatibility/schema only and never treats noisy runner CPU/RSS/thread values as a tight security/performance gate. Personal Release repeats the complete release/security baseline before publication and adds checksum/provenance validation. Trusted Release, when eventually used, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.

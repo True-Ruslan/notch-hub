@@ -1,9 +1,11 @@
 # Project state
 
 Last updated: 2026-08-07
-Current version: `0.1.0` (Personal Release published; downloaded-release acceptance pending)
+Current version: `0.1.0` (Personal Release published and accepted)
 Primary physical target: macOS `26.6`
 Protected branch: `main`
+P0 completion PR: #5 `Performance Foundation`
+Next milestone after P0 merge: M1 `Notch Core hardening and interaction`
 
 ## Product
 
@@ -23,137 +25,97 @@ Real-hardware final acceptance on the target MacBook/macOS 26.6:
 - `NH-HOVER-002`: PASS;
 - `NH-HOVER-003`: PASS.
 
-M0 includes:
-
-- Swift 6 / SwiftUI + AppKit native app shell;
-- public-API hardware-notch geometry and exact physical width;
-- explicit compact/expanded panel state;
-- deterministic pointer activation/retention policy;
-- AppKit-owned panel geometry (`NSHostingView.sizingOptions = []`);
-- App Sandbox + Hardened Runtime;
-- zero third-party Swift runtime dependencies;
-- no direct runtime network/WebKit, subprocess/shell, dynamic loading, telemetry, or broad global input monitoring;
-- global observation restricted to `mouseMoved` only;
-- strict CI, macOS 26 compatibility, warnings-as-errors, security audit, Swift regression tests, release DMG packaging/integrity checks;
-- RED→GREEN evidence for both real-hardware defect cycles.
-
-M0 integration PR #1 was squash-merged. Approved Personal Release + Performance Foundation design/plans were subsequently merged through docs PR #2.
+M0 includes the Swift 6 native shell, public notch geometry, deterministic pointer policy, AppKit-owned panel sizing, App Sandbox + Hardened Runtime, zero third-party Swift runtime dependencies, strict CI/security/package gates, and the accepted real-hardware regression fixes.
 
 ## R0.1 Personal Release
 
-Status: **PUBLISHED; downloaded-release acceptance pending**.
+Status: **ACCEPTED**.
 
-The Apple Developer Program dependency is intentionally deferred because NotchHub is currently personal-use software. This is a deliberate product decision, not an accidental missing credential.
+`v0.1.0` was published from accepted commit `8e913dcddfdec7d9aa920df8c37afb23b8c40884` as an immutable Personal Release and passed downloaded-release acceptance on the target MacBook/macOS 26.6. Personal Release remains ad-hoc signed, sandboxed, Hardened Runtime protected, checksum/provenance verified, and intentionally not notarized. Trusted Release remains an optional future tier.
 
-Current supported versioned distribution is therefore **Personal Release**:
+## P0 Performance Foundation
 
-- manual GitHub Actions publication from exact protected `main`;
-- ad-hoc app signature;
-- App Sandbox and Hardened Runtime mandatory;
-- complete correctness/security CI rerun before publication;
-- SHA-256 + machine-readable provenance metadata;
-- explicit `Personal build — not notarized` warning;
-- normal macOS Finder / Privacy & Security → Open Anyway approval may be needed once for a downloaded build;
-- no Gatekeeper disabling/quarantine-bypass/custom-root instructions;
-- immutable tag/release; no `--clobber`/asset replacement.
+Status: **ACCEPTED EVIDENCE; final PR #5 exact-head CI/review/merge gate pending**.
 
-`v0.1.0` has been published and its tag points exactly to accepted merge commit `8e913dcddfdec7d9aa920df8c37afb23b8c40884`.
+Canonical sources:
 
-A separate `Trusted Release` workflow retains Developer ID/notarization for a future new version if paid Apple membership becomes worthwhile. It cannot replace an existing Personal version.
+- `PERFORMANCE.md` — policy, accepted measurements, budgets, and regression rules;
+- `performance/baseline-v0.1.0.json` — machine-readable canonical baseline;
+- `docs/TESTING.md` — acceptance matrix and RED→GREEN evidence;
+- `docs/ROADMAP.md` — milestone exit gate and M1 sequencing.
 
-## Personal Release automated evidence
+Implemented P0 foundation:
 
-Release infrastructure was developed through deterministic RED→GREEN tests:
+- event-driven runtime policy and source audit against unreviewed busy loops/timers/sleeps/display links;
+- strict CPU/RSS/thread sampling/aggregation and Darwin `ps -M` thread measurement;
+- development-only target-Mac sampler with explicit app/tool provenance;
+- exactly 100,000 deterministic pointer/presentation decisions in CI without wall-clock threshold;
+- exact immutable release artifact-size baseline;
+- target-Mac CPU/RSS/thread acceptance ceilings;
+- fail-closed artifact-size checker with 15% relative allowance plus independent absolute ceilings;
+- shared-CI size regression gate;
+- executable security proof that measurement tooling is not bundled into runtime packaging.
 
-1. RED: release-policy tests failed because `release_policy.py` did not exist.
-2. GREEN candidate exposed a real policy bug: safe text `Do not disable Gatekeeper` was falsely classified as a bypass instruction; the rule was corrected rather than weakening tests.
-3. RED: current-version notes test failed because `docs/releases/v0.1.0.md` was absent; GREEN after versioned notes were added.
-4. RED: Personal Release workflow contract failed because `personal-release.yml` was absent; GREEN after fail-closed manual workflow implementation.
-5. RED: tier-separation contract failed because `trusted-release.yml` was absent; GREEN after trusted workflow was separated and legacy `release.yml` removed.
-6. RED: trust-boundary tests failed because executable `validate_personal_release_workflow` did not exist; GREEN after the validator and security-audit integration were added.
-7. Security review found a fail-closed weakness in the future Trusted pre-publish recheck; a RED test was added before the final remote tag/release error-classification fix.
+### Accepted target-Mac runtime baseline
 
-Pre-merge PR #3 verification passed macOS 26 compatibility, release-policy tests, executable security baseline, warnings-as-errors, Swift tests, DMG packaging, signature/Hardened Runtime/App Sandbox/system-library/integrity checks, and artifact upload.
+Measured against accepted `v0.1.0` on macOS 26.6 / `Mac16,8`, using tooling commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0`:
 
-## Personal Release assets and guarantees
+- `NH-PERF-IDLE-001`: CPU median/max `0.0% / 0.7%`, RSS median/max `33,648 / 33,808 KiB`, threads median/max `4 / 4`;
+- `NH-PERF-HOVER-001`: CPU median/max `5.95% / 22.3%`, RSS median/max `38,456 / 38,816 KiB`, threads median/max `6 / 7`;
+- `NH-PERF-STABILITY-001`: CPU median/max `0.0% / 6.8%`, RSS median/max `30,992 / 34,384 KiB`, threads median/max `3 / 7`;
+- stability RSS `34,256 -> 30,544 KiB` (`-3,712 KiB`): no sustained memory growth observed;
+- stability threads `4 -> 5`, max `7`: no runaway accumulation.
 
-Published `v0.1.0` GitHub Release is designed to contain:
+Measurement windows matched the stable contracts: idle `60.017 s / 60 samples`, hover `60.018 s / 60 samples`, stability `600.013 s / 120 samples`.
 
-- `NotchHub.dmg`;
-- `NotchHub.dmg.sha256`;
-- `build-metadata.json` containing source commit, build number, runner/toolchain versions, artifact sizes/checksum, `distributionTier=personal`, `appleTrusted=false`, `notarized=false`.
+### Accepted immutable-release size baseline
 
-Versioned release notes: `docs/releases/v0.1.0.md`.
+Published `v0.1.0` metadata:
 
-The release does **not** claim Apple identity/notarization trust.
+- executable `220,560 B`;
+- app aggregate `223,555 B`;
+- DMG `73,955 B`;
+- build number `1`;
+- release source `8e913dcddfdec7d9aa920df8c37afb23b8c40884`;
+- DMG SHA-256 `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`;
+- Xcode 26.6 / Swift 6.3.3 provenance.
 
-The remaining distribution acceptance is `NH-PERSONAL-RELEASE-001`: install and launch the DMG downloaded from GitHub Releases on the target MacBook/macOS 26.6 using only the standard macOS approval path.
+Runtime CPU/RSS/thread limits remain target-Mac acceptance gates. Shared GitHub runners never substitute for physical resource evidence. Artifact byte sizes are deterministic and are enforced in CI.
+
+### RED→GREEN evidence
+
+- RED CI #54: performance module absent as intended;
+- RED CI #73: stability summarizer absent as intended;
+- integration RED CI #75: Darwin `thcount` incompatibility discovered and fixed without dropping thread measurement;
+- RED CI #91: size-budget comparison API absent as intended;
+- GREEN CI #94: 12/12 release-policy tests, 22/22 performance-policy tests, performance/security audits, 11/11 Swift tests, package/signature/Sandbox/Hardened Runtime/DMG checks, deterministic size capture, size budget gate, harness smoke, and artifact upload all PASS.
+
+CI #94 candidate sizes were executable `214,016 B`, app `217,012 B`, DMG `73,378 B`; all passed the canonical size budget.
 
 ## Security baseline
 
-`SECURITY.md` is authoritative. Current key invariants:
-
-- Sandbox by default;
-- Hardened Runtime without dangerous exceptions;
-- zero external Swift runtime dependencies;
-- no bundled secrets;
-- no runtime shell/subprocess/dynamic code loading;
-- no telemetry/analytics/remote-control channel;
-- no broad global input capture;
-- immutable full-SHA GitHub Actions;
-- Personal Release contains no Apple secrets/notary path and cannot overwrite existing versions;
-- sensitive new permissions/capabilities require explicit security review and tests.
-
-## Performance/resource-efficiency requirement
-
-Performance is a first-class product requirement alongside security. The approved Performance Foundation plan executes after Personal `v0.1.0` downloaded-release acceptance and before feature-heavy M1.
-
-It will establish:
-
-- `PERFORMANCE.md`;
-- deterministic no-unreviewed-polling/timer/busy-loop policy;
-- development-only target-Mac metric harness;
-- canonical macOS 26.6 idle/hover/stability/artifact-size baseline;
-- evidence-based CPU/RAM/thread/size budgets rather than invented thresholds;
-- CI gates only for deterministic/reproducible performance invariants;
-- proof that measurement tooling is never shipped as runtime telemetry.
-
-Approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
+`SECURITY.md` is authoritative. P0 introduces no new runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, or broader global input capture. Development performance tooling remains outside `NotchHub.app`.
 
 ## Approved M1 interaction requirements
 
-Two additional UX requirements are now part of the M1 contract and must be implemented test-first after P0:
+After P0 merge:
 
-1. **Delayed hover activation**
-   - compact → expanded must not happen immediately on first pointer entry;
-   - use a short cancellable dwell/debounce, initial candidate `120 ms`, tuned from real-hardware evidence around `100–150 ms`;
-   - quick pointer transit through the notch, especially while moving to another display, must cancel activation and leave the panel compact;
-   - event-driven only: no polling/repeating timer, at most one pending activation task, deterministic cancellation/race tests.
+- investigate replacing global `.mouseMoved` with reliable window-local AppKit tracking, accepting it only if correctness and target-Mac resource evidence are equal or better than the P0 baseline;
+- add a cancellable hover dwell, initial candidate `120 ms`, without polling/repeating timers;
+- add one public AppKit haptic via `NSHapticFeedbackManager.defaultPerformer` only on a successful deliberate compact → expanded transition;
+- no haptic on cancellation, duplicate movement, retention, collapse, programmatic transitions, or stale callbacks;
+- no `CGEventTap`, Accessibility, Input Monitoring, private APIs, custom drivers, or synthetic input.
 
-2. **Trackpad haptic feedback on successful expansion**
-   - use public AppKit `NSHapticFeedbackManager.defaultPerformer`;
-   - emit exactly one haptic request only for a completed user-initiated `compact -> expanded` transition;
-   - no feedback for quick/cancelled hover, duplicate movement, expanded retention, collapse, layout/programmatic transitions, or stale callbacks;
-   - respect macOS/current-device/accessibility/user settings; no private APIs, synthetic input, custom drivers, Accessibility hacks, audio imitation, or retry loop.
-
-Authoritative spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
-
-Planned acceptance IDs: `NH-HOVER-DELAY-001`, `NH-HOVER-DELAY-002`, `NH-HAPTIC-001`, `NH-HAPTIC-002`.
+Authoritative M1 spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
 ## Known limitations
 
-- downloaded `v0.1.0` Personal Release acceptance is still pending;
-- ad-hoc Personal Release lacks Apple Developer identity/notarization and may require standard macOS first-launch approval;
-- performance baseline/budgets have not yet been measured;
-- current global `.mouseMoved` observer is security-narrow but its resource cost is not yet baselined;
-- current M0 hover activation remains immediate; M1 will add the approved cancellable dwell;
-- current M0 build has no expansion haptic; M1 will add public AppKit haptic feedback after successful deliberate hover;
-- active-display migration, final Spaces/fullscreen policy, animation tuning, and final product UI belong to M1;
-- feature modules including Yandex Music are not implemented yet.
+- initial target-Mac runtime ceilings are based on one canonical run per scenario and intentionally include conservative headroom;
+- current global `.mouseMoved` path remains until M1 proves a reliable equal-or-better local alternative;
+- active-display migration, Spaces/fullscreen policy, animation tuning, product modules, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Complete `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6 using the DMG downloaded from GitHub Releases.
-2. Begin Performance Foundation (P0), establish real target-Mac resource baseline and evidence-based budgets.
-3. Start M1 with TDD, including measured investigation of local tracking vs current global `mouseMoved`, then implement delayed hover + haptic behavior according to `docs/specs/M1_NOTCH_INTERACTION.md`.
-4. Preserve all existing security, performance, notch geometry, hover retention, and release guarantees while expanding interaction behavior.
+1. Complete final exact-head CI and independent read-only review for PR #5; squash-merge only if both pass.
+2. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
+3. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.

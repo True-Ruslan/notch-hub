@@ -60,6 +60,12 @@ jobs:
       - name: Release policy tests
         run: (cd scripts && python3 -m unittest -v test_release_policy.py)
 
+      - name: Performance policy tests
+        run: (cd scripts && python3 -m unittest -v test_performance_policy.py)
+
+      - name: Performance policy audit
+        run: python3 scripts/performance_policy.py audit Sources
+
       - name: Validate sources, scripts and security baseline
         run: |
           swift format lint --recursive --strict --configuration .swift-format Sources Tests Package.swift
@@ -119,6 +125,84 @@ jobs:
           done
 
           hdiutil verify build/NotchHub.dmg
+
+          if find "$APP" -type f \( -name 'perf-baseline.py' -o -name 'performance_policy.py' -o -name 'test_performance_policy.py' \) -print -quit | grep -q .; then
+            echo "Development performance tooling was bundled into NotchHub.app" >&2
+            exit 1
+          fi
+
+      - name: Record deterministic artifact sizes
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          app = Path('build/NotchHub.app')
+          executable = app / 'Contents/MacOS/NotchHub'
+          dmg = Path('build/NotchHub.dmg')
+          data = {
+              'schemaVersion': 1,
+              'sourceCommit': '${{ github.event.pull_request.head.sha || github.sha }}',
+              'executableSizeBytes': executable.stat().st_size,
+              'appSizeBytes': sum(path.stat().st_size for path in app.rglob('*') if path.is_file()),
+              'dmgSizeBytes': dmg.stat().st_size,
+          }
+          Path('build/perf-size.json').write_text(
+              json.dumps(data, sort_keys=True, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          cat build/perf-size.json
+
+      - name: Enforce release size budget
+        run: |
+          python3 scripts/performance_policy.py check-size-budget \
+            --summary build/perf-size.json \
+            --baseline performance/baseline-v0.1.0.json
+
+      - name: Performance harness compatibility smoke
+        run: |
+          SOURCE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          python3 scripts/perf-baseline.py \
+            --app build/NotchHub.app \
+            --source-commit "$SOURCE_SHA" \
+            --scenario idle \
+            --warmup-seconds 0 \
+            --duration-seconds 5 \
+            --interval-seconds 1 \
+            --output build/perf-smoke.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('build/perf-smoke.json').read_text(encoding='utf-8'))
+          required = {
+              'schemaVersion', 'scenario', 'sourceCommit', 'measurementToolCommit',
+              'platform', 'measurementMode', 'sampleIntervalSeconds', 'sampleCount', 'summary'
+          }
+          missing = required - set(data)
+          if missing:
+              raise SystemExit(f'Missing performance smoke keys: {sorted(missing)}')
+          if data['schemaVersion'] != 1 or data['scenario'] != 'idle':
+              raise SystemExit(f'Unexpected performance smoke schema: {data!r}')
+          if data['sampleCount'] != 5:
+              raise SystemExit(f'Expected 5 smoke samples, got {data["sampleCount"]!r}')
+          summary = data['summary']
+          for key in ('cpuMedianPercent', 'cpuMaxPercent', 'rssMedianKiB', 'rssMaxKiB', 'threadMedian', 'threadMax'):
+              if key not in summary:
+                  raise SystemExit(f'Missing summary key: {key}')
+          PY
+          cat build/perf-smoke.json
+
+      - name: Upload performance metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NotchHub-performance-metadata
+          path: |
+            build/perf-size.json
+            build/perf-smoke.json
+          if-no-files-found: error
 
       - name: Upload DMG
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

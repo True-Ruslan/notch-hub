@@ -16,6 +16,8 @@ For behavior changes and bug fixes, use RED → GREEN → REFACTOR:
 
 A regression test must fail against the broken behavior before the fix is considered covered. Do not write tests whose only purpose is to satisfy a coverage number.
 
+For performance work, deterministic policy, parser, state, lifecycle, and schema behavior belongs in automated tests. Physical CPU/RSS/thread acceptance belongs to the documented target-Mac scenarios; shared runner resource values are compatibility evidence only and are never substituted for target hardware.
+
 ### Commits
 
 Use small, intention-revealing commits. Preferred Conventional Commit prefixes:
@@ -26,6 +28,7 @@ Use small, intention-revealing commits. Preferred Conventional Commit prefixes:
 - `refactor:` behavior-preserving internal change
 - `docs:` documentation only
 - `chore:` tooling, CI, packaging, maintenance
+- `perf:` measured performance baseline or resource-efficiency change
 
 Do not mix unrelated refactors with a bug fix. A useful bug-fix history normally shows the regression test separately from the production fix.
 
@@ -38,7 +41,9 @@ Before marking a PR ready:
 - required automated checks are green;
 - `CHANGELOG.md` is updated for notable behavior changes;
 - `docs/PROJECT_STATE.md` reflects the actual state and remaining manual work;
-- unavoidable manual acceptance is explicitly listed rather than silently assumed.
+- unavoidable manual acceptance is explicitly listed rather than silently assumed;
+- performance changes that affect runtime cost are compared against the accepted target-Mac baseline where applicable;
+- noisy shared-runner CPU/RSS/thread measurements are never promoted into tight gates merely to increase automation coverage.
 
 ## Versioning
 
@@ -61,6 +66,7 @@ The repository is the hand-off source of truth for a new development session:
 - `docs/ROADMAP.md` — milestones and exit criteria.
 - `docs/PROJECT_STATE.md` — exact current state, accepted/manual-tested items, known limitations, and next step.
 - `docs/TESTING.md` — automated gates and manual acceptance scenario IDs.
+- `PERFORMANCE.md` — runtime resource policy, target-Mac methodology, accepted baseline values, and budgets.
 - `CHANGELOG.md` — notable changes by release.
 
-Update the relevant files in the same PR when a decision, limitation, acceptance result, or roadmap status changes.
+Update the relevant files in the same PR when a decision, limitation, acceptance result, roadmap status, or accepted resource baseline changes.

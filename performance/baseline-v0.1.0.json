@@ -1,0 +1,132 @@
+{
+  "baselineId": "v0.1.0",
+  "measurementToolCommit": "dfd4f87f8e5be04b467172d720d22bfc054c06d0",
+  "release": {
+    "appleTrusted": false,
+    "buildNumber": 1,
+    "buildPlatform": {
+      "runnerOS": "macOS 26.5.2",
+      "swiftVersion": "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)",
+      "xcodeVersion": "Xcode 26.6 Build version 17F113"
+    },
+    "distributionTier": "personal",
+    "dmgSHA256": "cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc",
+    "notarized": false,
+    "tag": "v0.1.0",
+    "version": "0.1.0"
+  },
+  "scenarios": {
+    "hover": {
+      "budget": {
+        "cpuMaxPercent": 30.0,
+        "cpuMedianPercent": 8.0,
+        "rssMaxKiB": 49152,
+        "threadMax": 9
+      },
+      "config": {
+        "durationSeconds": 60,
+        "interaction": "manual-fixed-5-second-cycle",
+        "sampleIntervalSeconds": 1,
+        "warmupSeconds": 10
+      },
+      "measurement": {
+        "actualMeasurementSeconds": 60.018,
+        "sampleCount": 60
+      },
+      "summary": {
+        "cpuMaxPercent": 22.3,
+        "cpuMedianPercent": 5.95,
+        "rssMaxKiB": 38816,
+        "rssMedianKiB": 38456.0,
+        "sampleCount": 60,
+        "threadMax": 7,
+        "threadMedian": 6.0
+      }
+    },
+    "idle": {
+      "budget": {
+        "cpuMaxPercent": 2.0,
+        "cpuMedianPercent": 0.5,
+        "rssMaxKiB": 43008,
+        "threadMax": 6
+      },
+      "config": {
+        "durationSeconds": 60,
+        "interaction": "none",
+        "sampleIntervalSeconds": 1,
+        "warmupSeconds": 10
+      },
+      "measurement": {
+        "actualMeasurementSeconds": 60.017,
+        "sampleCount": 60
+      },
+      "summary": {
+        "cpuMaxPercent": 0.7,
+        "cpuMedianPercent": 0.0,
+        "rssMaxKiB": 33808,
+        "rssMedianKiB": 33648.0,
+        "sampleCount": 60,
+        "threadMax": 4,
+        "threadMedian": 4.0
+      }
+    },
+    "stability": {
+      "budget": {
+        "cpuMaxPercent": 10.0,
+        "cpuMedianPercent": 0.5,
+        "rssMaxKiB": 45056,
+        "rssPositiveDriftMaxKiB": 8192,
+        "threadMax": 9,
+        "threadPositiveDriftMax": 2
+      },
+      "config": {
+        "durationSeconds": 600,
+        "interaction": "none",
+        "sampleIntervalSeconds": 5,
+        "warmupSeconds": 10
+      },
+      "measurement": {
+        "actualMeasurementSeconds": 600.013,
+        "sampleCount": 120
+      },
+      "stabilitySummary": {
+        "rssEndKiB": 30544,
+        "rssFirstQuartileKiB": 28976.0,
+        "rssStartKiB": 34256,
+        "threadEnd": 5,
+        "threadFirstQuartile": 3.0,
+        "threadStart": 4
+      },
+      "summary": {
+        "cpuMaxPercent": 6.8,
+        "cpuMedianPercent": 0.0,
+        "rssMaxKiB": 34384,
+        "rssMedianKiB": 30992.0,
+        "sampleCount": 120,
+        "threadMax": 7,
+        "threadMedian": 3.0
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "size": {
+    "budget": {
+      "absoluteCeilingBytes": {
+        "appSizeBytes": 270336,
+        "dmgSizeBytes": 90112,
+        "executableSizeBytes": 266240
+      },
+      "maxRegressionPercent": 15
+    },
+    "summary": {
+      "appSizeBytes": 223555,
+      "dmgSizeBytes": 73955,
+      "executableSizeBytes": 220560
+    }
+  },
+  "sourceCommit": "8e913dcddfdec7d9aa920df8c37afb23b8c40884",
+  "targetPlatform": {
+    "macOSVersion": "26.6",
+    "modelIdentifier": "Mac16,8"
+  }
+}
