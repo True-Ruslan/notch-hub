@@ -15,6 +15,7 @@ from performance_policy import (
     main,
     parse_ps_sample,
     summarize_samples,
+    summarize_stability_samples,
     validate_config,
 )
 
@@ -151,6 +152,26 @@ class ProcessMetricTests(unittest.TestCase):
     def test_summarize_samples_rejects_empty_input(self):
         with self.assertRaises(ValueError):
             summarize_samples([])
+
+    def test_stability_summary_preserves_start_end_and_first_quartile(self):
+        samples = [
+            ProcessSample(0.1, 10_000, 5),
+            ProcessSample(0.1, 11_000, 5),
+            ProcessSample(0.1, 12_000, 6),
+            ProcessSample(0.1, 13_000, 7),
+        ]
+
+        self.assertEqual(
+            {
+                "rssStartKiB": 10_000,
+                "rssEndKiB": 13_000,
+                "rssFirstQuartileKiB": 10_750.0,
+                "threadStart": 5,
+                "threadEnd": 7,
+                "threadFirstQuartile": 5.0,
+            },
+            summarize_stability_samples(samples),
+        )
 
 
 class BaselineConfigTests(unittest.TestCase):
