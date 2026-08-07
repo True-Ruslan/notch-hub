@@ -45,7 +45,7 @@ Completed:
 - manual `Personal Release` workflow published immutable `v0.1.0` from accepted `main`;
 - `NH-PERSONAL-RELEASE-001` passed on the target MacBook/macOS 26.6 using the downloaded GitHub Release DMG.
 
-Apple Developer Program membership is **not** a blocker. Developer ID/notarization is intentionally deferred to an optional future Trusted Release tier.
+Apple Developer Program membership is **not** a blocker. Developer ID/notarization is intentionally deferred to an optional future Trusted Release tier. No GitHub Environments or Apple signing/notarization secrets are currently configured for that dormant tier.
 
 ## P0 — Performance Foundation
 
@@ -96,7 +96,7 @@ Machine-readable baseline: `performance/baseline-v0.1.0.json`.
 
 ## P0.1 — Public repository readiness
 
-Status: **PUBLIC; SETTINGS VERIFICATION PENDING**
+Status: **PUBLIC; THREE SETTINGS/UI CHECKS PENDING**
 Hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
 
 Purpose: make the source repository safe to expose publicly before continuing feature development.
@@ -109,20 +109,21 @@ Completed:
 - root MIT license present;
 - ordinary fork PR CI explicitly read-only and secret-free;
 - repository-wide executable policy rejects `pull_request_target`, `workflow_run`, alternate `pull_request` workflow paths, self-hosted fork execution, OIDC/write permissions, reusable-workflow hops, and persisted checkout credentials;
-- Personal and Trusted release workflows remain manual, exact-`main` publication paths separated from untrusted PR execution;
+- Personal and dormant Trusted Release workflow definitions remain separated from untrusted PR execution;
 - RED CI #123 proved the public-CI policy helper did not exist before implementation;
 - exact-head CI #139 passed 16/16 release/public-policy tests plus full security/performance/Swift/package gates;
 - independent review found and closed two additional trust-boundary gaps before merge;
 - PR #6 squash-merged to `main`;
 - repository metadata now reports Public visibility;
 - squash-only repository integration settings remain enabled;
-- `v0.1.0` tag remains addressable with version/release documentation intact.
+- `v0.1.0` tag remains addressable with version/release documentation intact;
+- first post-public PR CI #141 passed the complete public security/performance/Swift/package gate set;
+- no GitHub Environments are currently configured; this is intentional while Personal Release is the only supported distribution tier, so Trusted Release environment/secrets verification is N/A until that optional tier is deliberately adopted.
 
-Remaining exit criteria require direct GitHub Settings verification because the connected API does not expose them:
+Remaining exit criteria require direct GitHub Settings/UI verification because the connected API does not expose them:
 
 - active branch protection/branch ruleset for `main` and required CI checks;
 - Actions default workflow token permissions and fork pull-request settings;
-- `release` environment protection/secrets isolation;
 - published `v0.1.0` Release assets/checksum/provenance remain intact in the release UI.
 
 Audit details and exact post-transition status: `docs/PUBLIC_READINESS.md`.
@@ -202,6 +203,8 @@ No `CGEventTap`, Accessibility, Input Monitoring, or broader capture merely for 
 ## M8 — Trusted distribution and maintenance (optional)
 
 - only if Apple Developer Program becomes worthwhile;
+- create and review the GitHub `release` environment before first Trusted Release use;
+- provision Apple signing/notarization credentials only as environment-scoped secrets;
 - validate Developer ID/notarization/stapling/Gatekeeper path on a new version;
 - never replace an existing Personal Release tag;
 - authenticated update-channel design before any self-update;

@@ -3,7 +3,7 @@
 Last reviewed: 2026-08-07
 Current visibility: **Public**
 Hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
-Status: **repository-content gates PASS; GitHub Settings gates pending direct verification**
+Status: **repository-content gates PASS; remaining GitHub Settings gates pending direct verification**
 
 ## Goal
 
@@ -85,9 +85,13 @@ Several earlier jobs during the work failed before checkout/test steps during a 
 Publication remains separate from fork PR execution:
 
 - Personal Release is manual `workflow_dispatch`, exact-`main` only, and contains no custom repository/Apple secrets;
-- Trusted Release is manual `workflow_dispatch`, exact-`main` only, behind the `release` environment, and is the only workflow allowed to reference Apple signing/notarization secrets;
+- Trusted Release is a dormant future workflow scaffold: it references `environment: release`, but **no GitHub Environment is currently configured and no Apple signing/notarization secrets are provisioned**;
+- GitHub documents that an environment must be created before it can be used by a workflow, so Trusted Release is not an operational release tier until that setup is deliberately performed;
+- if Trusted Release is adopted later, the `release` environment, protection rules, and Apple credentials must be created and reviewed before the first run;
 - neither release path may overwrite an existing tag/release;
 - public PR CI cannot invoke either release workflow with write authority.
+
+The absence of a configured `release` environment is intentional for the current Personal Release-only project and is treated as **N/A**, not a failed post-public gate.
 
 ## Runtime/security boundary
 
@@ -102,18 +106,18 @@ The repository is licensed under the MIT License in root `LICENSE`.
 Programmatically confirmed after the transition:
 
 - GitHub repository metadata reports `visibility=public`;
-- `main` head is the public-readiness squash `23500e099a0f8b2738f1157c6ae3be71c89df6e1`;
+- public-readiness hardening was squash-merged as `23500e099a0f8b2738f1157c6ae3be71c89df6e1`;
 - repository integration settings remain squash-only (`allow_squash_merge=true`, merge/rebase commits disabled);
 - `v0.1.0` tag remains addressable and contains `VERSION=0.1.0` plus the versioned Personal Release documentation;
-- public-readiness hardening itself introduced no runtime/workflow-definition/entitlement change.
+- the first post-public pull-request CI (#141) completed successfully through the normal public `pull_request` path, including public/release policy, security, performance, Swift, signing/Sandbox/DMG, and artifact-size gates;
+- no GitHub Environments are currently configured; Trusted Release is intentionally unconfigured and therefore its environment/secrets isolation check is N/A until that tier is adopted.
 
-Still requiring direct GitHub Settings verification because the connected API does not expose these settings:
+Still requiring direct GitHub Settings/UI verification because the connected API does not expose these settings/assets:
 
 1. active `main` branch protection/branch ruleset and required CI checks;
 2. Actions default workflow token permissions and fork pull-request approval/settings;
-3. `release` environment protection/secrets isolation;
-4. published `v0.1.0` Release assets (`NotchHub.dmg`, checksum, `build-metadata.json`) remain visible and intact.
+3. published `v0.1.0` Release assets (`NotchHub.dmg`, checksum, `build-metadata.json`) remain visible and intact.
 
 GitHub documents that visibility changes can alter ruleset state; therefore these settings are not assumed from the pre-transition configuration.
 
-Public readiness is complete only after these four Settings checks are confirmed.
+Public readiness is complete only after these three remaining checks are confirmed.
