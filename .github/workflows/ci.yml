@@ -16,11 +16,11 @@ jobs:
   build-test-package:
     name: Build, test and package
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Toolchain
         run: |
@@ -30,21 +30,33 @@ jobs:
       - name: Validate package
         run: swift package describe
 
+      - name: Validate sources and scripts
+        run: |
+          swift format lint --recursive --strict Sources Tests Package.swift
+          plutil -lint Resources/Info.plist
+          bash -n scripts/*.sh
+
       - name: Build debug
         run: swift build
 
-      - name: Test
-        run: swift test --parallel
+      - name: Test with coverage instrumentation
+        run: swift test --parallel --enable-code-coverage
 
       - name: Build release DMG
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: ./scripts/build-dmg.sh
 
-      - name: Verify app bundle
+      - name: Verify app bundle, version and DMG
         run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
           test -x build/NotchHub.app/Contents/MacOS/NotchHub
           test -f build/NotchHub.app/Contents/Info.plist
           test -f build/NotchHub.dmg
+          test "$(plutil -extract CFBundleShortVersionString raw build/NotchHub.app/Contents/Info.plist)" = "$VERSION"
+          test "$(plutil -extract CFBundleVersion raw build/NotchHub.app/Contents/Info.plist)" = "${{ github.run_number }}"
           codesign --verify --deep --strict build/NotchHub.app
+          hdiutil verify build/NotchHub.dmg
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4

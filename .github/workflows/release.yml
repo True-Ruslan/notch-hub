@@ -12,20 +12,35 @@ jobs:
   release:
     name: Build release DMG
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Validate tag and sources
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          test "$GITHUB_REF_NAME" = "v$VERSION"
+          swift format lint --recursive --strict Sources Tests Package.swift
+          plutil -lint Resources/Info.plist
+          bash -n scripts/*.sh
 
       - name: Test
-        run: swift test --parallel
+        run: swift test --parallel --enable-code-coverage
 
       - name: Build DMG
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: ./scripts/build-dmg.sh
 
-      - name: Verify bundle
-        run: codesign --verify --deep --strict build/NotchHub.app
+      - name: Verify release artifact
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          test "$(plutil -extract CFBundleShortVersionString raw build/NotchHub.app/Contents/Info.plist)" = "$VERSION"
+          test "$(plutil -extract CFBundleVersion raw build/NotchHub.app/Contents/Info.plist)" = "${{ github.run_number }}"
+          codesign --verify --deep --strict build/NotchHub.app
+          hdiutil verify build/NotchHub.dmg
 
       - name: Publish GitHub Release
         env:
@@ -35,6 +50,6 @@ jobs:
             gh release upload "$GITHUB_REF_NAME" build/NotchHub.dmg --clobber
           else
             gh release create "$GITHUB_REF_NAME" build/NotchHub.dmg \
-              --title "$GITHUB_REF_NAME" \
+              --title "NotchHub $GITHUB_REF_NAME" \
               --generate-notes
           fi
