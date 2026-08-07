@@ -84,7 +84,7 @@ Release infrastructure was developed through deterministic RED→GREEN tests:
 
 ## P0 Performance Foundation
 
-Status: **ACCEPTED subject to final PR #5 review/merge gate**.
+Status: **ACCEPTED EVIDENCE; final PR #5 exact-head CI/review/merge gate pending**.
 
 Performance/resource efficiency is a first-class product requirement alongside security. P0 establishes deterministic CI policy plus real target-hardware evidence before feature-heavy M1 work.
 
