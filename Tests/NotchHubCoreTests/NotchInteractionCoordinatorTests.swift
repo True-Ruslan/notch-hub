@@ -119,11 +119,23 @@ struct NotchInteractionCoordinatorTests {
         fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
         fixture.scheduler.advance(by: 0.12)
         fixture.coordinator.pointerMoved(to: outside, layout: layout)
+        #expect(fixture.model.presentation == .compact)
+
         fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
         fixture.scheduler.advance(by: 0.12)
 
         #expect(fixture.model.presentation == .expanded)
         #expect(fixture.haptics.requestCount == 2)
+    }
+
+    @Test
+    func programmaticExpansionDoesNotRequestHaptic() {
+        let fixture = makeFixture()
+
+        fixture.model.toggle()
+
+        #expect(fixture.model.presentation == .expanded)
+        #expect(fixture.haptics.requestCount == 0)
     }
 
     @Test
