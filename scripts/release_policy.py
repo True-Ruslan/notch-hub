@@ -70,8 +70,9 @@ _FORBIDDEN_PUBLIC_CI_FRAGMENTS = (
     "permissions: write-all",
     "id-token: write",
     "persist-credentials: true",
+    "./.github/workflows/",
 )
-_FORBIDDEN_PUBLIC_WORKFLOW_TRIGGERS = ("pull_request_target:", "workflow_run:")
+_FORBIDDEN_PUBLIC_WORKFLOW_TRIGGERS = ("pull_request_target", "workflow_run")
 
 
 def parse_semver(value: str) -> tuple[int, int, int]:
@@ -148,15 +149,19 @@ def validate_public_ci_workflow(text: str) -> None:
 
 
 def validate_public_workflow_triggers(workflows: dict[str, str]) -> None:
-    """Reject repository-wide privileged event bridges that can cross PR trust boundaries."""
+    """Keep all untrusted PR execution on the single reviewed CI workflow."""
     if not workflows:
         raise ValueError("workflow set must not be empty")
+    if "ci.yml" not in workflows:
+        raise ValueError("public repository workflow set must contain ci.yml")
 
     for name in sorted(workflows):
         text = workflows[name]
         for trigger in _FORBIDDEN_PUBLIC_WORKFLOW_TRIGGERS:
-            if trigger in text:
+            if re.search(rf"\b{re.escape(trigger)}\b", text):
                 raise ValueError(f"{name} contains prohibited public-repository trigger: {trigger}")
+        if name != "ci.yml" and re.search(r"\bpull_request\b", text):
+            raise ValueError(f"{name} must not define an alternate pull_request execution path")
 
 
 def _positive_build_number(value: str) -> int:
