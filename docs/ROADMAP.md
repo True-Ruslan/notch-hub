@@ -26,12 +26,12 @@ M0 code is merged into protected `main`.
 
 ## R0.1 — Personal Release foundation
 
-Status: **PUBLISHED; downloaded-release acceptance pending**
+Status: **ACCEPTED**
 Target: `v0.1.0 — Personal build`
 
 Purpose: publish versioned personal-use builds through GitHub Releases without paid Apple Developer membership while preserving security, provenance, and immutable history.
 
-Completed publication guarantees:
+Completed:
 
 - deterministic release-policy tests are green;
 - `Personal Release` workflow is manual-only and accepts only exact protected `main`;
@@ -42,32 +42,41 @@ Completed publication guarantees:
 - future `Trusted Release` workflow is separately named and cannot overwrite Personal versions;
 - release docs clearly explain standard Finder / Privacy & Security → Open Anyway path without weakening Gatekeeper;
 - protected implementation PR was squash-merged;
-- manual `Personal Release` workflow published `v0.1.0` from the accepted `main` commit.
-
-Remaining exit criterion:
-
-- `NH-PERSONAL-RELEASE-001` passes on the target MacBook/macOS 26.6 using the DMG downloaded from GitHub Releases.
+- manual `Personal Release` workflow published immutable `v0.1.0` from accepted `main`;
+- `NH-PERSONAL-RELEASE-001` passed on the target MacBook/macOS 26.6 using the downloaded GitHub Release DMG.
 
 Apple Developer Program membership is **not** a blocker. Developer ID/notarization is intentionally deferred to an optional future Trusted Release tier.
 
 ## P0 — Performance Foundation
 
-Status: **NEXT after Personal `v0.1.0` downloaded-release acceptance**
+Status: **IN PROGRESS (`PR #5`)**
 
 Purpose: make CPU, RAM, threads, wakeups/background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
 
-Planned:
+Implemented/in review:
 
 - root `PERFORMANCE.md` contract;
-- deterministic CI audit against unreviewed polling/timers/busy loops;
-- standard-library process-metric parser/aggregation tests;
-- development-only target-Mac baseline harness;
-- reproducible macOS 26.6 scenarios for idle, hover/active, stability, and artifact size;
-- evidence-based budgets derived from real measurements, never arbitrary guesses;
-- CI gates for deterministic/reproducible resource invariants (especially artifact size), while noisy CPU/RAM thresholds remain target-Mac acceptance rather than shared-runner gates;
-- prove performance tooling is never bundled as telemetry/runtime monitoring.
+- deterministic CI audit against unreviewed polling/timers/sleeps/display links/busy loops;
+- standard-library process-metric parser/aggregation and budget-comparison tests;
+- development-only target-Mac baseline harness with explicit source/tool provenance;
+- reproducible macOS 26.6 scenario contracts for idle, hover/active, stability, artifact size, and deterministic state stress;
+- 100,000-transition pure Swift state/pointer stress coverage with no wall-clock threshold;
+- CI runner compatibility/schema smoke without CPU/RAM magnitude gating;
+- deterministic release-candidate size metadata;
+- security/package checks proving performance tooling is not bundled as runtime telemetry.
+
+Remaining P0 exit criteria:
+
+- completed PR #5 CI/review is green;
+- canonical `NH-PERF-IDLE-001`, `NH-PERF-HOVER-001`, `NH-PERF-STABILITY-001`, and `NH-PERF-SIZE-001` measurements are collected on the target MacBook/macOS 26.6 against accepted `v0.1.0`;
+- measurement noise/stability is reviewed before thresholds are chosen;
+- `performance/baseline-v0.1.0.json` records only summarized non-sensitive measurements/configuration;
+- evidence-based CPU/RAM/thread/size budgets are derived from the accepted baseline rather than invented;
+- only deterministic/reproducible budgets (especially artifact size) are enforced in shared CI;
+- P0 final review is green and the PR is merged.
 
 Detailed approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
+Authoritative runtime policy: root `PERFORMANCE.md`.
 
 ## M1 — Notch Core hardening and interaction
 
