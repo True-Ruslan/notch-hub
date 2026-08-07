@@ -144,6 +144,52 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertTrue(encoded.endswith("\n"))
         self.assertLess(encoded.index('"appleTrusted"'), encoded.index('"version"'))
 
+    def test_personal_release_workflow_has_fail_closed_quality_and_provenance_gates(self):
+        workflow_path = REPOSITORY_ROOT / ".github" / "workflows" / "personal-release.yml"
+        self.assertTrue(workflow_path.is_file(), f"missing personal release workflow: {workflow_path}")
+        workflow = workflow_path.read_text(encoding="utf-8")
+
+        required_fragments = (
+            "name: Personal Release",
+            "workflow_dispatch:",
+            "permissions:\n  contents: write",
+            "runs-on: macos-26",
+            "persist-credentials: false",
+            "fetch-depth: 0",
+            "scripts/release_policy.py validate-notes",
+            "scripts/security-audit.sh",
+            "swift build -Xswiftc -warnings-as-errors",
+            "swift test --parallel --enable-code-coverage",
+            "codesign --verify --deep --strict",
+            "flags=.*runtime",
+            "com.apple.security.app-sandbox",
+            "hdiutil verify",
+            "shasum -a 256",
+            "scripts/release_policy.py metadata",
+            "gh release view",
+            "git rev-parse -q --verify",
+            "gh release create",
+            "--notes-file",
+            "build-metadata.json",
+        )
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, workflow)
+
+        forbidden_fragments = (
+            "notarytool",
+            "Developer ID Application",
+            "APPLE_DEVELOPER_ID",
+            "APPLE_NOTARY",
+            "environment: release",
+            "--clobber",
+            "xattr",
+            "spctl --master-disable",
+        )
+        for fragment in forbidden_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertNotIn(fragment, workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
