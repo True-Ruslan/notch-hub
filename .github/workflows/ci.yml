@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos-26-compatibility:
+    name: macOS 26 compatibility
+    runs-on: macos-26
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Report platform
+        run: |
+          sw_vers
+          xcode-select -p
+          swift --version
+
+      - name: Build with warnings as errors
+        run: swift build -Xswiftc -warnings-as-errors
+
+      - name: Test
+        run: swift test --parallel
+
+  build-test-package:
+    name: Build, test and package
+    needs: macos-26-compatibility
+    runs-on: macos-15
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcode-select -p
+          swift --version
+
+      - name: Validate package
+        run: swift package describe
+
+      - name: Validate sources, scripts and security baseline
+        run: |
+          swift format lint --recursive --strict --configuration .swift-format Sources Tests Package.swift
+          plutil -lint Resources/Info.plist Resources/NotchHub.entitlements
+          bash -n scripts/*.sh
+          ./scripts/security-audit.sh
+
+      - name: Build debug with warnings as errors
+        run: swift build -Xswiftc -warnings-as-errors
+
+      - name: Test with coverage instrumentation
+        run: swift test --parallel --enable-code-coverage
+
+      - name: Build release DMG
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: ./scripts/build-dmg.sh
+
+      - name: Verify bundle, hardened runtime, sandbox and DMG
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          APP="build/NotchHub.app"
+          EXECUTABLE="$APP/Contents/MacOS/NotchHub"
+
+          test -x "$EXECUTABLE"
+          test -f "$APP/Contents/Info.plist"
+          test -f build/NotchHub.dmg
+          test "$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")" = "$VERSION"
+          test "$(plutil -extract CFBundleVersion raw "$APP/Contents/Info.plist")" = "${{ github.run_number }}"
+          test "$(plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist")" = "ru.trueruslan.notchhub"
+
+          codesign --verify --deep --strict "$APP"
+          codesign -dv --verbose=4 "$APP" 2> build/codesign-details.txt
+          cat build/codesign-details.txt
+          grep -Eq 'flags=.*runtime' build/codesign-details.txt
+
+          codesign --display --entitlements - --xml "$APP" | tee build/effective-entitlements.plist
+          plutil -lint build/effective-entitlements.plist
+          plutil -p build/effective-entitlements.plist
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          with Path('build/effective-entitlements.plist').open('rb') as handle:
+              entitlements = plistlib.load(handle)
+
+          expected = {'com.apple.security.app-sandbox': True}
+          if entitlements != expected:
+              raise SystemExit(f'Unexpected effective entitlements: {entitlements!r}')
+          PY
+
+          otool -L "$EXECUTABLE" | tail -n +2 | awk '{print $1}' | while read -r library; do
+            case "$library" in
+              /System/*|/usr/lib/*) ;;
+              *) echo "Unexpected non-system dynamic library: $library" >&2; exit 1 ;;
+            esac
+          done
+
+          hdiutil verify build/NotchHub.dmg
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NotchHub-dmg
+          path: build/NotchHub.dmg
+          if-no-files-found: error
