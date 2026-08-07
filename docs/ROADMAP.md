@@ -96,29 +96,40 @@ Machine-readable baseline: `performance/baseline-v0.1.0.json`.
 
 ## P0.1 — Public repository readiness
 
-Status: **IN PROGRESS — PR #6**
+Status: **PUBLIC; SETTINGS VERIFICATION PENDING**
+Hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
 
 Purpose: make the source repository safe to expose publicly before continuing feature development.
 
-Exit criteria:
+Completed:
 
-- complete short Git/PR history reviewed for secret/private-key material;
+- complete short pre-public Git/PR history reviewed for secret/private-key material;
 - no history rewrite required by the reviewed evidence;
-- root open-source license present;
+- no open/closed Issues existed at transition time;
+- root MIT license present;
 - ordinary fork PR CI explicitly read-only and secret-free;
-- `pull_request_target`, `workflow_run` privilege bridges, self-hosted fork execution, OIDC/write permissions, and persisted checkout credentials rejected by executable policy;
+- repository-wide executable policy rejects `pull_request_target`, `workflow_run`, alternate `pull_request` workflow paths, self-hosted fork execution, OIDC/write permissions, reusable-workflow hops, and persisted checkout credentials;
 - Personal and Trusted release workflows remain manual, exact-`main` publication paths separated from untrusted PR execution;
-- full CI green on exact PR head;
-- independent public-readiness/security review has no blocker;
-- PR squash-merged before visibility change;
-- repository visibility switched to Public;
-- branch protection/rulesets, Actions permissions/fork behavior, release environment isolation, and `v0.1.0` release integrity reverified after the switch.
+- RED CI #123 proved the public-CI policy helper did not exist before implementation;
+- exact-head CI #139 passed 16/16 release/public-policy tests plus full security/performance/Swift/package gates;
+- independent review found and closed two additional trust-boundary gaps before merge;
+- PR #6 squash-merged to `main`;
+- repository metadata now reports Public visibility;
+- squash-only repository integration settings remain enabled;
+- `v0.1.0` tag remains addressable with version/release documentation intact.
 
-Audit details: `docs/PUBLIC_READINESS.md`.
+Remaining exit criteria require direct GitHub Settings verification because the connected API does not expose them:
+
+- active branch protection/branch ruleset for `main` and required CI checks;
+- Actions default workflow token permissions and fork pull-request settings;
+- `release` environment protection/secrets isolation;
+- published `v0.1.0` Release assets/checksum/provenance remain intact in the release UI.
+
+Audit details and exact post-transition status: `docs/PUBLIC_READINESS.md`.
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **NEXT AFTER PUBLIC READINESS**
+Status: **NEXT AFTER P0.1 SETTINGS VERIFICATION**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
