@@ -8,9 +8,9 @@ NotchHub turns the area around the camera housing into a compact panel for every
 
 Current version: **0.1.0 — Personal build**.
 
-**M0 engineering foundation and R0.1 Personal Release are accepted.** Immutable `v0.1.0` was published from protected `main` without paid Apple Developer membership and subsequently passed downloaded-release acceptance on the primary MacBook/macOS 26.6 target, including checksum/install/launch and accepted notch/hover behavior.
+**M0 engineering foundation, R0.1 Personal Release, and P0 Performance Foundation are accepted.** Immutable `v0.1.0` was published from protected `main` without paid Apple Developer membership and subsequently passed downloaded-release acceptance on the primary MacBook/macOS 26.6 target, including checksum/install/launch and accepted notch/hover behavior.
 
-Current development milestone: **P0 Performance Foundation**. PR #5 has established the deterministic no-polling/resource policy and development-only measurement tooling. Canonical macOS 26.6 runtime baselines for idle, hover, and 10-minute stability are accepted; exact immutable-release artifact sizes remain the last measurement input before the canonical baseline JSON and reproducible size gate can be finalized.
+P0 now has a complete canonical `v0.1.0` performance baseline: target-Mac idle/hover/10-minute stability measurements, exact immutable-release executable/app/DMG sizes, target-Mac CPU/RSS/thread acceptance ceilings, and a deterministic release-size regression gate in CI. The next development milestone is **M1 Notch Core hardening and interaction**.
 
 Source-of-truth documents:
 
@@ -21,6 +21,7 @@ Source-of-truth documents:
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — TDD, commits, versioning, documentation policy
 - [`SECURITY.md`](SECURITY.md) — threat model/security invariants/release trust boundary
 - [`PERFORMANCE.md`](PERFORMANCE.md) — resource-efficiency invariants, accepted target-Mac baseline values, budgets, and regression policy
+- [`performance/baseline-v0.1.0.json`](performance/baseline-v0.1.0.json) — canonical machine-readable performance/resource baseline
 - [`docs/RELEASING.md`](docs/RELEASING.md) — Personal Release and optional future Trusted Release
 - [`docs/PRODUCT_REFERENCES.md`](docs/PRODUCT_REFERENCES.md) — independent product/UI research
 - [`docs/specs/M1_NOTCH_INTERACTION.md`](docs/specs/M1_NOTCH_INTERACTION.md) — approved delayed-hover and haptic interaction contract
@@ -77,16 +78,18 @@ CI enforces this baseline. Future capabilities that require broader permissions/
 
 NotchHub is intended to stay available continuously, so low resource consumption is a product requirement rather than a later optimization pass.
 
-P0 currently provides:
+P0 provides:
 
 - deterministic prohibition of unreviewed polling/repeating timers/busy loops in runtime sources;
 - development-only metric tooling that is never shipped as telemetry;
 - accepted macOS 26.6 runtime baselines for idle, active hover, and 10-minute stability;
 - conservative target-Mac CPU/RSS/thread ceilings derived from those measurements;
-- shared-runner CI checks only for reproducible policy/schema/package behavior, never tight CPU/RAM thresholds;
+- exact immutable-release `v0.1.0` artifact-size baseline: executable `220,560 B`, app `223,555 B`, DMG `73,955 B`;
+- a fail-closed shared-CI artifact-size gate with a 15% relative regression allowance plus independent absolute ceilings;
+- shared-runner CPU/RAM values kept out of tight gates because they are not honest target-hardware evidence;
 - a measured reason to investigate replacing global `.mouseMoved` in M1: hover CPU is materially higher than untouched idle while idle/stability remain near-zero median CPU.
 
-Exact immutable-release executable/app/DMG sizes are still required before P0's canonical baseline JSON and deterministic size regression gate are complete.
+See `PERFORMANCE.md` and `performance/baseline-v0.1.0.json` for exact methodology, measurements, and budgets.
 
 ## Distribution
 
