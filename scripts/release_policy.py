@@ -14,7 +14,7 @@ _SHA256_RE = re.compile(r"[0-9a-fA-F]{64}")
 _PERSONAL_WARNING_HEADING = "## Personal build — not notarized"
 _UNSAFE_NOTE_PATTERNS = (
     re.compile(r"xattr\s+-[^\n]*com\.apple\.quarantine", re.IGNORECASE),
-    re.compile(r"disable\s+Gatekeeper", re.IGNORECASE),
+    re.compile(r"(?<!do not )(?<!never )disable\s+Gatekeeper", re.IGNORECASE),
     re.compile(r"spctl\s+--master-disable", re.IGNORECASE),
 )
 
