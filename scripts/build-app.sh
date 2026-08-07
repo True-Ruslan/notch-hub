@@ -7,9 +7,16 @@ APP_DIR="$ROOT_DIR/build/NotchHub.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 VERSION_FILE="$ROOT_DIR/VERSION"
+ENTITLEMENTS_FILE="$ROOT_DIR/Resources/NotchHub.entitlements"
+SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
 
 if [[ ! -f "$VERSION_FILE" ]]; then
     echo "Missing VERSION file" >&2
+    exit 1
+fi
+
+if [[ ! -f "$ENTITLEMENTS_FILE" ]]; then
+    echo "Missing entitlements file: $ENTITLEMENTS_FILE" >&2
     exit 1
 fi
 
@@ -40,7 +47,19 @@ plutil -replace CFBundleShortVersionString -string "$APP_VERSION" "$CONTENTS_DIR
 plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS_DIR/Info.plist"
 
 if command -v codesign >/dev/null 2>&1; then
-    codesign --force --deep --sign - "$APP_DIR"
+    sign_args=(
+        --force
+        --deep
+        --options runtime
+        --entitlements "$ENTITLEMENTS_FILE"
+        --sign "$SIGN_IDENTITY"
+    )
+
+    if [[ "$SIGN_IDENTITY" != "-" ]]; then
+        sign_args+=(--timestamp)
+    fi
+
+    codesign "${sign_args[@]}" "$APP_DIR"
 fi
 
-echo "Built $APP_DIR (version $APP_VERSION, build $BUILD_NUMBER)"
+echo "Built $APP_DIR (version $APP_VERSION, build $BUILD_NUMBER, signer $SIGN_IDENTITY)"
