@@ -8,9 +8,9 @@ NotchHub turns the area around the camera housing into a compact panel for every
 
 Current version: **0.1.0 — Personal build**.
 
-**M0 engineering foundation, R0.1 Personal Release, and P0 Performance Foundation are accepted and merged.** P0 was squash-merged into `main` as `a056aa74bad5d8e193eb4c76a76e6c910344bd09` after target-Mac performance acceptance, exact-head CI, and final review.
+**M0 engineering foundation, R0.1 Personal Release, P0 Performance Foundation, and P0.1 Public Repository Readiness are accepted.** P0 was squash-merged into `main` as `a056aa74bad5d8e193eb4c76a76e6c910344bd09`; public-readiness hardening was squash-merged as `23500e099a0f8b2738f1157c6ae3be71c89df6e1` and completed with successful post-public Settings/UI verification.
 
-The source repository is now **public**. Public-readiness hardening was squash-merged as `23500e099a0f8b2738f1157c6ae3be71c89df6e1`; repository-content security gates are accepted, while a small set of GitHub Settings checks remains to be verified directly after the visibility transition. Public pull-request CI is intentionally unprivileged and cannot use repository secrets or write authority. The next product milestone after those settings checks is **M1 Notch Core hardening and interaction**.
+The source repository is **public**. Public pull-request CI is intentionally unprivileged and cannot use repository secrets or write authority. The next product milestone is **M1 Notch Core hardening and interaction**.
 
 Source-of-truth documents:
 
@@ -22,7 +22,7 @@ Source-of-truth documents:
 - [`SECURITY.md`](SECURITY.md) — threat model/security invariants/release trust boundary
 - [`PERFORMANCE.md`](PERFORMANCE.md) — resource-efficiency invariants, accepted target-Mac baseline values, budgets, and regression policy
 - [`performance/baseline-v0.1.0.json`](performance/baseline-v0.1.0.json) — canonical machine-readable performance/resource baseline
-- [`docs/PUBLIC_READINESS.md`](docs/PUBLIC_READINESS.md) — public-repository audit scope, findings, and post-transition checks
+- [`docs/PUBLIC_READINESS.md`](docs/PUBLIC_READINESS.md) — public-repository audit scope, findings, and post-transition acceptance
 - [`docs/RELEASING.md`](docs/RELEASING.md) — Personal Release and optional future Trusted Release
 - [`docs/PRODUCT_REFERENCES.md`](docs/PRODUCT_REFERENCES.md) — independent product/UI research
 - [`docs/specs/M1_NOTCH_INTERACTION.md`](docs/specs/M1_NOTCH_INTERACTION.md) — approved delayed-hover and haptic interaction contract
@@ -113,7 +113,7 @@ Because no paid Developer ID/notarization is used, macOS may require Finder **Op
 
 ### Trusted Release — optional future
 
-A separately isolated `Trusted Release` workflow preserves Developer ID + Apple notarization/stapling/Gatekeeper checks for a future new version if Apple Developer Program membership becomes worthwhile. It cannot replace an already published Personal version.
+A separately isolated `Trusted Release` workflow preserves Developer ID + Apple notarization/stapling/Gatekeeper checks for a future new version if Apple Developer Program membership becomes worthwhile. It is intentionally unconfigured today: no GitHub Environment or Apple signing/notarization secrets are provisioned, and the workflow cannot become operational until that future setup is deliberately completed. It cannot replace an already published Personal version.
 
 ## Architecture
 
