@@ -49,11 +49,19 @@ Executable policy requires that CI:
 - never uses `pull_request_target` or `workflow_run` as an untrusted-code execution bridge;
 - never references repository `secrets.*`;
 - never runs untrusted PR code on `self-hosted` runners;
-- never grants a `write` permission or `permissions: write-all`;
+- never grants a `write` permission, `permissions: write-all`, or OIDC `id-token: write` authority;
 - keeps `actions/checkout` credentials disabled with `persist-credentials: false`;
 - keeps third-party Actions pinned to immutable full commit SHAs.
 
 These invariants are covered by `scripts/test_release_policy.py`, `scripts/release_policy.py validate-public-ci`, and `scripts/security-audit.sh`.
+
+### RED → GREEN evidence
+
+The public-CI boundary was introduced test-first. RED CI #123 failed exactly while importing the deliberately missing `validate_public_ci_workflow` helper:
+
+`ImportError: cannot import name 'validate_public_ci_workflow' from 'release_policy'`
+
+The validator, CLI command, and executable security-audit integration were implemented only after that RED evidence. Final GREEN evidence is required on the exact PR head before merge; transient GitHub-hosted runner failures that never reach checkout/test steps are treated as infrastructure failures rather than application evidence.
 
 ## Release workflow boundary
 
