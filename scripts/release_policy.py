@@ -17,6 +17,45 @@ _UNSAFE_NOTE_PATTERNS = (
     re.compile(r"(?<!do not )(?<!never )disable\s+Gatekeeper", re.IGNORECASE),
     re.compile(r"spctl\s+--master-disable", re.IGNORECASE),
 )
+_REQUIRED_PERSONAL_WORKFLOW_FRAGMENTS = (
+    "name: Personal Release",
+    "workflow_dispatch:",
+    "permissions:\n  contents: write",
+    "runs-on: macos-26",
+    "persist-credentials: false",
+    "fetch-depth: 0",
+    'test "$GITHUB_REF_NAME" = "main"',
+    "scripts/release_policy.py validate-notes",
+    "scripts/security-audit.sh",
+    "swift build -Xswiftc -warnings-as-errors",
+    "swift test --parallel --enable-code-coverage",
+    "CODE_SIGN_IDENTITY: \"-\"",
+    "Signature=adhoc",
+    "codesign --verify --deep --strict",
+    "flags=.*runtime",
+    "com.apple.security.app-sandbox",
+    "hdiutil verify",
+    "shasum -a 256",
+    "scripts/release_policy.py metadata",
+    "gh release view",
+    "git rev-parse -q --verify",
+    "gh release create",
+    "--notes-file",
+    "build-metadata.json",
+)
+_FORBIDDEN_PERSONAL_WORKFLOW_FRAGMENTS = (
+    "notarytool",
+    "Developer ID Application",
+    "APPLE_DEVELOPER_ID",
+    "APPLE_NOTARY",
+    "environment: release",
+    "secrets.",
+    "--clobber",
+    "gh release upload",
+    "xattr",
+    "spctl --master-disable",
+    "pull_request_target",
+)
 
 
 def parse_semver(value: str) -> tuple[int, int, int]:
@@ -58,6 +97,22 @@ def validate_personal_release_notes(text: str, version: str) -> None:
     for pattern in _UNSAFE_NOTE_PATTERNS:
         if pattern.search(text):
             raise ValueError(f"unsafe Gatekeeper-bypass instruction matched: {pattern.pattern}")
+
+
+def validate_personal_release_workflow(text: str) -> None:
+    for fragment in _REQUIRED_PERSONAL_WORKFLOW_FRAGMENTS:
+        if fragment not in text:
+            raise ValueError(f"personal release workflow is missing required invariant: {fragment}")
+
+    for fragment in _FORBIDDEN_PERSONAL_WORKFLOW_FRAGMENTS:
+        if fragment in text:
+            raise ValueError(f"personal release workflow contains forbidden trust-boundary fragment: {fragment}")
+
+    # Personal publication is intentionally manual. A top-level push trigger would
+    # make publishing possible without the deliberate workflow_dispatch action.
+    trigger_prefix = text.split("permissions:", maxsplit=1)[0]
+    if re.search(r"(?m)^\s{2}push:\s*$", trigger_prefix):
+        raise ValueError("personal release workflow must not publish from a push trigger")
 
 
 def _positive_build_number(value: str) -> int:
@@ -121,6 +176,13 @@ def _cmd_validate_notes(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_validate_workflow(args: argparse.Namespace) -> int:
+    text = Path(args.workflow).read_text(encoding="utf-8")
+    validate_personal_release_workflow(text)
+    print("Personal release workflow policy passed.")
+    return 0
+
+
 def _cmd_metadata(args: argparse.Namespace) -> int:
     metadata = build_metadata(
         version=args.version,
@@ -147,6 +209,10 @@ def _parser() -> argparse.ArgumentParser:
     notes.add_argument("--version", required=True)
     notes.add_argument("--notes", required=True)
     notes.set_defaults(handler=_cmd_validate_notes)
+
+    workflow = subparsers.add_parser("validate-workflow", help="validate Personal Release workflow")
+    workflow.add_argument("--workflow", required=True)
+    workflow.set_defaults(handler=_cmd_validate_workflow)
 
     metadata = subparsers.add_parser("metadata", help="write deterministic release metadata JSON")
     metadata.add_argument("--version", required=True)
