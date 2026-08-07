@@ -16,6 +16,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.show()
     }
 
+    public func applicationWillTerminate(_ notification: Notification) {
+        panelController?.invalidate()
+        panelController = nil
+    }
+
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
