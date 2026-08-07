@@ -2,11 +2,12 @@
 
 Last updated: 2026-08-07
 Current version: `0.1.0` (Personal Release published and accepted)
+Repository visibility: **Public**
 Primary physical target: macOS `26.6`
-Protected branch: `main`
+Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
-Current repository-hardening PR: #6 `Prepare repository for public visibility`
-Next product milestone: M1 `Notch Core hardening and interaction`
+Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
+Next product milestone after post-public settings verification: M1 `Notch Core hardening and interaction`
 
 ## Product
 
@@ -85,24 +86,34 @@ Published `v0.1.0` metadata:
 
 Runtime CPU/RSS/thread limits remain target-Mac acceptance gates. Shared GitHub runners never substitute for physical resource evidence. Artifact byte sizes are deterministic and are enforced in CI.
 
-## Public repository readiness
+## P0.1 Public repository readiness
 
-Status: **IN PROGRESS in PR #6**.
+Status: **PUBLIC; repository-settings verification pending**.
 
-The repository is being prepared for public source visibility before M1 begins.
+PR #6 completed the public-source audit/hardening with exact-head CI #139 fully green and no final review blocker, then squash-merged to `main` as `23500e099a0f8b2738f1157c6ae3be71c89df6e1`.
 
-Completed audit/hardening evidence so far:
+GitHub repository metadata now reports `visibility=public`. Public-source preparation introduced no runtime or entitlement changes.
 
-- complete short `main` history identified: initial commit plus PR #1–#5 squash commits;
-- initial commit and accessible PR #1–#5 diffs/discussions reviewed with no secret value/private-key material found;
-- historical workflow references contain secret names only, not secret values;
-- ordinary CI already uses `pull_request`, explicit `contents: read`, GitHub-hosted runners, full-SHA actions, and disabled checkout credential persistence;
-- new deterministic public-CI policy rejects write permissions, `pull_request_target`, `workflow_run`, repository secrets, self-hosted runners, OIDC/write authority, and persisted checkout credentials;
+Completed evidence:
+
+- complete short pre-public `main` history and accessible PR #1–#5 diffs/discussions reviewed with no secret value/private-key material found;
+- no separate open/closed Issues existed at transition time;
+- root MIT `LICENSE` present;
+- deterministic public-CI policy keeps untrusted PR execution on the single ordinary `ci.yml` path;
+- public PR CI requires `contents: read`, no secrets, no self-hosted runner, no OIDC/write authority, and no persisted checkout credentials;
+- repository-wide policy rejects alternate `pull_request` workflows plus `pull_request_target`/`workflow_run` bridges and reusable-workflow hops from public PR CI;
 - Personal/Trusted release publication remains isolated from untrusted PR execution;
-- root MIT `LICENSE` added;
-- durable audit details are recorded in `docs/PUBLIC_READINESS.md`.
+- `v0.1.0` tag remains addressable and its versioned release documentation remains intact;
+- repository metadata retains squash-only integration (`allow_squash_merge=true`, merge/rebase commits disabled).
 
-Repository visibility must not be changed until PR #6 is fully green/reviewed. After visibility becomes Public, repository settings/branch protection/Actions permissions/release integrity must be rechecked explicitly.
+Still requiring direct GitHub Settings verification because the connected API does not expose these account/repository settings:
+
+- active branch protection/branch ruleset for `main` and required CI checks;
+- Actions default workflow token permissions and fork-PR approval/settings;
+- `release` environment protection/secrets isolation;
+- published `v0.1.0` Release assets/checksum/provenance UI after the visibility transition.
+
+Public readiness is not marked fully accepted until those settings are confirmed. GitHub documents that a private → public transition can alter ruleset state, so this check is intentional rather than assumed.
 
 ## Security baseline
 
@@ -110,7 +121,7 @@ Repository visibility must not be changed until PR #6 is fully green/reviewed. A
 
 ## Approved M1 interaction requirements
 
-After public-readiness is complete:
+After public-readiness settings verification:
 
 - investigate replacing global `.mouseMoved` with reliable window-local AppKit tracking, accepting it only if correctness and target-Mac resource evidence are equal or better than the P0 baseline;
 - add a cancellable hover dwell, initial candidate `120 ms`, without polling/repeating timers;
@@ -124,13 +135,12 @@ Authoritative M1 spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
 - initial target-Mac runtime ceilings are based on one canonical run per scenario and intentionally include conservative headroom;
 - current global `.mouseMoved` path remains until M1 proves a reliable equal-or-better local alternative;
-- repository visibility is still private until PR #6 and post-transition checks complete;
+- public repository Settings verification is still pending before P0.1 is fully accepted;
 - active-display migration, Spaces/fullscreen policy, animation tuning, product modules, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Complete PR #6 GREEN CI and independent public-readiness review.
-2. Squash-merge PR #6 if clean.
-3. Change repository visibility to Public and immediately verify branch protection, Actions permissions/fork behavior, and release integrity.
-4. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
-5. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.
+1. Verify the remaining post-public GitHub Settings gates listed above.
+2. Record P0.1 as accepted once those checks pass.
+3. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
+4. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.
