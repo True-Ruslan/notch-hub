@@ -70,18 +70,6 @@ Downloaded-release acceptance on the target MacBook/macOS 26.6 is complete:
 
 A separate `Trusted Release` workflow retains Developer ID/notarization for a future new version if paid Apple membership becomes worthwhile. It cannot replace an existing Personal version.
 
-## Personal Release automated evidence
-
-Release infrastructure was developed through deterministic RED→GREEN tests:
-
-1. RED: release-policy tests failed because `release_policy.py` did not exist.
-2. GREEN candidate exposed a real policy bug: safe text `Do not disable Gatekeeper` was falsely classified as a bypass instruction; the rule was corrected rather than weakening tests.
-3. RED: current-version notes test failed because `docs/releases/v0.1.0.md` was absent; GREEN after versioned notes were added.
-4. RED: Personal Release workflow contract failed because `personal-release.yml` was absent; GREEN after fail-closed manual workflow implementation.
-5. RED: tier-separation contract failed because `trusted-release.yml` was absent; GREEN after trusted workflow was separated and legacy `release.yml` removed.
-6. RED: trust-boundary tests failed because executable `validate_personal_release_workflow` did not exist; GREEN after the validator and security-audit integration were added.
-7. Security review found a fail-closed weakness in the future Trusted pre-publish recheck; a RED test was added before the final remote tag/release error-classification fix.
-
 ## P0 Performance Foundation
 
 Status: **ACCEPTED EVIDENCE; final PR #5 exact-head CI/review/merge gate pending**.
