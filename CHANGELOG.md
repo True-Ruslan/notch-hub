@@ -9,17 +9,20 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 ### Added
 
 - Root `PERFORMANCE.md` defining event-driven runtime/resource invariants, target-Mac measurement methodology, stable performance acceptance IDs, accepted runtime baseline values, and evidence-based target-Mac budget rules.
-- Standard-library `scripts/performance_policy.py` plus unit tests for unreviewed polling/timer/sleep/display-link detection, strict process-metric parsing/aggregation, configuration validation, stability evidence, Darwin thread-row parsing, and deterministic budget comparison.
+- Canonical machine-readable `performance/baseline-v0.1.0.json` containing immutable-release provenance, macOS 26.6 runtime measurements, exact release artifact sizes, target-Mac resource ceilings, and deterministic size budgets.
+- Standard-library `scripts/performance_policy.py` plus unit tests for unreviewed polling/timer/sleep/display-link detection, strict process-metric parsing/aggregation, configuration validation, stability evidence, Darwin thread-row parsing, deterministic runtime budget comparison, and fail-closed release-size budget enforcement.
 - Development-only `scripts/perf-baseline.py` for CPU/RSS/thread sampling with explicit measured-app/tooling provenance and no user-content/pointer/clipboard telemetry.
 - Deterministic `NH-PERF-STATE-001` Swift coverage exercising exactly 100,000 pointer/presentation policy decisions without wall-clock thresholds.
-- CI performance-policy enforcement, release-candidate size metadata, harness compatibility/schema smoke, and explicit proof that measurement tooling is not bundled into `NotchHub.app`.
+- CI performance-policy enforcement, release-candidate size metadata, canonical size-regression gate, harness compatibility/schema smoke, and explicit proof that measurement tooling is not bundled into `NotchHub.app`.
 
 ### Changed
 
 - Downloaded immutable Personal Release `v0.1.0` completed `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6; R0.1 is accepted.
-- Performance Foundation P0 is now the active milestone before feature-heavy M1.
+- **Performance Foundation P0 is accepted** after target-Mac runtime evidence, immutable-release artifact-size provenance, RED→GREEN budget-checker coverage, and green integrated CI.
 - Accepted target-Mac runtime baselines for idle, hover, and 10-minute stability against immutable `v0.1.0`; idle/stability median CPU is `0.0%`, stability RSS decreased by `3,712 KiB`, and no sustained memory/thread growth was detected.
+- Accepted exact `v0.1.0` artifact sizes: executable `220,560 B`, app `223,555 B`, DMG `73,955 B`.
 - Defined conservative initial CPU/RSS/thread target-Mac acceptance ceilings from the measured baseline while keeping noisy shared-runner resource values out of CI thresholds.
+- Added deterministic shared-CI size limits: 15% relative regression allowance from the accepted baseline plus independent absolute ceilings derived at 120% and rounded upward to 4 KiB boundaries.
 - Documented approved M1 delayed-hover activation and public AppKit haptic requirements, including event-driven/no-polling constraints and stable hardware acceptance IDs.
 
 ## [0.1.0] - 2026-08-07
@@ -36,7 +39,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Hardened Runtime signing for test and Personal Release builds.
 - Root `SECURITY.md` threat/security policy and executable `scripts/security-audit.sh` CI baseline.
 - Security gates keeping the baseline free of third-party Swift runtime dependencies, runtime shell/subprocess execution, direct network/WebKit APIs, dynamic code loading, broad global input monitoring, dangerous Hardened Runtime exceptions, persistence helpers, mutable GitHub Action references, and `pull_request_target`.
-- GitHub Actions pinned to immutable full commit SHAs.
+- GitHub Actions pinned to immutable full-SHA references.
 - Semantic `VERSION` stamping and CI build numbers.
 - Versioned Personal Release notes under `docs/releases/` with explicit ad-hoc/not-notarized trust labeling.
 - Standard-library `scripts/release_policy.py` and unit tests for strict SemVer/tag rules, release-note trust warnings, unsafe Gatekeeper-bypass text, release-workflow boundaries, and provenance metadata.
