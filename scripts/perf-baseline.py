@@ -11,7 +11,12 @@ import sys
 import time
 from collections.abc import Sequence
 
-from performance_policy import parse_ps_sample, summarize_samples, validate_config
+from performance_policy import (
+    parse_ps_sample,
+    summarize_samples,
+    summarize_stability_samples,
+    validate_config,
+)
 
 
 def _command_text(args: list[str]) -> str:
@@ -81,6 +86,14 @@ def _utc_now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _sample_offsets(duration_seconds: float, interval_seconds: float) -> list[float]:
+    full_intervals = math.floor((duration_seconds / interval_seconds) + 1e-12)
+    offsets = [interval_seconds * index for index in range(1, full_intervals + 1)]
+    if not offsets or not math.isclose(offsets[-1], duration_seconds, rel_tol=0, abs_tol=1e-9):
+        offsets.append(duration_seconds)
+    return offsets
+
+
 def measure(
     *,
     scenario: str,
@@ -124,25 +137,25 @@ def measure(
         if warmup_seconds:
             time.sleep(warmup_seconds)
 
-        sample_target = max(1, math.ceil(duration_seconds / interval_seconds))
+        offsets = _sample_offsets(duration_seconds, interval_seconds)
         samples = []
         started_at = _utc_now()
         started_monotonic = time.monotonic()
 
-        for index in range(sample_target):
-            scheduled = started_monotonic + (index * interval_seconds)
+        for index, offset in enumerate(offsets, 1):
+            scheduled = started_monotonic + offset
             remaining = scheduled - time.monotonic()
             if remaining > 0:
                 time.sleep(remaining)
             if launched is not None and launched.poll() is not None:
-                raise RuntimeError(f"launched NotchHub exited before sample {index + 1}")
+                raise RuntimeError(f"launched NotchHub exited before sample {index}")
             samples.append(_sample_process(pid))
 
         ended_monotonic = time.monotonic()
         ended_at = _utc_now()
         summary = summarize_samples(samples)
 
-        return {
+        result: dict[str, object] = {
             "schemaVersion": 1,
             "scenario": scenario,
             "sourceCommit": measured_source_commit,
@@ -161,6 +174,9 @@ def measure(
             "sampleCount": len(samples),
             "summary": summary,
         }
+        if scenario == "stability":
+            result["stabilitySummary"] = summarize_stability_samples(samples)
+        return result
     finally:
         if launched is not None:
             _terminate_launched(launched)
