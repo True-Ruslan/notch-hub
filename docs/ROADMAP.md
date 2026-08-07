@@ -49,11 +49,12 @@ Apple Developer Program membership is **not** a blocker. Developer ID/notarizati
 
 ## P0 — Performance Foundation
 
-Status: **ACCEPTED EVIDENCE; PR #5 FINAL REVIEW/MERGE GATE**
+Status: **ACCEPTED AND MERGED**
+Merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 
 Purpose: make CPU, RAM, threads, wakeups/background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
 
-Completed evidence:
+Completed:
 
 - root `PERFORMANCE.md` contract;
 - deterministic CI audit against unreviewed polling/timers/sleeps/display links/busy loops;
@@ -69,7 +70,8 @@ Completed evidence:
 - complete machine-readable `performance/baseline-v0.1.0.json`;
 - conservative evidence-based CPU/RSS/thread target-Mac ceilings;
 - RED→GREEN fail-closed release-size checker covering relative allowance, absolute ceiling, schema mismatch, and missing metrics;
-- deterministic shared-CI artifact-size gate with 15% relative allowance plus independent absolute ceilings.
+- deterministic shared-CI artifact-size gate with 15% relative allowance plus independent absolute ceilings;
+- exact-head CI and final change review passed before squash merge.
 
 Accepted runtime evidence:
 
@@ -88,15 +90,35 @@ Accepted size evidence:
 
 P0 keeps runtime CPU/RSS/thread thresholds on the target Mac and enforces only deterministic/reproducible artifact-size budgets in shared CI.
 
-Exit gate remaining: final CI on exact PR head, independent read-only review, then squash-merge PR #5 if clean. No additional target-Mac measurements are required for P0.
-
 Detailed approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 Authoritative runtime policy and accepted values: root `PERFORMANCE.md`.
 Machine-readable baseline: `performance/baseline-v0.1.0.json`.
 
+## P0.1 — Public repository readiness
+
+Status: **IN PROGRESS — PR #6**
+
+Purpose: make the source repository safe to expose publicly before continuing feature development.
+
+Exit criteria:
+
+- complete short Git/PR history reviewed for secret/private-key material;
+- no history rewrite required by the reviewed evidence;
+- root open-source license present;
+- ordinary fork PR CI explicitly read-only and secret-free;
+- `pull_request_target`, `workflow_run` privilege bridges, self-hosted fork execution, OIDC/write permissions, and persisted checkout credentials rejected by executable policy;
+- Personal and Trusted release workflows remain manual, exact-`main` publication paths separated from untrusted PR execution;
+- full CI green on exact PR head;
+- independent public-readiness/security review has no blocker;
+- PR squash-merged before visibility change;
+- repository visibility switched to Public;
+- branch protection/rulesets, Actions permissions/fork behavior, release environment isolation, and `v0.1.0` release integrity reverified after the switch.
+
+Audit details: `docs/PUBLIC_READINESS.md`.
+
 ## M1 — Notch Core hardening and interaction
 
-Status: **NEXT AFTER P0 MERGE**
+Status: **NEXT AFTER PUBLIC READINESS**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
