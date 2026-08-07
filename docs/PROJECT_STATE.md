@@ -5,7 +5,7 @@ Current version: `0.1.0` (Personal Release published and accepted)
 Primary physical target: macOS `26.6`
 Protected branch: `main`
 P0 completion PR: #5 `Performance Foundation`
-Next milestone: M1 `Notch Core hardening and interaction`
+Next milestone after P0 merge: M1 `Notch Core hardening and interaction`
 
 ## Product
 
@@ -84,11 +84,11 @@ Release infrastructure was developed through deterministic RED→GREEN tests:
 
 ## P0 Performance Foundation
 
-Status: **ACCEPTED**.
+Status: **ACCEPTED subject to final PR #5 review/merge gate**.
 
 Performance/resource efficiency is a first-class product requirement alongside security. P0 establishes deterministic CI policy plus real target-hardware evidence before feature-heavy M1 work.
 
-Implemented and accepted:
+Implemented and accepted evidence:
 
 - root `PERFORMANCE.md` event-driven/resource-efficiency contract;
 - runtime source scanner for unreviewed busy loops, repeating timers, sleeps, and display links;
@@ -165,7 +165,7 @@ Approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 
 ## Approved M1 interaction requirements
 
-Two additional UX requirements are part of the M1 contract and must be implemented test-first:
+Two additional UX requirements are part of the M1 contract and must be implemented test-first after P0 merge:
 
 1. **Delayed hover activation**
    - compact → expanded must not happen immediately on first pointer entry;
@@ -194,7 +194,7 @@ Planned acceptance IDs: `NH-HOVER-DELAY-001`, `NH-HOVER-DELAY-002`, `NH-HAPTIC-0
 
 ## Next optimal step
 
-1. Complete final independent review and merge PR #5 if all final checks remain green.
+1. Complete final exact-head CI and independent read-only review for PR #5; squash-merge only if both pass.
 2. Start M1 by capturing current global `.mouseMoved` behavior behind deterministic tests/adapter boundaries.
 3. Investigate reliable window-local `NSTrackingArea`/AppKit tracking and accept it only if notch behavior remains correct and target-Mac resource/input-observation evidence is equal or better than the P0 hover baseline.
 4. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`, preserving event-driven/no-polling and security constraints.
