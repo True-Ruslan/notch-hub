@@ -11,6 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from performance_policy import (
     ProcessSample,
     compare_summary_to_budget,
+    count_ps_thread_rows,
     find_runtime_policy_violations,
     main,
     parse_ps_sample,
@@ -126,6 +127,20 @@ class ProcessMetricTests(unittest.TestCase):
             with self.subTest(line=line):
                 with self.assertRaises(ValueError):
                     parse_ps_sample(line)
+
+    def test_count_ps_thread_rows_counts_darwin_ps_m_body_rows(self):
+        output = """USER   PID   TT   %CPU STAT PRI     STIME     UTIME COMMAND
+runner 1234   ??    0.0 S    31T   0:00.10   0:00.20 NotchHub
+       1234         0.0 S    31T   0:00.00   0:00.00
+       1234         0.0 S    31T   0:00.00   0:00.00
+"""
+        self.assertEqual(3, count_ps_thread_rows(output))
+
+    def test_count_ps_thread_rows_rejects_missing_thread_body(self):
+        with self.assertRaises(ValueError):
+            count_ps_thread_rows("")
+        with self.assertRaises(ValueError):
+            count_ps_thread_rows("USER PID COMMAND\n")
 
     def test_summarize_samples_reports_exact_medians_and_maxima(self):
         samples = [
