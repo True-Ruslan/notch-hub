@@ -1,3 +1,4 @@
+import math
 import pathlib
 import sys
 import tempfile
@@ -5,7 +6,14 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from performance_policy import find_runtime_policy_violations
+from performance_policy import (
+    ProcessSample,
+    compare_summary_to_budget,
+    find_runtime_policy_violations,
+    parse_ps_sample,
+    summarize_samples,
+    validate_config,
+)
 
 
 class RuntimePerformancePolicyTests(unittest.TestCase):
@@ -71,6 +79,117 @@ class RuntimePerformancePolicyTests(unittest.TestCase):
             self.assertEqual(2, len(violations))
             self.assertTrue(violations[0].startswith("A.swift:1:"))
             self.assertTrue(violations[1].startswith("B.swift:1:"))
+
+
+class ProcessMetricTests(unittest.TestCase):
+    def test_parse_ps_sample_accepts_exact_three_field_format(self):
+        sample = parse_ps_sample(" 0.3  18432  7 ")
+        self.assertEqual(0.3, sample.cpu_percent)
+        self.assertEqual(18432, sample.rss_kib)
+        self.assertEqual(7, sample.thread_count)
+
+    def test_parse_ps_sample_rejects_malformed_or_unsafe_values(self):
+        invalid = (
+            "0.3 18432",
+            "0.3 18432 7 extra",
+            "nan 18432 7",
+            "inf 18432 7",
+            "-0.1 18432 7",
+            "0.3 -1 7",
+            "0.3 18432 0",
+            "0.3 18432 -1",
+            "0,3 18432 7",
+            "cpu rss threads",
+        )
+        for line in invalid:
+            with self.subTest(line=line):
+                with self.assertRaises(ValueError):
+                    parse_ps_sample(line)
+
+    def test_summarize_samples_reports_exact_medians_and_maxima(self):
+        samples = [
+            ProcessSample(0.1, 10_000, 5),
+            ProcessSample(0.3, 12_000, 7),
+            ProcessSample(0.2, 11_000, 6),
+            ProcessSample(0.8, 14_000, 8),
+            ProcessSample(0.4, 13_000, 7),
+        ]
+
+        self.assertEqual(
+            {
+                "sampleCount": 5,
+                "cpuMedianPercent": 0.3,
+                "cpuMaxPercent": 0.8,
+                "rssMedianKiB": 12_000,
+                "rssMaxKiB": 14_000,
+                "threadMedian": 7,
+                "threadMax": 8,
+            },
+            summarize_samples(samples),
+        )
+
+    def test_summarize_samples_rejects_empty_input(self):
+        with self.assertRaises(ValueError):
+            summarize_samples([])
+
+
+class BaselineConfigTests(unittest.TestCase):
+    def test_validate_config_accepts_launch_and_attach_modes(self):
+        validate_config("idle", 10, 60, 1, pathlib.Path("build/NotchHub.app"), None)
+        validate_config("hover", 10, 60, 1, None, 1234)
+
+    def test_validate_config_rejects_invalid_measurement_configuration(self):
+        cases = (
+            ("unknown", 10, 60, 1, pathlib.Path("app"), None),
+            ("idle", -1, 60, 1, pathlib.Path("app"), None),
+            ("idle", 10, 0, 1, pathlib.Path("app"), None),
+            ("idle", 10, 60, 0, pathlib.Path("app"), None),
+            ("idle", 10, 5, 6, pathlib.Path("app"), None),
+            ("idle", 10, 60, 1, None, None),
+            ("idle", 10, 60, 1, pathlib.Path("app"), 1234),
+            ("idle", 10, 60, 1, None, 0),
+        )
+        for args in cases:
+            with self.subTest(args=args):
+                with self.assertRaises(ValueError):
+                    validate_config(*args)
+
+
+class BudgetComparisonTests(unittest.TestCase):
+    def test_compare_summary_to_budget_returns_no_violations_when_under_budget(self):
+        summary = {
+            "cpuMaxPercent": 0.8,
+            "rssMaxKiB": 14_000,
+            "threadMax": 8,
+        }
+        budget = {
+            "cpuMaxPercent": 1.0,
+            "rssMaxKiB": 16_000,
+            "threadMax": 10,
+        }
+        self.assertEqual([], compare_summary_to_budget(summary, budget))
+
+    def test_compare_summary_to_budget_reports_only_exceeded_metrics(self):
+        summary = {
+            "cpuMaxPercent": 1.2,
+            "rssMaxKiB": 14_000,
+            "threadMax": 11,
+        }
+        budget = {
+            "cpuMaxPercent": 1.0,
+            "rssMaxKiB": 16_000,
+            "threadMax": 10,
+        }
+        violations = compare_summary_to_budget(summary, budget)
+        self.assertEqual(2, len(violations))
+        self.assertIn("cpuMaxPercent", violations[0])
+        self.assertIn("threadMax", violations[1])
+
+    def test_compare_summary_to_budget_rejects_missing_or_non_finite_values(self):
+        with self.assertRaises(ValueError):
+            compare_summary_to_budget({"cpuMaxPercent": 1.0}, {"rssMaxKiB": 10})
+        with self.assertRaises(ValueError):
+            compare_summary_to_budget({"cpuMaxPercent": math.nan}, {"cpuMaxPercent": 1.0})
 
 
 if __name__ == "__main__":
