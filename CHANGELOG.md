@@ -6,9 +6,18 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ## [Unreleased]
 
+### Added
+
+- Root `PERFORMANCE.md` defining event-driven runtime/resource invariants, target-Mac measurement methodology, stable performance acceptance IDs, and evidence-based budget rules.
+- Standard-library `scripts/performance_policy.py` plus unit tests for unreviewed polling/timer/sleep/display-link detection, strict process-metric parsing/aggregation, configuration validation, and deterministic budget comparison.
+- Development-only `scripts/perf-baseline.py` for CPU/RSS/thread sampling with explicit measured-app/tooling provenance and no user-content/pointer/clipboard telemetry.
+- Deterministic `NH-PERF-STATE-001` Swift coverage exercising exactly 100,000 pointer/presentation policy decisions without wall-clock thresholds.
+- CI performance-policy enforcement, release-candidate size metadata, harness compatibility/schema smoke, and explicit proof that measurement tooling is not bundled into `NotchHub.app`.
+
 ### Changed
 
-- Updated repository state after publication of immutable Personal Release `v0.1.0`; downloaded-release acceptance `NH-PERSONAL-RELEASE-001` remains pending on the target MacBook/macOS 26.6.
+- Downloaded immutable Personal Release `v0.1.0` completed `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6; R0.1 is accepted.
+- Performance Foundation P0 is now the active milestone before feature-heavy M1.
 - Documented approved M1 delayed-hover activation and public AppKit haptic requirements, including event-driven/no-polling constraints and stable hardware acceptance IDs.
 
 ## [0.1.0] - 2026-08-07
@@ -51,7 +60,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Final corrected-build hardware retest on macOS 26.6: `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, and `NH-HOVER-003` all **PASS**.
 - **M0 engineering foundation accepted and merged.**
 - Personal Release infrastructure developed with explicit RED→GREEN evidence for missing policy helper, versioned notes, workflow contract, Trusted/Personal tier separation, and executable trust-boundary validation.
-- Immutable Personal Release `v0.1.0` was published from accepted protected `main`; downloaded-release acceptance `NH-PERSONAL-RELEASE-001` remains pending.
+- Immutable Personal Release `v0.1.0` was published from accepted protected `main` and later passed downloaded-release acceptance `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6.
 
 ### Security
 
