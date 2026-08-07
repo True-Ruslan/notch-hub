@@ -82,6 +82,16 @@ def parse_ps_sample(line: str) -> ProcessSample:
     return ProcessSample(cpu_percent=cpu_percent, rss_kib=rss_kib, thread_count=thread_count)
 
 
+def count_ps_thread_rows(output: str) -> int:
+    lines = [line for line in output.splitlines() if line.strip()]
+    if len(lines) < 2:
+        raise ValueError("Darwin ps -M output must contain a header and at least one thread row")
+    thread_count = len(lines) - 1
+    if thread_count <= 0:
+        raise ValueError("thread count must be positive")
+    return thread_count
+
+
 def summarize_samples(samples: Sequence[ProcessSample]) -> dict[str, float | int]:
     if not samples:
         raise ValueError("at least one process sample is required")
