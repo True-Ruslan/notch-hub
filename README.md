@@ -8,9 +8,9 @@ NotchHub turns the area around the camera housing into a compact panel for every
 
 Current version: **0.1.0 — Personal build**.
 
-**M0 engineering foundation and R0.1 Personal Release are accepted and merged. P0 Performance Foundation has complete accepted evidence and is at the final PR #5 exact-head CI/review/merge gate.** Immutable `v0.1.0` was published from protected `main` without paid Apple Developer membership and subsequently passed downloaded-release acceptance on the primary MacBook/macOS 26.6 target, including checksum/install/launch and accepted notch/hover behavior.
+**M0 engineering foundation, R0.1 Personal Release, and P0 Performance Foundation are accepted and merged.** P0 was squash-merged into `main` as `a056aa74bad5d8e193eb4c76a76e6c910344bd09` after target-Mac performance acceptance, exact-head CI, and final review.
 
-P0 now has a complete canonical `v0.1.0` performance baseline: target-Mac idle/hover/10-minute stability measurements, exact immutable-release executable/app/DMG sizes, target-Mac CPU/RSS/thread acceptance ceilings, and a deterministic release-size regression gate in CI. After PR #5 is merged, the next development milestone is **M1 Notch Core hardening and interaction**.
+The current repository hardening step prepares NotchHub for public source visibility without changing runtime behavior or entitlements. Public pull-request CI is intentionally unprivileged and cannot use repository secrets or write authority. After that transition, the next development milestone is **M1 Notch Core hardening and interaction**.
 
 Source-of-truth documents:
 
@@ -22,10 +22,10 @@ Source-of-truth documents:
 - [`SECURITY.md`](SECURITY.md) — threat model/security invariants/release trust boundary
 - [`PERFORMANCE.md`](PERFORMANCE.md) — resource-efficiency invariants, accepted target-Mac baseline values, budgets, and regression policy
 - [`performance/baseline-v0.1.0.json`](performance/baseline-v0.1.0.json) — canonical machine-readable performance/resource baseline
+- [`docs/PUBLIC_READINESS.md`](docs/PUBLIC_READINESS.md) — public-repository audit scope, findings, and post-transition checks
 - [`docs/RELEASING.md`](docs/RELEASING.md) — Personal Release and optional future Trusted Release
 - [`docs/PRODUCT_REFERENCES.md`](docs/PRODUCT_REFERENCES.md) — independent product/UI research
 - [`docs/specs/M1_NOTCH_INTERACTION.md`](docs/specs/M1_NOTCH_INTERACTION.md) — approved delayed-hover and haptic interaction contract
-- [`docs/superpowers/plans/2026-08-07-performance-foundation.md`](docs/superpowers/plans/2026-08-07-performance-foundation.md) — approved performance plan
 - [`CHANGELOG.md`](CHANGELOG.md) — notable changes
 
 ## Requirements
@@ -72,7 +72,9 @@ Current runtime intentionally has:
 - no global keyboard/button/drag/scroll/modifier monitoring;
 - global observation currently limited to `mouseMoved`, without persisted pointer history.
 
-CI enforces this baseline. Future capabilities that require broader permissions/attack surface must change `SECURITY.md`, executable policy, tests, and relevant docs in the same reviewed PR.
+Public/fork pull requests execute only the ordinary `pull_request` CI path with explicit `contents: read`, no repository secrets, no self-hosted runners, no OIDC/write permission, and checkout credentials disabled. `pull_request_target` remains prohibited. Release publication is isolated in manual trusted-main workflows.
+
+CI enforces these baselines. Future capabilities that require broader permissions/attack surface must change `SECURITY.md`, executable policy, tests, and relevant docs in the same reviewed PR.
 
 ## Performance/resource efficiency
 
@@ -122,3 +124,7 @@ Yandex Music integration will use a provider boundary. A MediaRemote/private fal
 ## Privacy
 
 The baseline app is local-only and makes no direct network requests. Future modules must document any added permission, external process, private API, network use, persistence, cache, or resource-monitoring behavior before implementation.
+
+## License
+
+NotchHub source code is available under the [MIT License](LICENSE).
