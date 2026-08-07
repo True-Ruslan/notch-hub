@@ -8,11 +8,21 @@ public enum NotchPointerPolicy {
         activationPadding: CGFloat = 2,
         retentionPadding: CGFloat = 8
     ) -> NotchPresentation {
-        let activationFrame = layout.compactFrame.insetBy(
-            dx: -activationPadding,
-            dy: -activationPadding
-        )
+        let activeFrame: CGRect
 
-        return activationFrame.contains(pointer) ? .expanded : .compact
+        switch current {
+        case .compact:
+            activeFrame = layout.compactFrame.insetBy(
+                dx: -activationPadding,
+                dy: -activationPadding
+            )
+        case .expanded:
+            activeFrame = layout.expandedFrame.insetBy(
+                dx: -retentionPadding,
+                dy: -retentionPadding
+            )
+        }
+
+        return activeFrame.contains(pointer) ? .expanded : .compact
     }
 }

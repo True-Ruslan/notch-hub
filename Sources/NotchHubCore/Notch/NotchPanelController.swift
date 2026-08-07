@@ -8,6 +8,8 @@ public final class NotchPanelController: NSObject {
     private let model: NotchPanelModel
     private var layout: NotchLayout
     private var cancellables = Set<AnyCancellable>()
+    private var localPointerMonitor: Any?
+    private var globalPointerMonitor: Any?
 
     public override init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
@@ -27,10 +29,12 @@ public final class NotchPanelController: NSObject {
         super.init()
         configurePanel()
         bindModel()
+        configurePointerMonitoring()
     }
 
     public func show() {
         panel.orderFrontRegardless()
+        updatePresentation(for: NSEvent.mouseLocation)
     }
 
     private func configurePanel() {
@@ -56,6 +60,39 @@ public final class NotchPanelController: NSObject {
                 self?.apply(presentation)
             }
             .store(in: &cancellables)
+    }
+
+    private func configurePointerMonitoring() {
+        let mask: NSEvent.EventTypeMask = [
+            .mouseMoved,
+            .leftMouseDragged,
+            .rightMouseDragged,
+            .otherMouseDragged
+        ]
+
+        localPointerMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
+            let pointer = NSEvent.mouseLocation
+            Task { @MainActor [weak self] in
+                self?.updatePresentation(for: pointer)
+            }
+            return event
+        }
+
+        globalPointerMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] _ in
+            let pointer = NSEvent.mouseLocation
+            Task { @MainActor [weak self] in
+                self?.updatePresentation(for: pointer)
+            }
+        }
+    }
+
+    private func updatePresentation(for pointer: CGPoint) {
+        let target = NotchPointerPolicy.presentation(
+            current: model.presentation,
+            pointer: pointer,
+            layout: layout
+        )
+        model.setHovered(target == .expanded)
     }
 
     private func apply(_ presentation: NotchPresentation) {

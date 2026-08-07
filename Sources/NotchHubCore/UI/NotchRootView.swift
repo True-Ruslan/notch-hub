@@ -18,9 +18,13 @@ public struct NotchRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
-        .clipShape(RoundedRectangle(cornerRadius: model.presentation == .compact ? 12 : 22, style: .continuous))
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: model.presentation == .compact ? 12 : 22,
+                style: .continuous
+            )
+        )
         .contentShape(Rectangle())
-        .onHover { model.setHovered($0) }
         .animation(.snappy(duration: 0.22), value: model.presentation)
     }
 
@@ -73,6 +77,9 @@ public struct NotchRootView: View {
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, minHeight: 74)
-        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(
+            .white.opacity(0.08),
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
     }
 }
