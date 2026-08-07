@@ -1,0 +1,236 @@
+name: Personal Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: personal-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Verify and publish personal build
+    runs-on: macos-26
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout accepted main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Validate source, version and release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          test "$GITHUB_REF_NAME" = "main"
+          MAIN_SHA="$(git rev-parse refs/remotes/origin/main)"
+          test "$GITHUB_SHA" = "$MAIN_SHA"
+
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          RELEASE_TAG="v$VERSION"
+          NOTES="docs/releases/$RELEASE_TAG.md"
+
+          python3 scripts/release_policy.py validate-notes \
+            --version "$VERSION" \
+            --notes "$NOTES"
+
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "NOTES=$NOTES" >> "$GITHUB_ENV"
+
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
+            echo "Release tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          TAG_ERROR="$RUNNER_TEMP/notchhub-tag-check.err"
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>"$TAG_ERROR"
+          TAG_STATUS=$?
+          set -e
+          if [[ "$TAG_STATUS" -eq 0 ]]; then
+            echo "Remote release tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if ! grep -q 'HTTP 404' "$TAG_ERROR"; then
+            cat "$TAG_ERROR" >&2
+            echo "Could not prove that remote tag $RELEASE_TAG is absent." >&2
+            exit 1
+          fi
+
+          RELEASE_ERROR="$RUNNER_TEMP/notchhub-release-check.err"
+          set +e
+          gh release view "$RELEASE_TAG" >/dev/null 2>"$RELEASE_ERROR"
+          RELEASE_STATUS=$?
+          set -e
+          if [[ "$RELEASE_STATUS" -eq 0 ]]; then
+            echo "GitHub Release already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if ! grep -Eqi 'release not found|HTTP 404' "$RELEASE_ERROR"; then
+            cat "$RELEASE_ERROR" >&2
+            echo "Could not prove that GitHub Release $RELEASE_TAG is absent." >&2
+            exit 1
+          fi
+
+      - name: Run complete quality and security baseline
+        run: |
+          set -euo pipefail
+          sw_vers
+          xcode-select -p
+          swift --version
+          swift package describe
+          (cd scripts && python3 -m unittest -v test_release_policy.py)
+          swift format lint --recursive --strict --configuration .swift-format Sources Tests Package.swift
+          plutil -lint Resources/Info.plist Resources/NotchHub.entitlements
+          bash -n scripts/*.sh
+          ./scripts/security-audit.sh
+          swift build -Xswiftc -warnings-as-errors
+          swift test --parallel --enable-code-coverage
+
+      - name: Build ad-hoc personal DMG
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          CODE_SIGN_IDENTITY: "-"
+        run: ./scripts/build-dmg.sh
+
+      - name: Verify bundle, signature, runtime, sandbox and DMG
+        run: |
+          set -euo pipefail
+          APP="build/NotchHub.app"
+          EXECUTABLE="$APP/Contents/MacOS/NotchHub"
+
+          test -x "$EXECUTABLE"
+          test -f "$APP/Contents/Info.plist"
+          test -f build/NotchHub.dmg
+          test "$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")" = "$VERSION"
+          test "$(plutil -extract CFBundleVersion raw "$APP/Contents/Info.plist")" = "${{ github.run_number }}"
+          test "$(plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist")" = "ru.trueruslan.notchhub"
+
+          codesign --verify --deep --strict "$APP"
+          codesign -dv --verbose=4 "$APP" 2> build/codesign-details.txt
+          cat build/codesign-details.txt
+          grep -q 'Signature=adhoc' build/codesign-details.txt
+          grep -Eq 'flags=.*runtime' build/codesign-details.txt
+
+          codesign --display --entitlements - --xml "$APP" | tee build/effective-entitlements.plist
+          plutil -lint build/effective-entitlements.plist
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          with Path('build/effective-entitlements.plist').open('rb') as handle:
+              entitlements = plistlib.load(handle)
+
+          expected = {'com.apple.security.app-sandbox': True}
+          if entitlements != expected:
+              raise SystemExit(f'Unexpected effective entitlements: {entitlements!r}')
+          PY
+
+          otool -L "$EXECUTABLE" | tail -n +2 | awk '{print $1}' | while read -r library; do
+            case "$library" in
+              /System/*|/usr/lib/*) ;;
+              *) echo "Unexpected non-system dynamic library: $library" >&2; exit 1 ;;
+            esac
+          done
+
+          hdiutil verify build/NotchHub.dmg
+
+      - name: Generate checksum and provenance metadata
+        run: |
+          set -euo pipefail
+          APP="build/NotchHub.app"
+          EXECUTABLE="$APP/Contents/MacOS/NotchHub"
+          DMG="build/NotchHub.dmg"
+
+          shasum -a 256 "$DMG" > build/NotchHub.dmg.sha256
+          DMG_SHA256="$(awk '{print $1}' build/NotchHub.dmg.sha256)"
+          DMG_SIZE_BYTES="$(stat -f '%z' "$DMG")"
+          EXECUTABLE_SIZE_BYTES="$(stat -f '%z' "$EXECUTABLE")"
+          APP_SIZE_BYTES="$(python3 - <<'PY'
+          from pathlib import Path
+          app = Path('build/NotchHub.app')
+          print(sum(path.stat().st_size for path in app.rglob('*') if path.is_file()))
+          PY
+          )"
+          RUNNER_OS_VERSION="$(sw_vers -productVersion)"
+          XCODE_VERSION="$(xcodebuild -version | paste -sd ' ' -)"
+          SWIFT_VERSION="$(swift --version | head -n 1)"
+
+          python3 scripts/release_policy.py metadata \
+            --version "$VERSION" \
+            --build-number "${{ github.run_number }}" \
+            --source-sha "$GITHUB_SHA" \
+            --runner-os "macOS $RUNNER_OS_VERSION" \
+            --xcode-version "$XCODE_VERSION" \
+            --swift-version "$SWIFT_VERSION" \
+            --dmg-sha256 "$DMG_SHA256" \
+            --dmg-size-bytes "$DMG_SIZE_BYTES" \
+            --app-size-bytes "$APP_SIZE_BYTES" \
+            --executable-size-bytes "$EXECUTABLE_SIZE_BYTES" \
+            --output build/build-metadata.json
+
+          cat build/NotchHub.dmg.sha256
+          cat build/build-metadata.json
+
+      - name: Recheck immutable release state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
+            echo "Release tag appeared during build: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          TAG_ERROR="$RUNNER_TEMP/notchhub-tag-recheck.err"
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>"$TAG_ERROR"
+          TAG_STATUS=$?
+          set -e
+          if [[ "$TAG_STATUS" -eq 0 ]]; then
+            echo "Remote release tag appeared during build: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if ! grep -q 'HTTP 404' "$TAG_ERROR"; then
+            cat "$TAG_ERROR" >&2
+            echo "Could not prove that remote tag $RELEASE_TAG is absent." >&2
+            exit 1
+          fi
+
+          RELEASE_ERROR="$RUNNER_TEMP/notchhub-release-recheck.err"
+          set +e
+          gh release view "$RELEASE_TAG" >/dev/null 2>"$RELEASE_ERROR"
+          RELEASE_STATUS=$?
+          set -e
+          if [[ "$RELEASE_STATUS" -eq 0 ]]; then
+            echo "GitHub Release appeared during build: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if ! grep -Eqi 'release not found|HTTP 404' "$RELEASE_ERROR"; then
+            cat "$RELEASE_ERROR" >&2
+            echo "Could not prove that GitHub Release $RELEASE_TAG is absent." >&2
+            exit 1
+          fi
+
+      - name: Publish immutable GitHub Personal Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            build/NotchHub.dmg \
+            build/NotchHub.dmg.sha256 \
+            build/build-metadata.json \
+            --target "$GITHUB_SHA" \
+            --title "NotchHub $RELEASE_TAG — Personal build" \
+            --notes-file "$NOTES"
