@@ -225,6 +225,14 @@ class ReleasePolicyTests(unittest.TestCase):
 
         self.assertNotIn("--clobber", workflow)
 
+        # Both the initial check and the final pre-publish recheck must fail closed.
+        # A GitHub/API outage is not evidence that a tag/release is absent.
+        self.assertGreaterEqual(workflow.count("gh api \"repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG\""), 2)
+        self.assertIn("notchhub-trusted-tag-recheck.err", workflow)
+        self.assertIn("notchhub-trusted-release-recheck.err", workflow)
+        self.assertGreaterEqual(workflow.count("Could not prove that remote tag $RELEASE_TAG is absent."), 2)
+        self.assertGreaterEqual(workflow.count("Could not prove that GitHub Release $RELEASE_TAG is absent."), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
