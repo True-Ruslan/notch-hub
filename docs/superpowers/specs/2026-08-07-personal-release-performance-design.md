@@ -18,6 +18,8 @@ The project also elevates runtime efficiency to a first-class product requiremen
 
 `v0.1.0` will be published through GitHub Releases as a **personal ad-hoc signed build**.
 
+The GitHub Release is a normal versioned release, not an Apple-trusted distribution claim. Its title must include `Personal build`, for example `NotchHub v0.1.0 — Personal build`, and its notes must begin with the ad-hoc/notarization warning before feature notes.
+
 The personal release will still require:
 
 - accepted protected `main` as the exact source;
@@ -44,13 +46,13 @@ The two tiers are intentionally distinct:
 1. **Personal Release** — current, ad-hoc signed, local/personal use, checksum/provenance verified by the project.
 2. **Trusted Release** — future, Developer ID signed + notarized + stapled + Gatekeeper-assessed if Apple Developer Program membership becomes worthwhile.
 
-A personal artifact must never be presented as a trusted/notarized artifact.
+A personal artifact must never be presented as a trusted/notarized artifact. If Apple Developer membership is purchased later, trusted distribution begins with a **new version**. An already published personal version/tag is never silently rebuilt or replaced with a notarized binary.
 
 ### D3 — Release artifacts are immutable
 
 A published version/tag is immutable. If a release is wrong, the project fixes the defect and increments the version; it does not silently replace a previously published DMG under the same version.
 
-The personal release workflow therefore fails if the derived `v<version>` tag or GitHub Release already exists.
+The personal release workflow therefore fails if the derived `v<version>` tag or GitHub Release already exists. Re-running a successful release does not overwrite assets.
 
 ### D4 — No automatic updater yet
 
@@ -58,9 +60,33 @@ NotchHub will not implement background self-update or an update daemon. Updates 
 
 This keeps persistence, networking, signing, and supply-chain attack surface minimal.
 
+## Scope decomposition
+
+This design intentionally produces **two independent implementation PRs before M1 feature work**:
+
+### PR A — Personal Release
+
+- release-tier documentation/security contract;
+- dedicated immutable personal-release workflow;
+- checksum/build-metadata generation and validation;
+- safe Gatekeeper opening documentation;
+- publication and verification of `v0.1.0`.
+
+### PR B — Performance Foundation
+
+- authoritative `PERFORMANCE.md`;
+- deterministic performance-policy audit in CI;
+- tested measurement/aggregation harness;
+- first canonical baseline on the target MacBook/macOS 26.6;
+- evidence-based resource budgets and regression rules.
+
+Only after both are accepted does M1 begin with pointer-monitor/resource optimization and Notch Core expansion. This keeps release-chain risk separate from runtime-performance work and preserves reviewability.
+
 ## Personal Release workflow design
 
 A dedicated workflow should publish the accepted application from protected `main` without Apple secrets.
+
+The current Personal Release entry point is **manual `workflow_dispatch` on `main` only**. Tag pushes must not independently publish a personal release, so creating a tag cannot bypass the workflow's validation path.
 
 Proposed flow:
 
@@ -80,7 +106,7 @@ manual workflow_dispatch on main
     -> generate machine-readable build metadata
     -> assert tag/release do not already exist
     -> create immutable v<version> tag
-    -> publish GitHub Release
+    -> publish GitHub Release titled "NotchHub v<version> — Personal build"
        - NotchHub.dmg
        - NotchHub.dmg.sha256
        - build-metadata.json
@@ -94,7 +120,7 @@ Release notes must prominently state:
 - safe opening instructions only;
 - exact source commit and checksum.
 
-The current trusted release workflow should be renamed or documented so it cannot be confused with the personal path.
+The current trusted release workflow should be renamed or documented so it cannot be confused with the personal path. It remains manually unavailable/usefully dormant until Apple credentials exist and must never fall back to ad-hoc publication.
 
 ## Performance and resource-efficiency contract
 
@@ -105,7 +131,7 @@ Performance is a permanent project invariant alongside `SECURITY.md`.
 1. **Event-driven by default.** Do not poll when an OS event/notification can be used.
 2. **No permanent busy loops.** `while true`, spin loops, and similar constructs are prohibited in runtime code without an explicitly reviewed bounded design.
 3. **No periodic timers without justification.** `Timer`, `DispatchSourceTimer`, repeating sleeps/tasks, display links, or periodic refresh loops require an explicit performance rationale and lifecycle tests.
-4. **Zero unnecessary background work while idle.** A compact, untouched NotchHub should do no application-level work other than unavoidable OS event delivery.
+4. **Zero self-initiated periodic background work while idle.** A compact, untouched NotchHub must not wake itself on a schedule. Unavoidable OS event delivery is measured separately and should be minimized.
 5. **Observers must have bounded lifetimes.** Event monitors, notifications, tasks, subscriptions, security-scoped resources, and future media/calendar observers must be explicitly cancelled/released.
 6. **Caches must be bounded.** Artwork, snippets, file metadata, and other future caches require size/count limits and eviction rules.
 7. **No hidden network/background sync.** Existing security policy remains authoritative; performance design does not justify adding network traffic.
@@ -117,7 +143,7 @@ Performance is a permanent project invariant alongside `SECURITY.md`.
 
 The existing global `NSEvent` `.mouseMoved` monitor is intentionally narrow from a security perspective, but it still receives mouse movement systemwide and therefore is a candidate for unnecessary wakeups/CPU work.
 
-M1 should investigate replacing it with an AppKit-local tracking boundary such as `NSTrackingArea` / view-level enter/exit/move handling while preserving the already accepted deterministic screen-space retention policy.
+M1 will attempt to replace it with an AppKit-local tracking boundary such as `NSTrackingArea` / view-level enter/exit/move handling while preserving the already accepted deterministic screen-space retention policy.
 
 Preferred order:
 
@@ -125,7 +151,7 @@ Preferred order:
 2. if reliable behavior cannot be achieved, a narrowly scoped fallback with documented measured cost;
 3. do not adopt `CGEventTap`, Input Monitoring, Accessibility, or broader capture merely for hover convenience.
 
-The replacement must be developed RED -> GREEN where deterministic and must pass the existing real-hardware notch/hover matrix before the global monitor is removed.
+The replacement must be developed RED -> GREEN where deterministic and must pass the existing real-hardware notch/hover matrix before the global monitor is removed. If window-local tracking fails the accepted hardware behavior, the project retains the safer known-working implementation until a measured alternative is proven rather than shipping an unreliable optimization.
 
 ## Performance baseline methodology
 
@@ -168,6 +194,8 @@ CI should fail on objectively testable regressions such as:
 - significant artifact-size growth beyond a documented project threshold once a baseline is established;
 - performance-sensitive pure algorithms exceeding broad, non-flaky complexity/iteration invariants where wall-clock timing is unnecessary.
 
+Static policy checks are defense-in-depth, not proof that code is efficient. They must be paired with behavioral tests and measurements and must have explicit reviewed allowlists rather than encouraging code obfuscation to bypass grep-like rules.
+
 ### Real-hardware performance gate
 
 CPU/RAM/energy numbers from shared GitHub runners must **not** be used as tight required thresholds because runner load/hardware noise makes that dishonest.
@@ -196,7 +224,7 @@ Measurements are development/release activities, not runtime telemetry.
 
 ## Documentation changes required during implementation
 
-The implementation PR should update:
+The implementation PRs should update:
 
 - `SECURITY.md` — distinguish personal vs trusted release guarantees and accepted Gatekeeper limitation;
 - `docs/ARCHITECTURE.md` — add event-driven/resource-efficiency architecture and release tiers;
@@ -209,16 +237,34 @@ The implementation PR should update:
 
 ## TDD and implementation sequencing
 
-Implementation should be split into small, reviewable commits/PR work with RED evidence where behavior is testable:
+Implementation should use small, intention-revealing commits with RED evidence where behavior is testable.
 
-1. release-policy/documentation contract;
-2. Personal Release workflow tests/static validation before workflow implementation where feasible;
-3. performance-policy/audit regression tests;
-4. baseline measurement harness with self-tests for parsing/aggregation;
-5. collect the first target-Mac baseline and commit only summarized non-sensitive metrics;
-6. establish numerical budgets from the baseline;
-7. begin M1 pointer-monitor optimization using RED -> GREEN regression coverage;
-8. rerun real-hardware hover and performance acceptance.
+### PR A sequence
+
+1. update release/security documentation contract;
+2. add testable release-metadata/checksum helpers before wiring the workflow where feasible;
+3. implement Personal Release workflow;
+4. validate fail-closed behavior for wrong branch/version/existing tag or release;
+5. merge only with normal CI green;
+6. publish and verify immutable `v0.1.0` from accepted `main`.
+
+### PR B sequence
+
+1. add `PERFORMANCE.md` policy contract;
+2. add performance-policy/audit regression tests before enforcement;
+3. implement deterministic performance audit;
+4. implement measurement/aggregation harness with parser/statistics self-tests;
+5. collect first target-Mac baseline and commit only summarized non-sensitive metrics;
+6. establish numerical budgets from that baseline;
+7. merge only when normal security/correctness CI remains green.
+
+### M1 sequence after PR A + PR B
+
+1. add RED coverage for local tracking/lifecycle behavior that can be proven deterministically;
+2. implement window-local pointer tracking without broadening permissions;
+3. compare measured resource use against the accepted baseline/budgets;
+4. rerun real-hardware hover matrix;
+5. retain or revert the optimization based on correctness **and** measured efficiency rather than assumption.
 
 ## Acceptance criteria
 
