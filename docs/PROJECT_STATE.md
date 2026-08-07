@@ -4,8 +4,9 @@ Last updated: 2026-08-07
 Current version: `0.1.0` (Personal Release published and accepted)
 Primary physical target: macOS `26.6`
 Protected branch: `main`
-P0 completion PR: #5 `Performance Foundation`
-Next milestone after P0 merge: M1 `Notch Core hardening and interaction`
+P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
+Current repository-hardening PR: #6 `Prepare repository for public visibility`
+Next product milestone: M1 `Notch Core hardening and interaction`
 
 ## Product
 
@@ -25,7 +26,7 @@ Real-hardware final acceptance on the target MacBook/macOS 26.6:
 - `NH-HOVER-002`: PASS;
 - `NH-HOVER-003`: PASS.
 
-M0 includes the Swift 6 native shell, public notch geometry, deterministic pointer policy, AppKit-owned panel sizing, App Sandbox + Hardened Runtime, zero third-party Swift runtime dependencies, strict CI/security/package gates, and the accepted real-hardware regression fixes.
+M0 includes the Swift 6 native shell, public notch geometry, deterministic pointer policy, AppKit-owned panel sizing, App Sandbox + Hardened Runtime, zero third-party Swift runtime dependencies, strict CI/security/package gates, and accepted real-hardware regression fixes.
 
 ## R0.1 Personal Release
 
@@ -35,14 +36,16 @@ Status: **ACCEPTED**.
 
 ## P0 Performance Foundation
 
-Status: **ACCEPTED EVIDENCE; final PR #5 exact-head CI/review/merge gate pending**.
+Status: **ACCEPTED AND MERGED**.
+
+PR #5 was exact-head CI green, reviewed with no P0/P1/P2 blocker, and squash-merged to `main` as `a056aa74bad5d8e193eb4c76a76e6c910344bd09`.
 
 Canonical sources:
 
 - `PERFORMANCE.md` — policy, accepted measurements, budgets, and regression rules;
 - `performance/baseline-v0.1.0.json` — machine-readable canonical baseline;
 - `docs/TESTING.md` — acceptance matrix and RED→GREEN evidence;
-- `docs/ROADMAP.md` — milestone exit gate and M1 sequencing.
+- `docs/ROADMAP.md` — milestone sequencing.
 
 Implemented P0 foundation:
 
@@ -82,23 +85,32 @@ Published `v0.1.0` metadata:
 
 Runtime CPU/RSS/thread limits remain target-Mac acceptance gates. Shared GitHub runners never substitute for physical resource evidence. Artifact byte sizes are deterministic and are enforced in CI.
 
-### RED→GREEN evidence
+## Public repository readiness
 
-- RED CI #54: performance module absent as intended;
-- RED CI #73: stability summarizer absent as intended;
-- integration RED CI #75: Darwin `thcount` incompatibility discovered and fixed without dropping thread measurement;
-- RED CI #91: size-budget comparison API absent as intended;
-- GREEN CI #94: 12/12 release-policy tests, 22/22 performance-policy tests, performance/security audits, 11/11 Swift tests, package/signature/Sandbox/Hardened Runtime/DMG checks, deterministic size capture, size budget gate, harness smoke, and artifact upload all PASS.
+Status: **IN PROGRESS in PR #6**.
 
-CI #94 candidate sizes were executable `214,016 B`, app `217,012 B`, DMG `73,378 B`; all passed the canonical size budget.
+The repository is being prepared for public source visibility before M1 begins.
+
+Completed audit/hardening evidence so far:
+
+- complete short `main` history identified: initial commit plus PR #1–#5 squash commits;
+- initial commit and accessible PR #1–#5 diffs/discussions reviewed with no secret value/private-key material found;
+- historical workflow references contain secret names only, not secret values;
+- ordinary CI already uses `pull_request`, explicit `contents: read`, GitHub-hosted runners, full-SHA actions, and disabled checkout credential persistence;
+- new deterministic public-CI policy rejects write permissions, `pull_request_target`, `workflow_run`, repository secrets, self-hosted runners, OIDC/write authority, and persisted checkout credentials;
+- Personal/Trusted release publication remains isolated from untrusted PR execution;
+- root MIT `LICENSE` added;
+- durable audit details are recorded in `docs/PUBLIC_READINESS.md`.
+
+Repository visibility must not be changed until PR #6 is fully green/reviewed. After visibility becomes Public, repository settings/branch protection/Actions permissions/release integrity must be rechecked explicitly.
 
 ## Security baseline
 
-`SECURITY.md` is authoritative. P0 introduces no new runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, or broader global input capture. Development performance tooling remains outside `NotchHub.app`.
+`SECURITY.md` is authoritative. Public-source preparation adds no runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, or broader global input capture. Public fork PR code must remain confined to unprivileged CI.
 
 ## Approved M1 interaction requirements
 
-After P0 merge:
+After public-readiness is complete:
 
 - investigate replacing global `.mouseMoved` with reliable window-local AppKit tracking, accepting it only if correctness and target-Mac resource evidence are equal or better than the P0 baseline;
 - add a cancellable hover dwell, initial candidate `120 ms`, without polling/repeating timers;
@@ -112,10 +124,13 @@ Authoritative M1 spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
 - initial target-Mac runtime ceilings are based on one canonical run per scenario and intentionally include conservative headroom;
 - current global `.mouseMoved` path remains until M1 proves a reliable equal-or-better local alternative;
+- repository visibility is still private until PR #6 and post-transition checks complete;
 - active-display migration, Spaces/fullscreen policy, animation tuning, product modules, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Complete final exact-head CI and independent read-only review for PR #5; squash-merge only if both pass.
-2. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
-3. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.
+1. Complete PR #6 GREEN CI and independent public-readiness review.
+2. Squash-merge PR #6 if clean.
+3. Change repository visibility to Public and immediately verify branch protection, Actions permissions/fork behavior, and release integrity.
+4. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
+5. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.
