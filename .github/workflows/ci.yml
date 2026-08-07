@@ -93,7 +93,9 @@ jobs:
           cat build/codesign-details.txt
           grep -Eq 'flags=.*runtime' build/codesign-details.txt
 
-          codesign -d --entitlements :- "$APP" > build/effective-entitlements.plist 2>/dev/null
+          codesign --display --entitlements - --xml "$APP" | tee build/effective-entitlements.plist
+          plutil -lint build/effective-entitlements.plist
+          plutil -p build/effective-entitlements.plist
           test "$(plutil -extract com.apple.security.app-sandbox raw build/effective-entitlements.plist)" = "true"
 
           otool -L "$EXECUTABLE" | tail -n +2 | awk '{print $1}' | while read -r library; do
