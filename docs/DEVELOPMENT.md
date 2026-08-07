@@ -16,7 +16,7 @@ For behavior changes and bug fixes, use RED → GREEN → REFACTOR:
 
 A regression test must fail against the broken behavior before the fix is considered covered. Do not write tests whose only purpose is to satisfy a coverage number.
 
-For performance work, deterministic policy, parser, state, lifecycle, and schema behavior belongs in automated tests. Physical CPU/RSS/thread acceptance belongs to the documented target-Mac scenarios; shared runner resource values are evidence for compatibility only, never substituted for target hardware.
+For performance work, deterministic policy, parser, state, lifecycle, and schema behavior belongs in automated tests. Physical CPU/RSS/thread acceptance belongs to the documented target-Mac scenarios; shared runner resource values are compatibility evidence only and are never substituted for target hardware.
 
 ### Commits
 
