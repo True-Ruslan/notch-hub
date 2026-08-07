@@ -103,8 +103,9 @@ for forbidden_path in LaunchAgents LaunchDaemons PrivilegedHelperTools; do
     fi
 done
 
-# 7. Workflow supply-chain policy: external actions must be immutable full SHAs,
-# and pull_request_target is prohibited for this repository.
+# 7. Workflow supply-chain and public-fork policy. External actions must be immutable
+# full SHAs, pull_request_target is prohibited, and ordinary PR CI must stay read-only
+# without repository secrets or self-hosted runners.
 python3 <<'PY'
 from pathlib import Path
 import re
@@ -132,6 +133,11 @@ for path in sorted(workflow_dir.glob('*.y*ml')):
 if errors:
     raise SystemExit('\n'.join(errors))
 PY
+
+CI_WORKFLOW=".github/workflows/ci.yml"
+[[ -f "$CI_WORKFLOW" ]] || fail "missing CI workflow"
+python3 scripts/release_policy.py validate-public-ci --workflow "$CI_WORKFLOW" || \
+    fail "ordinary pull-request CI violated the public-repository trust boundary"
 
 # 8. Release-tier security policy. Personal distribution intentionally has no Apple
 # credentials/notarization authority and must never be silently upgraded, weakened,
