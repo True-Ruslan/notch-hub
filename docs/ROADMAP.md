@@ -96,7 +96,7 @@ Machine-readable baseline: `performance/baseline-v0.1.0.json`.
 
 ## P0.1 — Public repository readiness
 
-Status: **PUBLIC; THREE SETTINGS/UI CHECKS PENDING**
+Status: **ACCEPTED**
 Hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
 
 Purpose: make the source repository safe to expose publicly before continuing feature development.
@@ -114,23 +114,22 @@ Completed:
 - exact-head CI #139 passed 16/16 release/public-policy tests plus full security/performance/Swift/package gates;
 - independent review found and closed two additional trust-boundary gaps before merge;
 - PR #6 squash-merged to `main`;
-- repository metadata now reports Public visibility;
+- repository metadata reports Public visibility;
 - squash-only repository integration settings remain enabled;
 - `v0.1.0` tag remains addressable with version/release documentation intact;
 - first post-public PR CI #141 passed the complete public security/performance/Swift/package gate set;
-- no GitHub Environments are currently configured; this is intentional while Personal Release is the only supported distribution tier, so Trusted Release environment/secrets verification is N/A until that optional tier is deliberately adopted.
+- no GitHub Environments are currently configured; this is intentional while Personal Release is the only supported distribution tier, so Trusted Release environment/secrets verification is N/A until that optional tier is deliberately adopted;
+- direct post-public verification confirmed the active `main` protection/ruleset and required CI checks;
+- direct post-public verification confirmed Actions default workflow token permissions and fork pull-request settings;
+- direct post-public verification confirmed published `v0.1.0` Release assets/checksum/provenance remain intact.
 
-Remaining exit criteria require direct GitHub Settings/UI verification because the connected API does not expose them:
+P0.1 is closed. Future changes to repository visibility, branch protection/rulesets, Actions authority, release trust boundaries, or credential handling require a new focused review.
 
-- active branch protection/branch ruleset for `main` and required CI checks;
-- Actions default workflow token permissions and fork pull-request settings;
-- published `v0.1.0` Release assets/checksum/provenance remain intact in the release UI.
-
-Audit details and exact post-transition status: `docs/PUBLIC_READINESS.md`.
+Audit details and acceptance evidence: `docs/PUBLIC_READINESS.md`.
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **NEXT AFTER P0.1 SETTINGS VERIFICATION**
+Status: **NEXT**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
@@ -140,7 +139,7 @@ Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 - initial dwell candidate: **120 ms**, to be tuned from real MacBook evidence within roughly 100–150 ms rather than hardcoded blindly;
 - implement dwell as event-driven single pending work item: no polling, no repeating timer, deterministic cancellation/race tests;
 - provide **one trackpad haptic event on a successful user-initiated compact → expanded transition** through public `NSHapticFeedbackManager.defaultPerformer`;
-- no haptic on cancelled/quick transit, duplicate pointer events, expanded retention, collapse, programmatic/layout transitions, or stale callbacks;
+- no haptic on cancelled/quick transit, duplicate pointer events, expanded retention, collapse, programmatic transitions, or stale callbacks;
 - haptic must respect macOS/current-device/user settings and must not introduce private APIs, synthetic input, Accessibility, custom drivers, or retry loops;
 - click/pin interaction policy;
 - tuned expansion/collapse animation and reduced-motion behavior;
