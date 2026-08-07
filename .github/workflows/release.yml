@@ -22,7 +22,7 @@ jobs:
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           test "$GITHUB_REF_NAME" = "v$VERSION"
-          swift format lint --recursive --strict Sources Tests Package.swift
+          swift format lint --recursive --strict --configuration .swift-format Sources Tests Package.swift
           plutil -lint Resources/Info.plist
           bash -n scripts/*.sh
 
