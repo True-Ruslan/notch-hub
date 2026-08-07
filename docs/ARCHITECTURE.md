@@ -50,7 +50,30 @@ The UI is hosted in a borderless, non-activating `NSPanel`. It floats above norm
 
 The panel has explicit `compact` and `expanded` states. Current global observation is deliberately restricted to `mouseMoved`, with no persisted pointer history and no keyboard/button/scroll/drag monitoring.
 
-Performance Foundation will measure the real cost of that global movement observer before M1. M1 will prefer a reliable `NSTrackingArea`/window-local design if it preserves all accepted hover semantics and measurably reduces idle/wakeup cost. Correctness is not traded away merely to remove the global monitor.
+Performance Foundation measures the real cost of that global movement observer before M1. M1 will prefer a reliable `NSTrackingArea`/window-local design only if it preserves all accepted hover semantics and measurably improves or matches the resource/input-observation profile. Correctness is not traded away merely to remove the global monitor.
+
+## Resource-efficiency architecture
+
+Runtime work is event-driven by default. Prefer AppKit/Foundation notifications, tracking areas, permission callbacks, and explicit user actions over periodic refresh loops.
+
+The runtime architecture must not introduce polling, repeating timers, display links, or sleep-driven refresh merely to keep state fresh. A primitive that is genuinely necessary must have a narrow owner, documented cadence/need, deterministic lifecycle tests where possible, and an explicit performance-policy review.
+
+Long-lived adapters must expose lifecycle ownership explicitly:
+
+- event monitors/observers are removed when their owner is torn down;
+- tasks/subscriptions are cancellable;
+- security-scoped resources are balanced;
+- future caches/collections are bounded;
+- future media/calendar adapters prefer change notifications over fixed polling.
+
+Performance validation is split deliberately:
+
+1. **deterministic CI invariants** — source-policy scanner, state/lifecycle tests, parser/aggregation correctness, development-tool isolation, reproducible artifact-size checks;
+2. **target-Mac runtime evidence** — CPU, RSS, thread count, stability, and future wakeup/energy measurements on macOS 26.6.
+
+Shared runner CPU/RAM values are never used as tight release thresholds. See root `PERFORMANCE.md`.
+
+`scripts/perf-baseline.py` and `scripts/performance_policy.py` are repository development/release tools, not application runtime components. Packaging/security checks must keep them outside `NotchHub.app`; performance measurement is not telemetry.
 
 ## Notch geometry
 
@@ -143,6 +166,8 @@ There are three deliberately distinct artifact classes.
 
 The annual Apple Developer Program dependency is intentionally deferred while NotchHub remains personal-use software. See `docs/RELEASING.md`.
 
-## Release policy tooling
+## Policy tooling
 
-`scripts/release_policy.py` is intentionally small and standard-library-only. Unit tests cover strict SemVer/tag rules, trust-label requirements, unsafe Gatekeeper-bypass text, immutable workflow boundaries, and provenance metadata validation. GitHub Actions orchestrates these tested policies rather than embedding all policy logic as untestable shell text.
+`scripts/release_policy.py` is intentionally small and standard-library-only. Unit tests cover strict SemVer/tag rules, trust-label requirements, unsafe Gatekeeper-bypass text, immutable workflow boundaries, and provenance metadata validation.
+
+`scripts/performance_policy.py` is likewise standard-library-only and owns deterministic runtime source-policy scanning, process-sample parsing/aggregation, and reproducible budget comparisons. GitHub Actions orchestrates these tested policies rather than embedding policy logic as untestable shell text.
