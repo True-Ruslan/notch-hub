@@ -2,9 +2,11 @@
 
 All notable changes to NotchHub are documented here.
 
-The project follows [Semantic Versioning](https://semver.org/). The version under active development is stored in [`VERSION`](VERSION). Until the first tagged release, changes remain under `Unreleased`.
+The project follows [Semantic Versioning](https://semver.org/). The active version is stored in repository-root [`VERSION`](VERSION).
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-08-07
 
 ### Added
 
@@ -12,35 +14,48 @@ The project follows [Semantic Versioning](https://semver.org/). The version unde
 - AppKit `NSPanel` shell with hardware-notch geometry derived from public `NSScreen` APIs.
 - Compact and expanded presentation states.
 - Deterministic geometry, panel-state, pointer-retention, exact-notch-width, and hosting-view-sizing tests.
-- TDD/commit/documentation policy and stable real-hardware acceptance scenario IDs.
-- Strict Swift formatting, warnings-as-errors, coverage-instrumented tests, and dedicated macOS 26 CI compatibility validation.
+- TDD/commit/documentation policy and stable real-hardware acceptance IDs.
+- Strict Swift formatting, warnings-as-errors, coverage-instrumented tests, and dedicated macOS 26 compatibility validation.
 - App Sandbox with a deliberately minimal entitlement set.
-- Hardened Runtime signing for test and stable builds.
+- Hardened Runtime signing for test and Personal Release builds.
 - Root `SECURITY.md` threat/security policy and executable `scripts/security-audit.sh` CI baseline.
-- Security gates that keep M0 free of third-party Swift dependencies, runtime shell/subprocess execution, direct network/WebKit APIs, dynamic code loading, global keyboard/button/drag/scroll/modifier monitoring, dangerous Hardened Runtime exceptions, persistence helpers, mutable GitHub Action references, and `pull_request_target`.
+- Security gates keeping the baseline free of third-party Swift runtime dependencies, runtime shell/subprocess execution, direct network/WebKit APIs, dynamic code loading, broad global input monitoring, dangerous Hardened Runtime exceptions, persistence helpers, mutable GitHub Action references, and `pull_request_target`.
 - GitHub Actions pinned to immutable full commit SHAs.
 - Semantic `VERSION` stamping and CI build numbers.
-- GitHub Release workflow for Developer ID signing, Apple notarization, stapling, Gatekeeper assessment, and SHA-256 checksum publication.
+- Versioned Personal Release notes under `docs/releases/` with explicit ad-hoc/not-notarized trust labeling.
+- Standard-library `scripts/release_policy.py` and unit tests for strict SemVer/tag rules, release-note trust warnings, unsafe Gatekeeper-bypass text, release-workflow boundaries, and provenance metadata.
+- Manual immutable **Personal Release** workflow that repeats complete quality/security/package gates, verifies ad-hoc signature + Hardened Runtime + exact Sandbox entitlements, and publishes DMG + SHA-256 + build provenance without paid Apple credentials.
+- Separate optional **Trusted Release** workflow retaining Developer ID, Apple notarization/stapling, and Gatekeeper verification for future new versions.
+- Release workflows refuse to overwrite existing tags/releases; legacy ambiguous `release.yml` and `--clobber` behavior were removed.
+- Approved Personal Release and Performance Foundation design/implementation plans under `docs/superpowers/`.
 - Release/setup documentation and independent NotchNook product-reference notes.
 
 ### Fixed
 
-- Prevented the hover resize feedback loop observed during the first real-hardware acceptance test. Pointer state is now resolved against stable compact/expanded screen-space regions instead of trusting SwiftUI `onHover` events generated while the panel itself is resizing.
-- Real hardware notch widths are no longer inflated to the 180 pt fallback minimum; the fallback is now used only on displays without a detected hardware notch.
-- Disabled `NSHostingView` window-sizing ownership so expanded SwiftUI content cannot leave the `NSPanel` frame stuck at expanded dimensions after the model has collapsed to compact content.
+- Prevented hover resize feedback that caused compact/expanded oscillation on real hardware. Pointer state is resolved through deterministic screen-space policy instead of raw SwiftUI `onHover` resize feedback.
+- Real hardware notch widths are no longer inflated to the 180 pt fallback minimum; fallback is used only when no hardware notch is detected.
+- Disabled `NSHostingView` window-sizing ownership so compact content cannot leave the actual `NSPanel` frame expanded.
+- Corrected Personal Release note validation so the safe warning `Do not disable Gatekeeper` is allowed while actual Gatekeeper/quarantine bypass instructions remain prohibited.
 
 ### Testing
 
-- Added a RED-first regression test proving an expanded panel remains expanded while the pointer stays inside the expanded retention region.
-- Added exact macOS 26.6 real-hardware acceptance IDs while keeping GitHub-hosted macOS 26 testing as an automated major-version compatibility layer.
-- Recorded cycle 2 real-hardware defects: minor compact-notch width mismatch and expanded-window-shell collapse failure.
-- Added RED-first regression coverage for both cycle-2 failures. Commit `c518326` produced exactly two expected failures on macOS 26 CI; GREEN commit `3bb1bbb` raised the suite to **10/10 PASS**.
+- RED-first regression proved an expanded panel remains expanded while the pointer stays within expanded retention bounds.
+- Added macOS 26.6 real-hardware acceptance IDs while retaining GitHub-hosted macOS 26 as an automated compatibility layer.
+- RED `c518326` reproduced both second-cycle real-hardware defects: compact width `180` vs expected `176`, and hosting sizing options `7` vs empty.
+- GREEN `3bb1bbb` fixed both and raised the Swift suite to **10/10 PASS**.
 - Final corrected-build hardware retest on macOS 26.6: `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, and `NH-HOVER-003` all **PASS**.
-- **M0 engineering foundation accepted on real hardware.**
+- **M0 engineering foundation accepted and merged.**
+- Personal Release infrastructure developed with explicit RED→GREEN evidence for missing policy helper, versioned notes, workflow contract, Trusted/Personal tier separation, and executable trust-boundary validation.
+- Personal Release publication itself remains pending until the release-preparation PR is merged into protected `main`.
 
 ### Security
 
-- Stable releases are fail-closed: they cannot publish unless Developer ID signing, Hardened Runtime, App Sandbox entitlements, Apple notarization/stapling, and Gatekeeper assessment all succeed.
-- PR DMGs remain explicitly ad-hoc test artifacts and are not represented as trusted stable releases.
+- App Sandbox and Hardened Runtime remain mandatory for Personal Release despite lack of Apple Developer identity/notarization.
+- Personal Release is explicitly identified as ad-hoc/not notarized and never claims Apple trust.
+- Safe first-launch documentation uses only standard Finder / System Settings → Privacy & Security → Open Anyway flow; Gatekeeper disabling/quarantine-stripping instructions are prohibited by policy tests.
+- Personal Release contains no Apple Developer/notary secrets and cannot use the future Trusted Release environment.
+- Release assets/tags are immutable; existing versions are never replaced with `--clobber` or upload-overwrite flows.
+- Future Trusted Release remains fail-closed behind Developer ID/notarization and cannot overwrite an already published Personal version.
 
 [Unreleased]: https://github.com/True-Ruslan/notch-hub/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/True-Ruslan/notch-hub/releases/tag/v0.1.0

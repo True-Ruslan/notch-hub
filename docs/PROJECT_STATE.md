@@ -1,152 +1,142 @@
 # Project state
 
 Last updated: 2026-08-07
-Current development version: `0.1.0` (unreleased)
-Integration PR: #1 `Bootstrap native macOS foundation`
-Primary real-hardware target: macOS `26.6`
+Current version: `0.1.0` (Personal Release candidate; tag not published yet)
+Primary physical target: macOS `26.6`
+Protected branch: `main`
+Current implementation PR: #3 `Personal Release v0.1.0`
 
 ## Product
 
 NotchHub is a personal, native, local-first macOS productivity hub built around the MacBook notch. Planned modules are Shelf, Snippets, Calendar, Translator, and media controls with Yandex Music as the primary player.
 
-NotchNook is tracked only as a public product/UI reference. NotchHub is an independent implementation; see `docs/PRODUCT_REFERENCES.md`.
+NotchNook is a public product/UI research reference only; NotchHub remains an independent implementation.
 
-## Current milestone
+## Accepted foundation
 
-**M0 — Engineering foundation: ACCEPTED on real hardware.**
+**M0 — Engineering foundation: ACCEPTED and merged.**
 
-The corrected sandboxed/Hardened Runtime build was retested on the target MacBook running macOS 26.6. All mandatory M0 notch/hover acceptance scenarios now pass. PR #1 is ready for final CI and squash merge.
+Real-hardware final acceptance on the target MacBook/macOS 26.6:
 
-## Latest automated validation
+- `NH-OS26-001`: PASS from the earlier sandbox/Hardened Runtime cycle;
+- `NH-NOTCH-001`: PASS;
+- `NH-HOVER-001`: PASS;
+- `NH-HOVER-002`: PASS;
+- `NH-HOVER-003`: PASS.
 
-CI run #20 for documentation head based on production fix `3bb1bbb` passed the complete pipeline:
+M0 includes:
 
-- GitHub `macos-26` compatibility: PASS;
-- observed runner: macOS 26.5.2, Xcode 26.6, Swift 6.3.3;
-- warnings-as-errors build: PASS;
-- full unit/regression suite: **10/10 PASS**;
-- strict Swift format: PASS;
-- `scripts/security-audit.sh`: PASS;
-- coverage-instrumented test run: **10/10 PASS**;
-- release-mode app/DMG build: PASS;
-- code-signature verification: PASS;
-- Hardened Runtime verification: PASS;
-- effective App Sandbox entitlement verification: PASS;
-- M0 system-dylib-only inspection: PASS;
-- DMG integrity (`hdiutil verify`): PASS;
-- GitHub Actions artifact upload: PASS.
+- Swift 6 / SwiftUI + AppKit native app shell;
+- public-API hardware-notch geometry and exact physical width;
+- explicit compact/expanded panel state;
+- deterministic pointer activation/retention policy;
+- AppKit-owned panel geometry (`NSHostingView.sizingOptions = []`);
+- App Sandbox + Hardened Runtime;
+- zero third-party Swift runtime dependencies;
+- no direct runtime network/WebKit, subprocess/shell, dynamic loading, telemetry, or broad global input monitoring;
+- global observation restricted to `mouseMoved` only;
+- strict CI, macOS 26 compatibility, warnings-as-errors, security audit, 10/10 Swift regression tests, release DMG packaging/integrity checks;
+- RED→GREEN evidence for both real-hardware defect cycles.
 
-GitHub-hosted macOS 26 CI is a near-target automated layer; the exact macOS 26.6 physical-notch behavior is covered by the hardware acceptance below.
+M0 integration PR #1 was squash-merged. Approved Personal Release + Performance Foundation design/plans were subsequently merged through docs PR #2.
 
-## Implemented in M0
+## Current milestone — R0.1 Personal Release
 
-### Runtime foundation
+Status: **implementation/verification in PR #3**.
 
-- Swift 6 / Swift Package Manager project layout
-- macOS 14 minimum deployment target
-- SwiftUI + AppKit application shell
-- accessory/background-style app without Dock icon
-- borderless non-activating `NSPanel`
-- hardware-notch geometry derived from public `NSScreen` APIs
-- exact detected hardware-notch width for compact mode; 180 pt is fallback-only for displays without a notch
-- compact/expanded presentation state
-- deterministic screen-space pointer activation/retention policy
-- `NSHostingView.sizingOptions = []` so `NotchPanelController` remains the sole owner of window geometry
-- global observation restricted to `mouseMoved`; no keyboard, button, drag, scroll, or modifier monitoring
+The Apple Developer Program dependency is intentionally deferred because NotchHub is currently personal-use software. This is a deliberate product decision, not an accidental missing credential.
 
-### Tests and CI
+Current supported versioned distribution will therefore be **Personal Release**:
 
-- deterministic tests for geometry, state, pointer retention, exact notch width, and AppKit/SwiftUI sizing ownership
-- RED → GREEN TDD policy with actual failing regression runs preserved in PR history
-- strict formatting and warnings-as-errors
-- test coverage instrumentation
-- macOS 26 compatibility job
-- app/DMG packaging and bundle/signature/entitlement/library/integrity checks
-- stable real-hardware acceptance IDs in `docs/TESTING.md`
+- manual GitHub Actions publication from exact protected `main`;
+- ad-hoc app signature;
+- App Sandbox and Hardened Runtime remain mandatory;
+- complete correctness/security CI rerun before publication;
+- SHA-256 + machine-readable provenance metadata;
+- explicit `Personal build — not notarized` warning;
+- normal macOS Finder / Privacy & Security → Open Anyway approval may be needed once for a downloaded build;
+- no Gatekeeper disabling/quarantine-bypass/custom-root instructions;
+- immutable tag/release; no `--clobber`/asset replacement.
 
-### Security baseline
+A separate `Trusted Release` workflow retains Developer ID/notarization for a future new version if paid Apple membership becomes worthwhile. It cannot replace an existing Personal version.
 
-- App Sandbox enabled with a minimal entitlement set
-- Hardened Runtime enabled for test and stable builds
-- zero third-party Swift runtime dependencies at M0
-- no telemetry, analytics, ads, licensing backend, or direct network access
-- no runtime shell/subprocess execution
-- no dynamic code/plugin loading
-- no global keyboard monitoring
-- GitHub Actions pinned to immutable full commit SHAs
-- executable `scripts/security-audit.sh` fail-closed baseline
-- release path requires Developer ID signing, notarization, stapling, Gatekeeper assessment, and checksum before publication
+## PR #3 TDD / automated evidence so far
 
-### Versioning and distribution
+Release infrastructure is being developed through deterministic RED→GREEN tests:
 
-- Semantic Versioning via repository-root `VERSION`
-- `CHANGELOG.md`
-- CI-produced ad-hoc DMG artifacts for development testing
-- GitHub Release workflow prepared for trusted signed/notarized releases
+1. RED: release-policy tests failed because `release_policy.py` did not exist.
+2. GREEN candidate exposed a real policy bug: safe text `Do not disable Gatekeeper` was falsely classified as a bypass instruction; the rule was corrected rather than weakening tests.
+3. RED: current-version notes test failed because `docs/releases/v0.1.0.md` was absent; GREEN after versioned notes were added.
+4. RED: Personal Release workflow contract failed because `personal-release.yml` was absent; GREEN after fail-closed manual workflow implementation.
+5. RED: tier-separation contract failed because `trusted-release.yml` was absent; GREEN after trusted workflow was separated and legacy `release.yml` removed.
+6. RED: trust-boundary tests failed because executable `validate_personal_release_workflow` did not exist; GREEN after the validator and security-audit integration were added.
 
-## Real-hardware acceptance history — 2026-08-07
+Latest targeted checks on the current code before this documentation state update:
 
-### Cycle 1 — bootstrap build
+- macOS 26 compatibility: PASS;
+- release-policy tests: PASS;
+- executable security baseline including release-tier boundaries: PASS;
+- existing M0 Swift/security behavior remains unchanged by PR #3 (no `Sources/` changes).
 
-- `NH-BOOT-001`: PASS enough to run the application.
-- `NH-HOVER-001`: FAIL — compact/expanded oscillation during hover.
-- RED commit `eb4fb4d`: regression test failed for the expected reason.
-- GREEN commit `eff9bde`: pointer authority moved from raw SwiftUI `onHover` events to deterministic screen-space policy.
+Final full CI on the documentation-complete PR head is still required before merge.
 
-### Cycle 2 — sandbox/Hardened Runtime build
+## Personal Release assets and guarantees
 
-Target MacBook, macOS 26.6:
+Planned `v0.1.0` GitHub Release assets:
 
-- `NH-OS26-001`: PASS.
-- `NH-NOTCH-001`: FAIL — compact panel a few pixels wider than hardware notch.
-- `NH-HOVER-001`: PASS.
-- `NH-HOVER-002`: PASS.
-- `NH-HOVER-003`: FAIL — compact content appeared while the black `NSPanel` shell remained expanded.
-- `NH-SANDBOX-001`: earlier report was interpreted as PASS by matrix order; the source message duplicated the `NH-HOVER-003` label, so that ambiguity remains documented rather than rewritten as an explicit user label.
+- `NotchHub.dmg`;
+- `NotchHub.dmg.sha256`;
+- `build-metadata.json` containing source commit, build number, runner/toolchain versions, artifact sizes/checksum, `distributionTier=personal`, `appleTrusted=false`, `notarized=false`.
 
-RED commit `c518326` added both regressions before production changes. macOS 26 CI then failed exactly two tests: width `180` vs expected `176`, and hosting sizing options raw value `7` vs expected empty.
+Versioned release notes: `docs/releases/v0.1.0.md`.
 
-GREEN commit `3bb1bbb` fixed both defects. CI run #19 passed 10/10 tests and all security/package gates.
+The release does **not** claim Apple identity/notarization trust.
 
-### Cycle 3 — corrected build, final M0 retest
+## Security baseline
 
-Target MacBook, macOS 26.6:
+`SECURITY.md` is authoritative. Current key invariants:
 
-- `NH-NOTCH-001`: **PASS**.
-- `NH-HOVER-001`: **PASS**.
-- `NH-HOVER-002`: **PASS**.
-- `NH-HOVER-003`: **PASS**.
+- Sandbox by default;
+- Hardened Runtime without dangerous exceptions;
+- zero external Swift runtime dependencies;
+- no bundled secrets;
+- no runtime shell/subprocess/dynamic code loading;
+- no telemetry/analytics/remote-control channel;
+- no broad global input capture;
+- immutable full-SHA GitHub Actions;
+- Personal Release contains no Apple secrets/notary path and cannot overwrite existing versions;
+- sensitive new permissions/capabilities require explicit security review and tests.
 
-**M0 acceptance result: PASS.** No mandatory M0 physical-notch blocker remains.
+## Performance/resource-efficiency requirement
 
-## Release trust prerequisite
+Performance is now a first-class product requirement alongside security. The approved Performance Foundation plan will execute immediately after Personal `v0.1.0` publication and before feature-heavy M1.
 
-The repository-side stable release workflow is ready, but `v0.1.0` must not be published as a trusted stable release until Apple signing/notarization credentials are configured in the GitHub `release` environment.
+It will establish:
 
-Required secrets are documented in `docs/RELEASING.md` and must be configured directly in GitHub, never sent through chat:
+- `PERFORMANCE.md`;
+- deterministic no-unreviewed-polling/timer/busy-loop policy;
+- development-only target-Mac metric harness;
+- canonical macOS 26.6 idle/hover/stability/artifact-size baseline;
+- evidence-based CPU/RAM/thread/size budgets rather than invented thresholds;
+- CI gates only for deterministic/reproducible performance invariants;
+- proof that measurement tooling is never shipped as runtime telemetry.
 
-- Developer ID Application `.p12` + export password
-- App Store Connect notarization `.p8` key + key ID + issuer ID
+Approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
 
-An Apple Developer Program membership is required for Developer ID distribution.
+## Known limitations
 
-## Known limitations / next milestone
-
-M0 is accepted. Remaining work belongs to M1 or later:
-
-- active-display migration and display-change handling
-- fullscreen/Spaces behavior
-- animation and interaction tuning
-- final product UI instead of the foundation preview
-- feature modules are not yet implemented
-- Yandex Music integration is planned, not implemented
-- trusted Developer ID/notarized release waits for Apple credentials
+- `v0.1.0` Personal Release is not yet published;
+- ad-hoc Personal Release will lack Apple Developer identity/notarization and may require standard macOS first-launch approval;
+- performance baseline/budgets have not yet been measured;
+- current global `.mouseMoved` observer is security-narrow but its resource cost is not yet baselined;
+- active-display migration, final Spaces/fullscreen policy, animation tuning, and final product UI belong to M1;
+- feature modules including Yandex Music are not implemented yet.
 
 ## Next optimal step
 
-1. Final CI on this acceptance-state commit must be green.
-2. Mark PR #1 Ready and squash-merge it into protected `main`.
-3. Configure the GitHub `release` environment according to `docs/RELEASING.md`.
-4. Publish trusted `v0.1.0` through the Release workflow.
-5. Run `NH-GATEKEEPER-001` once against the normally downloaded stable release.
-6. Start M1 — Notch Core hardening: display migration, Spaces/fullscreen, reduced-motion/animation behavior, and refined interaction/UI architecture.
+1. Complete PR #3 documentation and final CI.
+2. Review PR #3 diff/security boundaries; mark Ready and squash-merge into protected `main` only when all checks are green.
+3. Run **Personal Release** workflow manually on `main`; it must publish immutable `v0.1.0 — Personal build` with DMG/checksum/provenance.
+4. Run `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6. Do not replace `v0.1.0` if acceptance fails; fix and increment the version.
+5. Begin Performance Foundation (P0), establish real target-Mac resource baseline and evidence-based budgets.
+6. Only then start feature-heavy M1, beginning with measured investigation of local tracking vs the current global `mouseMoved` monitor.
