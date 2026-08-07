@@ -154,6 +154,12 @@ jobs:
           PY
           cat build/perf-size.json
 
+      - name: Enforce release size budget
+        run: |
+          python3 scripts/performance_policy.py check-size-budget \
+            --summary build/perf-size.json \
+            --baseline performance/baseline-v0.1.0.json
+
       - name: Performance harness compatibility smoke
         run: |
           SOURCE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
