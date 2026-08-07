@@ -3,7 +3,7 @@
 Last reviewed: 2026-08-07
 Current visibility: **Public**
 Hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
-Status: **repository-content gates PASS; remaining GitHub Settings gates pending direct verification**
+Status: **ACCEPTED**
 
 ## Goal
 
@@ -86,7 +86,7 @@ Publication remains separate from fork PR execution:
 
 - Personal Release is manual `workflow_dispatch`, exact-`main` only, and contains no custom repository/Apple secrets;
 - Trusted Release is a dormant future workflow scaffold: it references `environment: release`, but **no GitHub Environment is currently configured and no Apple signing/notarization secrets are provisioned**;
-- GitHub documents that an environment must be created before it can be used by a workflow, so Trusted Release is not an operational release tier until that setup is deliberately performed;
+- Trusted Release is not an operational release tier until that setup is deliberately performed;
 - if Trusted Release is adopted later, the `release` environment, protection rules, and Apple credentials must be created and reviewed before the first run;
 - neither release path may overwrite an existing tag/release;
 - public PR CI cannot invoke either release workflow with write authority.
@@ -112,12 +112,10 @@ Programmatically confirmed after the transition:
 - the first post-public pull-request CI (#141) completed successfully through the normal public `pull_request` path, including public/release policy, security, performance, Swift, signing/Sandbox/DMG, and artifact-size gates;
 - no GitHub Environments are currently configured; Trusted Release is intentionally unconfigured and therefore its environment/secrets isolation check is N/A until that tier is adopted.
 
-Still requiring direct GitHub Settings/UI verification because the connected API does not expose these settings/assets:
+Direct GitHub Settings/UI verification was completed successfully after the visibility transition:
 
-1. active `main` branch protection/branch ruleset and required CI checks;
-2. Actions default workflow token permissions and fork pull-request approval/settings;
-3. published `v0.1.0` Release assets (`NotchHub.dmg`, checksum, `build-metadata.json`) remain visible and intact.
+1. the active `main` protection/ruleset and required CI checks were verified;
+2. Actions default workflow token permissions and fork pull-request settings were verified;
+3. published `v0.1.0` Release assets (`NotchHub.dmg`, checksum, `build-metadata.json`) and provenance were verified intact.
 
-GitHub documents that visibility changes can alter ruleset state; therefore these settings are not assumed from the pre-transition configuration.
-
-Public readiness is complete only after these three remaining checks are confirmed.
+All required P0.1 public-readiness gates are now complete. Future changes to repository visibility, branch/ruleset policy, Actions authority, release workflows, or credential handling require a fresh focused review rather than relying on this historical acceptance.
