@@ -38,7 +38,7 @@ These properties must hold unless an explicit reviewed security decision changes
 3. **Hardened Runtime without dangerous exceptions.** Do not enable JIT, unsigned executable memory, DYLD environment variables, disabled library validation, or `get-task-allow` in distributed builds.
 4. **No subprocess or shell execution.** Runtime code must not invoke `Process`, `NSTask`, shells, package managers, scripts, or arbitrary executables without an explicit architecture/security review.
 5. **No dynamic code loading or plug-in execution.** Runtime code must not use `dlopen`, `dlsym`, downloaded executable content, unsigned plug-ins, or self-modifying/JIT code.
-6. **No global keyboard monitoring.** Pointer interaction may observe only the narrow mouse movement/drag event classes needed to determine notch hover state. Keystrokes and modifier-key events must not be globally captured.
+6. **No global keyboard/button/scroll monitoring.** The M0 pointer interaction observes only the `mouseMoved` event class needed to determine notch hover state. Keystrokes, modifier keys, button events, drag events, and scrolling must not be globally captured unless a later feature explicitly changes this reviewed policy.
 7. **Minimize observed input.** Pointer monitors must not persist event contents, coordinates, histories, or behavioral telemetry. The current implementation reads only current pointer location to resolve UI state.
 8. **User-selected file access only.** Shelf should use App Sandbox user-selected access/security-scoped mechanisms rather than broad filesystem entitlements. Removing an item from Shelf must never delete the source file unless a future explicit delete feature is separately designed and confirmed.
 9. **No bundled secrets.** API keys, Developer ID certificates, App Store Connect keys, passwords, tokens, or private keys must never be committed or embedded in the app. Release credentials live only in GitHub encrypted secrets/environment secrets.
@@ -71,7 +71,7 @@ Severity is based on realistic reachability and impact to the user's Mac/data. A
 ## Known limitations and accepted risk
 
 - M0 test artifacts are ad-hoc signed and therefore do not receive normal Gatekeeper trust. They are explicitly non-release artifacts.
-- The app currently uses a global `NSEvent` monitor for mouse movement/drag classes only. Apple documents global event monitors as observational; key-related monitoring has additional Accessibility requirements. Keyboard event classes are prohibited by repository policy and CI baseline. This mouse-only monitor remains subject to real-device privacy/behavior validation.
+- The app currently uses a global `NSEvent` monitor for the `mouseMoved` event class only. Apple documents global event monitors as observational; key-related monitoring has additional Accessibility requirements. Keyboard, mouse-button, drag, and scroll event classes are prohibited by repository policy and CI baseline at M0. This movement-only monitor remains subject to real-device privacy/behavior validation.
 - Yandex Music integration is not implemented. No private MediaRemote dependency is currently present.
 - CodeQL and GitHub Dependency Review availability depends on GitHub repository/product entitlement. For this private user-owned repository, repository-local security gates must not assume those paid/public-repository features are available.
 
