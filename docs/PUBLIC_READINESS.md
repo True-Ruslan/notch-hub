@@ -1,16 +1,17 @@
 # Public repository readiness
 
 Last reviewed: 2026-08-07
+Current visibility: **Public**
+Hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
+Status: **repository-content gates PASS; GitHub Settings gates pending direct verification**
 
 ## Goal
 
-Make the NotchHub source repository safe to expose publicly without broadening application permissions, weakening release integrity, or giving untrusted pull requests access to privileged GitHub Actions capabilities.
-
-This document records the pre-publication audit. It is not a claim that GitHub account-level settings can never change; repository settings must be rechecked immediately after the visibility transition.
+Keep the NotchHub source repository safe to expose publicly without broadening application permissions, weakening release integrity, or giving untrusted pull requests access to privileged GitHub Actions capabilities.
 
 ## Repository-history audit
 
-The repository has a short, reviewable `main` history:
+The complete pre-public `main` history was short and reviewable:
 
 1. `6e04fa4226e60507e399f1f5b1a3cedce4678182` — initial commit;
 2. `eb7bcfda3c6938d5bc3a13a6ccbfa85e062e39cb` — M0 foundation / PR #1;
@@ -19,11 +20,11 @@ The repository has a short, reviewable `main` history:
 5. `8fb5a66ffcfefabfa9174ebc42ebeb92a4debafa` — M1 interaction specification / PR #4;
 6. `a056aa74bad5d8e193eb4c76a76e6c910344bd09` — P0 Performance Foundation / PR #5.
 
-Before preparing public visibility, the initial commit and the complete accessible PR #1–#5 diffs/discussions were reviewed for credential/private-key material and unintended private content.
+Before public visibility, the initial commit and complete accessible PR #1–#5 diffs/discussions were reviewed for credential/private-key material and unintended private content. No separate open or closed Issues existed.
 
 Result: **no secret value, API token, password, certificate/private key, or signing credential was found.** Historical workflow text contains only GitHub Secret *names* such as Apple signing/notarization variable names; secret values are not present in repository history.
 
-No repository-history rewrite is required by the reviewed evidence.
+No repository-history rewrite was required by the reviewed evidence.
 
 ## Data intentionally safe to publish
 
@@ -51,9 +52,11 @@ Executable policy requires that CI:
 - never runs untrusted PR code on `self-hosted` runners;
 - never grants a `write` permission, `permissions: write-all`, or OIDC `id-token: write` authority;
 - keeps `actions/checkout` credentials disabled with `persist-credentials: false`;
-- keeps third-party Actions pinned to immutable full commit SHAs.
+- does not hop into a reusable workflow;
+- keeps third-party Actions pinned to immutable full commit SHAs;
+- has no alternate repository workflow with a `pull_request` trigger.
 
-These invariants are covered by `scripts/test_release_policy.py`, `scripts/release_policy.py validate-public-ci`, and `scripts/security-audit.sh`.
+These invariants are covered by `scripts/test_release_policy.py`, `scripts/release_policy.py`, and `scripts/security-audit.sh`.
 
 ### RED → GREEN evidence
 
@@ -61,7 +64,21 @@ The public-CI boundary was introduced test-first. RED CI #123 failed exactly whi
 
 `ImportError: cannot import name 'validate_public_ci_workflow' from 'release_policy'`
 
-The validator, CLI command, and executable security-audit integration were implemented only after that RED evidence. Final GREEN evidence is required on the exact PR head before merge; transient GitHub-hosted runner failures that never reach checkout/test steps are treated as infrastructure failures rather than application evidence.
+Independent review then found two additional bounded trust-boundary gaps before merge: repository-wide privileged trigger enforcement and alternate PR/reusable-workflow execution paths. Tests were added and both gaps were closed before final acceptance.
+
+Exact-head CI #139 on PR #6 passed:
+
+- 16/16 release/public-repository policy tests;
+- repository-wide workflow trigger policy;
+- public pull-request CI policy;
+- 22/22 performance-policy tests;
+- complete security audit;
+- 11/11 Swift tests;
+- signing/Hardened Runtime/exact Sandbox/system-library/DMG checks;
+- deterministic artifact-size budget;
+- performance harness smoke and artifact upload.
+
+Several earlier jobs during the work failed before checkout/test steps during a GitHub-hosted Actions incident; no test or security gate was weakened in response.
 
 ## Release workflow boundary
 
@@ -74,23 +91,29 @@ Publication remains separate from fork PR execution:
 
 ## Runtime/security boundary
 
-Changing repository visibility changes source availability, not application authority. The public-readiness change does not modify `Sources/`, entitlements, runtime networking, telemetry, input capture, persistence, subprocess behavior, signing requirements, or performance budgets.
+Changing repository visibility changed source availability, not application authority. The public-readiness change modified no `Sources/` files, entitlements, runtime networking, telemetry, input capture, persistence, subprocess behavior, signing requirements, or performance budgets.
 
 ## License
 
 The repository is licensed under the MIT License in root `LICENSE`.
 
-## Required post-visibility verification
+## Post-visibility verification
 
-Immediately after changing GitHub visibility to Public, verify the actual repository settings rather than assuming private-repository settings were preserved:
+Programmatically confirmed after the transition:
 
-1. visibility reports `public`;
-2. `main` still has the intended protection/ruleset and squash-only integration policy;
-3. required CI checks still apply before merge;
-4. Actions default workflow permissions remain least privilege;
-5. fork pull-request workflows do not receive write tokens or repository secrets;
-6. release environments/secrets remain isolated from pull-request CI;
-7. `v0.1.0` Release assets, checksum, and provenance remain intact;
-8. a normal public-source CI run remains green.
+- GitHub repository metadata reports `visibility=public`;
+- `main` head is the public-readiness squash `23500e099a0f8b2738f1157c6ae3be71c89df6e1`;
+- repository integration settings remain squash-only (`allow_squash_merge=true`, merge/rebase commits disabled);
+- `v0.1.0` tag remains addressable and contains `VERSION=0.1.0` plus the versioned Personal Release documentation;
+- public-readiness hardening itself introduced no runtime/workflow-definition/entitlement change.
 
-If any of these checks cannot be proven, public-readiness remains incomplete until the repository setting is corrected.
+Still requiring direct GitHub Settings verification because the connected API does not expose these settings:
+
+1. active `main` branch protection/branch ruleset and required CI checks;
+2. Actions default workflow token permissions and fork pull-request approval/settings;
+3. `release` environment protection/secrets isolation;
+4. published `v0.1.0` Release assets (`NotchHub.dmg`, checksum, `build-metadata.json`) remain visible and intact.
+
+GitHub documents that visibility changes can alter ruleset state; therefore these settings are not assumed from the pre-transition configuration.
+
+Public readiness is complete only after these four Settings checks are confirmed.
