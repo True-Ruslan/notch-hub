@@ -18,7 +18,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 ### Changed
 
 - Downloaded immutable Personal Release `v0.1.0` completed `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6; R0.1 is accepted.
-- **Performance Foundation P0 is accepted** after target-Mac runtime evidence, immutable-release artifact-size provenance, RED→GREEN budget-checker coverage, and green integrated CI.
+- Performance Foundation P0 has complete accepted evidence and is at its final PR #5 review/merge gate before becoming merged project state.
 - Accepted target-Mac runtime baselines for idle, hover, and 10-minute stability against immutable `v0.1.0`; idle/stability median CPU is `0.0%`, stability RSS decreased by `3,712 KiB`, and no sustained memory/thread growth was detected.
 - Accepted exact `v0.1.0` artifact sizes: executable `220,560 B`, app `223,555 B`, DMG `73,955 B`.
 - Defined conservative initial CPU/RSS/thread target-Mac acceptance ceilings from the measured baseline while keeping noisy shared-runner resource values out of CI thresholds.
