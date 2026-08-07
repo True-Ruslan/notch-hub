@@ -56,6 +56,20 @@ _FORBIDDEN_PERSONAL_WORKFLOW_FRAGMENTS = (
     "spctl --master-disable",
     "pull_request_target",
 )
+_REQUIRED_PUBLIC_CI_FRAGMENTS = (
+    "name: CI",
+    "pull_request:",
+    "permissions:\n  contents: read",
+    "persist-credentials: false",
+)
+_FORBIDDEN_PUBLIC_CI_FRAGMENTS = (
+    "pull_request_target:",
+    "workflow_run:",
+    "secrets.",
+    "self-hosted",
+    "permissions: write-all",
+    "persist-credentials: true",
+)
 
 
 def parse_semver(value: str) -> tuple[int, int, int]:
@@ -108,11 +122,27 @@ def validate_personal_release_workflow(text: str) -> None:
         if fragment in text:
             raise ValueError(f"personal release workflow contains forbidden trust-boundary fragment: {fragment}")
 
-    # Personal publication is intentionally manual. A top-level push trigger would
-    # make publishing possible without the deliberate workflow_dispatch action.
     trigger_prefix = text.split("permissions:", maxsplit=1)[0]
     if re.search(r"(?m)^\s{2}push:\s*$", trigger_prefix):
         raise ValueError("personal release workflow must not publish from a push trigger")
+
+
+def validate_public_ci_workflow(text: str) -> None:
+    """Validate CI that will execute code from untrusted public fork pull requests."""
+    for fragment in _REQUIRED_PUBLIC_CI_FRAGMENTS:
+        if fragment not in text:
+            raise ValueError(f"public CI workflow is missing required invariant: {fragment}")
+
+    for fragment in _FORBIDDEN_PUBLIC_CI_FRAGMENTS:
+        if fragment in text:
+            raise ValueError(f"public CI workflow contains forbidden trust-boundary fragment: {fragment}")
+
+    trigger_prefix = text.split("permissions:", maxsplit=1)[0]
+    if not re.search(r"(?m)^\s{2}pull_request:\s*$", trigger_prefix):
+        raise ValueError("public CI must use the ordinary pull_request event")
+
+    if re.search(r"(?m)^\s+[A-Za-z0-9_-]+:\s*write\s*$", text):
+        raise ValueError("public pull-request CI must not grant write permissions")
 
 
 def _positive_build_number(value: str) -> int:
@@ -183,6 +213,13 @@ def _cmd_validate_workflow(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_validate_public_ci(args: argparse.Namespace) -> int:
+    text = Path(args.workflow).read_text(encoding="utf-8")
+    validate_public_ci_workflow(text)
+    print("Public pull-request CI policy passed.")
+    return 0
+
+
 def _cmd_metadata(args: argparse.Namespace) -> int:
     metadata = build_metadata(
         version=args.version,
@@ -202,7 +239,7 @@ def _cmd_metadata(args: argparse.Namespace) -> int:
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="NotchHub personal-release policy helpers")
+    parser = argparse.ArgumentParser(description="NotchHub release and public-repository policy helpers")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     notes = subparsers.add_parser("validate-notes", help="validate personal release notes")
@@ -213,6 +250,12 @@ def _parser() -> argparse.ArgumentParser:
     workflow = subparsers.add_parser("validate-workflow", help="validate Personal Release workflow")
     workflow.add_argument("--workflow", required=True)
     workflow.set_defaults(handler=_cmd_validate_workflow)
+
+    public_ci = subparsers.add_parser(
+        "validate-public-ci", help="validate ordinary CI for untrusted public fork pull requests"
+    )
+    public_ci.add_argument("--workflow", required=True)
+    public_ci.set_defaults(handler=_cmd_validate_public_ci)
 
     metadata = subparsers.add_parser("metadata", help="write deterministic release metadata JSON")
     metadata.add_argument("--version", required=True)
