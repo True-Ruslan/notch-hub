@@ -2,9 +2,9 @@
 
 ## Goal
 
-Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer feel, exact macOS trust/permission surfaces, third-party app integration, and other behavior CI cannot honestly reproduce.
+Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer feel, exact macOS trust/permission surfaces, third-party app integration, target-hardware resource measurements, and other behavior CI cannot honestly reproduce.
 
-A green pipeline is necessary but is not proof of real-device UX. Conversely, manual success never replaces deterministic automated coverage that can reasonably exist.
+A green pipeline is necessary but is not proof of real-device UX or target-Mac efficiency. Conversely, manual success never replaces deterministic automated coverage that can reasonably exist.
 
 ## Required CI gate
 
@@ -14,23 +14,26 @@ Current CI validates:
 
 1. Swift package structure.
 2. deterministic Personal/Trusted release-policy unit/static tests.
-3. project-configured strict Swift formatting.
-4. shell/plist syntax.
-5. executable repository security baseline (`scripts/security-audit.sh`).
-6. macOS 26 compilation with warnings as errors.
-7. macOS 26 complete Swift test suite.
-8. packaging-runner compilation with warnings as errors.
-9. complete Swift tests with coverage instrumentation.
-10. release app/DMG packaging.
-11. semantic version/build-number stamping.
-12. ad-hoc code-signature verification.
-13. Hardened Runtime verification.
-14. exact effective App Sandbox entitlement verification.
-15. linked-library inspection (system libraries only at the current milestone).
-16. DMG integrity with `hdiutil verify`.
-17. artifact upload.
+3. deterministic performance-policy/parser/aggregation tests.
+4. project-configured strict Swift formatting.
+5. shell/plist syntax.
+6. executable repository security baseline (`scripts/security-audit.sh`).
+7. deterministic runtime performance-policy audit (`scripts/performance_policy.py audit Sources`).
+8. macOS 26 compilation with warnings as errors.
+9. macOS 26 complete Swift test suite.
+10. packaging-runner compilation with warnings as errors.
+11. complete Swift tests with coverage instrumentation, including deterministic state-stress coverage.
+12. release app/DMG packaging.
+13. semantic version/build-number stamping.
+14. ad-hoc code-signature verification.
+15. Hardened Runtime verification.
+16. exact effective App Sandbox entitlement verification.
+17. linked-library inspection (system libraries only at the current milestone).
+18. DMG integrity with `hdiutil verify`.
+19. short development-harness compatibility/schema smoke on a shared runner, with no CPU/RAM magnitude gate.
+20. artifact upload.
 
-Do not lower assertions, delete useful tests, weaken security/release policy, or weaken production behavior merely to make CI green.
+Do not lower assertions, delete useful tests, weaken security/release/performance policy, or weaken production behavior merely to make CI green.
 
 ## Release-policy test boundary
 
@@ -62,13 +65,28 @@ The executable security baseline verifies, among other things:
 - no LaunchAgents/LaunchDaemons/privileged-helper surfaces;
 - immutable full-SHA GitHub Action references;
 - no `pull_request_target` workflows;
-- explicit Personal/Trusted release-tier boundaries and immutable release assets.
+- explicit Personal/Trusted release-tier boundaries and immutable release assets;
+- performance measurement tooling remains development-only and is not copied/referenced into the application bundle.
 
 Future capabilities that legitimately require a currently forbidden surface must update policy and tests explicitly in the same reviewed PR.
 
+## Performance test boundary
+
+`PERFORMANCE.md` is authoritative for runtime resource policy and target-Mac methodology.
+
+`scripts/test_performance_policy.py` and `scripts/performance_policy.py` deterministically cover:
+
+- forbidden unreviewed polling/timer/sleep/display-link primitives in runtime Swift sources;
+- strict `/bin/ps` CPU/RSS/thread sample parsing;
+- median/max aggregation without inventing empty measurements;
+- baseline-harness configuration validation;
+- deterministic budget comparison and malformed/non-finite input rejection.
+
+`scripts/perf-baseline.py` is development/release tooling only. CI runs only a short compatibility/schema smoke and must not enforce runner CPU/RSS/thread values. Canonical runtime values come from the target MacBook/macOS 26.6 under the stable scenarios below.
+
 ## Test design
 
-Prefer pure deterministic policies for geometry, parsing, permissions, state, transitions, release rules, time-dependent interaction decisions, and AppKit/SwiftUI boundary configuration. AppKit/SwiftUI/GitHub orchestration should be thin around tested policies.
+Prefer pure deterministic policies for geometry, parsing, permissions, state, transitions, release rules, resource-policy rules, time-dependent interaction decisions, and AppKit/SwiftUI boundary configuration. AppKit/SwiftUI/GitHub orchestration should be thin around tested policies.
 
 Tests should:
 
@@ -85,6 +103,18 @@ Tests should:
 - never use noisy shared-runner timing values as tight performance gates.
 
 No arbitrary global code-coverage percentage is used. Coverage instrumentation is enabled to find untested deterministic logic; component-specific thresholds may be introduced only where they remain meaningful.
+
+## P0 performance contracts
+
+| ID | Scenario | Expected result | Automation |
+| --- | --- | --- | --- |
+| `NH-PERF-IDLE-001` | Accepted Personal Release, 10 s warmup then untouched compact mode for 60 s sampled every 1 s | Stable idle CPU/RSS/thread summary; no app-initiated periodic work discovered by policy/review | Sampling automated on target Mac; interaction/manual environment control |
+| `NH-PERF-HOVER-001` | 60 s sampler while repeating documented 5-second expand/retain/collapse cycle | Active summary captured without synthesized input; accepted hover behavior remains intact | Sampling automated; interaction manual |
+| `NH-PERF-STABILITY-001` | 10 min untouched run sampled every 5 s | No unexplained sustained RSS/thread growth | Sampling automated on target Mac; interpretation reviewed |
+| `NH-PERF-SIZE-001` | Accepted release executable/app/DMG | Exact byte sizes recorded in canonical baseline | Deterministic local/release metadata |
+| `NH-PERF-STATE-001` | Exactly 100,000 pure pointer/presentation decisions | Correct final/count invariants with no retained history/state growth API; no wall-clock assertion | Fully automated Swift test |
+
+Canonical baseline and numerical budgets are added only after the target-Mac measurements are reviewed. Shared runner CPU/RAM/thread values are never substituted for this acceptance.
 
 ## M1 delayed-hover and haptic contract
 
@@ -159,6 +189,17 @@ Target MacBook/macOS 26.6:
 
 **M0 mandatory physical acceptance: PASS.**
 
+### 2026-08-07 — cycle 4 / Personal Release acceptance
+
+Downloaded immutable GitHub Personal Release `v0.1.0` on the target MacBook/macOS 26.6:
+
+- `NH-PERSONAL-RELEASE-001`: **PASS**.
+- published checksum/install/standard macOS first-launch path: **PASS**;
+- application launch: **PASS**;
+- accepted `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, `NH-HOVER-003` behavior on the downloaded release: **PASS**.
+
+**R0.1 Personal Release acceptance: PASS.**
+
 ## Personal Release TDD evidence
 
 PR #3 records release-policy RED/GREEN evidence independently from app runtime:
@@ -171,4 +212,4 @@ PR #3 records release-policy RED/GREEN evidence independently from app runtime:
 - trust-boundary tests failed until the executable workflow validator existed;
 - final Trusted pre-publish recheck received an additional RED-first fail-closed regression test before its fix.
 
-`v0.1.0` Personal Release has been published from the accepted `main` commit. `NH-PERSONAL-RELEASE-001` remains pending until the downloaded GitHub Release DMG is accepted on the target MacBook.
+`v0.1.0` Personal Release was published from accepted `main` and subsequently passed `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6.
