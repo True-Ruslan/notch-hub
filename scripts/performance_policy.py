@@ -101,6 +101,31 @@ def summarize_samples(samples: Sequence[ProcessSample]) -> dict[str, float | int
     }
 
 
+def _first_quartile(values: Sequence[int]) -> float:
+    if not values:
+        raise ValueError("at least one value is required")
+    if len(values) == 1:
+        return float(values[0])
+    return float(statistics.quantiles(values, n=4, method="inclusive")[0])
+
+
+def summarize_stability_samples(samples: Sequence[ProcessSample]) -> dict[str, float | int]:
+    if not samples:
+        raise ValueError("at least one process sample is required")
+
+    rss_values = [sample.rss_kib for sample in samples]
+    thread_values = [sample.thread_count for sample in samples]
+
+    return {
+        "rssStartKiB": rss_values[0],
+        "rssEndKiB": rss_values[-1],
+        "rssFirstQuartileKiB": _first_quartile(rss_values),
+        "threadStart": thread_values[0],
+        "threadEnd": thread_values[-1],
+        "threadFirstQuartile": _first_quartile(thread_values),
+    }
+
+
 def validate_config(
     scenario: str,
     warmup_seconds: float,
