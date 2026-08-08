@@ -9,7 +9,6 @@ MACOS_DIR="$CONTENTS_DIR/MacOS"
 VERSION_FILE="$ROOT_DIR/VERSION"
 ENTITLEMENTS_FILE="$ROOT_DIR/Resources/NotchHub.entitlements"
 SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
-LINK_MAP_PATH="$ROOT_DIR/build/NotchHub.linkmap"
 
 if [[ ! -f "$VERSION_FILE" ]]; then
     echo "Missing VERSION file" >&2
@@ -35,62 +34,8 @@ if [[ ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]] || [[ "$BUILD_NUMBER" == "0" ]]; then
 fi
 
 cd "$ROOT_DIR"
-mkdir -p "$ROOT_DIR/build"
-
-if [[ "$CONFIGURATION" == "release" ]]; then
-    rm -f "$LINK_MAP_PATH"
-    swift build -c "$CONFIGURATION" \
-        -Xlinker -map \
-        -Xlinker "$LINK_MAP_PATH"
-else
-    swift build -c "$CONFIGURATION"
-fi
-
+swift build -c "$CONFIGURATION"
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
-
-if [[ "$CONFIGURATION" == "release" && -f "$LINK_MAP_PATH" ]]; then
-    python3 - "$LINK_MAP_PATH" <<'PY'
-import re
-import sys
-from collections import defaultdict
-from pathlib import Path
-
-path = Path(sys.argv[1])
-objects = {}
-sizes = defaultdict(int)
-section = None
-
-object_pattern = re.compile(r"^\[\s*(\d+)\]\s+(.+)$")
-symbol_pattern = re.compile(r"^0x[0-9A-Fa-f]+\s+0x([0-9A-Fa-f]+)\s+\[\s*(\d+)\]\s+")
-
-for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-    if line == "# Object files:":
-        section = "objects"
-        continue
-    if line == "# Symbols:":
-        section = "symbols"
-        continue
-    if line.startswith("# Dead Stripped Symbols:"):
-        section = None
-        continue
-    if line.startswith("# ") and section in {"objects", "symbols"}:
-        continue
-
-    if section == "objects":
-        match = object_pattern.match(line)
-        if match:
-            objects[int(match.group(1))] = match.group(2)
-    elif section == "symbols":
-        match = symbol_pattern.match(line)
-        if match:
-            sizes[int(match.group(2))] += int(match.group(1), 16)
-
-print("=== NotchHub release link-map object contribution (top 20) ===")
-for index, size in sorted(sizes.items(), key=lambda item: item[1], reverse=True)[:20]:
-    object_path = objects.get(index, f"object[{index}]")
-    print(f"{size:8d} B  {object_path}")
-PY
-fi
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR"
