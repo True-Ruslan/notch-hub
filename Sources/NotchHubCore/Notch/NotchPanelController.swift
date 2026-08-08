@@ -41,7 +41,11 @@ public final class NotchPanelController: NSObject {
 
     public func show() {
         panel.orderFrontRegardless()
-        updateInteraction(for: NSEvent.mouseLocation)
+        interactionCoordinator.pointerMoved(
+            to: NSEvent.mouseLocation,
+            layout: layout,
+            allowActivation: false
+        )
     }
 
     func invalidate() {
