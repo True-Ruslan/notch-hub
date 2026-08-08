@@ -45,7 +45,7 @@ struct NotchPanelOwnershipTests {
         #expect(controllerSource.contains("accessibilityDisplayOptionsDidChangeNotification"))
         #expect(controllerSource.contains("reduceMotion != reduceMotionEnabled"))
         #expect(!controllerSource.contains("accessibilityObserver: NSObjectProtocol?"))
-        #expect(controllerSource.contains("selector: #selector(accessibilityDisplayOptionsDidChange)"))
+        #expect(controllerSource.contains("selector: #selector(accessibilityDisplayOptionsDidChange(_:))"))
         #expect(controllerSource.contains("notificationCenter.removeObserver(self"))
         #expect(controllerSource.contains("@objc private func accessibilityDisplayOptionsDidChange"))
         #expect(controllerSource.contains("transitionCoordinator.animationPolicyDidChange"))
