@@ -5,7 +5,7 @@ public enum NotchPointerPolicy {
         current: NotchPresentation,
         pointer: CGPoint,
         layout: NotchLayout,
-        activationPadding: CGFloat = 2,
+        activationInset: CGFloat = 4,
         retentionPadding: CGFloat = 8
     ) -> NotchPresentation {
         let activeFrame: CGRect
@@ -13,8 +13,8 @@ public enum NotchPointerPolicy {
         switch current {
         case .compact:
             activeFrame = layout.compactFrame.insetBy(
-                dx: -activationPadding,
-                dy: -activationPadding
+                dx: activationInset,
+                dy: activationInset
             )
         case .expanded:
             activeFrame = layout.expandedFrame.insetBy(
