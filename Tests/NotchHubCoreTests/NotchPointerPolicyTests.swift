@@ -44,10 +44,10 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
-    func compactPointerAtTopScreenEdgeActivatesWithoutTopInset() {
+    func compactPointerAtExactTopScreenEdgeActivatesWithoutTopInset() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
-            pointer: CGPoint(x: 500, y: layout.compactFrame.maxY - 1),
+            pointer: CGPoint(x: 500, y: layout.compactFrame.maxY),
             layout: layout
         )
 
@@ -58,7 +58,7 @@ struct NotchPointerPolicyTests {
     func compactPointerJustInsideLeftEdgeStillDoesNotActivate() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
-            pointer: CGPoint(x: layout.compactFrame.minX + 2, y: layout.compactFrame.maxY - 1),
+            pointer: CGPoint(x: layout.compactFrame.minX + 2, y: layout.compactFrame.maxY),
             layout: layout
         )
 
@@ -66,14 +66,36 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
+    func compactPointerAtExactLeftInsetActivates() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.minX + 4, y: layout.compactFrame.maxY),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
     func compactPointerJustInsideRightEdgeStillDoesNotActivate() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
-            pointer: CGPoint(x: layout.compactFrame.maxX - 2, y: layout.compactFrame.maxY - 1),
+            pointer: CGPoint(x: layout.compactFrame.maxX - 2, y: layout.compactFrame.maxY),
             layout: layout
         )
 
         #expect(result == .compact)
+    }
+
+    @Test
+    func compactPointerAtExactRightInsetActivates() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.maxX - 4, y: layout.compactFrame.maxY),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
     }
 
     @Test
