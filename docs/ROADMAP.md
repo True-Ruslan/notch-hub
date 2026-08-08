@@ -73,13 +73,14 @@ Public repository, ordinary fork PR CI, release authority, protected branch rule
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **IN PROGRESS — PR #10; CURRENT INTERACTION/TRANSITION SLICE HARDWARE ACCEPTED**
+Status: **IN PROGRESS — INTERACTION/TRANSITION SLICE ACCEPTED AND MERGED; POINTER-OBSERVATION EXPERIMENT NEXT**
+Interaction/transition merge: `094b494bd597643244e733baf5787a13b61fb4eb` (PR #10)
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
 Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
 
-### Interaction intent core — implemented and hardware accepted
+### Interaction intent core — implemented, hardware accepted and merged
 
 - [x] short cancellable hover dwell before compact -> expanded activation;
 - [x] **120 ms dwell accepted** on target Mac;
@@ -93,9 +94,11 @@ Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-trans
 - [x] no haptic for cancellation, duplicate movement, retention, collapse, setup/programmatic paths, stale callbacks, or transition-policy retarget;
 - [x] explicit local/global `.mouseMoved` monitor ownership and teardown;
 - [x] corrected `NH-HOVER-TOP-001` passed on exact CI #332 artifact;
-- [x] `NH-HOVER-DELAY-001` quick cross-display transit reconfirmed on the same exact artifact.
+- [x] `NH-HOVER-DELAY-001` quick cross-display transit reconfirmed on the same exact artifact;
+- [x] final exact-head CI #338 passed all deterministic/security/performance/package gates;
+- [x] PR #10 squash-merged into protected `main` as `094b494bd597643244e733baf5787a13b61fb4eb`.
 
-### Transition / animation hardening — implemented and hardware accepted
+### Transition / animation hardening — implemented, hardware accepted and merged
 
 - [x] separate pointer intents from presentation transition ownership;
 - [x] one `NotchPanelTransitionCoordinator` as the sole transition authority;
@@ -117,18 +120,25 @@ Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-trans
 - [x] unchanged P0 artifact-size budget restored after multiple CI failures; budget was never widened;
 - [x] physical normal animation, both reversal directions, rapid churn, and Reduce Motion accepted on target MacBook/macOS 26.6.
 
-### Pointer-observation efficiency — hot path improved; local-tracking experiment still pending
+### Pointer-observation efficiency — NEXT measured M1 experiment
 
-- [x] retain exactly one local + one global `.mouseMoved` monitor with idempotent teardown;
-- [x] remove per-event `Task { @MainActor ... }` allocation from live mouse-move delivery;
-- [x] deliver AppKit monitor callbacks synchronously through `MainActor.assumeIsolated` on the documented main-thread callback boundary;
-- [x] prove the no-per-event-Task property in deterministic regression coverage;
-- [ ] measure and investigate `NSTrackingArea` / window-local tracking against accepted `NH-PERF-HOVER-001`;
-- [ ] replace global `.mouseMoved` only if notch/cross-display correctness and target-Mac resource behavior are equal or better;
+Current accepted fallback:
+
+- [x] exactly one local + one global `.mouseMoved` monitor with idempotent teardown;
+- [x] no per-event `Task { @MainActor ... }` allocation from live mouse-move delivery;
+- [x] AppKit monitor callbacks delivered synchronously through `MainActor.assumeIsolated` on the documented main-thread boundary;
+- [x] deterministic coverage for the no-per-event-Task invariant.
+
+Next experiment:
+
+- [ ] design a measurement protocol for `NSTrackingArea` / window-local tracking against accepted `NH-PERF-HOVER-001` and the physical cross-display/notch matrix;
+- [ ] implement the alternative behind a narrow replaceable boundary using TDD;
+- [ ] measure target-Mac CPU/RSS/threads and hover/transit correctness against the current global-monitor fallback;
+- [ ] replace global `.mouseMoved` only if local tracking is equal-or-better in correctness and resource behavior;
 - [ ] retain the narrow global fallback if local tracking is less reliable or not measurably better;
 - [ ] never adopt `CGEventTap`, Accessibility, Input Monitoring, or broader capture merely for hover convenience.
 
-### Physical M1 acceptance gate for current slice
+### Physical M1 acceptance gate for merged interaction slice
 
 Broad exact-artifact hardware acceptance on CI #319 is complete:
 
@@ -154,13 +164,12 @@ Top-edge refinement history and acceptance:
 - [x] corrective exact-boundary RED #326;
 - [x] corrective GREEN #327: **54/54 tests** plus all security/performance/package gates, unchanged P0 size budget;
 - [x] exact CI #332 artifact `9022551570`: `NH-HOVER-TOP-001` **PASS**;
-- [x] same exact artifact: `NH-HOVER-DELAY-001` quick cross-display regression **PASS**.
+- [x] same exact artifact: `NH-HOVER-DELAY-001` quick cross-display regression **PASS**;
+- [x] final pre-merge exact-head CI #338: all gates **PASS**;
+- [x] protected squash integration as `094b494bd597643244e733baf5787a13b61fb4eb`.
 
-The current interaction/transition slice has completed its physical gate. Acceptance-record commits after the CI #332 source are documentation-only; one fresh exact-head CI remains before PR integration.
+### Remaining M1 product hardening after pointer experiment
 
-### Remaining M1 product hardening after current slice
-
-- [ ] measured pointer-observation experiment described above;
 - [ ] multiple displays and active-screen migration;
 - [ ] fullscreen/Space behavior;
 - [ ] screen-configuration change handling;
