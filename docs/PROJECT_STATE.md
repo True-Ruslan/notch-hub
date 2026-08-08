@@ -8,7 +8,7 @@ Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
 Current product milestone: M1 `Notch Core hardening and interaction` — **IN PROGRESS**
-Active implementation PR: #10 `M1 delayed hover and haptic interaction core` — **CURRENT SLICE HARDWARE ACCEPTED / FINAL DOCS CI PENDING**
+Active implementation PR: #10 `M1 delayed hover and haptic interaction core` — **CURRENT SLICE HARDWARE ACCEPTED / INTEGRATION PENDING**
 
 ## Product
 
@@ -209,7 +209,7 @@ Target MacBook/macOS 26.6 results reported on 2026-08-08:
 
 This accepts the final compact activation geometry as **inclusive 4 pt left/right/bottom, inclusive 0 pt top**, while preserving the accepted `120 ms` dwell and cross-display protection. No broad hardware rerun is required because the corrective change was limited to compact hit-test boundary semantics and both directly affected physical gates passed on the exact artifact.
 
-The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f298`. Subsequent acceptance-record commits are documentation-only and do not require another physical run; they do require a fresh exact-head CI before PR integration.
+The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f298`. Subsequent acceptance-record commits are documentation-only and do not require another physical run; the latest acceptance-record head must pass the full required CI before PR integration.
 
 ## Security baseline
 
@@ -224,8 +224,8 @@ The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f
 
 ## Next optimal step
 
-1. Run one fresh exact-head CI after these documentation-only acceptance commits.
-2. If all required gates remain green, mark PR #10 Ready for Review; no further physical retest is required because production source is unchanged from the accepted CI #332 artifact.
+1. Require the latest documentation-only acceptance head to pass the full exact-head CI before integration.
+2. Once those checks are green, mark PR #10 Ready for Review; no further physical retest is required because production source is unchanged from the accepted CI #332 artifact.
 3. Integrate PR #10 only after the explicit branch-integration decision required by repository workflow.
 4. After this interaction slice is merged, run the measured `NSTrackingArea` / window-local pointer experiment against accepted `NH-PERF-HOVER-001` before deciding whether the global `.mouseMoved` fallback can be removed.
 5. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration changes, click/pin, and gestures.
