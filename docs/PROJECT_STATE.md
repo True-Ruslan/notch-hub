@@ -1,13 +1,14 @@
 # Project state
 
-Last updated: 2026-08-07
+Last updated: 2026-08-08
 Current version: `0.1.0` (Personal Release published and accepted)
 Repository visibility: **Public**
 Primary physical target: macOS `26.6`
 Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
-Next product milestone: M1 `Notch Core hardening and interaction`
+Current product milestone: M1 `Notch Core hardening and interaction` — **IN PROGRESS**
+Active implementation PR: #10 `M1 delayed hover and haptic interaction core`
 
 ## Product
 
@@ -114,29 +115,69 @@ The `release` environment verification item is **N/A**: the current supported ti
 
 P0.1 is complete. Any future change to repository visibility, Actions authority, branch/ruleset protection, release workflow trust, or credential handling requires a fresh focused review.
 
+## M1 interaction core
+
+Status: **IMPLEMENTED IN PR #10; TARGET-MAC ACCEPTANCE PENDING**.
+
+Authoritative requirements: `docs/specs/M1_NOTCH_INTERACTION.md`.
+Implementation plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
+
+Implemented deterministically:
+
+- a dedicated `NotchInteractionCoordinator` separates pointer delivery, time, haptic output, and presentation state;
+- compact → expanded activation uses one cancellable one-shot dwell with named initial candidate `120 ms`;
+- duplicate pointer movement does not create duplicate pending activation;
+- leaving before the threshold cancels immediately;
+- generation validation makes stale callbacks harmless even if a cancelled callback is invoked later;
+- re-entry starts a fresh full dwell;
+- expanded retention/collapse stays independent from the activation dwell;
+- one successful pointer-initiated `compact -> expanded` transition requests exactly one haptic;
+- quick/cancelled transit, duplicate movement, retention, collapse, programmatic expansion, and stale callbacks request no haptic;
+- production haptic uses public `NSHapticFeedbackManager.defaultPerformer` with `.generic` / `.now`;
+- the dwell scheduler is one `DispatchWorkItem` via `DispatchQueue.main.asyncAfter`, not polling or a repeating timer;
+- pointer-monitor ownership is explicit: one local and one global `.mouseMoved` monitor are registered once and removed idempotently on invalidation;
+- application termination invalidates the controller and pending work;
+- no entitlement, runtime dependency, networking, subprocess, Accessibility, Input Monitoring, `CGEventTap`, private API, or broader event mask was added.
+
+### TDD / CI evidence
+
+- RED CI #147 first failed because the interaction coordinator/scheduler/haptic types deliberately did not exist; an independent missing `Foundation` test-harness import was then corrected without adding production code.
+- RED CI #148 failed cleanly on the still-missing production interaction types.
+- RED CI #150 additionally covered the missing pointer-monitor lifecycle abstraction and failed for both intended production seams.
+- GREEN CI #157 passed macOS 26 compatibility, 24/24 Swift tests, release/performance policy, runtime performance audit, security baseline, build/package/signature/Sandbox/Hardened Runtime/DMG gates, but correctly failed the unchanged artifact-size budget: executable `254,000 B` exceeded the 15% relative limit `253,644 B` by `356 B`.
+- The budget was **not widened**. Runtime metadata/structure was reduced without changing tested behavior.
+- GREEN CI #158 on implementation head `6b0173b79e457a8749c6f8675681efb8850e4e9e` passed all gates. Candidate sizes: executable `251,856 B`, app `254,853 B`, DMG `83,072 B`.
+
+The shared-runner 5-second performance harness in CI remains schema/compatibility evidence only; its CPU/RSS/thread values are not target-Mac acceptance data.
+
+### Still pending before delayed-hover/haptic acceptance
+
+The following exact hardware scenarios have **not** yet been claimed as PASS on the target MacBook/macOS 26.6:
+
+- `NH-HOVER-DELAY-001` — normal cross-display transit remains compact with zero haptic;
+- `NH-HOVER-DELAY-002` — deliberate hover expands once after a fast but perceptible dwell; final dwell tuning is accepted;
+- `NH-HAPTIC-001` — one physical Force Touch haptic accompanies successful deliberate expansion when hardware/settings permit it;
+- `NH-HAPTIC-002` — quick/cancelled hover, retention, and collapse produce no physical haptic;
+- regression retest of `NH-NOTCH-001` and `NH-HOVER-001/002/003` on the exact PR candidate.
+
+The `120 ms` value therefore remains the **candidate**, not a final hardware-tuned value.
+
 ## Security baseline
 
-`SECURITY.md` is authoritative. Public-source preparation adds no runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, or broader global input capture. Public fork PR code must remain confined to unprivileged CI.
+`SECURITY.md` remains authoritative. M1 interaction work adds no runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, Accessibility/Input Monitoring permission, or broader global input capture. Global observation remains exactly `.mouseMoved` and pointer coordinates/history are not persisted.
 
-## Approved M1 interaction requirements
-
-- investigate replacing global `.mouseMoved` with reliable window-local AppKit tracking, accepting it only if correctness and target-Mac resource evidence are equal or better than the P0 baseline;
-- add a cancellable hover dwell, initial candidate `120 ms`, without polling/repeating timers;
-- add one public AppKit haptic via `NSHapticFeedbackManager.defaultPerformer` only on a successful deliberate compact → expanded transition;
-- no haptic on cancellation, duplicate movement, retention, collapse, programmatic transitions, or stale callbacks;
-- no `CGEventTap`, Accessibility, Input Monitoring, private APIs, custom drivers, or synthetic input.
-
-Authoritative M1 spec: `docs/specs/M1_NOTCH_INTERACTION.md`.
-
-## Known limitations
+## Known limitations / technical debt
 
 - initial target-Mac runtime ceilings are based on one canonical run per scenario and intentionally include conservative headroom;
-- current global `.mouseMoved` path remains until M1 proves a reliable equal-or-better local alternative;
-- active-display migration, Spaces/fullscreen policy, animation tuning, product modules, and optional trusted distribution remain later work.
+- the narrow global `.mouseMoved` fallback remains in the M1 candidate; it now has explicit lifecycle ownership but is not yet replaced;
+- a window-local `NSTrackingArea`/AppKit replacement may be accepted only after target-Mac correctness, cross-display behavior, and resource evidence are equal or better than the P0 baseline;
+- final dwell timing is pending physical UX acceptance;
+- active-display migration, Spaces/fullscreen policy, screen-configuration handling, notchless mode, click/pin policy, animation/reduced-motion tuning, gestures, product modules, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Start M1 with deterministic tracking-adapter regression tests and measured local AppKit tracking investigation.
-2. Accept a local tracking replacement only if correctness stays PASS and target-Mac resource/input-observation evidence is equal or better than the P0 baseline.
-3. Implement delayed hover + haptic test-first under `docs/specs/M1_NOTCH_INTERACTION.md`.
-4. Continue with M1 multi-display, Spaces/fullscreen, animation, and gesture hardening after the core interaction path is proven.
+1. Complete final exact-head PR CI after documentation synchronization and review PR #10 for regressions/security/resource implications.
+2. Exercise the exact PR candidate on the target MacBook/macOS 26.6 and record `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, and `NH-HAPTIC-001/002` honestly.
+3. Tune the named dwell value only from that physical evidence; if changed, preserve deterministic coverage and rerun exact-head CI/hardware acceptance.
+4. Run the separate M1 local-tracking experiment against the accepted P0 `NH-PERF-HOVER-001` baseline. Remove global `.mouseMoved` only if local tracking remains reliable during notch/multi-display transit and resource/input-observation evidence is equal or better.
+5. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration handling, animation/reduced-motion, click/pin, and gesture hardening after the core interaction path is accepted.
