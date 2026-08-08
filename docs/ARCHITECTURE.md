@@ -97,11 +97,11 @@ It separates:
 - **transition phase**: `compact`, `expanding`, `expanded`, or `collapsing`;
 - **content presentation**: what SwiftUI is currently allowed to render.
 
-The separation is deliberate. Expanded SwiftUI content remains staged while collapse is animating and switches to compact only when the matching collapse completion wins. This prevents controls from disappearing before the backing window has visually reached the compact endpoint.
+Expanded SwiftUI content remains staged while collapse is animating and switches to compact only when the matching collapse completion wins. This prevents controls from disappearing before the backing window has visually reached the compact endpoint.
 
 Every started transition advances a generation. Cancellation/reversal invalidates the previous generation. A completion may settle state only when its generation is still current, so an old expansion/collapse callback cannot overwrite a newer desired state.
 
-Reversal therefore follows this rule:
+Reversal follows this rule:
 
 1. cancel the current AppKit/Core Animation output;
 2. invalidate its generation;
@@ -148,7 +148,7 @@ The transition coordinator, not the pointer monitor or view, decides haptic elig
 Exactly one feedback request may occur when a deliberate user dwell creates a real compact -> expanded transition. The current hardware candidate is:
 
 ```swift
-NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
 ```
 
 No haptic is requested for quick/cancelled transit, duplicate pointer events, retention, collapse, startup synchronization, programmatic expansion, stale callbacks/completions, or animation-policy retargeting. Reversal cannot create a second feedback request simply because the current visual transition changes direction.
