@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import SwiftUI
 
 @MainActor
@@ -9,7 +8,6 @@ public final class NotchPanelController: NSObject {
     private let interactionCoordinator: NotchInteractionCoordinator
     private let pointerMonitor: NotchPointerMonitor
     private var layout: NotchLayout
-    private var cancellables = Set<AnyCancellable>()
 
     public override init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
@@ -17,10 +15,27 @@ public final class NotchPanelController: NSObject {
         let resolvedLayout = NotchGeometry.layout(for: geometry)
         let model = NotchPanelModel()
         let haptics = AppKitNotchHapticPerformer()
+        let panel = NSPanel(
+            contentRect: resolvedLayout.compactFrame,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
         let interactionCoordinator = NotchInteractionCoordinator(
             scheduler: MainQueueNotchActivationScheduler(),
             emitIntent: { intent in
                 model.setContentPresentation(intent.desiredPresentation)
+                if let contentView = panel.contentView {
+                    NotchHostingViewFactory.applyPresentation(
+                        intent.desiredPresentation,
+                        to: contentView
+                    )
+                }
+                let targetFrame =
+                    intent.desiredPresentation == .compact
+                    ? resolvedLayout.compactFrame
+                    : resolvedLayout.expandedFrame
+                panel.setFrame(targetFrame, display: true)
                 if intent.hapticEligible {
                     haptics.performExpansionHaptic()
                 }
@@ -31,16 +46,10 @@ public final class NotchPanelController: NSObject {
         self.model = model
         self.interactionCoordinator = interactionCoordinator
         self.pointerMonitor = NotchPointerMonitor()
-        self.panel = NSPanel(
-            contentRect: resolvedLayout.compactFrame,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
+        self.panel = panel
 
         super.init()
         configurePanel()
-        bindModel()
         configurePointerMonitoring()
     }
 
@@ -57,7 +66,6 @@ public final class NotchPanelController: NSObject {
     func invalidate() {
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
-        cancellables.removeAll()
     }
 
     private func configurePanel() {
@@ -74,15 +82,6 @@ public final class NotchPanelController: NSObject {
         panel.contentView = NotchHostingViewFactory.make(model: model, layout: layout)
     }
 
-    private func bindModel() {
-        model.$contentPresentation
-            .removeDuplicates()
-            .sink { [weak self] presentation in
-                self?.apply(presentation)
-            }
-            .store(in: &cancellables)
-    }
-
     private func configurePointerMonitoring() {
         pointerMonitor.start { [weak self] pointer in
             self?.updateInteraction(for: pointer)
@@ -95,13 +94,5 @@ public final class NotchPanelController: NSObject {
             layout: layout,
             currentPresentation: model.contentPresentation
         )
-    }
-
-    private func apply(_ presentation: NotchPresentation) {
-        if let contentView = panel.contentView {
-            NotchHostingViewFactory.applyPresentation(presentation, to: contentView)
-        }
-        let targetFrame = presentation == .compact ? layout.compactFrame : layout.expandedFrame
-        panel.setFrame(targetFrame, display: true)
     }
 }
