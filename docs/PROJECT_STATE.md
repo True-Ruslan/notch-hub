@@ -209,7 +209,23 @@ Target MacBook/macOS 26.6 results reported on 2026-08-08:
 
 This accepts the final compact activation geometry as **inclusive 4 pt left/right/bottom, inclusive 0 pt top**, while preserving the accepted `120 ms` dwell and cross-display protection. No broad hardware rerun is required because the corrective change was limited to compact hit-test boundary semantics and both directly affected physical gates passed on the exact artifact.
 
-The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f298`. Subsequent acceptance-record commits are documentation-only and do not require another physical run; the latest acceptance-record head must pass the full required CI before PR integration.
+The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f298`.
+
+## Final acceptance-record verification
+
+Documentation-only acceptance head `705ed9f5ce6dbb706def2c1bcf28519e488e998a` passed CI #337 / run `31260754621`:
+
+- macOS 26 compatibility: PASS;
+- **54/54 Swift tests**: PASS;
+- **16/16 release-policy tests**: PASS;
+- **22/22 performance-policy tests**: PASS;
+- security/performance audits: PASS;
+- App Sandbox + Hardened Runtime + ad-hoc signature: PASS;
+- system-only dynamic linkage and DMG integrity: PASS;
+- unchanged P0 artifact-size budget: PASS;
+- exact sizes: executable `250,320 B`, app `253,317 B`, DMG `84,684 B`.
+
+No production source changed after the physically accepted CI #332 artifact, so no additional physical run is required before integration.
 
 ## Security baseline
 
@@ -224,8 +240,7 @@ The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f
 
 ## Next optimal step
 
-1. Require the latest documentation-only acceptance head to pass the full exact-head CI before integration.
-2. Once those checks are green, mark PR #10 Ready for Review; no further physical retest is required because production source is unchanged from the accepted CI #332 artifact.
-3. Integrate PR #10 only after the explicit branch-integration decision required by repository workflow.
-4. After this interaction slice is merged, run the measured `NSTrackingArea` / window-local pointer experiment against accepted `NH-PERF-HOVER-001` before deciding whether the global `.mouseMoved` fallback can be removed.
-5. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration changes, click/pin, and gestures.
+1. PR #10 can move to Ready for Review: hardware acceptance and exact-head deterministic verification are complete for the current slice.
+2. Integrate PR #10 only after the explicit branch-integration decision required by repository workflow.
+3. After this interaction slice is merged, run the measured `NSTrackingArea` / window-local pointer experiment against accepted `NH-PERF-HOVER-001` before deciding whether the global `.mouseMoved` fallback can be removed.
+4. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration changes, click/pin, and gestures.
