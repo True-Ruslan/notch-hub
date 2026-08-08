@@ -176,7 +176,9 @@ Hardware-feedback revision evidence:
 - GREEN source head `446a976591a43a856a2683337cb4df1ada10cc8a` / CI #199 passed **29/29 Swift tests**, including 32 repeated expanded<->compact AppKit mask cycles and hosting-view width/height autoresizing invariants;
 - after the physical report that only the white point remained, RED commit `1bb2d1481f31557868651bab6b59745e44ed827b` / CI #204 changed the deterministic hardware-notch compact contract from opacity `0` to required opacity `1` and failed exactly on `0.0 == 1.0`;
 - GREEN source head `29627f5f145d5e60ef1873d988cf4c51b91f097f` / CI #205 restored opaque compact rendering while retaining the AppKit repeated-mask fix and passed **29/29 Swift tests**, macOS 26 compatibility, release/performance policy, runtime performance audit, security baseline, warnings-as-errors, Sandbox/Hardened Runtime/signature/DMG verification, harness smoke, and the **unchanged** P0 size budget;
-- CI #205 sizes: executable `248,768 B`, app `251,765 B`, DMG `82,075 B`.
+- final exact-head `a524b2f709f64534e9473664a7482c7de015b5d9` / CI #214 repeated the complete pipeline after source-of-truth documentation synchronization and passed **29/29 Swift tests** plus every required quality/security/performance/package gate;
+- CI #214 exact-head sizes: executable `248,768 B`, app `251,765 B`, DMG `82,074 B`;
+- CI #214 produced `NotchHub-dmg` artifact `9019528633` from exact head `a524b2f709f64534e9473664a7482c7de015b5d9`.
 
 Shared-runner CPU/RSS/thread smoke remains schema/compatibility evidence only.
 
@@ -211,8 +213,7 @@ The `120 ms` dwell, `4 pt` activation inset, and `.levelChange` haptic remain ca
 
 ## Next optimal step
 
-1. Finish exact-head CI after source-of-truth documentation synchronization.
-2. Run the short revised target-Mac acceptance matrix above, with special emphasis on visible black compact chrome and `NH-VISUAL-003` repeated-cycle stability, and record results honestly.
-3. If `120 ms`, `4 pt`, and `.levelChange` feel correct, accept those values; otherwise tune only the failing value and rerun deterministic + hardware acceptance.
-4. Once the interaction/visual slice is accepted, run the separate `NSTrackingArea`/window-local tracking experiment against accepted P0 `NH-PERF-HOVER-001`; remove global `.mouseMoved` only with equal-or-better correctness/resource evidence.
-5. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration handling, animation/Reduced Motion, click/pin, and gesture hardening.
+1. Run the short revised target-Mac acceptance matrix above using exact-head CI #214 artifact `9019528633`, with special emphasis on visible black compact chrome and `NH-VISUAL-003` repeated-cycle stability, and record results honestly.
+2. If `120 ms`, `4 pt`, and `.levelChange` feel correct, accept those values; otherwise tune only the failing value and rerun deterministic + hardware acceptance.
+3. Once the interaction/visual slice is accepted, run the separate `NSTrackingArea`/window-local tracking experiment against accepted P0 `NH-PERF-HOVER-001`; remove global `.mouseMoved` only with equal-or-better correctness/resource evidence.
+4. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration handling, animation/Reduced Motion, click/pin, and gesture hardening.
