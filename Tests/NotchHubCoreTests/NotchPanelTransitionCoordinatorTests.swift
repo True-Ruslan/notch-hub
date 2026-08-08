@@ -21,8 +21,8 @@ struct NotchPanelTransitionCoordinatorTests {
         #expect(fixture.coordinator.desiredPresentation == .expanded)
         #expect(fixture.model.contentPresentation == .expanded)
         #expect(fixture.driver.requests.count == 1)
-        #expect(fixture.driver.requests[0].target.frame == layout.expandedFrame)
-        #expect(fixture.driver.requests[0].target.cornerRadius == 22)
+        #expect(fixture.driver.requests[0].frame == layout.expandedFrame)
+        #expect(fixture.driver.requests[0].cornerRadius == 22)
         #expect(fixture.haptics.requestCount == 1)
 
         fixture.driver.complete(index: 0)
@@ -41,8 +41,8 @@ struct NotchPanelTransitionCoordinatorTests {
         #expect(fixture.coordinator.desiredPresentation == .compact)
         #expect(fixture.model.contentPresentation == .expanded)
         #expect(fixture.driver.requests.count == 1)
-        #expect(fixture.driver.requests[0].target.frame == layout.compactFrame)
-        #expect(fixture.driver.requests[0].target.cornerRadius == 12)
+        #expect(fixture.driver.requests[0].frame == layout.compactFrame)
+        #expect(fixture.driver.requests[0].cornerRadius == 12)
         #expect(fixture.haptics.requestCount == 0)
 
         fixture.driver.complete(index: 0)
@@ -178,7 +178,7 @@ struct NotchPanelTransitionCoordinatorTests {
         let coordinator = NotchPanelTransitionCoordinator(
             model: model,
             animationDriver: driver,
-            animationPolicy: policy,
+            animationPolicy: { policy.currentPolicy },
             haptics: haptics,
             initialPresentation: initialPresentation
         )
@@ -223,7 +223,7 @@ private struct TransitionFixture {
 }
 
 @MainActor
-private final class StaticAnimationPolicyProvider: NotchAnimationPolicyProviding {
+private final class StaticAnimationPolicyProvider {
     var currentPolicy: NotchAnimationPolicy
 
     init(policy: NotchAnimationPolicy) {
@@ -251,7 +251,8 @@ private final class ManualPanelAnimationDriver: NotchPanelAnimationDriving {
     }
 
     struct Request {
-        let target: NotchPanelAnimationTarget
+        let frame: CGRect
+        let cornerRadius: CGFloat
         let policy: NotchAnimationPolicy
         let completion: @MainActor () -> Void
         let handle: Handle
@@ -260,14 +261,16 @@ private final class ManualPanelAnimationDriver: NotchPanelAnimationDriving {
     private(set) var requests: [Request] = []
 
     func animate(
-        to target: NotchPanelAnimationTarget,
+        frame: CGRect,
+        cornerRadius: CGFloat,
         policy: NotchAnimationPolicy,
         completion: @escaping @MainActor () -> Void
     ) -> any NotchPanelAnimationHandle {
         let handle = Handle()
         requests.append(
             Request(
-                target: target,
+                frame: frame,
+                cornerRadius: cornerRadius,
                 policy: policy,
                 completion: completion,
                 handle: handle
