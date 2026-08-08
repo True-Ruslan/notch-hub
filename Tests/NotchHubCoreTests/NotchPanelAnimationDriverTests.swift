@@ -46,7 +46,9 @@ struct NotchPanelAnimationDriverTests {
         #expect(animation?.keyPath == "cornerRadius")
         #expect(animation?.toValue as? CGFloat == 22)
         #expect(animation?.duration == 0.20)
-        #expect(animation?.timingFunction == CAMediaTimingFunction(name: .easeInEaseOut))
+        #expect(
+            animation?.timingFunction == CAMediaTimingFunction(name: .easeInEaseOut)
+        )
         #expect(completionCount == 0)
 
         fixture.driver.cancel()
