@@ -1,15 +1,10 @@
 import CoreGraphics
 
-public enum NotchPanelTransitionPhase: Equatable, Sendable {
+enum NotchPanelTransitionPhase: Equatable, Sendable {
     case compact
     case expanding
     case expanded
     case collapsing
-}
-
-@MainActor
-protocol NotchPanelAnimationHandle: AnyObject {
-    func cancel()
 }
 
 @MainActor
@@ -19,7 +14,9 @@ protocol NotchPanelAnimationDriving: AnyObject {
         cornerRadius: CGFloat,
         policy: NotchAnimationPolicy,
         completion: @escaping @MainActor () -> Void
-    ) -> any NotchPanelAnimationHandle
+    )
+
+    func cancel()
 }
 
 @MainActor
@@ -36,7 +33,7 @@ final class NotchPanelTransitionCoordinator {
     private(set) var desiredPresentation: NotchPresentation
 
     private var generation: UInt64 = 0
-    private var activeAnimation: (any NotchPanelAnimationHandle)?
+    private var hasActiveAnimation = false
     private var isInvalidated = false
 
     init(
@@ -91,8 +88,7 @@ final class NotchPanelTransitionCoordinator {
 
         isInvalidated = true
         generation &+= 1
-        activeAnimation?.cancel()
-        activeAnimation = nil
+        cancelActiveAnimationIfNeeded()
     }
 
     private func beginTransition(
@@ -107,9 +103,7 @@ final class NotchPanelTransitionCoordinator {
 
         generation &+= 1
         let scheduledGeneration = generation
-
-        activeAnimation?.cancel()
-        activeAnimation = nil
+        cancelActiveAnimationIfNeeded()
 
         let expectedPhase: NotchPanelTransitionPhase
         let frame: CGRect
@@ -130,7 +124,7 @@ final class NotchPanelTransitionCoordinator {
             cornerRadius = Self.expandedCornerRadius
         }
 
-        let handle = animationDriver.animate(
+        animationDriver.animate(
             frame: frame,
             cornerRadius: cornerRadius,
             policy: currentAnimationPolicy()
@@ -145,12 +139,21 @@ final class NotchPanelTransitionCoordinator {
             generation == scheduledGeneration,
             phase == expectedPhase
         {
-            activeAnimation = handle
+            hasActiveAnimation = true
         }
 
         if hapticEligible, presentation == .expanded {
             haptics.performExpansionHaptic()
         }
+    }
+
+    private func cancelActiveAnimationIfNeeded() {
+        guard hasActiveAnimation else {
+            return
+        }
+
+        hasActiveAnimation = false
+        animationDriver.cancel()
     }
 
     private func completeTransition(
@@ -165,7 +168,7 @@ final class NotchPanelTransitionCoordinator {
             return
         }
 
-        activeAnimation = nil
+        hasActiveAnimation = false
 
         switch expectedPresentation {
         case .compact:
