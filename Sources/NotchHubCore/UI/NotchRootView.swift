@@ -2,21 +2,21 @@ import SwiftUI
 
 public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
-    private let visualMetrics: NotchVisualMetrics
+    private let hasHardwareNotch: Bool
+    private let compactHeight: CGFloat
 
     public init(model: NotchPanelModel) {
-        self.init(
-            model: model,
-            visualMetrics: NotchVisualLayoutPolicy.metrics(
-                hasHardwareNotch: false,
-                compactHeight: 32
-            )
-        )
+        self.init(model: model, hasHardwareNotch: false, compactHeight: 32)
     }
 
-    init(model: NotchPanelModel, visualMetrics: NotchVisualMetrics) {
+    init(
+        model: NotchPanelModel,
+        hasHardwareNotch: Bool,
+        compactHeight: CGFloat
+    ) {
         self.model = model
-        self.visualMetrics = visualMetrics
+        self.hasHardwareNotch = hasHardwareNotch
+        self.compactHeight = compactHeight
     }
 
     public var body: some View {
@@ -29,7 +29,15 @@ public struct NotchRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(surfaceBackground)
+        .background(
+            model.presentation == .compact
+                ? Color.black.opacity(
+                    NotchVisualLayoutPolicy.compactBackgroundOpacity(
+                        hasHardwareNotch: hasHardwareNotch
+                    )
+                )
+                : Color.black
+        )
         .clipShape(
             RoundedRectangle(
                 cornerRadius: model.presentation == .compact ? 12 : 22,
@@ -38,15 +46,6 @@ public struct NotchRootView: View {
         )
         .contentShape(Rectangle())
         .animation(.snappy(duration: 0.22), value: model.presentation)
-    }
-
-    private var surfaceBackground: Color {
-        switch model.presentation {
-        case .compact:
-            Color.black.opacity(visualMetrics.compactBackgroundOpacity)
-        case .expanded:
-            Color.black
-        }
     }
 
     private var compactContent: some View {
@@ -88,7 +87,13 @@ public struct NotchRootView: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
-        .padding(.top, visualMetrics.expandedContentTopInset)
+        .padding(
+            .top,
+            NotchVisualLayoutPolicy.expandedContentTopInset(
+                hasHardwareNotch: hasHardwareNotch,
+                compactHeight: compactHeight
+            )
+        )
     }
 
     private func moduleTile(_ title: String, systemImage: String) -> some View {
