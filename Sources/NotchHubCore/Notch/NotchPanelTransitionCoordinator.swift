@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 
 enum NotchPanelTransitionPhase: Equatable, Sendable {
     case compact
@@ -8,26 +9,20 @@ enum NotchPanelTransitionPhase: Equatable, Sendable {
 }
 
 @MainActor
-protocol NotchPanelAnimationDriving: AnyObject {
-    func animate(
-        frame: CGRect,
-        cornerRadius: CGFloat,
-        policy: NotchAnimationPolicy,
-        completion: @escaping @MainActor () -> Void
-    )
-
-    func cancel()
-}
-
-@MainActor
 final class NotchPanelTransitionCoordinator {
     static let compactCornerRadius: CGFloat = 12
     static let expandedCornerRadius: CGFloat = 22
 
     private let model: NotchPanelModel
-    private let animationDriver: any NotchPanelAnimationDriving
-    private let currentAnimationPolicy: @MainActor () -> NotchAnimationPolicy
-    private let haptics: any NotchHapticPerforming
+    private let currentAnimationDuration: @MainActor () -> TimeInterval
+    private let animate: @MainActor (
+        CGRect,
+        CGFloat,
+        TimeInterval,
+        @escaping @MainActor () -> Void
+    ) -> Void
+    private let cancelAnimation: @MainActor () -> Void
+    private let performExpansionHaptic: @MainActor () -> Void
 
     private(set) var phase: NotchPanelTransitionPhase
     private(set) var desiredPresentation: NotchPresentation
@@ -38,28 +33,50 @@ final class NotchPanelTransitionCoordinator {
 
     init(
         model: NotchPanelModel,
-        animationDriver: any NotchPanelAnimationDriving,
-        animationPolicy: @escaping @MainActor () -> NotchAnimationPolicy,
-        haptics: any NotchHapticPerforming,
-        initialPresentation: NotchPresentation = .compact
+        initialPresentation: NotchPresentation = .compact,
+        animationDuration: @escaping @MainActor () -> TimeInterval,
+        animate: @escaping @MainActor (
+            CGRect,
+            CGFloat,
+            TimeInterval,
+            @escaping @MainActor () -> Void
+        ) -> Void,
+        cancelAnimation: @escaping @MainActor () -> Void,
+        performExpansionHaptic: @escaping @MainActor () -> Void
     ) {
         self.model = model
-        self.animationDriver = animationDriver
-        self.currentAnimationPolicy = animationPolicy
-        self.haptics = haptics
+        self.currentAnimationDuration = animationDuration
+        self.animate = animate
+        self.cancelAnimation = cancelAnimation
+        self.performExpansionHaptic = performExpansionHaptic
         self.desiredPresentation = initialPresentation
         self.phase = initialPresentation == .compact ? .compact : .expanded
     }
 
     func accept(_ intent: NotchInteractionIntent, layout: NotchLayout) {
-        guard !isInvalidated, intent.desiredPresentation != desiredPresentation else {
+        let presentation: NotchPresentation
+        let hapticEligible: Bool
+
+        switch intent {
+        case .deliberateExpansion:
+            presentation = .expanded
+            hapticEligible = true
+        case .pointerExitCollapse:
+            presentation = .compact
+            hapticEligible = false
+        case .programmaticExpansion:
+            presentation = .expanded
+            hapticEligible = false
+        }
+
+        guard !isInvalidated, presentation != desiredPresentation else {
             return
         }
 
         beginTransition(
-            to: intent.desiredPresentation,
+            to: presentation,
             layout: layout,
-            hapticEligible: intent.hapticEligible
+            hapticEligible: hapticEligible
         )
     }
 
@@ -124,10 +141,10 @@ final class NotchPanelTransitionCoordinator {
             cornerRadius = Self.expandedCornerRadius
         }
 
-        animationDriver.animate(
-            frame: frame,
-            cornerRadius: cornerRadius,
-            policy: currentAnimationPolicy()
+        animate(
+            frame,
+            cornerRadius,
+            currentAnimationDuration()
         ) { [weak self] in
             self?.completeTransition(
                 generation: scheduledGeneration,
@@ -143,7 +160,7 @@ final class NotchPanelTransitionCoordinator {
         }
 
         if hapticEligible, presentation == .expanded {
-            haptics.performExpansionHaptic()
+            performExpansionHaptic()
         }
     }
 
@@ -153,7 +170,7 @@ final class NotchPanelTransitionCoordinator {
         }
 
         hasActiveAnimation = false
-        animationDriver.cancel()
+        cancelAnimation()
     }
 
     private func completeTransition(
