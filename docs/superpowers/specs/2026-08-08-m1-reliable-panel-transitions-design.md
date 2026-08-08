@@ -1,7 +1,8 @@
 # M1 Reliable Panel Transitions — Design
 
-Status: **DESIGN DECISIONS APPROVED; WRITTEN SPEC AWAITING FINAL USER REVIEW**  
+Status: **APPROVED**  
 Date: 2026-08-08  
+Final written-spec approval: **2026-08-08**  
 Scope: Notch Core interaction/presentation hardening for PR #10
 
 ## 1. Context
@@ -424,18 +425,16 @@ These rules exist specifically to prevent the pattern "fix A, silently break B".
 
 ## 16. Implementation boundary and sequence
 
-After this written spec is explicitly approved, implementation planning should decompose the work into RED-first increments:
+Implementation planning decomposes the work into RED-first increments:
 
-1. transition state model and deterministic coordinator contract;
-2. explicit interaction-intent/haptic-eligibility boundary;
-3. fake animation driver and stale-completion/reversal tests;
-4. accessibility animation policy and notification lifecycle;
-5. production AppKit animation driver feasibility/reversal proof;
-6. coordinated AppKit frame + chrome transition integration;
-7. controller migration so it no longer independently owns presentation transitions;
-8. real AppKit repeated-cycle tests;
-9. full security/performance/package CI;
-10. target-Mac acceptance of transition/visual/haptic gates;
-11. only after acceptance, PR #10 may become merge-ready.
+1. explicit interaction-intent boundary;
+2. animation policy values and transition state model;
+3. accessibility policy/provider and policy-change lifecycle;
+4. production AppKit/Core Animation driver;
+5. controller migration to one transition authority;
+6. deterministic interruption/reversal proof and exact-head candidate;
+7. target-Mac reversal feasibility gate;
+8. full security/performance/size regression hardening;
+9. source-of-truth synchronization and final PR evidence.
 
 The implementation must return to design review if the chosen public AppKit animation mechanism cannot meet smooth interruption/reversal without custom frame loops or broadened system permissions.
