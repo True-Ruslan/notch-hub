@@ -65,7 +65,7 @@ public final class NotchPanelController: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isMovable = false
         panel.acceptsMouseMovedEvents = true
-        panel.contentView = NotchHostingViewFactory.make(model: model)
+        panel.contentView = NotchHostingViewFactory.make(model: model, layout: layout)
     }
 
     private func bindModel() {
@@ -89,6 +89,6 @@ public final class NotchPanelController: NSObject {
 
     private func apply(_ presentation: NotchPresentation) {
         let targetFrame = presentation == .compact ? layout.compactFrame : layout.expandedFrame
-        panel.setFrame(targetFrame, display: true, animate: true)
+        panel.setFrame(targetFrame, display: true)
     }
 }
