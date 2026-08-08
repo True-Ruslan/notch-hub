@@ -76,7 +76,17 @@ final class AppKitNotchPanelAnimationDriver {
 
     func cancel() {
         generation &+= 1
-        chromeView?.layer?.removeAnimation(forKey: Self.cornerAnimationKey)
+        freezeVisibleCornerRadius()
+    }
+
+    private func freezeVisibleCornerRadius() {
+        guard let layer = chromeView?.layer else {
+            return
+        }
+
+        let visibleCornerRadius = layer.presentation()?.cornerRadius ?? layer.cornerRadius
+        layer.removeAnimation(forKey: Self.cornerAnimationKey)
+        setCornerRadius(visibleCornerRadius, on: layer)
     }
 
     private func setCornerRadius(_ cornerRadius: CGFloat, on layer: CALayer) {
