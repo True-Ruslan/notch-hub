@@ -143,15 +143,15 @@ private final class FakeProbeProcessLauncher: ProbeProcessLaunching {
     var lastProcess: FakeProbeProcess?
     var nextTerminationStatus: Int32 = 0
 
-    private var stdoutHandler: ((Data) -> Void)?
-    private var stderrHandler: ((Data) -> Void)?
-    private var terminationHandler: ((Int32) -> Void)?
+    private var stdoutHandler: (@MainActor @Sendable (Data) -> Void)?
+    private var stderrHandler: (@MainActor @Sendable (Data) -> Void)?
+    private var terminationHandler: (@MainActor @Sendable (Int32) -> Void)?
 
     func launch(
         configuration: ProbeProcessConfiguration,
-        stdout: @escaping (Data) -> Void,
-        stderr: @escaping (Data) -> Void,
-        termination: @escaping (Int32) -> Void
+        stdout: @escaping @MainActor @Sendable (Data) -> Void,
+        stderr: @escaping @MainActor @Sendable (Data) -> Void,
+        termination: @escaping @MainActor @Sendable (Int32) -> Void
     ) throws -> any ProbeProcessHandle {
         launches.append(configuration)
         stdoutHandler = stdout
