@@ -38,11 +38,40 @@ swift build -c "$CONFIGURATION"
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 
 if [[ "$CONFIGURATION" == "release" ]]; then
-    echo "Release top symbols by linked size:"
-    nm -S "$BIN_DIR/NotchHub" \
-        | sort -k2,2r \
-        | head -n 40 \
-        | swift demangle || true
+    python3 - "$BIN_DIR/NotchHub" <<'PY'
+import re
+import subprocess
+import sys
+
+binary = sys.argv[1]
+raw = subprocess.check_output(["nm", "-n", binary], text=True)
+by_address = {}
+for line in raw.splitlines():
+    match = re.match(r"^([0-9A-Fa-f]+)\s+([A-Za-z])\s+(.+)$", line)
+    if not match:
+        continue
+    address = int(match.group(1), 16)
+    kind = match.group(2)
+    symbol = match.group(3)
+    by_address.setdefault(address, []).append((kind, symbol))
+
+addresses = sorted(by_address)
+rows = []
+for index, address in enumerate(addresses[:-1]):
+    text_symbols = [symbol for kind, symbol in by_address[address] if kind in {"t", "T"}]
+    if not text_symbols:
+        continue
+    next_address = addresses[index + 1]
+    size = next_address - address
+    if size <= 0:
+        continue
+    rows.append((size, address, text_symbols[0]))
+
+print("Release top text symbols by address-delta estimate:")
+for size, address, symbol in sorted(rows, reverse=True)[:40]:
+    demangled = subprocess.check_output(["swift", "demangle", symbol], text=True).strip()
+    print(f"{size:8d} B  0x{address:x}  {demangled}")
+PY
 fi
 
 rm -rf "$APP_DIR"
