@@ -12,7 +12,7 @@ Completed:
 - deterministic notch geometry and compact/expanded state;
 - stable pointer activation/retention policy;
 - exact hardware-notch width and AppKit-owned panel sizing;
-- RED → GREEN regression coverage for real-device defects;
+- RED -> GREEN regression coverage for real-device defects;
 - strict formatting + warnings-as-errors + macOS 26 CI;
 - App Sandbox and Hardened Runtime;
 - zero third-party Swift runtime dependencies;
@@ -29,144 +29,131 @@ M0 code is merged into protected `main`.
 Status: **ACCEPTED**
 Target: `v0.1.0 — Personal build`
 
-Purpose: publish versioned personal-use builds through GitHub Releases without paid Apple Developer membership while preserving security, provenance, and immutable history.
-
 Completed:
 
-- deterministic release-policy tests are green;
-- `Personal Release` workflow is manual-only and accepts only exact protected `main`;
-- App Sandbox/Hardened Runtime/ad-hoc signature/system-library/DMG gates are repeated before publication;
-- no Apple signing/notary secrets or trusted-distribution claims exist in Personal Release;
-- SHA-256 and `build-metadata.json` are published beside the DMG;
-- existing tags/releases cannot be overwritten (`--clobber`/release upload prohibited);
-- future `Trusted Release` workflow is separately named and cannot overwrite Personal versions;
-- release docs clearly explain standard Finder / Privacy & Security → Open Anyway path without weakening Gatekeeper;
-- protected implementation PR was squash-merged;
-- manual `Personal Release` workflow published immutable `v0.1.0` from accepted `main`;
-- `NH-PERSONAL-RELEASE-001` passed on the target MacBook/macOS 26.6 using the downloaded GitHub Release DMG.
+- deterministic release-policy tests;
+- manual-only Personal Release from exact protected `main`;
+- App Sandbox/Hardened Runtime/ad-hoc signature/system-library/DMG gates;
+- immutable release assets with SHA-256 and build provenance;
+- separate dormant Trusted Release tier;
+- downloaded `v0.1.0` acceptance on target MacBook/macOS 26.6.
 
-Apple Developer Program membership is **not** a blocker. Developer ID/notarization is intentionally deferred to an optional future Trusted Release tier. No GitHub Environments or Apple signing/notarization secrets are currently configured for that dormant tier.
+Apple Developer Program membership is intentionally deferred and is not a blocker for current personal use.
 
 ## P0 — Performance Foundation
 
 Status: **ACCEPTED AND MERGED**
 Merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 
-Purpose: make CPU, RAM, threads, wakeups/background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
+Purpose: make CPU, RAM, threads, background work, artifact size, and lifecycle efficiency measurable release requirements before feature-heavy M1 work.
 
-Completed:
-
-- root `PERFORMANCE.md` contract;
-- deterministic CI audit against unreviewed polling/timers/sleeps/display links/busy loops;
-- standard-library process-metric parser/aggregation and budget-comparison tests;
-- development-only target-Mac baseline harness with explicit source/tool provenance;
-- Darwin-compatible thread measurement through `ps -M` and stability start/end/quartile evidence;
-- reproducible macOS 26.6 scenario contracts for idle, hover/active, stability, artifact size, and deterministic state stress;
-- 100,000-transition pure Swift state/pointer stress coverage with no wall-clock threshold;
-- CI runner compatibility/schema smoke without CPU/RAM magnitude gating;
-- security/package checks proving performance tooling is not bundled as runtime telemetry;
-- accepted macOS 26.6 runtime baseline against immutable Personal Release `v0.1.0`;
-- exact immutable `v0.1.0` release sizes from published `build-metadata.json`;
-- complete machine-readable `performance/baseline-v0.1.0.json`;
-- conservative evidence-based CPU/RSS/thread target-Mac ceilings;
-- RED→GREEN fail-closed release-size checker covering relative allowance, absolute ceiling, schema mismatch, and missing metrics;
-- deterministic shared-CI artifact-size gate with 15% relative allowance plus independent absolute ceilings;
-- exact-head CI and final change review passed before squash merge.
-
-Accepted runtime evidence:
+Accepted runtime evidence on target macOS 26.6 / `Mac16,8`:
 
 - `NH-PERF-IDLE-001`: CPU median/max `0.0% / 0.7%`, RSS max `33,808 KiB`, threads max `4`;
 - `NH-PERF-HOVER-001`: CPU median/max `5.95% / 22.3%`, RSS max `38,816 KiB`, threads max `7`;
 - `NH-PERF-STABILITY-001`: CPU median/max `0.0% / 6.8%`, RSS max `34,384 KiB`, threads max `7`;
-- 10-minute stability RSS `34,256 -> 30,544 KiB`, delta `-3,712 KiB`, so no sustained RSS accumulation was observed.
+- 10-minute stability RSS `34,256 -> 30,544 KiB`, delta `-3,712 KiB`.
 
-Accepted size evidence:
+Accepted immutable size baseline:
 
-- executable: `220,560 B`;
-- app aggregate: `223,555 B`;
-- DMG: `73,955 B`;
-- release source commit: `8e913dcddfdec7d9aa920df8c37afb23b8c40884`;
-- published DMG SHA-256: `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`.
+- executable `220,560 B`;
+- app aggregate `223,555 B`;
+- DMG `73,955 B`.
 
-P0 keeps runtime CPU/RSS/thread thresholds on the target Mac and enforces only deterministic/reproducible artifact-size budgets in shared CI.
+Shared CI enforces deterministic artifact sizes with the accepted 15% relative allowance plus absolute ceilings. CPU/RSS/thread magnitude acceptance remains target-Mac only.
 
-Detailed approved plan: `docs/superpowers/plans/2026-08-07-performance-foundation.md`.
-Authoritative runtime policy and accepted values: root `PERFORMANCE.md`.
-Machine-readable baseline: `performance/baseline-v0.1.0.json`.
+Detailed policy: `PERFORMANCE.md` and `performance/baseline-v0.1.0.json`.
 
 ## P0.1 — Public repository readiness
 
 Status: **ACCEPTED**
 Hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
 
-Purpose: make the source repository safe to expose publicly before continuing feature development.
-
-Completed:
-
-- complete short pre-public Git/PR history reviewed for secret/private-key material;
-- no history rewrite required by the reviewed evidence;
-- no open/closed Issues existed at transition time;
-- root MIT license present;
-- ordinary fork PR CI explicitly read-only and secret-free;
-- repository-wide executable policy rejects `pull_request_target`, `workflow_run`, alternate `pull_request` workflow paths, self-hosted fork execution, OIDC/write permissions, reusable-workflow hops, and persisted checkout credentials;
-- Personal and dormant Trusted Release workflow definitions remain separated from untrusted PR execution;
-- RED CI #123 proved the public-CI policy helper did not exist before implementation;
-- exact-head CI #139 passed 16/16 release/public-policy tests plus full security/performance/Swift/package gates;
-- independent review found and closed two additional trust-boundary gaps before merge;
-- PR #6 squash-merged to `main`;
-- repository metadata reports Public visibility;
-- squash-only repository integration settings remain enabled;
-- `v0.1.0` tag remains addressable with version/release documentation intact;
-- first post-public PR CI #141 passed the complete public security/performance/Swift/package gate set;
-- no GitHub Environments are currently configured; this is intentional while Personal Release is the only supported distribution tier, so Trusted Release environment/secrets verification is N/A until that optional tier is deliberately adopted;
-- direct post-public verification confirmed the active `main` protection/ruleset and required CI checks;
-- direct post-public verification confirmed Actions default workflow token permissions and fork pull-request settings;
-- direct post-public verification confirmed published `v0.1.0` Release assets/checksum/provenance remain intact.
-
-P0.1 is closed. Future changes to repository visibility, branch protection/rulesets, Actions authority, release trust boundaries, or credential handling require a new focused review.
-
-Audit details and acceptance evidence: `docs/PUBLIC_READINESS.md`.
+Public repository, ordinary fork PR CI, release authority, protected branch rules, and immutable release boundaries are accepted. Any future authority/credential/visibility change requires a fresh focused review.
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **IN PROGRESS — PR #10**
+Status: **IN PROGRESS — PR #10 DRAFT**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
-Implementation plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
+Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
+Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
 
-### Interaction core — implemented, hardware acceptance pending
+### Interaction intent core — implemented, final hardware acceptance pending
 
-- [x] add a short, cancellable hover dwell before compact → expanded activation;
-- [x] keep the initial dwell as a named **120 ms candidate**, not a final value before target-Mac tuning;
-- [x] implement dwell as one event-driven pending work item with no polling or repeating timer;
-- [x] cover quick transit cancellation, threshold completion, duplicate movement, stale callback rejection, re-entry, retention, repeated independent activations, programmatic-state exclusion, and invalidation with deterministic scheduler tests;
-- [x] provide exactly one haptic request on a successful user-initiated compact → expanded transition;
-- [x] use public `NSHapticFeedbackManager.defaultPerformer` only;
-- [x] keep haptic silent for quick/cancelled transit, duplicate pointer events, expanded retention, collapse, programmatic transitions, and stale callbacks;
-- [x] give local/global `.mouseMoved` monitor tokens explicit ownership, duplicate-registration prevention, and idempotent teardown;
-- [x] preserve App Sandbox/Hardened Runtime, current entitlement set, zero external Swift runtime dependencies, and event-driven performance policy;
-- [x] keep candidate executable/app/DMG within the unchanged P0 artifact-size budget after CI caught and forced correction of an initial 356-byte executable overage;
-- [ ] pass `NH-HOVER-DELAY-001/002` on the target MacBook/macOS 26.6;
-- [ ] pass `NH-HAPTIC-001/002` on compatible real hardware;
-- [ ] rerun `NH-NOTCH-001` and `NH-HOVER-001/002/003` on the exact candidate;
-- [ ] accept or tune the final dwell value from physical evidence.
+- [x] short cancellable hover dwell before compact -> expanded activation;
+- [x] named **120 ms candidate**;
+- [x] **4 pt inward activation inset candidate** to reject edge grazing;
+- [x] one one-shot cancellable `DispatchWorkItem`, no polling/repeating timer;
+- [x] deterministic quick-transit, threshold, duplicate, stale-callback, re-entry, retention, setup, programmatic, and invalidation coverage;
+- [x] exactly one public AppKit haptic request on eligible deliberate expansion;
+- [x] current tactile candidate `.levelChange`;
+- [x] no haptic for cancellation, duplicate movement, retention, collapse, setup/programmatic paths, stale callbacks, or transition-policy retarget;
+- [x] explicit local/global `.mouseMoved` monitor ownership and teardown;
+- [ ] accept/tune `120 ms`, `4 pt`, and `.levelChange` from exact final target-Mac evidence.
 
-### Pointer-observation optimization — pending measured experiment
+### Transition / animation hardening — deterministic implementation complete, hardware acceptance pending
 
-- [ ] measure and investigate replacing global `.mouseMoved` observation with reliable `NSTrackingArea`/window-local tracking, using the accepted P0 hover resource baseline as the comparison point;
-- [ ] accept replacement only if notch/hover/cross-display correctness stays PASS and measured target-Mac resource/input-observation profile is equal or better;
-- [ ] retain the narrow, lifecycle-owned global `.mouseMoved` fallback if a local alternative is less reliable or not measurably better;
-- [ ] do not adopt `CGEventTap`, Accessibility, Input Monitoring, or broader capture merely for hover convenience.
+- [x] separate pointer intents from presentation transition ownership;
+- [x] one `NotchPanelTransitionCoordinator` as the sole transition authority;
+- [x] explicit `compact / expanding / expanded / collapsing` lifecycle;
+- [x] preserve expanded SwiftUI content until collapse animation completion;
+- [x] generation-based stale-completion rejection;
+- [x] expansion -> collapse and collapse -> expansion reversal semantics;
+- [x] exactly-once expansion haptic authority across reversals;
+- [x] programmatic transition path remains non-haptic;
+- [x] public `NSAnimationContext` frame animation with a **0.20 s** standard-duration candidate;
+- [x] public Core Animation corner-radius transition with matching `.easeInEaseOut` timing;
+- [x] cancellation freezes current presentation-layer corner radius before removing the old animation;
+- [x] Reduced Motion maps transition duration to zero and reaches the exact endpoint synchronously;
+- [x] live Reduce Motion changes retarget in-flight desired presentation without a second haptic;
+- [x] `NSWorkspace.accessibilityDisplayOptionsDidChangeNotification` lifecycle owned explicitly by the panel controller;
+- [x] selector-based accessibility observation avoids an unnecessary block observer token/runtime closure;
+- [x] 10,000 reversal deterministic stress keeps only the latest generation authoritative;
+- [x] 32 immediate AppKit endpoint cycles preserve frame/chrome invariants;
+- [x] unchanged P0 artifact-size budget restored after multiple CI failures; budget was never widened;
+- [ ] physically validate normal animation, reversal continuity, rapid churn, and Reduce Motion behavior on target MacBook/macOS 26.6;
+- [ ] accept/tune the final 0.20 s duration only from physical evidence.
 
-### Remaining M1 product hardening
+### Pointer-observation efficiency — hot path improved; local-tracking experiment still pending
 
-- [ ] click/pin interaction policy;
-- [ ] tuned expansion/collapse animation and Reduced Motion behavior;
-- [ ] gesture model (hover/click/scroll/swipe) designed independently while benchmarking public NotchNook behavior;
+- [x] retain exactly one local + one global `.mouseMoved` monitor with idempotent teardown;
+- [x] remove per-event `Task { @MainActor ... }` allocation from live mouse-move delivery;
+- [x] deliver AppKit monitor callbacks synchronously through `MainActor.assumeIsolated` on the documented main-thread callback boundary;
+- [x] prove the no-per-event-Task property in deterministic regression coverage;
+- [ ] measure and investigate `NSTrackingArea` / window-local tracking against accepted `NH-PERF-HOVER-001`;
+- [ ] replace global `.mouseMoved` only if notch/cross-display correctness and target-Mac resource behavior are equal or better;
+- [ ] retain the narrow global fallback if local tracking is less reliable or not measurably better;
+- [ ] never adopt `CGEventTap`, Accessibility, Input Monitoring, or broader capture merely for hover convenience.
+
+### Physical M1 acceptance gate for current slice
+
+The final clean exact-head CI artifact must pass on target MacBook/macOS 26.6:
+
+- [ ] `NH-NOTCH-001`;
+- [ ] `NH-HOVER-001/002/003`;
+- [ ] `NH-HOVER-DELAY-001/002`;
+- [ ] `NH-HAPTIC-001/002`;
+- [ ] `NH-VISUAL-001/002/003`;
+- [ ] normal expansion/collapse is visibly smooth;
+- [ ] expansion -> collapse reversal begins from the current visible state with no snap/flicker/stale endpoint;
+- [ ] collapse -> expansion reversal behaves likewise;
+- [ ] rapid hover/leave churn cannot leave a stale/stuck phase;
+- [ ] Reduce Motion enabled before transition yields an immediate endpoint;
+- [ ] Reduce Motion changed during an in-flight transition retargets immediately without duplicate haptic;
+- [ ] startup with pointer already over the notch remains non-activating.
+
+If the public AppKit animator visibly snaps on the target Mac, treat it as a hard failure and revisit architecture. Do not introduce a custom timer, display link, private API, or weaker acceptance rule.
+
+### Remaining M1 product hardening after current acceptance
+
+- [ ] measured pointer-observation experiment described above;
 - [ ] multiple displays and active-screen migration;
 - [ ] fullscreen/Space behavior;
 - [ ] screen-configuration change handling;
-- [ ] notchless-screen mode decision/prototype.
+- [ ] notchless-screen mode decision/prototype;
+- [ ] click/pin interaction policy;
+- [ ] gesture model (hover/click/scroll/swipe) designed independently while benchmarking public NotchNook behavior.
 
 ## M2 — Shelf
 
@@ -218,9 +205,9 @@ Implementation plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics
 ## M8 — Trusted distribution and maintenance (optional)
 
 - only if Apple Developer Program becomes worthwhile;
-- create and review the GitHub `release` environment before first Trusted Release use;
+- create/review release environment before first Trusted Release use;
 - provision Apple signing/notarization credentials only as environment-scoped secrets;
-- validate Developer ID/notarization/stapling/Gatekeeper path on a new version;
+- validate Developer ID/notarization/stapling/Gatekeeper on a new version;
 - never replace an existing Personal Release tag;
-- authenticated update-channel design before any self-update;
+- authenticated update-channel design before self-update;
 - recurring dependency/action/toolchain/security/performance review.
