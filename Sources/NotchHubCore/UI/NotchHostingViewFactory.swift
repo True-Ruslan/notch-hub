@@ -9,8 +9,8 @@ enum NotchHostingViewFactory {
         let hostingView = NSHostingView(
             rootView: NotchRootView(
                 model: model,
-                hasHardwareNotch: layout.hasHardwareNotch,
-                compactHeight: layout.compactFrame.height
+                compactBackgroundOpacity: layout.compactBackgroundOpacity,
+                expandedContentTopInset: layout.expandedContentTopInset
             )
         )
         hostingView.sizingOptions = []
