@@ -4,25 +4,14 @@ import Testing
 @MainActor
 struct NotchPanelModelTests {
     @Test
-    func hoverExpandsAndLeavingCollapses() {
+    func contentPresentationChangesOnlyWhenExplicitlySet() {
         let model = NotchPanelModel()
-        #expect(model.presentation == .compact)
+        #expect(model.contentPresentation == .compact)
 
-        model.setHovered(true)
-        #expect(model.presentation == .expanded)
+        model.setContentPresentation(.expanded)
+        #expect(model.contentPresentation == .expanded)
 
-        model.setHovered(false)
-        #expect(model.presentation == .compact)
-    }
-
-    @Test
-    func toggleAlternatesPresentation() {
-        let model = NotchPanelModel()
-
-        model.toggle()
-        #expect(model.presentation == .expanded)
-
-        model.toggle()
-        #expect(model.presentation == .compact)
+        model.setContentPresentation(.compact)
+        #expect(model.contentPresentation == .compact)
     }
 }
