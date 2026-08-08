@@ -1,18 +1,20 @@
 # Project state
 
-Last updated: 2026-08-08
+Last updated: 2026-08-09
 Current version: `0.1.0` (Personal Release published and accepted)
 Repository visibility: **Public**
 Primary physical target: macOS `26.6`
 Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
-Current product milestone: M1 `Notch Core hardening and interaction` — **IN PROGRESS**
+Current product state: M1 interaction/transition slice **ACCEPTED AND MERGED**; next active slice is M6.1 **Universal Media Bridge compatibility/security probe**
 Accepted interaction/transition slice: PR #10 `M1 delayed hover and haptic interaction core` — **ACCEPTED AND SQUASH-MERGED** as `094b494bd597643244e733baf5787a13b61fb4eb`
+Approved Universal Media design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`
+First Universal Media implementation plan: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`
 
 ## Product
 
-NotchHub is a personal, native, local-first macOS productivity hub built around the MacBook notch. Planned modules are Shelf, Snippets, Calendar, Translator, and media controls with Yandex Music as the primary player.
+NotchHub is a personal, native, local-first macOS productivity hub built around the MacBook notch. Planned modules are Shelf, Snippets, Calendar, Translator, and universal media controls that follow the system Now Playing source selected by macOS rather than targeting one music application. Yandex Music is one required real-world acceptance source alongside Apple Music, Spotify, browser media, and another independent player.
 
 NotchNook is a public product/UI research reference only; NotchHub remains an independent implementation.
 
@@ -137,7 +139,7 @@ The current narrow input boundary remains exactly one local and one global `.mou
 
 The monitor does not allocate `Task { @MainActor ... }` for every mouse-move event. AppKit event-monitor callbacks are delivered on the main thread, so delivery uses `MainActor.assumeIsolated` synchronously. This removes avoidable hot-path task allocation without broadening the observed event mask or permissions.
 
-The global `.mouseMoved` fallback remains intentionally in place until the separate `NSTrackingArea` / window-local experiment proves equal-or-better target-Mac correctness and resource behavior.
+The global `.mouseMoved` fallback remains accepted. The `NSTrackingArea` / window-local experiment is intentionally deferred to the P1 whole-app performance review after Universal Media integration so its correctness/resource value is measured in the real application rather than optimized speculatively in isolation.
 
 ### Haptic policy
 
@@ -228,20 +230,68 @@ Final pre-merge branch head `7e04acd46414f39cf3d910b8c310deb22f9b9b9e` passed CI
 
 PR #10 was then squash-merged into protected `main` as `094b494bd597643244e733baf5787a13b61fb4eb`. No production source changed after the physically accepted CI #332 artifact except the already verified exact-boundary correction; acceptance-record commits were documentation-only. No additional physical run is required for this merged slice.
 
+## Universal Media design — APPROVED, IMPLEMENTATION NOT STARTED
+
+The approved product target is **system-wide macOS Now Playing**, not a Yandex-specific integration. If macOS itself exposes an application as the active Now Playing source, NotchHub should observe/control that source subject to the capabilities the source actually publishes. Applications that do not publish a system media session are outside the first milestone.
+
+Authoritative design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`.
+First TDD plan: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`.
+Design/documentation PR: #12 `Document universal media, gestures, and haptics design`.
+
+Approved architecture:
+
+- `SystemMediaBridge` is the only boundary allowed to contain a private MediaRemote compatibility mechanism;
+- the rest of NotchHub depends on player-agnostic `MediaProvider`, immutable `MediaSessionSnapshot`, and MainActor `MediaSessionController` contracts;
+- UI/gestures never contain Spotify/Yandex/Apple Music-specific branches;
+- the current system Now Playing source selected by macOS is authoritative when multiple players exist;
+- capabilities are explicit; unsupported/unknown commands are not guessed or emulated;
+- bridge failure is fail-closed for media only and must not destabilize Notch Core;
+- metadata/artwork are untrusted inputs; listening history is not persisted and production logs do not record track metadata;
+- event-driven updates are required; one-second current-track polling is explicitly rejected.
+
+Approved media UX:
+
+- active media in compact mode: artwork on the left and a lightweight playback/status indicator on the right;
+- paused media preserves context with a quieter state; no session returns to ordinary compact NotchHub;
+- expanding while media is active opens media-first content; disappearing media while expanded returns content to Home without collapsing the panel;
+- horizontal swipe left/right means next/previous in both compact and expanded states;
+- compact swipe down expands; expanded swipe up collapses; progress drag performs seek only when supported; play/pause is click/tap;
+- no gesture volume control in the first slice;
+- gestures are local to NotchHub's own window; no global `.scrollWheel` capture;
+- horizontal gestures use `idle -> tracking -> armed -> committed/cancelled`, commit only on physical release, use hysteresis, ignore momentum as an arming/commit source, and request one `.levelChange` haptic on each semantic `armed` transition;
+- initial threshold candidate is `clamp(28% of interactive width, 70 pt ... 120 pt)` with `20 pt` disarm hysteresis, subject to one target-trackpad tuning cycle before being frozen in regression tests.
+
+Approved implementation/acceptance cadence:
+
+1. transport compatibility/security probe;
+2. production media provider/state boundary only if transport passes;
+3. media UI;
+4. gesture/haptic/seek engine;
+5. multi-source target-Mac hardware acceptance;
+6. P1 whole-app performance review;
+7. evidence-driven optimization or redesign.
+
+P1 intentionally includes the previously proposed `NSTrackingArea` / window-local pointer experiment so performance work happens against the real post-media application rather than as a speculative standalone optimization.
+
 ## Security baseline
 
-`SECURITY.md` remains authoritative. M1 adds no runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, Accessibility/Input Monitoring permission, synthetic input, or broader global input capture. Global observation remains exactly `.mouseMoved`; pointer coordinates/history are not persisted.
+`SECURITY.md` remains authoritative. The currently merged M1 runtime adds no runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, Accessibility/Input Monitoring permission, synthetic input, or broader global input capture. Global observation remains exactly `.mouseMoved`; pointer coordinates/history are not persisted.
+
+The Universal Media design approves one **future narrow exception** for private MediaRemote compatibility behind `SystemMediaBridge`, but no such runtime code exists yet. The next slice is deliberately development-only: it must test the candidate mechanism under the same Sandbox/Hardened Runtime posture before any production security-policy change is considered. A failed probe is rejected/redesigned, not repaired by disabling Sandbox/Hardened Runtime/library validation or adding broad permissions.
 
 ## Known limitations / technical debt
 
 - target-Mac runtime ceilings still derive from one canonical run per scenario with conservative headroom;
-- the narrow global `.mouseMoved` fallback remains and must be evaluated separately against `NSTrackingArea` / window-local tracking;
+- the narrow global `.mouseMoved` fallback remains; its `NSTrackingArea` / window-local comparison is deferred to P1 after media integration;
 - GitHub-hosted runner resource values are not representative of the target Mac;
-- active-display migration, Spaces/fullscreen, screen-configuration handling, notchless mode, click/pin policy, gestures, product modules, and optional trusted distribution remain later work.
+- Universal Media private transport is approved in design only and remains unproven on the target sandboxed Personal Release configuration;
+- authoritative previous/next/seek capability discovery is a required bridge acceptance criterion and may force transport redesign even if basic metadata/commands work;
+- active-display migration, Spaces/fullscreen, screen-configuration handling, notchless mode, click/pin policy, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Run a measured `NSTrackingArea` / window-local pointer-observation experiment against the accepted `NH-PERF-HOVER-001` baseline and the accepted physical notch/cross-display interaction matrix.
-2. Replace the narrow global `.mouseMoved` fallback only if the experiment proves equal-or-better correctness and resource behavior; otherwise retain the current fallback.
-3. Continue M1 with active-display migration / `NH-DISPLAY-001`, then Spaces/fullscreen / `NH-SPACE-001` and screen-configuration changes.
-4. After display/Space hardening, design click/pin and gesture interaction without broadening permissions or adding polling.
+1. Implement `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md` using TDD, with all probe code kept outside shipping `Sources/**`.
+2. Exercise the exact sandboxed/Hardened Runtime probe on macOS 26.6 against Yandex Music, Apple Music, Spotify, browser media, and one independent system Now Playing source.
+3. Accept the transport only if event-driven observation, artwork/commands, authoritative capability handling, clean child-process lifecycle, no new sensitive permission, and bounded resource behavior are proven; otherwise reject/redesign the transport without weakening NotchHub security.
+4. Only after `ACCEPT_TRANSPORT`, create the production `MediaProvider` / `MediaSessionController` / `SystemMediaBridge` implementation plan, then proceed to media UI and gesture/haptic slices.
+5. After the complete functional media slice passes hardware acceptance, run P1 whole-app resource measurements and the deferred `NSTrackingArea` experiment before deciding whether optimization is necessary.
