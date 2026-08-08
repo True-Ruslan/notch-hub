@@ -10,7 +10,7 @@ struct ProbeInvocationTests {
                 "--seconds",
                 "15",
                 "--report",
-                "build/probe-report.json",
+                "build/probe-report.json"
             ]
         )
 
@@ -33,7 +33,7 @@ struct ProbeInvocationTests {
                         "--seconds",
                         seconds,
                         "--report",
-                        "build/probe-report.json",
+                        "build/probe-report.json"
                     ]
                 )
             }
