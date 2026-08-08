@@ -7,7 +7,7 @@ struct NotchPointerMonitorTests {
     @Test
     func startRegistersOneLocalAndOneGlobalMouseMovedMonitor() {
         let backend = FakeNotchEventMonitorBackend()
-        let monitor = NotchPointerMonitor(backend: backend)
+        let monitor = makeMonitor(backend: backend)
         var received: [CGPoint] = []
 
         monitor.start { point in
@@ -28,7 +28,7 @@ struct NotchPointerMonitorTests {
     @Test
     func repeatedStartDoesNotRegisterDuplicateMonitors() {
         let backend = FakeNotchEventMonitorBackend()
-        let monitor = NotchPointerMonitor(backend: backend)
+        let monitor = makeMonitor(backend: backend)
 
         monitor.start { _ in }
         monitor.start { _ in }
@@ -40,7 +40,7 @@ struct NotchPointerMonitorTests {
     @Test
     func invalidateRemovesBothMonitorsExactlyOnce() {
         let backend = FakeNotchEventMonitorBackend()
-        let monitor = NotchPointerMonitor(backend: backend)
+        let monitor = makeMonitor(backend: backend)
 
         monitor.start { _ in }
         monitor.invalidate()
@@ -48,10 +48,18 @@ struct NotchPointerMonitorTests {
 
         #expect(backend.removedTokens.sorted() == ["global-1", "local-1"])
     }
+
+    private func makeMonitor(backend: FakeNotchEventMonitorBackend) -> NotchPointerMonitor {
+        NotchPointerMonitor(
+            addLocal: { handler in backend.addLocalMouseMoved(handler: handler) },
+            addGlobal: { handler in backend.addGlobalMouseMoved(handler: handler) },
+            remove: { token in backend.removeMonitor(token) }
+        )
+    }
 }
 
 @MainActor
-private final class FakeNotchEventMonitorBackend: NotchEventMonitorBackend {
+private final class FakeNotchEventMonitorBackend {
     private(set) var localRegistrationCount = 0
     private(set) var globalRegistrationCount = 0
     private(set) var removedTokens: [String] = []
