@@ -2,9 +2,21 @@ import SwiftUI
 
 public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
+    private let visualMetrics: NotchVisualMetrics
 
     public init(model: NotchPanelModel) {
+        self.init(
+            model: model,
+            visualMetrics: NotchVisualLayoutPolicy.metrics(
+                hasHardwareNotch: false,
+                compactHeight: 32
+            )
+        )
+    }
+
+    init(model: NotchPanelModel, visualMetrics: NotchVisualMetrics) {
         self.model = model
+        self.visualMetrics = visualMetrics
     }
 
     public var body: some View {
@@ -17,7 +29,7 @@ public struct NotchRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
+        .background(surfaceBackground)
         .clipShape(
             RoundedRectangle(
                 cornerRadius: model.presentation == .compact ? 12 : 22,
@@ -26,6 +38,15 @@ public struct NotchRootView: View {
         )
         .contentShape(Rectangle())
         .animation(.snappy(duration: 0.22), value: model.presentation)
+    }
+
+    private var surfaceBackground: Color {
+        switch model.presentation {
+        case .compact:
+            Color.black.opacity(visualMetrics.compactBackgroundOpacity)
+        case .expanded:
+            Color.black
+        }
     }
 
     private var compactContent: some View {
@@ -65,7 +86,9 @@ public struct NotchRootView: View {
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.55))
         }
-        .padding(20)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
+        .padding(.top, visualMetrics.expandedContentTopInset)
     }
 
     private func moduleTile(_ title: String, systemImage: String) -> some View {
