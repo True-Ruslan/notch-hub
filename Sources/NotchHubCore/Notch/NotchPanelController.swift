@@ -20,14 +20,9 @@ public final class NotchPanelController: NSObject {
         let interactionCoordinator = NotchInteractionCoordinator(
             scheduler: MainQueueNotchActivationScheduler(),
             emitIntent: { intent in
-                switch intent.desiredPresentation {
-                case .compact:
-                    model.setHovered(false)
-                case .expanded:
-                    model.setHovered(true)
-                    if intent.hapticEligible {
-                        haptics.performExpansionHaptic()
-                    }
+                model.setContentPresentation(intent.desiredPresentation)
+                if intent.hapticEligible {
+                    haptics.performExpansionHaptic()
                 }
             }
         )
@@ -54,7 +49,7 @@ public final class NotchPanelController: NSObject {
         interactionCoordinator.pointerMoved(
             to: NSEvent.mouseLocation,
             layout: layout,
-            currentPresentation: model.presentation,
+            currentPresentation: model.contentPresentation,
             allowActivation: false
         )
     }
@@ -80,7 +75,7 @@ public final class NotchPanelController: NSObject {
     }
 
     private func bindModel() {
-        model.$presentation
+        model.$contentPresentation
             .removeDuplicates()
             .sink { [weak self] presentation in
                 self?.apply(presentation)
@@ -98,7 +93,7 @@ public final class NotchPanelController: NSObject {
         interactionCoordinator.pointerMoved(
             to: pointer,
             layout: layout,
-            currentPresentation: model.presentation
+            currentPresentation: model.contentPresentation
         )
     }
 
