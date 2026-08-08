@@ -75,7 +75,7 @@ public final class ProbeProcessController {
                 testClientURL.path,
                 "stream",
                 "--no-diff",
-                "--micros",
+                "--micros"
             ]
         )
 
@@ -106,13 +106,34 @@ public final class ProbeProcessController {
         frameworkURL: URL,
         testClientURL: URL
     ) throws -> Int32 {
-        let configuration = ProbeProcessConfiguration(
-            executableURL: URL(fileURLWithPath: "/usr/bin/perl"),
-            arguments: try command.adapterArguments(
+        try runOneShot(
+            arguments: command.adapterArguments(
                 scriptURL: scriptURL,
                 frameworkURL: frameworkURL,
                 testClientURL: testClientURL
             )
+        )
+    }
+
+    public func runSelfTest(
+        scriptURL: URL,
+        frameworkURL: URL,
+        testClientURL: URL
+    ) throws -> Int32 {
+        try runOneShot(
+            arguments: [
+                scriptURL.path,
+                frameworkURL.path,
+                testClientURL.path,
+                "test"
+            ]
+        )
+    }
+
+    private func runOneShot(arguments: [String]) throws -> Int32 {
+        let configuration = ProbeProcessConfiguration(
+            executableURL: URL(fileURLWithPath: "/usr/bin/perl"),
+            arguments: arguments
         )
 
         let process = try launcher.launch(
