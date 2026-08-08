@@ -196,7 +196,9 @@ struct NotchInteractionCoordinatorTests {
         let scheduler = ManualActivationScheduler()
         let recorder = IntentRecorder()
         let coordinator = NotchInteractionCoordinator(
-            scheduler: scheduler,
+            scheduleActivation: { delaySeconds, action in
+                scheduler.schedule(after: delaySeconds, action: action)
+            },
             dwellSeconds: 0.12,
             emitIntent: { intent in
                 recorder.intents.append(intent)
@@ -245,13 +247,9 @@ private final class IntentRecorder {
 }
 
 @MainActor
-private final class ManualActivationScheduler: NotchActivationScheduling {
-    private final class Token: NotchActivationCancellation {
+private final class ManualActivationScheduler {
+    private final class Token {
         var isCancelled = false
-
-        func cancel() {
-            isCancelled = true
-        }
     }
 
     private struct Entry {
@@ -270,7 +268,7 @@ private final class ManualActivationScheduler: NotchActivationScheduling {
     func schedule(
         after delaySeconds: TimeInterval,
         action: @escaping @MainActor () -> Void
-    ) -> any NotchActivationCancellation {
+    ) -> @MainActor () -> Void {
         let token = Token()
         entries.append(
             Entry(
@@ -279,7 +277,7 @@ private final class ManualActivationScheduler: NotchActivationScheduling {
                 action: action
             )
         )
-        return token
+        return { token.isCancelled = true }
     }
 
     func advance(by seconds: TimeInterval, invokeCancelled: Bool = false) {
