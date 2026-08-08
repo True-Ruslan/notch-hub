@@ -79,7 +79,7 @@ struct ProbeMediaCommandTests {
             Array(arguments.prefix(3)) == [
                 scriptURL.path,
                 frameworkURL.path,
-                testClientURL.path,
+                testClientURL.path
             ]
         )
     }
