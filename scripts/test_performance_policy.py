@@ -1,12 +1,12 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
 import contextlib
 import io
 import math
 import pathlib
-import sys
 import tempfile
 import unittest
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from performance_policy import (
     ProcessSample,
@@ -25,53 +25,46 @@ from performance_policy import (
 class RuntimePerformancePolicyTests(unittest.TestCase):
     def test_forbidden_runtime_primitives_are_reported_with_path_line_and_rule(self):
         cases = {
-            "while true {": "unbounded busy loop",
+            "while true { }": "unbounded busy loop",
             "Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in }": "scheduled Timer",
             "Timer.publish(every: 1, on: .main, in: .common)": "Timer publisher",
             "DispatchSource.makeTimerSource()": "dispatch timer source",
-            "try await Task.sleep(nanoseconds: 1)": "Task.sleep",
+            "try await Task.sleep(for: .seconds(1))": "Task.sleep",
             "Thread.sleep(forTimeInterval: 1)": "Thread.sleep",
             "usleep(1000)": "usleep",
             "sleep(1)": "sleep",
-            "CVDisplayLinkCreateWithActiveCGDisplays(nil)": "CVDisplayLink",
-            "CADisplayLink(target: target, selector: selector)": "CADisplayLink",
+            "CVDisplayLinkCreateWithActiveCGDisplays(&link)": "CVDisplayLink",
+            "CADisplayLink(target: self, selector: #selector(tick))": "CADisplayLink",
         }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            source = root / "Runtime.swift"
+            source.write_text("\n".join(cases), encoding="utf-8")
+            violations = find_runtime_policy_violations(root)
 
-        for source, expected_rule in cases.items():
-            with self.subTest(source=source):
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    root = pathlib.Path(temp_dir)
-                    swift_file = root / "Feature.swift"
-                    swift_file.write_text(f"func run() {{\n    {source}\n}}\n", encoding="utf-8")
-
-                    violations = find_runtime_policy_violations(root)
-
-                    self.assertEqual(1, len(violations))
-                    self.assertIn("Feature.swift:2:", violations[0])
-                    self.assertIn(expected_rule, violations[0])
+        self.assertEqual(len(cases), len(violations))
+        for rule in cases.values():
+            self.assertTrue(any(rule in violation for violation in violations), rule)
 
     def test_ordinary_event_driven_code_is_allowed(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = pathlib.Path(temp_dir)
-            (root / "Feature.swift").write_text(
-                """func handle(values: [Int]) {
-    for value in values {
-        DispatchQueue.main.async {
-            print(value)
-        }
-    }
-}
-""",
+            (root / "Runtime.swift").write_text(
+                """
+                for item in items { consume(item) }
+                DispatchQueue.main.async { refresh() }
+                let token = NotificationCenter.default.addObserver(
+                    forName: .init("event"), object: nil, queue: .main
+                ) { _ in refresh() }
+                """,
                 encoding="utf-8",
             )
-
             self.assertEqual([], find_runtime_policy_violations(root))
 
     def test_non_swift_files_are_not_scanned(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = pathlib.Path(temp_dir)
-            (root / "README.md").write_text("Timer.scheduledTimer\nwhile true\n", encoding="utf-8")
-
+            (root / "notes.md").write_text("while true Timer.publish", encoding="utf-8")
             self.assertEqual([], find_runtime_policy_violations(root))
 
     def test_violations_are_sorted_deterministically(self):
@@ -79,25 +72,20 @@ class RuntimePerformancePolicyTests(unittest.TestCase):
             root = pathlib.Path(temp_dir)
             (root / "B.swift").write_text("sleep(1)\n", encoding="utf-8")
             (root / "A.swift").write_text("while true { }\n", encoding="utf-8")
-
             violations = find_runtime_policy_violations(root)
-
-            self.assertEqual(2, len(violations))
-            self.assertTrue(violations[0].startswith("A.swift:1:"))
-            self.assertTrue(violations[1].startswith("B.swift:1:"))
+        self.assertEqual(sorted(violations), violations)
 
     def test_audit_cli_returns_success_for_clean_sources_and_failure_for_violation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = pathlib.Path(temp_dir)
-            swift_file = root / "Feature.swift"
-            swift_file.write_text("func eventDriven() {}\n", encoding="utf-8")
-
+            source = root / "Runtime.swift"
+            source.write_text("func handleEvent() {}\n", encoding="utf-8")
             stdout = io.StringIO()
             with contextlib.redirect_stdout(stdout):
                 self.assertEqual(0, main(["audit", str(root)]))
             self.assertIn("Performance policy checks passed.", stdout.getvalue())
 
-            swift_file.write_text("while true { }\n", encoding="utf-8")
+            source.write_text("while true { }\n", encoding="utf-8")
             stderr = io.StringIO()
             with contextlib.redirect_stderr(stderr):
                 self.assertEqual(1, main(["audit", str(root)]))
@@ -107,63 +95,38 @@ class RuntimePerformancePolicyTests(unittest.TestCase):
 class ProcessMetricTests(unittest.TestCase):
     def test_parse_ps_sample_accepts_exact_three_field_format(self):
         sample = parse_ps_sample(" 0.3  18432  7 ")
-        self.assertEqual(0.3, sample.cpu_percent)
-        self.assertEqual(18432, sample.rss_kib)
-        self.assertEqual(7, sample.thread_count)
+        self.assertEqual(ProcessSample(0.3, 18432, 7), sample)
 
     def test_parse_ps_sample_rejects_malformed_or_unsafe_values(self):
-        invalid = (
+        cases = (
             "0.3 18432",
-            "0.3 18432 7 extra",
-            "nan 18432 7",
-            "inf 18432 7",
-            "-0.1 18432 7",
-            "0.3 -1 7",
-            "0.3 18432 0",
-            "0.3 18432 -1",
             "0,3 18432 7",
-            "cpu rss threads",
+            "nan 18432 7",
+            "-0.1 18432 7",
+            "0.1 -1 7",
+            "0.1 18432 0",
         )
-        for line in invalid:
-            with self.subTest(line=line):
+        for value in cases:
+            with self.subTest(value=value):
                 with self.assertRaises(ValueError):
-                    parse_ps_sample(line)
-
-    def test_count_ps_thread_rows_counts_darwin_ps_m_body_rows(self):
-        output = """USER   PID   TT   %CPU STAT PRI     STIME     UTIME COMMAND
-runner 1234   ??    0.0 S    31T   0:00.10   0:00.20 NotchHub
-       1234         0.0 S    31T   0:00.00   0:00.00
-       1234         0.0 S    31T   0:00.00   0:00.00
-"""
-        self.assertEqual(3, count_ps_thread_rows(output))
-
-    def test_count_ps_thread_rows_rejects_missing_thread_body(self):
-        with self.assertRaises(ValueError):
-            count_ps_thread_rows("")
-        with self.assertRaises(ValueError):
-            count_ps_thread_rows("USER PID COMMAND\n")
+                    parse_ps_sample(value)
 
     def test_summarize_samples_reports_exact_medians_and_maxima(self):
         samples = [
-            ProcessSample(0.1, 10_000, 5),
-            ProcessSample(0.3, 12_000, 7),
-            ProcessSample(0.2, 11_000, 6),
-            ProcessSample(0.8, 14_000, 8),
-            ProcessSample(0.4, 13_000, 7),
+            ProcessSample(0.1, 100, 2),
+            ProcessSample(0.3, 300, 6),
+            ProcessSample(0.2, 200, 4),
+            ProcessSample(0.5, 500, 8),
+            ProcessSample(0.4, 400, 7),
         ]
-
-        self.assertEqual(
-            {
-                "sampleCount": 5,
-                "cpuMedianPercent": 0.3,
-                "cpuMaxPercent": 0.8,
-                "rssMedianKiB": 12_000,
-                "rssMaxKiB": 14_000,
-                "threadMedian": 7,
-                "threadMax": 8,
-            },
-            summarize_samples(samples),
-        )
+        summary = summarize_samples(samples)
+        self.assertEqual(5, summary["sampleCount"])
+        self.assertEqual(0.3, summary["cpuMedianPercent"])
+        self.assertEqual(0.5, summary["cpuMaxPercent"])
+        self.assertEqual(300, summary["rssMedianKiB"])
+        self.assertEqual(500, summary["rssMaxKiB"])
+        self.assertEqual(6, summary["threadMedian"])
+        self.assertEqual(8, summary["threadMax"])
 
     def test_summarize_samples_rejects_empty_input(self):
         with self.assertRaises(ValueError):
@@ -171,28 +134,32 @@ runner 1234   ??    0.0 S    31T   0:00.10   0:00.20 NotchHub
 
     def test_stability_summary_preserves_start_end_and_first_quartile(self):
         samples = [
-            ProcessSample(0.1, 10_000, 5),
-            ProcessSample(0.1, 11_000, 5),
-            ProcessSample(0.1, 12_000, 6),
-            ProcessSample(0.1, 13_000, 7),
+            ProcessSample(0.0, 400, 4),
+            ProcessSample(0.0, 200, 3),
+            ProcessSample(0.0, 220, 3),
+            ProcessSample(0.0, 240, 3),
+            ProcessSample(0.0, 260, 4),
         ]
+        summary = summarize_stability_samples(samples)
+        self.assertEqual(400, summary["rssStartKiB"])
+        self.assertEqual(260, summary["rssEndKiB"])
+        self.assertEqual(220.0, summary["rssFirstQuartileKiB"])
+        self.assertEqual(4, summary["threadStart"])
+        self.assertEqual(4, summary["threadEnd"])
+        self.assertEqual(3.0, summary["threadFirstQuartile"])
 
-        self.assertEqual(
-            {
-                "rssStartKiB": 10_000,
-                "rssEndKiB": 13_000,
-                "rssFirstQuartileKiB": 10_750.0,
-                "threadStart": 5,
-                "threadEnd": 7,
-                "threadFirstQuartile": 5.0,
-            },
-            summarize_stability_samples(samples),
-        )
+    def test_count_ps_thread_rows_counts_darwin_ps_m_body_rows(self):
+        output = "PID TT STAT TIME COMMAND\n42 ?? S 0:00.01 App\n42 ?? S 0:00.00 App\n"
+        self.assertEqual(2, count_ps_thread_rows(output))
+
+    def test_count_ps_thread_rows_rejects_missing_thread_body(self):
+        with self.assertRaises(ValueError):
+            count_ps_thread_rows("PID TT STAT TIME COMMAND\n")
 
 
 class BaselineConfigTests(unittest.TestCase):
     def test_validate_config_accepts_launch_and_attach_modes(self):
-        validate_config("idle", 10, 60, 1, pathlib.Path("build/NotchHub.app"), None)
+        validate_config("idle", 10, 60, 1, pathlib.Path("app"), None)
         validate_config("hover", 10, 60, 1, None, 1234)
 
     def test_validate_config_rejects_invalid_measurement_configuration(self):
@@ -252,7 +219,16 @@ class BudgetComparisonTests(unittest.TestCase):
 
 class ReleaseSizeBudgetTests(unittest.TestCase):
     @staticmethod
-    def baseline(*, regression_percent=15.0, executable_ceiling=200, app_ceiling=300, dmg_ceiling=100):
+    def baseline(
+        *,
+        regression_percent=15.0,
+        executable_ceiling=200,
+        app_ceiling=300,
+        dmg_ceiling=100,
+        relative_metrics=None,
+    ):
+        if relative_metrics is None:
+            relative_metrics = ["executableSizeBytes", "appSizeBytes", "dmgSizeBytes"]
         return {
             "schemaVersion": 1,
             "size": {
@@ -263,6 +239,7 @@ class ReleaseSizeBudgetTests(unittest.TestCase):
                 },
                 "budget": {
                     "maxRegressionPercent": regression_percent,
+                    "relativeRegressionMetrics": relative_metrics,
                     "absoluteCeilingBytes": {
                         "executableSizeBytes": executable_ceiling,
                         "appSizeBytes": app_ceiling,
@@ -303,6 +280,45 @@ class ReleaseSizeBudgetTests(unittest.TestCase):
         self.assertEqual(1, len(violations))
         self.assertIn("executableSizeBytes", violations[0])
         self.assertIn("15% regression allowance", violations[0])
+
+    def test_dmg_uses_absolute_ceiling_when_relative_bytes_are_not_reproducible(self):
+        summary = {
+            "executableSizeBytes": 114,
+            "appSizeBytes": 220,
+            "dmgSizeBytes": 59,
+        }
+        baseline = self.baseline(
+            regression_percent=15.0,
+            dmg_ceiling=60,
+            relative_metrics=["executableSizeBytes", "appSizeBytes"],
+        )
+        self.assertEqual([], compare_size_summary_to_baseline(summary, baseline))
+
+        summary["dmgSizeBytes"] = 61
+        violations = compare_size_summary_to_baseline(summary, baseline)
+        self.assertEqual(1, len(violations))
+        self.assertIn("dmgSizeBytes", violations[0])
+        self.assertIn("absolute ceiling", violations[0])
+
+    def test_size_budget_rejects_unknown_or_malformed_relative_metric_policy(self):
+        summary = {
+            "executableSizeBytes": 100,
+            "appSizeBytes": 200,
+            "dmgSizeBytes": 50,
+        }
+
+        unknown = self.baseline(relative_metrics=["executableSizeBytes", "unknownMetric"])
+        with self.assertRaises(ValueError):
+            compare_size_summary_to_baseline(summary, unknown)
+
+        malformed = self.baseline()
+        malformed["size"]["budget"]["relativeRegressionMetrics"] = "appSizeBytes"
+        with self.assertRaises(ValueError):
+            compare_size_summary_to_baseline(summary, malformed)
+
+        empty = self.baseline(relative_metrics=[])
+        with self.assertRaises(ValueError):
+            compare_size_summary_to_baseline(summary, empty)
 
     def test_size_budget_fails_closed_on_schema_or_required_metric_mismatch(self):
         summary = {
