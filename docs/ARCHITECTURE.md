@@ -32,15 +32,20 @@ Primary physical acceptance target: macOS 26.6.
 ```text
 NotchHubApp
   -> AppDelegate
-      -> NotchPanelController          # thin AppKit/event wiring
-          -> ScreenGeometryInput       # NSScreen adapter
-          -> NotchGeometry             # pure geometry policy
-          -> NotchPointerPolicy        # pure activation/retention policy
-          -> NotchPanelModel           # explicit presentation state
-          -> NotchRootView             # SwiftUI rendering only
+      -> NotchPanelController              # thin AppKit/event wiring
+          -> ScreenGeometryInput           # NSScreen adapter
+          -> NotchGeometry                 # pure geometry policy
+          -> NotchPointerMonitor           # lifecycle-owned mouseMoved delivery
+              -> NotchEventMonitorBackend  # current narrow AppKit local/global boundary
+          -> NotchInteractionCoordinator   # dwell/cancellation/haptic state machine
+              -> NotchPointerPolicy        # pure activation/retention policy
+              -> NotchActivationScheduling # one-shot time boundary
+              -> NotchHapticPerforming     # haptic output boundary
+          -> NotchPanelModel               # explicit presentation state
+          -> NotchRootView                 # SwiftUI rendering only
 ```
 
-Hardware/interaction decisions are intentionally moved out of view callbacks. `NotchGeometry` and `NotchPointerPolicy` are deterministic and unit-testable without a physical MacBook notch.
+Hardware/interaction decisions are intentionally moved out of view callbacks. `NotchGeometry` and `NotchPointerPolicy` are deterministic and unit-testable without a physical MacBook notch. M1 extends the same principle to time, haptic output, and event-monitor lifecycle: `NotchInteractionCoordinator` is independent from `NSPanel`/`NSEvent`, tests inject a manual scheduler and counting haptic performer, and AppKit remains thin orchestration.
 
 The first hardware regression proved why this boundary matters: resizing an `NSPanel` directly from raw SwiftUI `onHover` feedback created an oscillation loop. The corrected controller reads pointer location at the AppKit boundary and delegates the state decision to pure screen-space policy. `NSHostingView.sizingOptions = []` keeps actual window geometry owned by AppKit rather than SwiftUI content sizing.
 
@@ -48,9 +53,31 @@ The first hardware regression proved why this boundary matters: resizing an `NSP
 
 The UI is hosted in a borderless, non-activating `NSPanel`. It floats above normal windows, can join Spaces, can be a fullscreen auxiliary window, and does not place NotchHub in the Dock (`LSUIElement` + accessory activation policy).
 
-The panel has explicit `compact` and `expanded` states. Current global observation is deliberately restricted to `mouseMoved`, with no persisted pointer history and no keyboard/button/scroll/drag monitoring.
+The panel has explicit `compact` and `expanded` states. Global observation remains deliberately restricted to `mouseMoved`, with no persisted pointer history and no keyboard/button/scroll/drag monitoring.
 
-Performance Foundation measures the real cost of that global movement observer before M1. M1 will prefer a reliable `NSTrackingArea`/window-local design only if it preserves all accepted hover semantics and measurably improves or matches the resource/input-observation profile. Correctness is not traded away merely to remove the global monitor.
+M1 now gives those event monitors explicit ownership through `NotchPointerMonitor`: one local and one global `.mouseMoved` token are installed at most once and removed idempotently on invalidation. This is lifecycle hardening, not an expansion of input authority.
+
+The global observer is still a candidate for removal because P0 measured materially higher active-hover CPU than untouched idle. A reliable `NSTrackingArea`/window-local design is preferred only if target-Mac evidence proves all accepted hover semantics, cross-display transit, and resource behavior remain equal or better. Correctness is not traded away merely to remove the global monitor; `CGEventTap`, Accessibility, Input Monitoring, or broader event capture are not acceptable substitutes.
+
+## Delayed hover and haptic architecture
+
+Compact → expanded pointer activation passes through `NotchInteractionCoordinator` instead of changing presentation immediately.
+
+The coordinator owns exactly one optional pending activation and a monotonically changing generation value. Its rules are:
+
+- pointer entry into the compact activation region schedules one dwell if none is pending;
+- duplicate movement in that region does not schedule additional work;
+- exit before completion cancels immediately;
+- cancellation clears the currently accepted generation, so a stale callback cannot commit a later transition even if it is invoked by a test/faulty scheduler after cancellation;
+- re-entry receives a fresh generation and full dwell;
+- expanded retention/collapse bypasses activation dwell and never retriggers haptic;
+- invalidation cancels pending work.
+
+The initial dwell candidate is a named `120 ms` value. Production timing uses a single cancellable `DispatchWorkItem` scheduled with `DispatchQueue.main.asyncAfter`. There is no repeating `Timer`, polling loop, sleep-driven refresh, or periodic idle work. Tests use a deterministic manual scheduler and do not wait on wall-clock sleeps.
+
+Haptic output is requested only after the coordinator validates a still-current pointer-initiated dwell and the model actually changes from compact to expanded. Production uses the public API `NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)`. macOS is allowed to suppress physical feedback according to hardware/current touch state/user settings; NotchHub does not retry or synthesize alternative feedback. Programmatic expansion is outside the coordinator's success path and therefore emits no haptic.
+
+The `120 ms` value remains provisional until `NH-HOVER-DELAY-001/002` and `NH-HAPTIC-001/002` are accepted on the target MacBook/macOS 26.6.
 
 ## Resource-efficiency architecture
 
@@ -71,6 +98,8 @@ Performance validation is split deliberately:
 1. **deterministic CI invariants** — source-policy scanner, state/lifecycle tests, parser/aggregation correctness, development-tool isolation, reproducible artifact-size checks;
 2. **target-Mac runtime evidence** — CPU, RSS, thread count, stability, and future wakeup/energy measurements on macOS 26.6.
 
+The M1 interaction implementation follows this split. Shared CI proves one-shot scheduling semantics, stale-callback/cancellation behavior, monitor lifecycle, security policy, and artifact-size budgets. It does not claim physical haptic feel, cross-display hover feel, or target-Mac CPU/RSS/thread acceptance.
+
 Shared runner CPU/RAM values are never used as tight release thresholds. See root `PERFORMANCE.md`.
 
 `scripts/perf-baseline.py` and `scripts/performance_policy.py` are repository development/release tools, not application runtime components. Packaging/security checks must keep them outside `NotchHub.app`; performance measurement is not telemetry.
@@ -88,6 +117,8 @@ Real hardware uses the exact detected notch width. A centered fallback width is 
 ## Security architecture
 
 The current app is App Sandbox + Hardened Runtime with no dangerous exception entitlements. M0 has zero external Swift runtime dependencies, no runtime subprocess/shell execution, no direct network/WebKit API, no dynamic plug-in loading, and no telemetry/licensing service. `scripts/security-audit.sh` makes these invariants executable CI gates.
+
+M1 delayed hover/haptic adds only internal state-machine/scheduler boundaries and the public AppKit haptic performer. It adds no entitlement, new process/network surface, sensitive permission, private API, dynamic loading, synthetic input, or broader global input monitoring.
 
 Future modules keep sensitive access behind narrow adapters and explicit permission state machines. See root `SECURITY.md`.
 
