@@ -21,7 +21,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - One-shot cancellable main-queue dwell scheduling with a named initial `120 ms` candidate and no polling/repeating timer.
 - Public AppKit expansion haptic through `NSHapticFeedbackManager.defaultPerformer`, isolated behind a deterministic test seam.
 - Explicit pointer-monitor ownership/lifecycle tests proving exactly one local and one global `.mouseMoved` registration and idempotent teardown.
-- Stable M1 hardware acceptance IDs `NH-VISUAL-001/002` for preserving the native rounded physical-notch silhouette and keeping expanded primary controls visible below the notch during active hover.
+- Stable M1 hardware acceptance IDs `NH-VISUAL-001/002/003` for preserving the native physical-notch silhouette, keeping expanded controls visible below the notch during active hover, and retaining rounded panel chrome across repeated open/collapse cycles.
 
 ### Changed
 
@@ -38,7 +38,8 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Initial panel `show()` pointer synchronization is explicitly non-activating, preventing an unintended dwell/haptic merely because the pointer already overlaps the notch when NotchHub launches.
 - Compact activation now uses a **4 pt inward inset** candidate instead of extending beyond the physical notch edge, requiring slightly more deliberate pointer depth while leaving expanded retention unchanged.
 - The single public AppKit expansion haptic candidate changed from `.generic` to `.levelChange` after target-Mac feedback requested a slightly more noticeable tactile response; exactly one feedback request remains the invariant.
-- Panel-frame presentation changes are synchronized immediately with SwiftUI state in the revised interaction candidate; polished frame animation and Reduced Motion behavior remain a later dedicated M1 hardening step.
+- Panel-frame presentation changes are synchronized immediately with presentation state in the revised interaction candidate; polished frame animation and Reduced Motion behavior remain a later dedicated M1 hardening step.
+- Outer panel clipping now has one owner at the AppKit hosting-view boundary rather than competing SwiftUI/AppKit owners; the layer mask uses continuous `12 pt` compact / `22 pt` expanded radii and is reasserted on every presentation transition while the hosting view follows panel width and height.
 - PR #10 CI initially caught an executable-size regression of `254,000 B` against the unchanged 15% P0 budget; implementation metadata was reduced rather than widening the budget. CI #158 then passed at executable `251,856 B`, app `254,853 B`, and DMG `83,072 B`.
 - Independent review caught the setup-time activation path; RED CI #165 reproduced it and GREEN CI #167 passed **25/25 Swift tests** plus all security/performance/package gates with executable `251,872 B`, app `254,869 B`, and DMG `83,036 B`.
 
@@ -46,16 +47,20 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 - Hardware-notch compact mode no longer paints black into the visible rounded-corner cutouts around the physical notch, avoiding the square-notch appearance reported on macOS 26.6; non-notch fallback remains opaque.
 - Expanded primary controls now receive an explicit hardware-notch safe top inset and no longer depend on an independently animated AppKit frame, addressing the hardware symptom where a large black panel appeared while controls were hidden under the notch until pointer exit/collapse.
+- Repeated compact/expanded resizing no longer relies on SwiftUI `clipShape` to preserve the actual outer panel chrome. AppKit now masks the backing hosting view on every transition, addressing the hardware regression where initially rounded expanded corners became square after several openings.
 
 ### Testing
 
-- Target-Mac M1 hardware feedback exposed the two visual regressions above despite the original delayed-hover/haptic checks otherwise passing; the candidate was therefore not accepted.
+- Target-Mac M1 hardware feedback exposed the two initial visual regressions despite the original delayed-hover/haptic checks otherwise passing; the candidate was therefore not accepted.
 - RED CI #172 established the hardware-notch visual contract before implementation.
 - CI #177, #181, and #187 rejected successive visual implementations that exceeded the existing P0 size budget; the budget was never widened and the implementation was simplified instead.
 - CI #188 passed the complete pipeline with the revised visual architecture at executable `251,856 B`, app `254,853 B`, and DMG `83,143 B`.
 - RED CI #189 reproduced edge-grazing activation at only 2 pt inside the compact physical boundary.
 - GREEN CI #191 on `ab782262c16163742bb115671f7908255fc08e4a` passed **27/27 Swift tests** and all release/security/performance/package gates with executable `251,856 B`, app `254,853 B`, and DMG `83,117 B`.
-- Revised target-Mac acceptance remains pending for `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and new `NH-VISUAL-001/002`.
+- A second target-Mac visual cycle showed that expanded corners could start rounded and become square after repeated open/collapse transitions; this is retained as `NH-VISUAL-003` rather than treated as a one-off screenshot artifact.
+- RED commit `8088df8df655183d3fbe1a0cff54d23dfc936034` / CI #196 failed exactly because the new AppKit presentation-mask boundary did not yet exist.
+- GREEN source head `446a976591a43a856a2683337cb4df1ada10cc8a` / CI #199 passed **29/29 Swift tests**, including hosting-view width/height tracking and **32 repeated expanded -> compact layer-mask cycles**, plus all release/security/performance/package gates and the unchanged size budget. Candidate sizes improved to executable `248,768 B`, app `251,765 B`, and DMG `82,069 B`.
+- Revised target-Mac acceptance remains pending for `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and `NH-VISUAL-001/002/003`; deterministic backing-layer checks do not substitute for physical pixel validation.
 
 ## [0.1.0] - 2026-08-07
 
