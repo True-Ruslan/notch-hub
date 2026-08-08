@@ -8,7 +8,7 @@ Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
 Current product milestone: M1 `Notch Core hardening and interaction` — **IN PROGRESS**
-Active implementation PR: #10 `M1 delayed hover and haptic interaction core` — **DRAFT / EXACT TOP-EDGE RETEST PENDING**
+Active implementation PR: #10 `M1 delayed hover and haptic interaction core` — **CURRENT SLICE HARDWARE ACCEPTED / FINAL DOCS CI PENDING**
 
 ## Product
 
@@ -65,7 +65,7 @@ Public-source hardening is merged. Ordinary public pull-request CI remains read-
 
 ## M1 interaction and transition hardening
 
-Status: **CORE HARDWARE ACCEPTED; EXACT TOP-EDGE BOUNDARY RETEST PENDING**.
+Status: **CURRENT INTERACTION / TRANSITION SLICE HARDWARE ACCEPTED**.
 
 Authoritative requirements: `docs/specs/M1_NOTCH_INTERACTION.md`.
 Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
@@ -90,7 +90,7 @@ Accepted/implemented invariants:
 - setup/current-pointer synchronization is non-activating;
 - one `DispatchWorkItem` via `DispatchQueue.main.asyncAfter`; no polling or repeating timer.
 
-The exact top-edge geometry is the only behavior added after the broad hardware acceptance cycle and therefore has its own targeted physical gate `NH-HOVER-TOP-001`.
+The exact top-edge geometry is now physically accepted through `NH-HOVER-TOP-001` on the exact CI #332 artifact.
 
 ### Single transition authority
 
@@ -144,7 +144,7 @@ The global `.mouseMoved` fallback remains intentionally in place until the separ
 
 No haptic is requested for quick/cancelled transit, duplicate pointer movement, retention, collapse, startup synchronization, programmatic expansion, stale completion, or Reduce Motion retargeting. Reversal does not create a second haptic merely because an in-flight transition changes direction.
 
-## Exact hardware acceptance — CI #319 candidate
+## Broad hardware acceptance — CI #319 candidate
 
 The broad M1 hardware acceptance used source SHA `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4`, exact-head CI #319 / run `31257399497`, artifact `NotchHub-dmg` ID `9021802122`.
 
@@ -165,7 +165,7 @@ Target MacBook/macOS 26.6 results reported on 2026-08-08:
 - startup with pointer already over notch: **PASS** — no automatic activation/haptic;
 - accepted tuning: `120 ms` dwell, `.levelChange` haptic, `0.20 s` animation, 4 pt side/bottom activation depth.
 
-This accepts the interaction, visual, animation, reversal, haptic, startup and Reduce Motion architecture on the target hardware. The only requested change after that acceptance is the exact top-edge activation geometry described below.
+This accepted the interaction, visual, animation, reversal, haptic, startup and Reduce Motion architecture on the target hardware. The only requested follow-up was the exact top-edge activation geometry described below.
 
 ## Top-edge activation refinement — hardware finding and corrective TDD
 
@@ -198,12 +198,18 @@ Corrective TDD:
 - CI #327 passed **54/54 Swift tests**, macOS 26 compatibility, release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG checks and the unchanged P0 size budget;
 - CI #327 sizes: executable `250,320 B`, app `253,317 B`, DMG `84,679 B`.
 
-A documentation-only exact-head CI is required after this state update. Then only a targeted physical retest is needed:
+## Final targeted hardware acceptance — CI #332 candidate
 
-- `NH-HOVER-TOP-001`: on the built-in display, push/hold the pointer against the **exact** top edge over the notch; after the accepted 120 ms dwell the panel opens once, with one haptic and no oscillation;
-- `NH-HOVER-DELAY-001`: quick cross-display transit remains compact/no haptic.
+The corrected exact artifact used source SHA `6d4c13739216503ec97fe3e71eada0fc9b32f298`, CI #332 / run `31260116337`, `NotchHub-dmg` artifact ID `9022551570`, digest `sha256:f79a01f5dd65f6056d3021231667ac15cb7f340d32c4fc8bf383ccea0723a758`.
 
-No broad re-run of visual/reversal/Reduce Motion scenarios is required unless these two checks expose a regression.
+Target MacBook/macOS 26.6 results reported on 2026-08-08:
+
+- `NH-HOVER-TOP-001`: **PASS** — holding the pointer at the exact top edge over the notch activates once after the accepted dwell;
+- `NH-HOVER-DELAY-001`: **PASS** — quick cross-display transit remains compact and produces no haptic.
+
+This accepts the final compact activation geometry as **inclusive 4 pt left/right/bottom, inclusive 0 pt top**, while preserving the accepted `120 ms` dwell and cross-display protection. No broad hardware rerun is required because the corrective change was limited to compact hit-test boundary semantics and both directly affected physical gates passed on the exact artifact.
+
+The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f298`. Subsequent acceptance-record commits are documentation-only and do not require another physical run; they do require a fresh exact-head CI before PR integration.
 
 ## Security baseline
 
@@ -218,8 +224,8 @@ No broad re-run of visual/reversal/Reduce Motion scenarios is required unless th
 
 ## Next optimal step
 
-1. Run fresh exact-head CI after this corrective acceptance documentation commit.
-2. Use only that exact artifact for `NH-HOVER-TOP-001` and the narrow `NH-HOVER-DELAY-001` regression check.
-3. If both pass, record the explicit inclusive asymmetric activation geometry as accepted, mark PR #10 ready, and complete protected squash integration according to repository policy.
+1. Run one fresh exact-head CI after these documentation-only acceptance commits.
+2. If all required gates remain green, mark PR #10 Ready for Review; no further physical retest is required because production source is unchanged from the accepted CI #332 artifact.
+3. Integrate PR #10 only after the explicit branch-integration decision required by repository workflow.
 4. After this interaction slice is merged, run the measured `NSTrackingArea` / window-local pointer experiment against accepted `NH-PERF-HOVER-001` before deciding whether the global `.mouseMoved` fallback can be removed.
 5. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration changes, click/pin, and gestures.
