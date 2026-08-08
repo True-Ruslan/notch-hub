@@ -199,6 +199,24 @@ class ReleasePolicyTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate_personal_release_workflow(mutation)
 
+    def test_media_bridge_probe_isolated_from_shipping_bundle_configuration(self):
+        forbidden = (
+            "MediaBridgeProbe",
+            "mediaremote-adapter.pl",
+            "MediaRemoteAdapter.framework",
+            "MediaRemoteAdapterTestClient",
+        )
+        for relative_path in ("scripts/build-app.sh", "scripts/build-dmg.sh"):
+            text = (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8")
+            for fragment in forbidden:
+                with self.subTest(path=relative_path, fragment=fragment):
+                    self.assertNotIn(fragment, text)
+
+        package = (REPOSITORY_ROOT / "Package.swift").read_text(encoding="utf-8")
+        self.assertNotIn(".package(", package)
+        self.assertIn('name: "MediaBridgeProbe"', package)
+        self.assertNotIn('.executable(name: "MediaBridgeProbe"', package)
+
     def test_trusted_release_workflow_is_separate_fail_closed_tier(self):
         workflows = REPOSITORY_ROOT / ".github" / "workflows"
         trusted_path = workflows / "trusted-release.yml"
@@ -227,13 +245,20 @@ class ReleasePolicyTests(unittest.TestCase):
 
         self.assertNotIn("--clobber", workflow)
 
-        # Both the initial check and the final pre-publish recheck must fail closed.
-        # A GitHub/API outage is not evidence that a tag/release is absent.
-        self.assertGreaterEqual(workflow.count("gh api \"repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG\""), 2)
+        self.assertGreaterEqual(
+            workflow.count("gh api \"repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG\""),
+            2,
+        )
         self.assertIn("notchhub-trusted-tag-recheck.err", workflow)
         self.assertIn("notchhub-trusted-release-recheck.err", workflow)
-        self.assertGreaterEqual(workflow.count("Could not prove that remote tag $RELEASE_TAG is absent."), 2)
-        self.assertGreaterEqual(workflow.count("Could not prove that GitHub Release $RELEASE_TAG is absent."), 2)
+        self.assertGreaterEqual(
+            workflow.count("Could not prove that remote tag $RELEASE_TAG is absent."),
+            2,
+        )
+        self.assertGreaterEqual(
+            workflow.count("Could not prove that GitHub Release $RELEASE_TAG is absent."),
+            2,
+        )
 
     def test_public_ci_workflow_is_safe_for_untrusted_fork_pull_requests(self):
         workflow_path = REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
@@ -279,7 +304,10 @@ class ReleasePolicyTests(unittest.TestCase):
         workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "trusted-release.yml").read_text(encoding="utf-8")
         trigger_prefix = workflow.split("permissions:", maxsplit=1)[0]
         self.assertIn("workflow_dispatch:", trigger_prefix)
-        self.assertNotRegex(trigger_prefix, r"(?m)^\s{2}(?:pull_request|pull_request_target|push|workflow_run):\s*$")
+        self.assertNotRegex(
+            trigger_prefix,
+            r"(?m)^\s{2}(?:pull_request|pull_request_target|push|workflow_run):\s*$",
+        )
         self.assertIn('test "$GITHUB_REF_NAME" = "main"', workflow)
         self.assertIn("environment: release", workflow)
 
