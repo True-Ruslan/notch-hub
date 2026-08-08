@@ -1,6 +1,6 @@
 # M1 Notch interaction requirements
 
-Status: **CORE HARDWARE ACCEPTED / EXACT TOP-EDGE TARGETED RETEST PENDING**
+Status: **CURRENT INTERACTION / TRANSITION SLICE HARDWARE ACCEPTED**
 Primary target: MacBook with hardware notch, macOS 26.6
 
 This document is the behavioral contract for delayed hover activation, transition animation, trackpad haptic feedback, accessibility motion policy, and notch-adjacent visual behavior in M1. The implementation must follow TDD and preserve the security/performance contracts of the project.
@@ -253,13 +253,14 @@ Transition-animation hardening evidence:
 - GREEN `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**;
 - clean exact-head `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed every automated gate, but its target-Mac `NH-HOVER-TOP-001` **FAILED** because the test had modeled `maxY - 1` instead of exact `maxY`;
 - RED `3d0d40b5426cb8a8fe0bd19393688a68247637b0` / CI #326 corrected the test model and failed only three new exact-boundary expectations out of 54 tests;
-- GREEN `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive directional bounds and passed **54/54 Swift tests** plus all release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG gates and the unchanged P0 size budget.
+- GREEN `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive directional bounds and passed **54/54 Swift tests** plus all release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG gates and the unchanged P0 size budget;
+- clean exact-head CI #332 on `6d4c13739216503ec97fe3e71eada0fc9b32f298` passed both jobs and produced artifact `9022551570`, which then passed the two remaining target-Mac gates `NH-HOVER-TOP-001` and `NH-HOVER-DELAY-001`.
 
-CI #327 sizes:
+CI #332 deterministic sizes:
 
 - executable `250,320 B`;
 - app `253,317 B`;
-- DMG `84,679 B`.
+- DMG `84,689 B`.
 
 Shared-runner CPU/RSS/thread values are compatibility/schema evidence only, never target-Mac performance acceptance.
 
@@ -269,7 +270,6 @@ Broad target-Mac acceptance on exact candidate `f6de06f5d045fc9375b3b31b0a7feb97
 
 - `NH-NOTCH-001`: **PASS**.
 - `NH-HOVER-001/002/003`: **PASS**.
-- `NH-HOVER-DELAY-001`: **PASS** for quick cross-display transit.
 - `NH-HOVER-DELAY-002`: **PASS**; 120 ms accepted.
 - `NH-HAPTIC-001/002`: **PASS**; `.levelChange` accepted.
 - `NH-VISUAL-001/002/003`: **PASS**.
@@ -282,18 +282,15 @@ Post-acceptance top-edge history:
 
 - `NH-HOVER-TOP-001` on CI #325 artifact: **FAIL** — exact physical top edge did not activate;
 - the failure invalidated the previous nearby-point automation as evidence for this exact boundary;
-- corrective CI #326/#327 now tests and implements exact inclusive `maxY` semantics.
+- corrective CI #326/#327 tests and implements exact inclusive `maxY` semantics;
+- exact corrected CI #332 artifact `9022551570`: `NH-HOVER-TOP-001` **PASS**;
+- the same artifact: `NH-HOVER-DELAY-001` **PASS**, proving quick cross-display transit remains protected.
 
-The next exact artifact must rerun only:
-
-- `NH-HOVER-TOP-001`: built-in display, pointer held at exact top edge over notch -> opens once after 120 ms, one haptic, no oscillation;
-- `NH-HOVER-DELAY-001`: quick cross-display transit -> remains compact, zero haptic.
-
-No broad visual/animation/Reduce Motion retest is required unless either targeted scenario exposes a regression.
+Final accepted compact activation geometry is therefore **inclusive 4 pt left/right/bottom and inclusive 0 pt top**, with accepted `120 ms` dwell, `.levelChange` haptic, and `0.20 s` system animation.
 
 ## 11. Definition of done
 
-This interaction/animation slice is complete only when:
+The current interaction/animation slice is complete when:
 
 - deterministic RED-first suite remains green;
 - exact clean head passes all release/security/performance/package gates;
@@ -305,4 +302,4 @@ This interaction/animation slice is complete only when:
 - `NH-HOVER-DELAY-001` remains PASS on that same candidate;
 - final accepted geometry is recorded as **inclusive 4 pt left/right/bottom, inclusive 0 pt top**, with 120 ms dwell, `.levelChange`, and 0.20 s animation.
 
-Until the two targeted physical checks pass, PR #10 remains Draft and unmerged.
+All physical requirements above are now satisfied on the exact CI #332 artifact. Acceptance-record changes after that source are documentation-only; one final exact-head CI is required before PR integration, with no further physical retest unless production source changes.
