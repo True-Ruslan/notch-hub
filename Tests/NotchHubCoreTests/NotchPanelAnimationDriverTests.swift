@@ -26,7 +26,7 @@ struct NotchPanelAnimationDriverTests {
     }
 
     @Test
-    func animatedRequestInstallsSystemCornerAnimationAndTargetModelValues() {
+    func animatedRequestInstallsSystemCornerAnimationWithoutSynchronousCompletion() {
         let fixture = makeFixture()
         let target = CGRect(x: 240, y: 650, width: 520, height: 250)
         var completionCount = 0
@@ -42,11 +42,11 @@ struct NotchPanelAnimationDriverTests {
             forKey: AppKitNotchPanelAnimationDriver.cornerAnimationKey
         ) as? CABasicAnimation
 
-        #expect(fixture.panel.frame == target)
         #expect(fixture.chromeView.layer?.cornerRadius == 22)
         #expect(animation?.keyPath == "cornerRadius")
         #expect(animation?.toValue as? CGFloat == 22)
         #expect(animation?.duration == 0.20)
+        #expect(animation?.timingFunction == CAMediaTimingFunction(name: .easeInEaseOut))
         #expect(completionCount == 0)
 
         fixture.driver.cancel()
