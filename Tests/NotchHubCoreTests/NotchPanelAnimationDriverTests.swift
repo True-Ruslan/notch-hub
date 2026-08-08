@@ -38,9 +38,10 @@ struct NotchPanelAnimationDriverTests {
             completion: { completionCount += 1 }
         )
 
-        let animation = fixture.chromeView.layer?.animation(
-            forKey: AppKitNotchPanelAnimationDriver.cornerAnimationKey
-        ) as? CABasicAnimation
+        let animation =
+            fixture.chromeView.layer?.animation(
+                forKey: AppKitNotchPanelAnimationDriver.cornerAnimationKey
+            ) as? CABasicAnimation
 
         #expect(fixture.chromeView.layer?.cornerRadius == 22)
         #expect(animation?.keyPath == "cornerRadius")
@@ -52,7 +53,9 @@ struct NotchPanelAnimationDriverTests {
         #expect(completionCount == 0)
 
         fixture.driver.cancel()
-        #expect(fixture.chromeView.layer?.animation(forKey: AppKitNotchPanelAnimationDriver.cornerAnimationKey) == nil)
+        #expect(
+            fixture.chromeView.layer?.animation(forKey: AppKitNotchPanelAnimationDriver.cornerAnimationKey) == nil
+        )
     }
 
     @Test
