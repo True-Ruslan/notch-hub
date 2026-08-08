@@ -7,7 +7,7 @@ struct ProbeMediaPayloadTests {
     func decodesNoDiffMicrosPayloadWithoutRetainingArtworkBytes() throws {
         let line = Data(#"{"type":"data","diff":false,"payload":{"bundleIdentifier":"ru.yandex.desktop.music","playing":true,"title":"Track","artist":"Artist","album":"Album","durationMicros":180000000,"elapsedTimeMicros":42000000,"timestampEpochMicros":1786233600000000,"playbackRate":1,"artworkMimeType":"image/jpeg","artworkData":"AQID","prohibitsSkip":false}}"#.utf8)
 
-        let decoded = try #require(ProbePayloadDecoder.decode(line: line))
+        let decoded = try #require(try ProbePayloadDecoder.decode(line: line))
 
         #expect(decoded.bundleIdentifier == "ru.yandex.desktop.music")
         #expect(decoded.playing)
