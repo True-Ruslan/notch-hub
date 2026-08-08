@@ -26,9 +26,9 @@ protocol ProbeProcessHandle: AnyObject {
 protocol ProbeProcessLaunching: AnyObject {
     func launch(
         configuration: ProbeProcessConfiguration,
-        stdout: @escaping (Data) -> Void,
-        stderr: @escaping (Data) -> Void,
-        termination: @escaping (Int32) -> Void
+        stdout: @escaping @MainActor @Sendable (Data) -> Void,
+        stderr: @escaping @MainActor @Sendable (Data) -> Void,
+        termination: @escaping @MainActor @Sendable (Int32) -> Void
     ) throws -> any ProbeProcessHandle
 }
 
@@ -133,17 +133,13 @@ public final class ProbeProcessController {
         }
 
         stdoutBuffer.append(data)
-        guard stdoutBuffer.count <= ProbePayloadDecoder.maximumLineBytes else {
-            finishOwnedProcess(finalState: .protocolFailure)
-            return
-        }
 
         while let newlineIndex = stdoutBuffer.firstIndex(of: 0x0A) {
-            var line = stdoutBuffer[..<newlineIndex]
+            var line = Data(stdoutBuffer[..<newlineIndex])
             stdoutBuffer.removeSubrange(...newlineIndex)
 
             if line.last == 0x0D {
-                line = line.dropLast()
+                line.removeLast()
             }
 
             guard line.count <= ProbePayloadDecoder.maximumLineBytes else {
@@ -152,12 +148,17 @@ public final class ProbeProcessController {
             }
 
             do {
-                let payload = try ProbePayloadDecoder.decode(line: Data(line))
+                let payload = try ProbePayloadDecoder.decode(line: line)
                 onPayload?(payload)
             } catch {
                 finishOwnedProcess(finalState: .protocolFailure)
                 return
             }
+        }
+
+        guard stdoutBuffer.count <= ProbePayloadDecoder.maximumLineBytes else {
+            finishOwnedProcess(finalState: .protocolFailure)
+            return
         }
     }
 
@@ -208,9 +209,9 @@ public final class ProbeProcessController {
 private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
     func launch(
         configuration: ProbeProcessConfiguration,
-        stdout: @escaping (Data) -> Void,
-        stderr: @escaping (Data) -> Void,
-        termination: @escaping (Int32) -> Void
+        stdout: @escaping @MainActor @Sendable (Data) -> Void,
+        stderr: @escaping @MainActor @Sendable (Data) -> Void,
+        termination: @escaping @MainActor @Sendable (Int32) -> Void
     ) throws -> any ProbeProcessHandle {
         let process = Process()
         let stdoutPipe = Pipe()
@@ -268,15 +269,15 @@ private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
     }
 }
 
-private final class ProbeProcessCallbacks: @unchecked Sendable {
-    let stdout: @MainActor (Data) -> Void
-    let stderr: @MainActor (Data) -> Void
-    let termination: @MainActor (Int32) -> Void
+private final class ProbeProcessCallbacks: Sendable {
+    let stdout: @MainActor @Sendable (Data) -> Void
+    let stderr: @MainActor @Sendable (Data) -> Void
+    let termination: @MainActor @Sendable (Int32) -> Void
 
     init(
-        stdout: @escaping @MainActor (Data) -> Void,
-        stderr: @escaping @MainActor (Data) -> Void,
-        termination: @escaping @MainActor (Int32) -> Void
+        stdout: @escaping @MainActor @Sendable (Data) -> Void,
+        stderr: @escaping @MainActor @Sendable (Data) -> Void,
+        termination: @escaping @MainActor @Sendable (Int32) -> Void
     ) {
         self.stdout = stdout
         self.stderr = stderr
