@@ -1,6 +1,6 @@
 # M1 Reliable Panel Transitions — Design
 
-Status: **APPROVED DESIGN**  
+Status: **DESIGN DECISIONS APPROVED; WRITTEN SPEC AWAITING FINAL USER REVIEW**  
 Date: 2026-08-08  
 Scope: Notch Core interaction/presentation hardening for PR #10
 
@@ -125,7 +125,7 @@ It owns:
 - desired presentation;
 - transition generation/token;
 - animation policy;
-- sequencing of content preparation, AppKit mask/chrome, panel geometry, and final content settlement;
+- sequencing of content preparation, AppKit mask/chrome, panel geometry, haptic emission, and final content settlement;
 - validation of animation completions;
 - transition invalidation on teardown.
 
@@ -135,11 +135,12 @@ It does **not** own pointer detection, notch geometry calculation, SwiftUI modul
 
 The design separates responsibilities into small units:
 
-- `NotchInteractionCoordinator`: decides whether user intent wants compact or expanded, including dwell/cancellation/haptic eligibility.
-- `NotchPanelTransitionCoordinator`: converts desired presentation into a safe transition lifecycle.
-- `NotchPanelAnimationDriver`: thin AppKit boundary that starts/cancels/re-targets system window animations and reports completion.
+- `NotchInteractionCoordinator`: decides user intent, including dwell/cancellation and whether an expansion intent is haptic-eligible. It does not directly animate the window or emit transition haptics.
+- `NotchInteractionIntent` (conceptual contract): carries desired presentation and cause/eligibility metadata such as deliberate hover versus pointer exit or programmatic synchronization. The implementation may choose a different concrete name, but this information must cross the boundary explicitly rather than being inferred later from mutable state.
+- `NotchPanelTransitionCoordinator`: converts interaction intent into a safe transition lifecycle and is the sole authority that may emit the transition haptic after accepting an eligible expansion.
+- `NotchPanelAnimationDriver`: thin AppKit boundary that starts/cancels/re-targets system window/chrome animations and reports completion.
 - `NotchAnimationPolicy`: derives duration/timing/reduced-motion behavior from system accessibility state.
-- `NotchPanelChrome`: applies outer layer masking/radius for the current phase/target without becoming an independent presentation authority.
+- `NotchPanelChrome`: applies outer layer masking/radius under transition-coordinator direction; it is not an independent presentation authority.
 - `NotchPanelController`: composition/orchestration of AppKit objects only; it must no longer contain independent presentation logic.
 - `NotchPanelModel` / SwiftUI view state: exposes the content mode required by the transition coordinator rather than directly commanding window geometry.
 
@@ -179,13 +180,13 @@ Every new transition/reversal increments a monotonically increasing generation.
 
 For a successful deliberate expansion:
 
-1. Dwell has completed and the interaction layer establishes desired presentation = expanded.
-2. Transition coordinator invalidates any older transition generation.
+1. Dwell has completed and the interaction layer emits an expansion intent marked haptic-eligible.
+2. Transition coordinator accepts the intent, establishes desired presentation = expanded, and invalidates any older transition generation.
 3. Phase becomes `expanding`.
 4. Expanded content is prepared before growth, but the AppKit window/chrome remains the clipping authority so controls cannot escape the current visible panel bounds.
-5. Correct transition chrome is applied through the AppKit-owned layer boundary.
-6. The animation driver starts a system AppKit geometry transition toward `expandedFrame` using the current animation policy.
-7. Exactly one eligible haptic is requested for this deliberate expansion, synchronized through the public AppKit performer.
+5. The frame target and chrome target are submitted as one coordinated system transition. Corner shape must not jump independently before or after window geometry.
+6. The animation driver starts the public AppKit transition toward `expandedFrame` using the current animation policy.
+7. The transition coordinator requests exactly one haptic for this accepted deliberate expansion through the public AppKit performer, using system visual synchronization rather than an application timing loop.
 8. Completion validates both generation and desired presentation.
 9. Only a valid completion settles phase/content as `expanded`.
 
@@ -199,10 +200,11 @@ For collapse:
 2. Coordinator invalidates any older transition generation.
 3. Phase becomes `collapsing`.
 4. Expanded content remains installed while the window shrinks; it must not disappear at transition start.
-5. The AppKit clipping boundary naturally hides content as visible bounds shrink.
-6. Animation driver targets `compactFrame`.
-7. Completion validates generation and desired presentation.
-8. Only a valid completion switches final content to compact and settles phase = `compact`.
+5. Frame and chrome changes participate in one coordinated system transition so corner shape and window size cannot visibly disagree.
+6. The AppKit clipping boundary naturally hides content as visible bounds shrink.
+7. Animation driver targets `compactFrame`.
+8. Completion validates generation and desired presentation.
+9. Only a valid completion switches final content to compact and settles phase = `compact`.
 
 This sequencing prevents the observed class of bug where content changes immediately while panel geometry is still in another state.
 
@@ -216,22 +218,22 @@ If desired presentation changes to compact while phase is `expanding`:
 
 - the expansion generation becomes stale;
 - a collapse transition starts without snapping through a nominal endpoint;
-- the visible panel must reverse smoothly from its current on-screen progress;
+- the visible panel and its chrome must reverse smoothly from current on-screen progress;
 - the old expansion completion is harmless even if AppKit later invokes it;
 - no second haptic is emitted.
 
 ### 8.2 Re-enter during collapse
 
-If a new valid deliberate expansion intent arrives while phase is `collapsing`:
+If a new haptic-eligible deliberate expansion intent arrives while phase is `collapsing`:
 
 - collapse generation becomes stale;
 - expansion is re-targeted from the current visible state;
 - old collapse completion is ignored;
-- haptic eligibility follows the interaction contract: only a newly accepted deliberate expansion can request one feedback event.
+- exactly one haptic may be emitted for this newly accepted deliberate expansion intent, never because a stale completion fired.
 
 ### 8.3 AppKit feasibility gate
 
-The implementation must demonstrate that the chosen AppKit animator path can re-target/reverse without a visible snap on the target Mac. Nominal `NSWindow.frame` values must not be treated as proof of current on-screen animation progress if AppKit has already committed a target value internally.
+The implementation must demonstrate that the chosen AppKit animator path can re-target/reverse both geometry and chrome without a visible snap on the target Mac. Nominal `NSWindow.frame` values must not be treated as proof of current on-screen animation progress if AppKit has already committed a target value internally.
 
 If the selected AppKit API cannot provide reliable smooth reversal, implementation must stop and return to design rather than hide the issue with timers, manual frame stepping, or relaxed acceptance criteria.
 
@@ -250,8 +252,11 @@ Required invariants:
 - continuous corner curve;
 - compact radius candidate `12 pt`;
 - expanded radius candidate `22 pt`;
+- radius participates in the same system transition lifecycle as frame geometry rather than jumping as an unrelated state update;
 - mask/radius explicitly valid in every transition phase and after repeated cycles;
 - no competing SwiftUI outer `clipShape` authority.
+
+The exact public AppKit/Core Animation mechanism for synchronizing radius with frame is an implementation detail subject to the reversal feasibility gate. It must not require a manual per-frame loop.
 
 ### 9.2 Background
 
@@ -290,7 +295,7 @@ Forbidden for production transition logic:
 - repeating `Timer`;
 - `CADisplayLink`/`CVDisplayLink` animation loops;
 - sleep loops;
-- manual per-frame geometry updates;
+- manual per-frame geometry or corner-radius updates;
 - retained pointer/animation history that grows with use.
 
 System AppKit/Core Animation performs interpolation.
@@ -329,6 +334,7 @@ Deterministically cover at minimum:
 - re-enter during collapse;
 - multiple rapid reversals;
 - duplicate desired-state updates;
+- haptic-eligible versus non-haptic interaction intents;
 - stale expansion completion;
 - stale collapse completion;
 - invalidation during expansion;
@@ -337,23 +343,23 @@ Deterministically cover at minimum:
 
 No wall-clock sleeps are allowed in these tests.
 
-### 13.2 Fake animation-driver tests
+### 13.2 Fake animation-driver and output tests
 
-The fake driver records commands and exposes completion manually.
+The fake animation driver records transition commands and exposes completion manually. Fake chrome/content/haptic outputs record exact order without invoking hardware.
 
 Tests must prove exact operation order for:
 
+- interaction intent acceptance;
 - content preparation;
 - phase change;
-- chrome preparation;
-- geometry target request;
-- haptic request;
+- coordinated chrome/frame target preparation;
+- geometry animation request;
+- exactly-once haptic request for eligible expansion;
 - valid completion settlement;
 - collapse content retention until completion;
 - reversal and generation replacement;
+- deliberate completion of stale transitions with zero effect;
 - Reduce Motion immediate/reduced driver behavior.
-
-The fake must be able to complete stale transitions deliberately to prove they are harmless.
 
 ### 13.3 Real AppKit boundary tests
 
@@ -362,11 +368,11 @@ Use real AppKit objects on CI where feasible to prove:
 - hosting view follows panel bounds in width and height;
 - compact black background policy remains opaque;
 - mask/radius remains enabled in compact, expanding, expanded, and collapsing phases;
-- repeated transitions do not lose `masksToBounds` or corner radii;
+- repeated transitions do not lose `masksToBounds` or endpoint corner radii;
 - at least 32 deterministic presentation cycles remain stable;
 - controller invalidation leaves no transition authority active.
 
-These tests validate AppKit object state, not subjective animation smoothness.
+These tests validate AppKit object state and transaction setup, not subjective animation smoothness.
 
 ### 13.4 Target-Mac acceptance
 
@@ -374,6 +380,7 @@ Only hardware/visual facts that CI cannot honestly prove remain manual:
 
 - perceived smoothness and absence of stutter;
 - no flash/snap during normal opening/closing;
+- no visible corner-radius jump relative to frame motion;
 - no snap during reversal;
 - real physical-notch alignment/shape;
 - actual haptic feel on compatible trackpad;
@@ -392,12 +399,13 @@ Manual acceptance is evidence, not a substitute for deterministic tests.
 | `NH-TRANSITION-004` | Re-enter during collapse reverses without stale completion winning | Generation/reversal tests | No visible snap |
 | `NH-TRANSITION-005` | Rapid repeated intent changes converge to latest desired state without oscillation | Stress/state-machine tests | No flicker/oscillation |
 | `NH-TRANSITION-006` | Reduce Motion preserves state semantics with reduced/immediate movement | Policy + fake-driver tests | Matches system preference |
+| `NH-TRANSITION-007` | Frame geometry and corner chrome evolve as one transition lifecycle | Transaction/order tests | No radius jump or geometry/chrome mismatch |
 | `NH-VISUAL-001` | Compact surface is black and rounded; indicator is not directly on wallpaper | Background/chrome tests | Physical-notch visual PASS |
 | `NH-VISUAL-002` | Expanded controls stay below notch and visible during active hover | Geometry/content-order tests | Real layout PASS |
 | `NH-VISUAL-003` | Rounded chrome survives repeated cycles | 32-cycle AppKit regression | At least 20 real cycles PASS |
 | `NH-HOVER-DELAY-001` | Fast transit does not expand | Existing deterministic dwell test | Cross-display transit PASS |
 | `NH-HOVER-DELAY-002` | Deliberate dwell expands | Existing deterministic dwell test | 120 ms candidate feels correct |
-| `NH-HAPTIC-001` | Exactly one public AppKit haptic for accepted deliberate expansion | Fake performer count/order | Physical feedback PASS |
+| `NH-HAPTIC-001` | Exactly one public AppKit haptic for accepted deliberate expansion | Intent + fake performer count/order | Physical feedback PASS |
 | `NH-HAPTIC-002` | No haptic on cancel/retention/collapse/setup/stale paths | Negative-path tests | Physical negative-path PASS |
 
 Existing `NH-NOTCH-001` and `NH-HOVER-001/002/003` remain regression gates and must continue to pass.
@@ -416,17 +424,18 @@ These rules exist specifically to prevent the pattern "fix A, silently break B".
 
 ## 16. Implementation boundary and sequence
 
-After this design is approved in repository form, implementation planning should decompose the work into RED-first increments:
+After this written spec is explicitly approved, implementation planning should decompose the work into RED-first increments:
 
 1. transition state model and deterministic coordinator contract;
-2. fake animation driver and stale-completion/reversal tests;
-3. accessibility animation policy and notification lifecycle;
-4. production AppKit animation driver feasibility/reversal proof;
-5. AppKit chrome/content sequencing integration;
-6. controller migration so it no longer independently owns presentation transitions;
-7. real AppKit repeated-cycle tests;
-8. full security/performance/package CI;
-9. target-Mac acceptance of transition/visual/haptic gates;
-10. only after acceptance, PR #10 may become merge-ready.
+2. explicit interaction-intent/haptic-eligibility boundary;
+3. fake animation driver and stale-completion/reversal tests;
+4. accessibility animation policy and notification lifecycle;
+5. production AppKit animation driver feasibility/reversal proof;
+6. coordinated AppKit frame + chrome transition integration;
+7. controller migration so it no longer independently owns presentation transitions;
+8. real AppKit repeated-cycle tests;
+9. full security/performance/package CI;
+10. target-Mac acceptance of transition/visual/haptic gates;
+11. only after acceptance, PR #10 may become merge-ready.
 
 The implementation must return to design review if the chosen public AppKit animation mechanism cannot meet smooth interruption/reversal without custom frame loops or broadened system permissions.
