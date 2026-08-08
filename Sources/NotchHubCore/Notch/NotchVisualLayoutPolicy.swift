@@ -1,23 +1,14 @@
 import CoreGraphics
 
-struct NotchVisualMetrics: Equatable, Sendable {
-    let compactBackgroundOpacity: Double
-    let expandedContentTopInset: CGFloat
-}
-
 enum NotchVisualLayoutPolicy {
-    private static let standardContentInset: CGFloat = 20
-    private static let hardwareNotchContentSpacing: CGFloat = 12
+    static func compactBackgroundOpacity(hasHardwareNotch: Bool) -> Double {
+        hasHardwareNotch ? 0 : 1
+    }
 
-    static func metrics(
+    static func expandedContentTopInset(
         hasHardwareNotch: Bool,
         compactHeight: CGFloat
-    ) -> NotchVisualMetrics {
-        NotchVisualMetrics(
-            compactBackgroundOpacity: hasHardwareNotch ? 0 : 1,
-            expandedContentTopInset: hasHardwareNotch
-                ? compactHeight + hardwareNotchContentSpacing
-                : standardContentInset
-        )
+    ) -> CGFloat {
+        hasHardwareNotch ? compactHeight + 12 : 20
     }
 }
