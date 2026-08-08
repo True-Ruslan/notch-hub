@@ -66,7 +66,7 @@ Global observation remains deliberately restricted to `.mouseMoved`, with no per
 
 `NotchPointerMonitor` owns exactly one local and one global `.mouseMoved` token, installs them at most once, and removes them idempotently. Its production AppKit callbacks are delivered on the main thread and are bridged synchronously through `MainActor.assumeIsolated`; the runtime no longer creates a `Task` for each mouse-move event. This is a hot-path allocation reduction, not an expansion of input authority.
 
-The global observer is still a candidate for removal because P0 measured materially higher active-hover CPU than untouched idle. A reliable `NSTrackingArea` / window-local design is preferred only if target-Mac evidence proves accepted hover semantics, cross-display transit, and resource behavior remain equal or better. Correctness is not traded away merely to remove the global monitor; `CGEventTap`, Accessibility, Input Monitoring, or broader event capture are not acceptable substitutes.
+The global observer is still a candidate for removal because P0 measured materially higher active-hover CPU than untouched idle. A reliable `NSTrackingArea` / window-local design is preferred only if target-Mac evidence proves accepted hover semantics, cross-display transit, and resource behavior remain equal or better. That comparison is now deliberately scheduled inside P1 after Universal Media integration, so the optimization is measured against the real application rather than an isolated pre-feature build. Correctness is not traded away merely to remove the global monitor; `CGEventTap`, Accessibility, Input Monitoring, or broader event capture are not acceptable substitutes.
 
 ## Delayed hover intent architecture
 
@@ -83,7 +83,7 @@ The interaction coordinator owns exactly one optional pending activation and a m
 - setup/current-pointer synchronization is non-activating;
 - invalidation cancels pending work.
 
-The current timing candidate is `120 ms`; compact activation also uses a `4 pt` inward inset candidate. Production timing is one cancellable `DispatchWorkItem` scheduled with `DispatchQueue.main.asyncAfter`. There is no repeating `Timer`, polling loop, sleep-driven refresh, or periodic idle work.
+The accepted timing is `120 ms`; compact activation uses 4 pt inward protection on left/right/bottom and no top inset, with exact accepted boundaries treated inclusively. Production timing is one cancellable `DispatchWorkItem` scheduled with `DispatchQueue.main.asyncAfter`. There is no repeating `Timer`, polling loop, sleep-driven refresh, or periodic idle work.
 
 The interaction coordinator does **not** mutate the model, animate the panel, or perform haptics. It emits a small interaction intent to the transition coordinator. This prevents multiple owners from independently committing presentation state.
 
@@ -119,7 +119,7 @@ For a normal transition:
 
 - `NSAnimationContext` animates `NSPanel` frame changes through `panel.animator().setFrame(...)`;
 - a `CABasicAnimation` animates `cornerRadius` on the existing layer-backed hosting view;
-- both use the same standard-duration candidate (`0.20 s`) and `.easeInEaseOut` timing;
+- both use the accepted `0.20 s` duration and `.easeInEaseOut` timing;
 - the model-layer corner radius is set to the target while the presentation layer supplies the current visible starting radius.
 
 On cancellation, `cancelNotchPanelAnimation` reads the current presentation-layer radius, writes that visible value back to the model layer with implicit actions disabled, and only then removes the old corner animation. This prevents the rounded chrome from jumping to an obsolete target before a reversal begins.
@@ -132,7 +132,7 @@ The runtime does not use `CADisplayLink`, `CVDisplayLink`, repeating timers, sle
 
 The standard animation duration policy is intentionally tiny and deterministic:
 
-- normal motion: `0.20 s` candidate;
+- normal motion: `0.20 s`;
 - Reduce Motion: `0 s`.
 
 `NotchPanelController` observes `NSWorkspace.accessibilityDisplayOptionsDidChangeNotification` through the selector-based `NotificationCenter` API. It caches only the current boolean to suppress duplicate notifications. On an actual value change, the controller asks `NotchPanelTransitionCoordinator` to retarget the currently desired presentation.
@@ -145,7 +145,7 @@ This is a public display accessibility preference and does not require Accessibi
 
 The transition coordinator, not the pointer monitor or view, decides haptic eligibility.
 
-Exactly one feedback request may occur when a deliberate user dwell creates a real compact -> expanded transition. The current hardware candidate is:
+Exactly one feedback request may occur when a deliberate user dwell creates a real compact -> expanded transition. The accepted hardware feedback is:
 
 ```swift
 NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
@@ -208,6 +208,8 @@ The current app is App Sandbox + Hardened Runtime with no dangerous exception en
 
 M1 interaction/animation work adds internal state machines, public AppKit/Core Animation calls, and public accessibility-display preference observation only. It adds no entitlement, process/network surface, sensitive permission, private API, dynamic loading, synthetic input, or broader global input monitoring.
 
+The approved Universal Media design introduces one **future and optional compatibility exception**: a private MediaRemote mechanism may exist only behind `SystemMediaBridge`. That exception is not yet runtime code. Before production adoption, a development-only probe must demonstrate that the mechanism can preserve the current App Sandbox + Hardened Runtime posture, avoid sensitive permission prompts, operate event-driven, terminate its helper cleanly, and expose enough authoritative media/capability state. A failed probe is rejected or redesigned rather than made to pass by weakening the app.
+
 Future modules keep sensitive access behind narrow adapters and explicit permission state machines. See root `SECURITY.md`.
 
 ## Feature-module boundaries
@@ -218,7 +220,7 @@ Planned modules are isolated behind feature-specific services/adapters:
 2. Snippets
 3. Calendar
 4. Translator
-5. Media
+5. Universal Media
 6. Settings / shortcuts / launch at login
 
 ### Shelf
@@ -233,17 +235,43 @@ Store locally inside the sandbox container. Copy-to-clipboard is the safe baseli
 
 Prefer public Apple frameworks and explicit permission/availability states. A denied permission or unavailable model/language is a normal product state, not a crash path.
 
-### Yandex Music
+### Universal Media / System Now Playing
 
-Yandex Music is the primary media target. Media UI depends on a provider boundary rather than a private mechanism directly.
+The first media milestone follows the system Now Playing source chosen by macOS. Yandex Music is an important acceptance source, not a special architecture branch. The same player-agnostic path must support Apple Music, Spotify, browser media, and other applications when they publish a system media session.
 
-Provider preference order:
+The intended production structure is:
 
-1. sandbox-compatible/public supported integration;
-2. narrow app-specific integration that does not expand unrelated permissions;
-3. isolated MediaRemote/private-API fallback for the personal build only after explicit security, compatibility, and resource-cost review.
+```text
+macOS system Now Playing
+  -> SystemMediaBridge                # only private compatibility boundary
+  -> MediaProvider                    # player-agnostic NotchHub protocol
+  -> MediaSessionController           # MainActor normalization/lifecycle/commands
+  -> MediaSessionSnapshot             # immutable validated state + capabilities
+  -> compact / expanded Media UI
 
-A media fallback may not disable Hardened Runtime/library validation, execute external code, introduce general input monitoring, or silently add network/telemetry behavior.
+local NotchHub gesture
+  -> MediaGestureCoordinator          # deterministic semantic intent
+  -> MediaSessionController
+  -> MediaProvider
+  -> SystemMediaBridge
+```
+
+Only `SystemMediaBridge` may know the MediaRemote implementation mechanism. UI, gesture code, and product state cannot branch on Spotify/Yandex/Apple Music or import private APIs.
+
+The media capability contract is fail-closed:
+
+- unsupported or unknown previous/next/seek actions are not guessed or emulated;
+- no Accessibility/Input Monitoring or synthetic media keys are used to manufacture missing control support;
+- multiple active players follow macOS system source priority;
+- transport failure invalidates media state only and leaves Notch Core operational;
+- listening history and normal production track metadata are not persisted/logged;
+- artwork/metadata are untrusted inputs with bounded decoding/validation;
+- current-track state is event-driven rather than refreshed with a permanent one-second timer.
+
+The approved gesture layer is local to NotchHub's own window. Horizontal swipes control previous/next in compact and expanded media states; vertical gestures retain expand/collapse semantics; seek owns the progress interaction; no global `.scrollWheel` monitor is introduced. Horizontal media commands commit only on release after an armed threshold, use hysteresis to avoid chatter, and request one public `.levelChange` haptic on each semantic armed transition rather than every raw scroll event.
+
+Authoritative design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`.
+First transport plan: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`.
 
 ## Product/UI references
 
