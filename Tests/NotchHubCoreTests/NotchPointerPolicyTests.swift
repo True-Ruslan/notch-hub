@@ -22,7 +22,7 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
-    func compactPointerJustInsidePhysicalEdgeDoesNotActivate() {
+    func compactPointerJustInsidePhysicalBottomEdgeDoesNotActivate() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
             pointer: CGPoint(x: 500, y: 870),
@@ -33,7 +33,7 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
-    func compactPointerFourPointsInsideActivates() {
+    func compactPointerFourPointsInsideBottomEdgeActivates() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
             pointer: CGPoint(x: 500, y: 872),
@@ -41,6 +41,39 @@ struct NotchPointerPolicyTests {
         )
 
         #expect(result == .expanded)
+    }
+
+    @Test
+    func compactPointerAtTopScreenEdgeActivatesWithoutTopInset() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: 500, y: layout.compactFrame.maxY - 1),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
+    func compactPointerJustInsideLeftEdgeStillDoesNotActivate() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.minX + 2, y: layout.compactFrame.maxY - 1),
+            layout: layout
+        )
+
+        #expect(result == .compact)
+    }
+
+    @Test
+    func compactPointerJustInsideRightEdgeStillDoesNotActivate() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.maxX - 2, y: layout.compactFrame.maxY - 1),
+            layout: layout
+        )
+
+        #expect(result == .compact)
     }
 
     @Test
