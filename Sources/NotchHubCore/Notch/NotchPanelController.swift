@@ -34,9 +34,6 @@ public final class NotchPanelController: NSObject {
                 case .pointerExitCollapse:
                     presentation = .compact
                     hapticEligible = false
-                case .programmaticExpansion:
-                    presentation = .expanded
-                    hapticEligible = false
                 }
 
                 model.setContentPresentation(presentation)
