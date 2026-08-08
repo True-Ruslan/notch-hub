@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import NotchHubCore
 
@@ -23,6 +24,7 @@ struct NotchPanelTransitionCoordinatorTests {
         #expect(fixture.driver.requests.count == 1)
         #expect(fixture.driver.requests[0].frame == layout.expandedFrame)
         #expect(fixture.driver.requests[0].cornerRadius == 22)
+        #expect(fixture.driver.requests[0].duration == 0.20)
         #expect(fixture.haptics.requestCount == 1)
 
         fixture.driver.complete(index: 0)
@@ -173,66 +175,54 @@ struct NotchPanelTransitionCoordinatorTests {
         let model = NotchPanelModel()
         model.setContentPresentation(initialPresentation)
         let driver = ManualPanelAnimationDriver()
-        let policy = StaticAnimationPolicyProvider(policy: .standard)
+        let duration = AnimationDurationSource(value: 0.20)
         let haptics = TransitionCountingHapticPerformer()
         let coordinator = NotchPanelTransitionCoordinator(
             model: model,
-            animationDriver: driver,
-            animationPolicy: { policy.currentPolicy },
-            haptics: haptics,
-            initialPresentation: initialPresentation
+            initialPresentation: initialPresentation,
+            animationDuration: { duration.value },
+            animate: { frame, cornerRadius, animationDuration, completion in
+                driver.animate(
+                    frame: frame,
+                    cornerRadius: cornerRadius,
+                    duration: animationDuration,
+                    completion: completion
+                )
+            },
+            cancelAnimation: { driver.cancel() },
+            performExpansionHaptic: { haptics.performExpansionHaptic() }
         )
 
         return TransitionFixture(
             model: model,
             driver: driver,
-            policy: policy,
+            duration: duration,
             haptics: haptics,
             coordinator: coordinator
         )
     }
 }
 
-private extension NotchInteractionIntent {
-    static let deliberateExpansion = NotchInteractionIntent(
-        desiredPresentation: .expanded,
-        cause: .deliberateHover,
-        hapticEligible: true
-    )
-
-    static let pointerExitCollapse = NotchInteractionIntent(
-        desiredPresentation: .compact,
-        cause: .pointerExit,
-        hapticEligible: false
-    )
-
-    static let programmaticExpansion = NotchInteractionIntent(
-        desiredPresentation: .expanded,
-        cause: .programmatic,
-        hapticEligible: false
-    )
-}
-
 @MainActor
 private struct TransitionFixture {
     let model: NotchPanelModel
     let driver: ManualPanelAnimationDriver
-    let policy: StaticAnimationPolicyProvider
+    let duration: AnimationDurationSource
     let haptics: TransitionCountingHapticPerformer
     let coordinator: NotchPanelTransitionCoordinator
 }
 
 @MainActor
-private final class StaticAnimationPolicyProvider {
-    var currentPolicy: NotchAnimationPolicy
+private final class AnimationDurationSource {
+    var value: TimeInterval
 
-    init(policy: NotchAnimationPolicy) {
-        self.currentPolicy = policy
+    init(value: TimeInterval) {
+        self.value = value
     }
 }
 
 @MainActor
-private final class TransitionCountingHapticPerformer: NotchHapticPerforming {
+private final class TransitionCountingHapticPerformer {
     private(set) var requestCount = 0
 
     func performExpansionHaptic() {
@@ -241,11 +231,11 @@ private final class TransitionCountingHapticPerformer: NotchHapticPerforming {
 }
 
 @MainActor
-private final class ManualPanelAnimationDriver: NotchPanelAnimationDriving {
+private final class ManualPanelAnimationDriver {
     struct Request {
         let frame: CGRect
         let cornerRadius: CGFloat
-        let policy: NotchAnimationPolicy
+        let duration: TimeInterval
         let completion: @MainActor () -> Void
     }
 
@@ -255,14 +245,14 @@ private final class ManualPanelAnimationDriver: NotchPanelAnimationDriving {
     func animate(
         frame: CGRect,
         cornerRadius: CGFloat,
-        policy: NotchAnimationPolicy,
+        duration: TimeInterval,
         completion: @escaping @MainActor () -> Void
     ) {
         requests.append(
             Request(
                 frame: frame,
                 cornerRadius: cornerRadius,
-                policy: policy,
+                duration: duration,
                 completion: completion
             )
         )
