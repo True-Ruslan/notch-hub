@@ -1,6 +1,12 @@
 import CoreGraphics
 import Foundation
 
+enum NotchInteractionIntent: Equatable, Sendable {
+    case deliberateExpansion
+    case pointerExitCollapse
+    case programmaticExpansion
+}
+
 @MainActor
 protocol NotchActivationCancellation: AnyObject {
     func cancel()
