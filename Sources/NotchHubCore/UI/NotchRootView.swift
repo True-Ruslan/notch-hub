@@ -30,12 +30,6 @@ struct NotchRootView: View {
                 ? Color.black.opacity(compactBackgroundOpacity)
                 : Color.black
         )
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: model.presentation == .compact ? 12 : 22,
-                style: .continuous
-            )
-        )
         .contentShape(Rectangle())
     }
 
