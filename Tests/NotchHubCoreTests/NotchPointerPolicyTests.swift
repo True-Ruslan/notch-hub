@@ -22,6 +22,28 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
+    func compactPointerJustInsidePhysicalEdgeDoesNotActivate() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: 500, y: 870),
+            layout: layout
+        )
+
+        #expect(result == .compact)
+    }
+
+    @Test
+    func compactPointerFourPointsInsideActivates() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: 500, y: 872),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
     func expandedPointerInsideExpandedRetentionRegionStaysExpanded() {
         let result = NotchPointerPolicy.presentation(
             current: .expanded,
