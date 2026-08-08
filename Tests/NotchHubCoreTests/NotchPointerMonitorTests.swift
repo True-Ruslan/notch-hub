@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import NotchHubCore
 
@@ -47,6 +48,25 @@ struct NotchPointerMonitorTests {
         monitor.invalidate()
 
         #expect(backend.removedTokens.sorted() == ["global-1", "local-1"])
+    }
+
+    @Test
+    func liveMouseMovedDeliveryDoesNotAllocateTaskPerEvent() throws {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repositoryRoot =
+            testFile
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/NotchHubCore/Notch/NotchPointerMonitor.swift"
+            ),
+            encoding: .utf8
+        )
+
+        #expect(!source.contains("Task { @MainActor"))
+        #expect(source.contains("MainActor.assumeIsolated"))
     }
 
     private func makeMonitor(backend: FakeNotchEventMonitorBackend) -> NotchPointerMonitor {
