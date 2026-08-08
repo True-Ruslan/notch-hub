@@ -15,8 +15,7 @@ final class NotchPanelTransitionCoordinator {
 
     private let model: NotchPanelModel
     private let currentAnimationDuration: @MainActor () -> TimeInterval
-    private let animate:
-        @MainActor (CGRect, CGFloat, TimeInterval, @escaping @MainActor () -> Void) -> Void
+    private let animate: @MainActor (CGRect, CGFloat, TimeInterval, @escaping @MainActor () -> Void) -> Void
     private let cancelAnimation: @MainActor () -> Void
     private let performExpansionHaptic: @MainActor () -> Void
 
