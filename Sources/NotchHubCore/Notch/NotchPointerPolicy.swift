@@ -12,10 +12,13 @@ public enum NotchPointerPolicy {
 
         switch current {
         case .compact:
-            activeFrame = layout.compactFrame.insetBy(
+            var compactActivationFrame = layout.compactFrame.insetBy(
                 dx: activationInset,
-                dy: activationInset
+                dy: 0
             )
+            compactActivationFrame.origin.y += activationInset
+            compactActivationFrame.size.height -= activationInset
+            activeFrame = compactActivationFrame
         case .expanded:
             activeFrame = layout.expandedFrame.insetBy(
                 dx: -retentionPadding,
