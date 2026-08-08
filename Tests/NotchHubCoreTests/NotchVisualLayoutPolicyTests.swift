@@ -4,42 +4,40 @@ import Testing
 struct NotchVisualLayoutPolicyTests {
     @Test
     func hardwareNotchCompactSurfaceDoesNotPaintOverPhysicalCornerPixels() {
-        let metrics = NotchVisualLayoutPolicy.metrics(
-            hasHardwareNotch: true,
-            compactHeight: 32
+        #expect(
+            NotchVisualLayoutPolicy.compactBackgroundOpacity(
+                hasHardwareNotch: true
+            ) == 0
         )
-
-        #expect(metrics.compactBackgroundOpacity == 0)
     }
 
     @Test
     func fallbackCompactSurfaceRemainsOpaqueWithoutHardwareNotch() {
-        let metrics = NotchVisualLayoutPolicy.metrics(
-            hasHardwareNotch: false,
-            compactHeight: 32
+        #expect(
+            NotchVisualLayoutPolicy.compactBackgroundOpacity(
+                hasHardwareNotch: false
+            ) == 1
         )
-
-        #expect(metrics.compactBackgroundOpacity == 1)
     }
 
     @Test
     func expandedHardwareNotchContentStartsBelowOccludedArea() {
-        let metrics = NotchVisualLayoutPolicy.metrics(
+        let inset = NotchVisualLayoutPolicy.expandedContentTopInset(
             hasHardwareNotch: true,
             compactHeight: 32
         )
 
-        #expect(metrics.expandedContentTopInset > 32)
-        #expect(metrics.expandedContentTopInset == 44)
+        #expect(inset > 32)
+        #expect(inset == 44)
     }
 
     @Test
     func expandedFallbackContentKeepsStandardInset() {
-        let metrics = NotchVisualLayoutPolicy.metrics(
-            hasHardwareNotch: false,
-            compactHeight: 32
+        #expect(
+            NotchVisualLayoutPolicy.expandedContentTopInset(
+                hasHardwareNotch: false,
+                compactHeight: 32
+            ) == 20
         )
-
-        #expect(metrics.expandedContentTopInset == 20)
     }
 }
