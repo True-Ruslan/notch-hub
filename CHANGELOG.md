@@ -46,7 +46,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Fixed
 
-- Restored the intended visible black compact pлашка on hardware-notch displays after a transparency workaround left only the white compact indicator floating over wallpaper. The black surface is now clipped by the AppKit-owned rounded mask instead of being removed.
+- Restored the intended visible black compact panel on hardware-notch displays after a transparency workaround left only the white compact indicator floating over wallpaper. The black surface is now clipped by the AppKit-owned rounded mask instead of being removed.
 - Expanded primary controls now receive an explicit hardware-notch safe top inset and no longer depend on an independently animated AppKit frame, addressing the hardware symptom where a large black panel appeared while controls were hidden under the notch until pointer exit/collapse.
 - Repeated compact/expanded resizing no longer relies on SwiftUI `clipShape` to preserve the actual outer panel chrome. AppKit now masks the backing hosting view on every transition, addressing the hardware regression where initially rounded expanded corners became square after several openings.
 
