@@ -12,7 +12,9 @@ struct NotchPanelAnimationDriverTests {
         let target = CGRect(x: 240, y: 650, width: 520, height: 250)
         var completionCount = 0
 
-        fixture.driver.animate(
+        animateNotchPanel(
+            panel: fixture.panel,
+            chromeView: fixture.chromeView,
             frame: target,
             cornerRadius: 22,
             duration: 0,
@@ -21,7 +23,7 @@ struct NotchPanelAnimationDriverTests {
 
         #expect(fixture.panel.frame == target)
         #expect(fixture.chromeView.layer?.cornerRadius == 22)
-        #expect(fixture.chromeView.layer?.animation(forKey: AppKitNotchPanelAnimationDriver.cornerAnimationKey) == nil)
+        #expect(fixture.chromeView.layer?.animation(forKey: notchCornerAnimationKey) == nil)
         #expect(completionCount == 1)
     }
 
@@ -31,7 +33,9 @@ struct NotchPanelAnimationDriverTests {
         let target = CGRect(x: 240, y: 650, width: 520, height: 250)
         var completionCount = 0
 
-        fixture.driver.animate(
+        animateNotchPanel(
+            panel: fixture.panel,
+            chromeView: fixture.chromeView,
             frame: target,
             cornerRadius: 22,
             duration: 0.20,
@@ -39,23 +43,18 @@ struct NotchPanelAnimationDriverTests {
         )
 
         let animation =
-            fixture.chromeView.layer?.animation(
-                forKey: AppKitNotchPanelAnimationDriver.cornerAnimationKey
-            ) as? CABasicAnimation
+            fixture.chromeView.layer?.animation(forKey: notchCornerAnimationKey)
+            as? CABasicAnimation
 
         #expect(fixture.chromeView.layer?.cornerRadius == 22)
         #expect(animation?.keyPath == "cornerRadius")
         #expect(animation?.toValue as? CGFloat == 22)
         #expect(animation?.duration == 0.20)
-        #expect(
-            animation?.timingFunction == CAMediaTimingFunction(name: .easeInEaseOut)
-        )
+        #expect(animation?.timingFunction == CAMediaTimingFunction(name: .easeInEaseOut))
         #expect(completionCount == 0)
 
-        fixture.driver.cancel()
-        #expect(
-            fixture.chromeView.layer?.animation(forKey: AppKitNotchPanelAnimationDriver.cornerAnimationKey) == nil
-        )
+        cancelNotchPanelAnimation(chromeView: fixture.chromeView)
+        #expect(fixture.chromeView.layer?.animation(forKey: notchCornerAnimationKey) == nil)
     }
 
     @Test
@@ -65,7 +64,9 @@ struct NotchPanelAnimationDriverTests {
         let expanded = CGRect(x: 240, y: 650, width: 520, height: 250)
 
         for _ in 0..<32 {
-            fixture.driver.animate(
+            animateNotchPanel(
+                panel: fixture.panel,
+                chromeView: fixture.chromeView,
                 frame: expanded,
                 cornerRadius: 22,
                 duration: 0,
@@ -76,7 +77,9 @@ struct NotchPanelAnimationDriverTests {
             #expect(fixture.chromeView.layer?.cornerCurve == .continuous)
             #expect(fixture.chromeView.layer?.cornerRadius == 22)
 
-            fixture.driver.animate(
+            animateNotchPanel(
+                panel: fixture.panel,
+                chromeView: fixture.chromeView,
                 frame: compact,
                 cornerRadius: 12,
                 duration: 0,
@@ -105,14 +108,7 @@ struct NotchPanelAnimationDriverTests {
         chromeView.autoresizingMask = [.width, .height]
         panel.contentView = chromeView
 
-        return DriverFixture(
-            panel: panel,
-            chromeView: chromeView,
-            driver: AppKitNotchPanelAnimationDriver(
-                panel: panel,
-                chromeView: chromeView
-            )
-        )
+        return DriverFixture(panel: panel, chromeView: chromeView)
     }
 }
 
@@ -120,5 +116,4 @@ struct NotchPanelAnimationDriverTests {
 private struct DriverFixture {
     let panel: NSPanel
     let chromeView: NSView
-    let driver: AppKitNotchPanelAnimationDriver
 }
