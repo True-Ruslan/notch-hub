@@ -18,7 +18,7 @@ struct NotchPanelTransitionCoordinatorTests {
 
         fixture.coordinator.accept(.deliberateExpansion, layout: layout)
 
-        #expect(fixture.coordinator.phase == .expanding)
+        #expect(fixture.coordinator.phase.isExpanding)
         #expect(fixture.coordinator.desiredPresentation == .expanded)
         #expect(fixture.model.contentPresentation == .expanded)
         #expect(fixture.driver.requests.count == 1)
@@ -29,7 +29,7 @@ struct NotchPanelTransitionCoordinatorTests {
 
         fixture.driver.complete(index: 0)
 
-        #expect(fixture.coordinator.phase == .expanded)
+        #expect(fixture.coordinator.phase.isExpanded)
         #expect(fixture.coordinator.desiredPresentation == .expanded)
     }
 
@@ -39,7 +39,7 @@ struct NotchPanelTransitionCoordinatorTests {
 
         fixture.coordinator.accept(.pointerExitCollapse, layout: layout)
 
-        #expect(fixture.coordinator.phase == .collapsing)
+        #expect(fixture.coordinator.phase.isCollapsing)
         #expect(fixture.coordinator.desiredPresentation == .compact)
         #expect(fixture.model.contentPresentation == .expanded)
         #expect(fixture.driver.requests.count == 1)
@@ -50,7 +50,7 @@ struct NotchPanelTransitionCoordinatorTests {
         fixture.driver.complete(index: 0)
 
         #expect(fixture.model.contentPresentation == .compact)
-        #expect(fixture.coordinator.phase == .compact)
+        #expect(fixture.coordinator.phase.isCompact)
     }
 
     @Test
@@ -62,18 +62,18 @@ struct NotchPanelTransitionCoordinatorTests {
 
         #expect(fixture.driver.requests.count == 2)
         #expect(fixture.driver.cancelCount == 1)
-        #expect(fixture.coordinator.phase == .collapsing)
+        #expect(fixture.coordinator.phase.isCollapsing)
         #expect(fixture.model.contentPresentation == .expanded)
 
         fixture.driver.complete(index: 0)
 
-        #expect(fixture.coordinator.phase == .collapsing)
+        #expect(fixture.coordinator.phase.isCollapsing)
         #expect(fixture.coordinator.desiredPresentation == .compact)
         #expect(fixture.model.contentPresentation == .expanded)
 
         fixture.driver.complete(index: 1)
 
-        #expect(fixture.coordinator.phase == .compact)
+        #expect(fixture.coordinator.phase.isCompact)
         #expect(fixture.model.contentPresentation == .compact)
     }
 
@@ -86,18 +86,18 @@ struct NotchPanelTransitionCoordinatorTests {
 
         #expect(fixture.driver.requests.count == 2)
         #expect(fixture.driver.cancelCount == 1)
-        #expect(fixture.coordinator.phase == .expanding)
+        #expect(fixture.coordinator.phase.isExpanding)
         #expect(fixture.coordinator.desiredPresentation == .expanded)
         #expect(fixture.haptics.requestCount == 1)
 
         fixture.driver.complete(index: 0)
 
-        #expect(fixture.coordinator.phase == .expanding)
+        #expect(fixture.coordinator.phase.isExpanding)
         #expect(fixture.model.contentPresentation == .expanded)
 
         fixture.driver.complete(index: 1)
 
-        #expect(fixture.coordinator.phase == .expanded)
+        #expect(fixture.coordinator.phase.isExpanded)
         #expect(fixture.model.contentPresentation == .expanded)
     }
 
@@ -110,7 +110,7 @@ struct NotchPanelTransitionCoordinatorTests {
 
         #expect(fixture.driver.requests.count == 1)
         #expect(fixture.haptics.requestCount == 1)
-        #expect(fixture.coordinator.phase == .expanding)
+        #expect(fixture.coordinator.phase.isExpanding)
     }
 
     @Test
@@ -121,7 +121,7 @@ struct NotchPanelTransitionCoordinatorTests {
 
         #expect(fixture.driver.requests.count == 1)
         #expect(fixture.haptics.requestCount == 0)
-        #expect(fixture.coordinator.phase == .expanding)
+        #expect(fixture.coordinator.phase.isExpanding)
     }
 
     @Test
@@ -132,12 +132,12 @@ struct NotchPanelTransitionCoordinatorTests {
         fixture.coordinator.invalidate()
 
         #expect(fixture.driver.cancelCount == 1)
-        #expect(fixture.coordinator.phase == .expanding)
+        #expect(fixture.coordinator.phase.isExpanding)
         #expect(fixture.model.contentPresentation == .expanded)
 
         fixture.driver.complete(index: 0)
 
-        #expect(fixture.coordinator.phase == .expanding)
+        #expect(fixture.coordinator.phase.isExpanding)
         #expect(fixture.model.contentPresentation == .expanded)
     }
 
@@ -149,12 +149,12 @@ struct NotchPanelTransitionCoordinatorTests {
         fixture.coordinator.invalidate()
 
         #expect(fixture.driver.cancelCount == 1)
-        #expect(fixture.coordinator.phase == .collapsing)
+        #expect(fixture.coordinator.phase.isCollapsing)
         #expect(fixture.model.contentPresentation == .expanded)
 
         fixture.driver.complete(index: 0)
 
-        #expect(fixture.coordinator.phase == .collapsing)
+        #expect(fixture.coordinator.phase.isCollapsing)
         #expect(fixture.model.contentPresentation == .expanded)
     }
 
@@ -200,6 +200,40 @@ struct NotchPanelTransitionCoordinatorTests {
             haptics: haptics,
             coordinator: coordinator
         )
+    }
+}
+
+private extension NotchPanelTransitionPhase {
+    var isCompact: Bool {
+        if case .compact = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    var isExpanding: Bool {
+        if case .expanding = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    var isExpanded: Bool {
+        if case .expanded = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    var isCollapsing: Bool {
+        if case .collapsing = self {
+            true
+        } else {
+            false
+        }
     }
 }
 
