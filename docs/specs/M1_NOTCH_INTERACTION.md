@@ -1,6 +1,6 @@
 # M1 Notch interaction requirements
 
-Status: **DETERMINISTIC IMPLEMENTATION COMPLETE / CLEAN EXACT-HEAD CI AND HARDWARE ACCEPTANCE PENDING**
+Status: **CORE HARDWARE ACCEPTED / TOP-EDGE REFINEMENT TARGETED RETEST PENDING**
 Primary target: MacBook with hardware notch, macOS 26.6
 
 This document is the behavioral contract for delayed hover activation, transition animation, trackpad haptic feedback, accessibility motion policy, and notch-adjacent visual behavior in M1. The implementation must follow TDD and preserve the security/performance contracts of the project.
@@ -9,14 +9,20 @@ This document is the behavioral contract for delayed hover activation, transitio
 
 ### Goal
 
-Moving the pointer through the hardware-notch region on the way to another display must not immediately open NotchHub. Deliberate hover should still feel fast.
+Moving the pointer through the hardware-notch region on the way to another display must not immediately open NotchHub. Deliberate hover should still feel fast. On the built-in display, a deliberate pointer pushed all the way to the top screen edge over the notch must remain able to activate the panel.
 
 ### Required behavior
 
 - Entering the compact activation region starts a **single cancellable dwell**.
-- The activation region is slightly inset from the physical notch bounding box so grazing the edge is not deliberate intent.
-- Current inset candidate: **4 pt** on each edge.
-- Current dwell candidate: **120 ms**.
+- The accepted dwell is **120 ms**.
+- The compact activation region is asymmetric by design:
+  - **4 pt inward inset on the left**;
+  - **4 pt inward inset on the right**;
+  - **4 pt inward inset on the bottom**;
+  - **0 pt inset on the top**.
+- The top edge is intentionally unrestricted so a pointer held against the physical top screen boundary over the notch can activate NotchHub on a single-display workflow.
+- The side/bottom inset still rejects accidental edge grazing.
+- Cross-display transit remains protected by the cancellable 120 ms dwell rather than by removing the topmost activation band.
 - The panel remains compact until the dwell threshold is reached.
 - Leaving before threshold cancels immediately.
 - A cancelled activation must never fire later from a stale callback.
@@ -70,7 +76,7 @@ A bounded deterministic stress test must exercise at least 10,000 reversal reque
 
 Use only public AppKit haptics through `NSHapticFeedbackManager.defaultPerformer`.
 
-Current tactile candidate: **one `.levelChange` request** per successful deliberate expansion. Do not simulate strength with repeated/double feedback.
+Accepted tactile behavior: **one `.levelChange` request** per successful deliberate expansion. Do not simulate strength with repeated/double feedback.
 
 ### Exactly-once rule
 
@@ -100,8 +106,8 @@ A reversal must not create an additional tactile hit merely because the current 
 
 Expansion/collapse should feel continuous without introducing a custom continuously running animation system or background work.
 
-Current standard-duration candidate: **0.20 s**.
-Current timing curve: **ease-in-out**.
+Accepted standard duration: **0.20 s**.
+Accepted timing curve: **ease-in-out**.
 
 ### Required implementation boundary
 
@@ -129,7 +135,7 @@ Headless CI can verify lifecycle/generation/model-layer contracts but cannot hon
 
 Public AppKit accessibility display preference is authoritative:
 
-- normal motion duration: `0.20 s` candidate;
+- normal motion duration: `0.20 s`;
 - `accessibilityDisplayShouldReduceMotion == true`: duration `0`.
 
 `NotchPanelController` observes `NSWorkspace.accessibilityDisplayOptionsDidChangeNotification` through a selector-based observer on `NSWorkspace.notificationCenter`.
@@ -168,7 +174,7 @@ Required behavior on hardware-notch displays:
 - compact outer radius `12 pt`, expanded radius `22 pt`, continuous corner curve;
 - expanded controls remain visible while the pointer intentionally holds the panel open;
 - expanded interactive content begins below physical-notch occlusion with the accepted safe spacing;
-- current hardware-notch expanded content inset is `compactFrame.height + 12 pt`;
+- hardware-notch expanded content inset is `compactFrame.height + 12 pt`;
 - no-notch fallback remains opaque with its normal 20 pt content inset;
 - outer clipping has exactly one owner at the AppKit hosting-view boundary;
 - the hosting view remains layer-backed, masked, and follows panel width/height;
@@ -189,27 +195,31 @@ Minimum deterministic scenarios include:
 7. pointer exit -> non-haptic collapse intent;
 8. setup synchronization -> no activation/haptic;
 9. invalidation -> pending activation cancelled;
-10. 2 pt edge depth rejected, 4 pt candidate accepted;
-11. transition phase settles only on matching completion;
-12. collapse retains expanded content until matching completion;
-13. stale expansion completion cannot win after collapse reversal;
-14. stale collapse completion cannot win after expansion reversal;
-15. duplicate desired expansion does not duplicate transition/haptic;
-16. programmatic expansion remains non-haptic;
-17. transition invalidation makes later completion harmless;
-18. Reduce Motion duration resolves to zero;
-19. normal duration resolves to 0.20 s;
-20. in-flight Reduce Motion retarget does not create second haptic;
-21. 10,000 reversal stress keeps only latest generation authoritative;
-22. zero-duration AppKit path applies exact endpoint synchronously once;
-23. animated path installs system corner animation and does not complete synchronously;
-24. at least 32 immediate endpoint cycles retain AppKit chrome/frame invariants;
-25. cancellation freezes visible presentation-layer radius before removing animation;
-26. controller source has no competing presentation `setFrame` path;
-27. Reduce Motion observation uses selector ownership without a block observer token;
-28. pointer-monitor live path has no per-event `Task` allocation;
-29. pointer monitor still registers/removes exactly one local + one global `.mouseMoved` monitor;
-30. hardware-notch compact surface remains opaque and AppKit-owned clipping remains continuous.
+10. pointer only 2 pt inside the **bottom** edge is rejected;
+11. pointer 4 pt inside the bottom edge is accepted;
+12. pointer 1 pt below the **top screen edge** at the center of the notch is accepted with no top inset;
+13. pointer only 2 pt inside the left edge remains rejected even at the top edge;
+14. pointer only 2 pt inside the right edge remains rejected even at the top edge;
+15. transition phase settles only on matching completion;
+16. collapse retains expanded content until matching completion;
+17. stale expansion completion cannot win after collapse reversal;
+18. stale collapse completion cannot win after expansion reversal;
+19. duplicate desired expansion does not duplicate transition/haptic;
+20. programmatic expansion remains non-haptic;
+21. transition invalidation makes later completion harmless;
+22. Reduce Motion duration resolves to zero;
+23. normal duration resolves to 0.20 s;
+24. in-flight Reduce Motion retarget does not create second haptic;
+25. 10,000 reversal stress keeps only latest generation authoritative;
+26. zero-duration AppKit path applies exact endpoint synchronously once;
+27. animated path installs system corner animation and does not complete synchronously;
+28. at least 32 immediate endpoint cycles retain AppKit chrome/frame invariants;
+29. cancellation freezes visible presentation-layer radius before removing animation;
+30. controller source has no competing presentation `setFrame` path;
+31. Reduce Motion observation uses selector ownership without a block observer token;
+32. pointer-monitor live path has no per-event `Task` allocation;
+33. pointer monitor still registers/removes exactly one local + one global `.mouseMoved` monitor;
+34. hardware-notch compact surface remains opaque and AppKit-owned clipping remains continuous.
 
 ## 9. TDD / CI evidence — 2026-08-08
 
@@ -228,46 +238,39 @@ Transition-animation hardening evidence:
 - CI #305: RED before selector-based accessibility observation replaced the block-observer/token boundary;
 - CI #308: functional/security/package checks passed; executable/app returned under budget, but DMG still failed the unchanged budget;
 - CI #309: RED specifically for the remaining per-mouse-event `Task` hot path while all previous 48 Swift tests passed;
-- CI #310 on `12c5ff26dc409dd0391f3b296866c2be9515ce7e`: GREEN with **49/49 Swift tests**, macOS 26 compatibility, release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG checks, performance harness smoke, and the unchanged P0 artifact-size budget.
+- CI #310 on `12c5ff26dc409dd0391f3b296866c2be9515ce7e`: GREEN with **49/49 Swift tests**, macOS 26 compatibility, release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG checks, performance harness smoke, and the unchanged P0 artifact-size budget;
+- clean exact-head CI #319 on `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4` produced the hardware candidate subsequently accepted for all broad interaction/visual/animation/motion checks;
+- RED commit `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 added asymmetric activation-edge coverage and failed only the new top-edge activation expectation while all 51 other Swift tests stayed green;
+- GREEN source `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests** and all release/security/performance/package gates with the unchanged P0 budget.
 
-CI #310 sizes:
+CI #321 sizes:
 
 - executable `250,000 B`;
 - app `252,997 B`;
-- DMG `84,422 B`.
-
-Temporary release-symbol diagnostics used only to attribute size were removed afterward. A fresh clean exact-head CI after documentation is required before hardware acceptance.
+- DMG `84,468 B`.
 
 Shared-runner CPU/RSS/thread values are compatibility/schema evidence only, never target-Mac performance acceptance.
 
 ## 10. Real-hardware acceptance
 
-Stable existing IDs:
+Broad target-Mac acceptance on exact candidate `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4` / CI #319:
 
-- `NH-NOTCH-001`: compact center/width match physical notch.
-- `NH-HOVER-001`: deliberate hover expands once without oscillation.
-- `NH-HOVER-002`: movement inside expanded retention remains expanded.
-- `NH-HOVER-003`: leaving retention collapses once and stays compact.
-- `NH-HOVER-DELAY-001`: normal cross-display transit stays compact with zero haptic.
-- `NH-HOVER-DELAY-002`: deliberate hover opens once after accepted dwell/depth threshold.
-- `NH-HAPTIC-001`: eligible expansion produces exactly one acceptable physical haptic.
-- `NH-HAPTIC-002`: cancelled transit/retention/collapse remain physically silent.
-- `NH-VISUAL-001`: compact black rounded panel is visible/aligned with no square leakage.
-- `NH-VISUAL-002`: expanded primary controls remain visible below the notch while held open.
-- `NH-VISUAL-003`: at least 20 physical open/collapse cycles retain rounded chrome.
+- `NH-NOTCH-001`: **PASS**.
+- `NH-HOVER-001/002/003`: **PASS**.
+- `NH-HOVER-DELAY-001`: **PASS** for quick cross-display transit.
+- `NH-HOVER-DELAY-002`: **PASS**; 120 ms accepted.
+- `NH-HAPTIC-001/002`: **PASS**; `.levelChange` accepted.
+- `NH-VISUAL-001/002/003`: **PASS**.
+- `NH-ANIM-001/002/003/004`: **PASS**.
+- `NH-MOTION-001/002`: **PASS**.
+- startup while pointer already overlaps the notch: **PASS**.
+- physical tuning accepted: 120 ms dwell, 0.20 s animation, `.levelChange`, 4 pt protection on the edges where protection is desired.
 
-Additional animation/accessibility checks for this hardening slice:
+The only post-acceptance product refinement is asymmetric top-edge activation. New stable physical gate:
 
-- normal expansion is visibly smooth;
-- normal collapse is visibly smooth;
-- expansion -> collapse reversal starts at the current visible state with no snap/flicker/stale endpoint and no extra haptic;
-- collapse -> expansion reversal behaves likewise;
-- repeated rapid hover/leave does not leave the panel stuck;
-- Reduce Motion enabled before a transition produces an immediate endpoint;
-- switching Reduce Motion during an in-flight transition immediately reaches the desired endpoint without duplicate haptic/flicker;
-- startup with cursor already over the notch remains non-activating.
+- `NH-HOVER-TOP-001`: on the built-in display, deliberately push/hold the pointer against the top screen edge over the notch. It must remain eligible and open once after 120 ms with one haptic and no oscillation. Left/right/bottom still use 4 pt inward protection.
 
-If public AppKit window animation visibly snaps on physical hardware, this is a hard failure. Do not replace the failed behavior with a timer/display link/private API merely to satisfy the test matrix.
+Because removing the top inset restores a 4 pt-high activation band, `NH-HOVER-DELAY-001` must be rerun once on the new exact artifact to confirm quick cross-display transit remains compact/no haptic. No other broad hardware checks need repeating unless either targeted scenario fails.
 
 ## 11. Definition of done
 
@@ -278,7 +281,9 @@ This interaction/animation slice is complete only when:
 - unchanged P0 size budget passes;
 - runtime remains event-driven and cancellation-safe;
 - no permissions/entitlements/input surface are broadened;
-- physical acceptance above passes on target MacBook/macOS 26.6;
-- final accepted/tuned `120 ms`, `4 pt`, `.levelChange`, and `0.20 s` candidates are recorded in project state/testing/changelog.
+- broad physical acceptance remains recorded as PASS;
+- new `NH-HOVER-TOP-001` passes on the exact asymmetric-inset candidate;
+- `NH-HOVER-DELAY-001` remains PASS on that same candidate;
+- final accepted geometry is recorded as **4 pt left/right/bottom, 0 pt top**, with 120 ms dwell, `.levelChange`, and 0.20 s animation.
 
-Until then PR #10 remains Draft and unmerged.
+Until the two targeted physical checks pass, PR #10 remains Draft and unmerged.
