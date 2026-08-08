@@ -7,7 +7,7 @@ public struct NotchLayout: Equatable, Sendable {
     public let expandedFrame: CGRect
 
     var compactBackgroundOpacity: Double {
-        hasHardwareNotch ? 0 : 1
+        1
     }
 
     var expandedContentTopInset: CGFloat {
