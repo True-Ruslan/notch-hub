@@ -1,7 +1,7 @@
 import AppKit
 
 @MainActor
-final class AppKitNotchHapticPerformer: NotchHapticPerforming {
+final class AppKitNotchHapticPerformer {
     func performExpansionHaptic() {
         NSHapticFeedbackManager.defaultPerformer.perform(
             .levelChange,
