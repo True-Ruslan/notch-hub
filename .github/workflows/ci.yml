@@ -63,12 +63,15 @@ jobs:
       - name: Performance policy tests
         run: (cd scripts && python3 -m unittest -v test_performance_policy.py)
 
+      - name: Media bridge probe policy tests
+        run: (cd scripts && python3 -m unittest -v test_media_bridge_probe_acceptance.py)
+
       - name: Performance policy audit
         run: python3 scripts/performance_policy.py audit Sources
 
       - name: Validate sources, scripts and security baseline
         run: |
-          swift format lint --recursive --strict --configuration .swift-format Sources Tests Package.swift
+          swift format lint --recursive --strict --configuration .swift-format Sources Tools Tests Package.swift
           plutil -lint Resources/Info.plist Resources/NotchHub.entitlements
           bash -n scripts/*.sh
           ./scripts/security-audit.sh
@@ -128,6 +131,19 @@ jobs:
 
           if find "$APP" -type f \( -name 'perf-baseline.py' -o -name 'performance_policy.py' -o -name 'test_performance_policy.py' \) -print -quit | grep -q .; then
             echo "Development performance tooling was bundled into NotchHub.app" >&2
+            exit 1
+          fi
+
+          if find "$APP" -type f \( \
+            -name 'MediaBridgeProbe' -o \
+            -name 'mediaremote-adapter.pl' -o \
+            -name 'MediaRemoteAdapterTestClient' \
+          \) -print -quit | grep -q .; then
+            echo "Development media probe tooling was bundled into NotchHub.app" >&2
+            exit 1
+          fi
+          if find "$APP" -type d -name 'MediaRemoteAdapter.framework' -print -quit | grep -q .; then
+            echo "Development MediaRemoteAdapter.framework was bundled into NotchHub.app" >&2
             exit 1
           fi
 
