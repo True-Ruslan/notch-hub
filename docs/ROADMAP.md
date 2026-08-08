@@ -129,28 +129,44 @@ Audit details and acceptance evidence: `docs/PUBLIC_READINESS.md`.
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **NEXT**
+Status: **IN PROGRESS — PR #10**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
+Implementation plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
 
-- measure and investigate replacing global `.mouseMoved` observation with reliable `NSTrackingArea`/window-local tracking, using the accepted P0 hover resource baseline as the comparison point;
-- accept replacement only if notch/hover correctness stays PASS and measured resource/input-observation profile is equal or better;
-- add a short, cancellable **hover dwell delay** before compact → expanded activation so normal pointer transit through the notch (including movement toward another display) does not immediately open the panel;
-- initial dwell candidate: **120 ms**, to be tuned from real MacBook evidence within roughly 100–150 ms rather than hardcoded blindly;
-- implement dwell as event-driven single pending work item: no polling, no repeating timer, deterministic cancellation/race tests;
-- provide **one trackpad haptic event on a successful user-initiated compact → expanded transition** through public `NSHapticFeedbackManager.defaultPerformer`;
-- no haptic on cancelled/quick transit, duplicate pointer events, expanded retention, collapse, programmatic transitions, or stale callbacks;
-- haptic must respect macOS/current-device/user settings and must not introduce private APIs, synthetic input, Accessibility, custom drivers, or retry loops;
-- click/pin interaction policy;
-- tuned expansion/collapse animation and reduced-motion behavior;
-- gesture model (hover/click/scroll/swipe) designed independently while benchmarking public NotchNook behavior;
-- multiple displays and active-screen migration;
-- fullscreen/Space behavior;
-- screen-configuration change handling;
-- notchless-screen mode decision/prototype;
-- expanded automated + real-hardware acceptance matrix, including `NH-HOVER-DELAY-001/002` and `NH-HAPTIC-001/002`.
+### Interaction core — implemented, hardware acceptance pending
 
-No `CGEventTap`, Accessibility, Input Monitoring, or broader capture merely for hover convenience or haptic feedback.
+- [x] add a short, cancellable hover dwell before compact → expanded activation;
+- [x] keep the initial dwell as a named **120 ms candidate**, not a final value before target-Mac tuning;
+- [x] implement dwell as one event-driven pending work item with no polling or repeating timer;
+- [x] cover quick transit cancellation, threshold completion, duplicate movement, stale callback rejection, re-entry, retention, repeated independent activations, programmatic-state exclusion, and invalidation with deterministic scheduler tests;
+- [x] provide exactly one haptic request on a successful user-initiated compact → expanded transition;
+- [x] use public `NSHapticFeedbackManager.defaultPerformer` only;
+- [x] keep haptic silent for quick/cancelled transit, duplicate pointer events, expanded retention, collapse, programmatic transitions, and stale callbacks;
+- [x] give local/global `.mouseMoved` monitor tokens explicit ownership, duplicate-registration prevention, and idempotent teardown;
+- [x] preserve App Sandbox/Hardened Runtime, current entitlement set, zero external Swift runtime dependencies, and event-driven performance policy;
+- [x] keep candidate executable/app/DMG within the unchanged P0 artifact-size budget after CI caught and forced correction of an initial 356-byte executable overage;
+- [ ] pass `NH-HOVER-DELAY-001/002` on the target MacBook/macOS 26.6;
+- [ ] pass `NH-HAPTIC-001/002` on compatible real hardware;
+- [ ] rerun `NH-NOTCH-001` and `NH-HOVER-001/002/003` on the exact candidate;
+- [ ] accept or tune the final dwell value from physical evidence.
+
+### Pointer-observation optimization — pending measured experiment
+
+- [ ] measure and investigate replacing global `.mouseMoved` observation with reliable `NSTrackingArea`/window-local tracking, using the accepted P0 hover resource baseline as the comparison point;
+- [ ] accept replacement only if notch/hover/cross-display correctness stays PASS and measured target-Mac resource/input-observation profile is equal or better;
+- [ ] retain the narrow, lifecycle-owned global `.mouseMoved` fallback if a local alternative is less reliable or not measurably better;
+- [ ] do not adopt `CGEventTap`, Accessibility, Input Monitoring, or broader capture merely for hover convenience.
+
+### Remaining M1 product hardening
+
+- [ ] click/pin interaction policy;
+- [ ] tuned expansion/collapse animation and Reduced Motion behavior;
+- [ ] gesture model (hover/click/scroll/swipe) designed independently while benchmarking public NotchNook behavior;
+- [ ] multiple displays and active-screen migration;
+- [ ] fullscreen/Space behavior;
+- [ ] screen-configuration change handling;
+- [ ] notchless-screen mode decision/prototype.
 
 ## M2 — Shelf
 
