@@ -28,7 +28,8 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Public AppKit/Core Animation transition output: `NSAnimationContext` for panel frame and `CABasicAnimation` for corner radius, sharing an accepted `0.20 s` / ease-in-out policy.
 - Reduce Motion policy using public `NSWorkspace.accessibilityDisplayShouldReduceMotion` and `accessibilityDisplayOptionsDidChangeNotification`, with zero-duration exact endpoints and in-flight retargeting.
 - M1 transition/animation hardening implementation plan under `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
-- Stable `NH-HOVER-TOP-001` hardware gate for deliberate built-in-display activation while the pointer is held against the top screen edge over the notch.
+- Stable `NH-HOVER-TOP-001` hardware gate for deliberate built-in-display activation while the pointer is held against the exact top screen edge over the notch.
+- Exact compact activation boundary tests for `maxY` and the accepted 4 pt left/right boundaries, preventing nearby interior points from being mistaken for hardware-edge coverage.
 
 ### Changed
 
@@ -41,7 +42,8 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Prepared repository policy/documentation for public source visibility while keeping runtime entitlements unchanged.
 - M1 compact-to-expanded pointer activation routes through one cancellable dwell instead of expanding immediately; collapse/retention remains governed by deterministic screen-space pointer policy.
 - Initial panel `show()` pointer synchronization is explicitly non-activating, preventing unintended dwell/haptic merely because the pointer already overlaps the notch when NotchHub launches.
-- Compact activation geometry is now asymmetric: **4 pt inward on left/right/bottom, 0 pt on top**. The top edge stays eligible so a cursor intentionally pushed against the top screen boundary over the notch can activate; cross-display quick transit remains protected by the 120 ms dwell.
+- Compact activation geometry is asymmetric: **4 pt inward on left/right/bottom, 0 pt on top**. Accepted compact boundaries are explicit and inclusive, including `pointer.y == compactFrame.maxY`; compact activation no longer inherits `CGRect.contains` maximum-edge exclusion.
+- Cross-display quick transit remains protected by the accepted 120 ms cancellable dwell rather than by a top dead band.
 - The haptic changed from `.generic` to the now physically accepted `.levelChange`; exactly one feedback request remains the invariant.
 - Hardware-notch compact rendering is **opaque black**. Transparency is no longer used as a contour workaround; visible compact chrome and rounded clipping are separate invariants.
 - Outer panel clipping has one owner at the AppKit hosting-view boundary; the layer uses continuous `12 pt` compact / `22 pt` expanded radii and the hosting view follows panel width and height.
@@ -65,6 +67,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Reduce Motion changes during an active transition no longer require waiting for the obsolete animation path and do not duplicate haptic feedback.
 - Removed avoidable per-mouse-event Swift concurrency task allocation from the pointer-monitor hot path.
 - Removed the top 4 pt compact activation dead band while retaining the accepted side/bottom accidental-grazing protection.
+- Fixed exact top-edge activation after hardware showed that `CGRect.contains` rejected `compactFrame.maxY`; compact hit-testing now uses explicit inclusive directional boundaries instead of half-open maximum-edge semantics.
 
 ### Testing
 
@@ -88,10 +91,13 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - GREEN CI #310 on source `12c5ff26dc409dd0391f3b296866c2be9515ce7e` passed **49/49 Swift tests**, macOS 26 compatibility, release/public policy, runtime performance audit, security baseline, warnings-as-errors, Sandbox/Hardened Runtime/signature/DMG verification, performance-harness smoke, artifact uploads, and the unchanged P0 size budget.
 - Clean exact-head CI #319 on `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4` produced the target-Mac candidate. Physical acceptance passed `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, `NH-VISUAL-001/002/003`, `NH-ANIM-001/002/003/004`, `NH-MOTION-001/002`, startup non-activation, and accepted 120 ms / `.levelChange` / 0.20 s tuning.
 - That accepted cycle requested one geometry refinement: no top activation inset while keeping 4 pt left/right/bottom.
-- RED commit `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 ran 52 Swift tests and failed only `compactPointerAtTopScreenEdgeActivatesWithoutTopInset`; the new side/right/bottom protection tests and every prior behavior stayed green.
-- GREEN source `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**, macOS 26 compatibility, all release/security/performance/package gates, and the unchanged P0 size budget.
-- CI #321 sizes: executable `250,000 B`, app `252,997 B`, DMG `84,468 B`.
-- Only targeted physical checks `NH-HOVER-TOP-001` and `NH-HOVER-DELAY-001` remain for the asymmetric activation geometry; the already accepted broad visual/animation/motion matrix need not be repeated unless a regression appears.
+- RED `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 established the initial asymmetric geometry; GREEN `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests** and all automated gates.
+- Clean exact-head `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed all automated gates, but target-Mac `NH-HOVER-TOP-001` **FAILED**: holding the cursor at the exact top screen edge did not open the panel.
+- The #325 failure exposed that the prior test used `compactFrame.maxY - 1`, not the exact edge, while production delegated to `CGRect.contains`, which excludes maximum X/Y edges. The automated evidence was therefore insufficient for the physical scenario it claimed to cover.
+- Corrective RED `3d0d40b5426cb8a8fe0bd19393688a68247637b0` / CI #326 used exact `y == compactFrame.maxY` and exact 4 pt left/right boundaries; **54 tests ran and only the three new exact-boundary expectations failed**.
+- Corrective GREEN `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive directional comparisons and passed **54/54 Swift tests**, macOS 26 compatibility, all release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG gates, and the unchanged P0 size budget.
+- CI #327 sizes: executable `250,320 B`, app `253,317 B`, DMG `84,679 B`.
+- Only targeted physical checks `NH-HOVER-TOP-001` and `NH-HOVER-DELAY-001` remain after the corrective exact-head documentation build; the already accepted broad visual/animation/motion matrix need not be repeated unless a regression appears.
 
 ## [0.1.0] - 2026-08-07
 
