@@ -121,15 +121,37 @@ These findings mean the original M1 candidate was **not accepted**, despite the 
 
 ### Revised visual/interaction candidate
 
-The current PR #10 candidate now:
+The revised PR #10 candidate:
 
 - does not paint an opaque black compact background over the visible rounded-corner pixels of a hardware notch; non-notch fallback remains opaque;
 - starts expanded content below hardware-notch occlusion at `compactFrame.height + 12 pt`; non-notch fallback retains 20 pt;
-- updates the AppKit panel frame immediately with the SwiftUI state instead of running an independent AppKit frame animation that could expose mismatched panel/content states;
-- keeps polished animation/Reduced Motion as a later dedicated M1 hardening step rather than sacrificing state correctness now;
-- changes compact activation geometry from an outward `2 pt` padding to an inward **4 pt activation inset** candidate;
-- keeps expanded retention padding unchanged;
-- changes the one public AppKit haptic pattern from `.generic` to **`.levelChange`** as the target-Mac tuning candidate; there is still exactly one haptic request, never a double-hit strength simulation.
+- updates the AppKit panel frame immediately with state instead of running an independent frame animation;
+- uses an inward **4 pt activation inset** candidate while leaving expanded retention unchanged;
+- uses one public `.levelChange` AppKit haptic candidate, never a double-hit strength simulation;
+- keeps polished animation/Reduced Motion as a later dedicated M1 hardening step.
+
+### Second target-Mac visual cycle — repeated chrome regression
+
+The next target-Mac screenshots clarified an important detail: the compact framebuffer surface is intentionally transparent on a hardware-notch display, so a screenshot can show the small compact indicator over wallpaper because the physical camera notch itself is not part of the captured framebuffer. That screenshot alone is therefore not evidence of a black compact panel.
+
+A new real regression was nevertheless reproduced on hardware:
+
+- expanded panel corners were initially rounded;
+- after several open/collapse cycles the visible panel chrome became square;
+- therefore rounded geometry was not stable across presentation transitions.
+
+This is tracked as `NH-VISUAL-003` and is **FAIL on the previous candidate**.
+
+Code review identified a split-ownership flaw: SwiftUI `clipShape` owned visual clipping while AppKit `NSPanel.setFrame` independently owned repeated window resizing. There was no AppKit-level invariant requiring the backing view to remain masked after every transition.
+
+The current source candidate fixes that boundary:
+
+- SwiftUI no longer owns outer panel clipping;
+- the existing `NSHostingView` is explicitly layer-backed;
+- AppKit `masksToBounds = true` is required;
+- continuous corner radius is applied as `12 pt` compact / `22 pt` expanded;
+- the AppKit mask is reasserted on every presentation transition;
+- the hosting view explicitly autoresizes with both panel width and height.
 
 ### TDD / CI evidence
 
@@ -145,12 +167,14 @@ Original interaction RED -> GREEN evidence remains preserved:
 Hardware-feedback revision evidence:
 
 - RED CI #172: hardware-notch visual contract absent before implementation;
-- visual implementations remained correctness/security green but CI #177, #181, and #187 rejected excessive executable/app growth;
-- **the size budget was never widened**; the implementation architecture was simplified instead;
-- CI #188 passed the full pipeline after the visual solution was reduced to existing layout/view boundaries: executable `251,856 B`, app `254,853 B`, DMG `83,143 B`;
-- RED CI #189 reproduced edge-grazing activation: a point only 2 pt inside the physical compact edge still activated;
-- GREEN CI #191 on source head `ab782262c16163742bb115671f7908255fc08e4a` passed **27/27 Swift tests**, release/performance policy, runtime performance audit, security baseline, warnings-as-errors, packaging/signature/Sandbox/Hardened Runtime/DMG, harness smoke, and unchanged size budgets;
-- CI #191 candidate sizes: executable `251,856 B`, app `254,853 B`, DMG `83,117 B`.
+- CI #177, #181, and #187 rejected visual implementations that exceeded the unchanged P0 size budget;
+- CI #188 restored the visual solution under budget;
+- RED CI #189 reproduced edge-grazing activation;
+- GREEN CI #191 passed 27/27 Swift tests with the revised 4 pt activation and `.levelChange` candidate;
+- RED commit `8088df8df655183d3fbe1a0cff54d23dfc936034` / CI #196 added the repeated panel-chrome contract before an AppKit presentation-mask API existed and failed exactly on that missing production boundary;
+- GREEN source head `446a976591a43a856a2683337cb4df1ada10cc8a` / CI #199 passed **29/29 Swift tests**, including 32 repeated expanded<->compact AppKit mask cycles and hosting-view width/height autoresizing invariants;
+- CI #199 also passed release/performance policy, runtime performance audit, security baseline, warnings-as-errors, Sandbox/Hardened Runtime/signature/DMG verification, performance harness smoke, and the **unchanged** P0 size budget;
+- CI #199 sizes improved to executable `248,768 B`, app `251,765 B`, DMG `82,069 B`.
 
 Shared-runner CPU/RSS/thread smoke remains schema/compatibility evidence only.
 
@@ -159,15 +183,16 @@ Shared-runner CPU/RSS/thread smoke remains schema/compatibility evidence only.
 Before this PR can be accepted/merged, rerun on the target MacBook/macOS 26.6:
 
 - `NH-NOTCH-001` — compact alignment/width remains correct;
-- `NH-HOVER-001/002/003` — expansion, retention and collapse remain correct after frame synchronization change;
-- `NH-HOVER-DELAY-001` — normal cross-display transit stays compact/no haptic with the new 4 pt inset;
+- `NH-HOVER-001/002/003` — expansion, retention and collapse remain correct;
+- `NH-HOVER-DELAY-001` — normal cross-display transit stays compact/no haptic with the 4 pt inset;
 - `NH-HOVER-DELAY-002` — deliberate hover still opens reliably with 120 ms dwell + 4 pt inset;
-- `NH-HAPTIC-001` — one `.levelChange` haptic is present and the slightly stronger feel is acceptable;
-- `NH-HAPTIC-002` — quick/cancelled/retention/collapse still produce no physical haptic;
-- `NH-VISUAL-001` — compact mode preserves the physical notch's native rounded silhouette with no black corner protrusion;
-- `NH-VISUAL-002` — expanded controls are visible below the physical notch while the pointer is still holding the panel open.
+- `NH-HAPTIC-001` — one `.levelChange` haptic is present and its feel is acceptable;
+- `NH-HAPTIC-002` — quick/cancelled/retention/collapse produce no physical haptic;
+- `NH-VISUAL-001` — compact mode preserves the physical notch's native rounded silhouette with no app-painted black corner protrusion;
+- `NH-VISUAL-002` — expanded controls remain visible below the physical notch while the pointer is holding the panel open;
+- `NH-VISUAL-003` — expanded panel keeps its rounded chrome after at least 20 repeated open/collapse cycles, with no transition to square corners.
 
-The `120 ms` dwell, `4 pt` activation inset, and `.levelChange` haptic are therefore **current candidates**, not final accepted values until this revised hardware pass.
+The `120 ms` dwell, `4 pt` activation inset, and `.levelChange` haptic remain candidates until this revised hardware pass.
 
 ## Security baseline
 
@@ -185,7 +210,7 @@ The `120 ms` dwell, `4 pt` activation inset, and `.levelChange` haptic are there
 ## Next optimal step
 
 1. Finish exact-head CI after source-of-truth documentation synchronization.
-2. Run the short revised target-Mac acceptance matrix above and record results honestly.
+2. Run the short revised target-Mac acceptance matrix above, with special emphasis on `NH-VISUAL-003` repeated-cycle stability, and record results honestly.
 3. If `120 ms`, `4 pt`, and `.levelChange` feel correct, accept those values; otherwise tune only the failing value and rerun deterministic + hardware acceptance.
 4. Once the interaction/visual slice is accepted, run the separate `NSTrackingArea`/window-local tracking experiment against accepted P0 `NH-PERF-HOVER-001`; remove global `.mouseMoved` only with equal-or-better correctness/resource evidence.
 5. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration handling, animation/Reduced Motion, click/pin, and gesture hardening.
