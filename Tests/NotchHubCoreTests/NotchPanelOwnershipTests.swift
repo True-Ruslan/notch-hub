@@ -15,13 +15,14 @@ struct NotchPanelOwnershipTests {
     }
 
     @Test
-    func transitionOutputsStayAliveForControllerLifetime() throws {
+    func transitionBoundaryUsesLeanAppKitFunctions() throws {
         let controllerSource = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
         )
 
-        #expect(!controllerSource.contains("[weak animationDriver]"))
-        #expect(!controllerSource.contains("[weak haptics]"))
+        #expect(!controllerSource.contains("AppKitNotchPanelAnimationDriver("))
+        #expect(controllerSource.contains("animateNotchPanel("))
+        #expect(controllerSource.contains("cancelNotchPanelAnimation("))
     }
 
     @Test
@@ -30,9 +31,21 @@ struct NotchPanelOwnershipTests {
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelAnimationDriver.swift"
         )
 
-        #expect(driverSource.contains("freezeVisibleCornerRadius()"))
+        #expect(driverSource.contains("freezeVisibleCornerRadius(chromeView: chromeView)"))
         #expect(driverSource.contains("layer.presentation()?.cornerRadius ?? layer.cornerRadius"))
-        #expect(driverSource.contains("setCornerRadius(visibleCornerRadius, on: layer)"))
+        #expect(driverSource.contains("setNotchCornerRadius(visibleCornerRadius, on: layer)"))
+    }
+
+    @Test
+    func reduceMotionObservationIsControllerOwnedAndIdempotent() throws {
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(controllerSource.contains("accessibilityDisplayOptionsDidChangeNotification"))
+        #expect(controllerSource.contains("reduceMotion != reduceMotionEnabled"))
+        #expect(controllerSource.contains("notificationCenter.removeObserver(accessibilityObserver)"))
+        #expect(controllerSource.contains("transitionCoordinator.animationPolicyDidChange"))
     }
 
     @Test
