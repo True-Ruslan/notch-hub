@@ -148,11 +148,14 @@ The current PR #10 deterministic suite proves:
 - hardware-notch layout resolves a transparent compact app surface so the real notch defines its visible rounded silhouette;
 - hardware-notch expanded content begins at `compactFrame.height + 12 pt`, while no-notch fallback keeps the normal 20 pt inset;
 - non-notch compact fallback remains opaque;
-- panel-frame presentation changes no longer run an independent AppKit animation that can visibly diverge from the SwiftUI presentation state.
+- panel-frame presentation changes no longer run an independent AppKit animation that can visibly diverge from presentation state;
+- the hosting view tracks panel bounds in both width and height while retaining `sizingOptions == []`;
+- outer panel clipping has one owner at the AppKit boundary: the hosting view is layer-backed, `masksToBounds == true`, and uses a continuous `12 pt` compact / `22 pt` expanded radius;
+- the AppKit mask/radius invariant survives **32 repeated expanded -> compact cycles** in deterministic regression coverage.
 
 The implementation remains event-driven: no polling, no repeating timer, and at most one pending activation work item. Production haptic output is public AppKit. The revised tactile candidate is one `.levelChange` request per successful expansion; AppKit exposes patterns rather than an arbitrary strength scalar, so stronger feedback is not simulated by duplicate haptic requests.
 
-The `120 ms` dwell, `4 pt` activation inset, and `.levelChange` pattern are target-Mac candidates until the revised physical acceptance cycle. Deterministic tests validate their policy semantics but cannot declare the physical feel or native silhouette ergonomically accepted.
+The `120 ms` dwell, `4 pt` activation inset, and `.levelChange` pattern are target-Mac candidates until the revised physical acceptance cycle. Deterministic tests validate policy and backing-layer invariants but cannot declare the physical rendering or tactile feel accepted.
 
 ## Real-hardware / distribution acceptance matrix
 
@@ -174,6 +177,7 @@ Record results in `docs/PROJECT_STATE.md`.
 | `NH-HAPTIC-002` | Quick/cancelled hover, retention movement, and collapse | No haptic feedback | Deterministic policy/output tests automated; physical negative check manual |
 | `NH-VISUAL-001` | Observe compact NotchHub on the physical-notch display | Native physical notch keeps its rounded silhouette; no app-painted black corner pixels make it look square | Hardware/no-notch background policy automated; exact silhouette manual |
 | `NH-VISUAL-002` | Deliberately hold pointer in the expanded panel | Primary controls are visible below the physical notch during active hover, not only after exit/collapse begins | Expanded content inset + frame-state behavior deterministic; physical occlusion/visibility manual |
+| `NH-VISUAL-003` | Open and collapse the expanded panel repeatedly, at least 20 cycles on the target Mac | Rounded panel chrome remains rounded after every cycle; no transition to square bottom corners | AppKit layer mask/radius + 32-cycle deterministic regression automated; exact physical rendering manual |
 | `NH-GATEKEEPER-TRUSTED-001` | Future: download Trusted Release | Gatekeeper identifies `Notarized Developer ID` without personal-build approval workaround | Trusted workflow automated; normal downloaded path manual when tier is first adopted |
 | `NH-SPACE-001` | Switch Spaces/fullscreen | Behavior matches M1 policy | Planned M1 |
 | `NH-DISPLAY-001` | Connect/move between displays | Correct target-display geometry/migration | Planned M1 |
@@ -296,7 +300,28 @@ TDD and budget evidence for the revised candidate:
 - GREEN CI #191 on `ab782262c16163742bb115671f7908255fc08e4a` passed **27/27 Swift tests**, all release/security/performance policy gates, packaging/signature/Sandbox/Hardened Runtime/DMG verification, unchanged artifact-size budgets, harness smoke, and artifact upload;
 - CI #191 sizes: executable `251,856 B`, app `254,853 B`, DMG `83,117 B`.
 
-Revised hardware acceptance is **PENDING** for `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and `NH-VISUAL-001/002`.
+Revised hardware acceptance was still pending for `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and `NH-VISUAL-001/002`.
+
+### 2026-08-08 — cycle 10 / repeated panel-chrome hardware regression
+
+Target MacBook/macOS 26.6 screenshots and repeated interaction clarified the rendering boundary:
+
+- the compact screenshot can show the 4 pt indicator over wallpaper because a physical camera notch is hardware and is not captured in the framebuffer; the hardware-notch compact app surface is intentionally transparent, so this screenshot is **not** evidence of an opaque black compact panel;
+- expanded panel corners were initially rounded but became square after several open/collapse cycles;
+- `NH-VISUAL-003`: **FAIL on the previous candidate**.
+
+Root cause review found split ownership of the same outer chrome invariant: SwiftUI `clipShape` owned visual clipping while AppKit `NSPanel.setFrame` independently resized the window on every presentation transition. The previous automated suite had no AppKit-level requirement that the backing surface remain clipped through repeated resizing.
+
+TDD correction:
+
+- RED commit `8088df8df655183d3fbe1a0cff54d23dfc936034` added the desired AppKit presentation-mask API and repeated-cycle regression before production support existed;
+- RED CI #196 failed exactly because `NotchHostingViewFactory.applyPresentation` did not exist;
+- GREEN implementation moved outer clipping ownership to the existing AppKit hosting-view boundary, enabled layer backing and `masksToBounds`, uses continuous `12 pt` compact / `22 pt` expanded radii, reasserts them on every state transition, and makes the hosting view autoresize with both width and height;
+- SwiftUI outer `clipShape` was removed so there is no competing owner;
+- GREEN source head `446a976591a43a856a2683337cb4df1ada10cc8a` / CI #199 passed **29/29 Swift tests**, including **32 repeated expanded -> compact mask cycles**, plus release/security/performance policies, warnings-as-errors, packaging/signature/Sandbox/Hardened Runtime/DMG checks, harness smoke, and the unchanged P0 size budget;
+- CI #199 sizes improved to executable `248,768 B`, app `251,765 B`, DMG `82,069 B`.
+
+Physical acceptance remains **PENDING**. The revised target-Mac pass must include `NH-VISUAL-003` with at least 20 real open/collapse cycles; deterministic AppKit invariants do not substitute for observing the actual pixels on the target display.
 
 ## Personal Release TDD evidence
 
