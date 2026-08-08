@@ -122,20 +122,17 @@ final class NotchPanelTransitionCoordinator {
         let scheduledGeneration = generation
         cancelActiveAnimationIfNeeded()
 
-        let expectedPhase: NotchPanelTransitionPhase
         let frame: CGRect
         let cornerRadius: CGFloat
 
         switch presentation {
         case .compact:
             phase = .collapsing
-            expectedPhase = .collapsing
             frame = layout.compactFrame
             cornerRadius = Self.compactCornerRadius
 
         case .expanded:
             phase = .expanding
-            expectedPhase = .expanding
             model.setContentPresentation(.expanded)
             frame = layout.expandedFrame
             cornerRadius = Self.expandedCornerRadius
@@ -154,7 +151,8 @@ final class NotchPanelTransitionCoordinator {
 
         if !isInvalidated,
             generation == scheduledGeneration,
-            phaseMatches(expectedPhase)
+            desiredPresentation == presentation,
+            isTransitioning
         {
             hasActiveAnimation = true
         }
@@ -164,12 +162,11 @@ final class NotchPanelTransitionCoordinator {
         }
     }
 
-    private func phaseMatches(_ expectedPhase: NotchPanelTransitionPhase) -> Bool {
-        switch (phase, expectedPhase) {
-        case (.compact, .compact), (.expanding, .expanding), (.expanded, .expanded),
-            (.collapsing, .collapsing):
+    private var isTransitioning: Bool {
+        switch phase {
+        case .expanding, .collapsing:
             true
-        default:
+        case .compact, .expanded:
             false
         }
     }
