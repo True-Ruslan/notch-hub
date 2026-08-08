@@ -73,26 +73,29 @@ Public repository, ordinary fork PR CI, release authority, protected branch rule
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **IN PROGRESS — PR #10 DRAFT**
+Status: **IN PROGRESS — PR #10 DRAFT; ONLY EXACT TOP-EDGE RETEST REMAINS FOR CURRENT SLICE**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
 Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
 
-### Interaction intent core — implemented, final hardware acceptance pending
+### Interaction intent core — implemented; broad hardware accepted
 
 - [x] short cancellable hover dwell before compact -> expanded activation;
-- [x] named **120 ms candidate**;
-- [x] **4 pt inward activation inset candidate** to reject edge grazing;
+- [x] **120 ms dwell accepted** on target Mac;
+- [x] asymmetric compact activation geometry: **4 pt left/right/bottom, 0 pt top**;
+- [x] exact accepted compact boundaries are inclusive, including `pointer.y == compactFrame.maxY`;
+- [x] compact hit-test no longer relies on `CGRect.contains` maximum-edge semantics;
 - [x] one one-shot cancellable `DispatchWorkItem`, no polling/repeating timer;
-- [x] deterministic quick-transit, threshold, duplicate, stale-callback, re-entry, retention, setup, programmatic, and invalidation coverage;
+- [x] deterministic quick-transit, threshold, duplicate, stale-callback, re-entry, retention, setup, programmatic, invalidation, and exact-edge coverage;
 - [x] exactly one public AppKit haptic request on eligible deliberate expansion;
-- [x] current tactile candidate `.levelChange`;
+- [x] `.levelChange` tactile feedback accepted on target Mac;
 - [x] no haptic for cancellation, duplicate movement, retention, collapse, setup/programmatic paths, stale callbacks, or transition-policy retarget;
 - [x] explicit local/global `.mouseMoved` monitor ownership and teardown;
-- [ ] accept/tune `120 ms`, `4 pt`, and `.levelChange` from exact final target-Mac evidence.
+- [ ] pass corrected `NH-HOVER-TOP-001` on the exact final artifact;
+- [ ] reconfirm `NH-HOVER-DELAY-001` quick cross-display transit on that same artifact.
 
-### Transition / animation hardening — deterministic implementation complete, hardware acceptance pending
+### Transition / animation hardening — implemented and hardware accepted
 
 - [x] separate pointer intents from presentation transition ownership;
 - [x] one `NotchPanelTransitionCoordinator` as the sole transition authority;
@@ -102,7 +105,7 @@ Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-trans
 - [x] expansion -> collapse and collapse -> expansion reversal semantics;
 - [x] exactly-once expansion haptic authority across reversals;
 - [x] programmatic transition path remains non-haptic;
-- [x] public `NSAnimationContext` frame animation with a **0.20 s** standard-duration candidate;
+- [x] public `NSAnimationContext` frame animation with **0.20 s accepted duration**;
 - [x] public Core Animation corner-radius transition with matching `.easeInEaseOut` timing;
 - [x] cancellation freezes current presentation-layer corner radius before removing the old animation;
 - [x] Reduced Motion maps transition duration to zero and reaches the exact endpoint synchronously;
@@ -112,8 +115,7 @@ Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-trans
 - [x] 10,000 reversal deterministic stress keeps only the latest generation authoritative;
 - [x] 32 immediate AppKit endpoint cycles preserve frame/chrome invariants;
 - [x] unchanged P0 artifact-size budget restored after multiple CI failures; budget was never widened;
-- [ ] physically validate normal animation, reversal continuity, rapid churn, and Reduce Motion behavior on target MacBook/macOS 26.6;
-- [ ] accept/tune the final 0.20 s duration only from physical evidence.
+- [x] physical normal animation, both reversal directions, rapid churn, and Reduce Motion accepted on target MacBook/macOS 26.6.
 
 ### Pointer-observation efficiency — hot path improved; local-tracking experiment still pending
 
@@ -128,22 +130,33 @@ Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-trans
 
 ### Physical M1 acceptance gate for current slice
 
-The final clean exact-head CI artifact must pass on target MacBook/macOS 26.6:
+Broad exact-artifact hardware acceptance on CI #319 is complete:
 
-- [ ] `NH-NOTCH-001`;
-- [ ] `NH-HOVER-001/002/003`;
-- [ ] `NH-HOVER-DELAY-001/002`;
-- [ ] `NH-HAPTIC-001/002`;
-- [ ] `NH-VISUAL-001/002/003`;
-- [ ] normal expansion/collapse is visibly smooth;
-- [ ] expansion -> collapse reversal begins from the current visible state with no snap/flicker/stale endpoint;
-- [ ] collapse -> expansion reversal behaves likewise;
-- [ ] rapid hover/leave churn cannot leave a stale/stuck phase;
-- [ ] Reduce Motion enabled before transition yields an immediate endpoint;
-- [ ] Reduce Motion changed during an in-flight transition retargets immediately without duplicate haptic;
-- [ ] startup with pointer already over the notch remains non-activating.
+- [x] `NH-NOTCH-001`;
+- [x] `NH-HOVER-001/002/003`;
+- [x] `NH-HOVER-DELAY-002` and accepted 120 ms dwell;
+- [x] `NH-HAPTIC-001/002` and accepted `.levelChange`;
+- [x] `NH-VISUAL-001/002/003`;
+- [x] normal expansion/collapse smoothness;
+- [x] expansion -> collapse reversal continuity;
+- [x] collapse -> expansion reversal continuity;
+- [x] rapid hover/leave churn;
+- [x] Reduce Motion before transition;
+- [x] Reduce Motion retarget during transition;
+- [x] startup with pointer already over the notch remains non-activating.
 
-If the public AppKit animator visibly snaps on the target Mac, treat it as a hard failure and revisit architecture. Do not introduce a custom timer, display link, private API, or weaker acceptance rule.
+Top-edge refinement history:
+
+- [x] initial asymmetric geometry RED #320 -> GREEN #321;
+- [x] exact-head CI #325 fully automated GREEN;
+- [x] **hardware #325 `NH-HOVER-TOP-001` FAIL captured**;
+- [x] root cause identified: test used `maxY - 1`, while exact `maxY` was rejected by `CGRect.contains`;
+- [x] corrective exact-boundary RED #326;
+- [x] corrective GREEN #327: **54/54 tests** plus all security/performance/package gates, unchanged P0 size budget;
+- [ ] final documented exact-head artifact: `NH-HOVER-TOP-001` PASS;
+- [ ] same artifact: `NH-HOVER-DELAY-001` quick cross-display regression PASS.
+
+If exact top-edge activation still fails on hardware after the inclusive-boundary correction, do not widen the zone or add polling. Investigate actual event delivery/coordinates at the physical edge and add a lower-level deterministic/instrumented boundary before further production changes.
 
 ### Remaining M1 product hardening after current acceptance
 
