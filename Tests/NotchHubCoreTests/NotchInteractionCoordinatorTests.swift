@@ -17,148 +17,191 @@ struct NotchInteractionCoordinatorTests {
     private let outside = CGPoint(x: 100, y: 500)
 
     @Test
-    func quickTransitBeforeThresholdDoesNotExpand() {
-        let fixture = makeFixture()
-
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
-        fixture.scheduler.advance(by: 0.08)
-        fixture.coordinator.pointerMoved(to: outside, layout: layout)
-        fixture.scheduler.advance(by: 1, invokeCancelled: true)
-
-        #expect(fixture.model.presentation == .compact)
-        #expect(fixture.haptics.requestCount == 0)
-        #expect(fixture.scheduler.pendingCount == 0)
-    }
-
-    @Test
-    func setupPointerSynchronizationInsideCompactDoesNotActivateOrHaptic() {
+    func quickTransitBeforeThresholdDoesNotEmitIntent() {
         let fixture = makeFixture()
 
         fixture.coordinator.pointerMoved(
             to: insideCompact,
             layout: layout,
-            allowActivation: false
+            currentPresentation: .compact
         )
-        fixture.scheduler.advance(by: 1)
+        fixture.scheduler.advance(by: 0.08)
+        fixture.coordinator.pointerMoved(
+            to: outside,
+            layout: layout,
+            currentPresentation: .compact
+        )
+        fixture.scheduler.advance(by: 1, invokeCancelled: true)
 
-        #expect(fixture.model.presentation == .compact)
-        #expect(fixture.haptics.requestCount == 0)
+        #expect(fixture.intents.isEmpty)
         #expect(fixture.scheduler.pendingCount == 0)
     }
 
     @Test
-    func deliberateHoverExpandsOnlyAfterThreshold() {
+    func setupSynchronizationNeverEmitsExpansionIntent() {
         let fixture = makeFixture()
 
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact,
+            allowActivation: false
+        )
+        fixture.scheduler.advance(by: 1, invokeCancelled: true)
+
+        #expect(fixture.intents.isEmpty)
+        #expect(fixture.scheduler.pendingCount == 0)
+    }
+
+    @Test
+    func deliberateHoverEmitsOneEligibleExpansionIntentAtThreshold() {
+        let fixture = makeFixture()
+
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact
+        )
         fixture.scheduler.advance(by: 0.11)
-        #expect(fixture.model.presentation == .compact)
+        #expect(fixture.intents.isEmpty)
 
-        fixture.scheduler.advance(by: 0.02)
-        #expect(fixture.model.presentation == .expanded)
+        fixture.scheduler.advance(by: 0.01)
+
+        #expect(fixture.intents == [
+            NotchInteractionIntent(
+                desiredPresentation: .expanded,
+                cause: .deliberateHover,
+                hapticEligible: true
+            )
+        ])
     }
 
     @Test
-    func successfulHoverExpansionRequestsExactlyOneHaptic() {
+    func duplicatePointerEventsKeepOnePendingActivationAndOneIntent() {
         let fixture = makeFixture()
 
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
-        fixture.scheduler.advance(by: 0.12)
-
-        #expect(fixture.model.presentation == .expanded)
-        #expect(fixture.haptics.requestCount == 1)
-    }
-
-    @Test
-    func duplicatePointerEventsDoNotDuplicatePendingActivationOrHaptic() {
-        let fixture = makeFixture()
-
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
+        for _ in 0..<3 {
+            fixture.coordinator.pointerMoved(
+                to: insideCompact,
+                layout: layout,
+                currentPresentation: .compact
+            )
+        }
 
         #expect(fixture.scheduler.pendingCount == 1)
 
         fixture.scheduler.advance(by: 0.12)
 
-        #expect(fixture.model.presentation == .expanded)
-        #expect(fixture.haptics.requestCount == 1)
+        #expect(fixture.intents == [
+            NotchInteractionIntent(
+                desiredPresentation: .expanded,
+                cause: .deliberateHover,
+                hapticEligible: true
+            )
+        ])
     }
 
     @Test
-    func cancelledActivationCannotFireFromStaleCallback() {
+    func cancelledActivationCannotEmitFromStaleCallback() {
         let fixture = makeFixture()
 
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
-        fixture.coordinator.pointerMoved(to: outside, layout: layout)
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact
+        )
+        fixture.coordinator.pointerMoved(
+            to: outside,
+            layout: layout,
+            currentPresentation: .compact
+        )
         fixture.scheduler.advance(by: 1, invokeCancelled: true)
 
-        #expect(fixture.model.presentation == .compact)
-        #expect(fixture.haptics.requestCount == 0)
+        #expect(fixture.intents.isEmpty)
     }
 
     @Test
-    func reentryStartsFreshDwell() {
+    func reentryStartsFreshFullDwell() {
         let fixture = makeFixture()
 
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact
+        )
         fixture.scheduler.advance(by: 0.08)
-        fixture.coordinator.pointerMoved(to: outside, layout: layout)
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
+        fixture.coordinator.pointerMoved(
+            to: outside,
+            layout: layout,
+            currentPresentation: .compact
+        )
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact
+        )
 
         fixture.scheduler.advance(by: 0.05)
-        #expect(fixture.model.presentation == .compact)
+        #expect(fixture.intents.isEmpty)
 
         fixture.scheduler.advance(by: 0.07)
-        #expect(fixture.model.presentation == .expanded)
-        #expect(fixture.haptics.requestCount == 1)
+
+        #expect(fixture.intents == [
+            NotchInteractionIntent(
+                desiredPresentation: .expanded,
+                cause: .deliberateHover,
+                hapticEligible: true
+            )
+        ])
     }
 
     @Test
-    func expandedRetentionDoesNotRetriggerHaptic() {
+    func expandedRetentionEmitsNoIntent() {
         let fixture = makeFixture()
 
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
-        fixture.scheduler.advance(by: 0.12)
-        fixture.coordinator.pointerMoved(to: insideExpanded, layout: layout)
-        fixture.coordinator.pointerMoved(to: insideExpanded, layout: layout)
+        fixture.coordinator.pointerMoved(
+            to: insideExpanded,
+            layout: layout,
+            currentPresentation: .expanded
+        )
+        fixture.coordinator.pointerMoved(
+            to: insideExpanded,
+            layout: layout,
+            currentPresentation: .expanded
+        )
 
-        #expect(fixture.model.presentation == .expanded)
-        #expect(fixture.haptics.requestCount == 1)
+        #expect(fixture.intents.isEmpty)
         #expect(fixture.scheduler.pendingCount == 0)
     }
 
     @Test
-    func collapseThenNewDeliberateHoverCanHapticAgain() {
+    func expandedPointerExitEmitsNonHapticCollapseIntent() {
         let fixture = makeFixture()
 
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
-        fixture.scheduler.advance(by: 0.12)
-        fixture.coordinator.pointerMoved(to: outside, layout: layout)
-        #expect(fixture.model.presentation == .compact)
+        fixture.coordinator.pointerMoved(
+            to: outside,
+            layout: layout,
+            currentPresentation: .expanded
+        )
 
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
-        fixture.scheduler.advance(by: 0.12)
-
-        #expect(fixture.model.presentation == .expanded)
-        #expect(fixture.haptics.requestCount == 2)
-    }
-
-    @Test
-    func programmaticExpansionDoesNotRequestHaptic() {
-        let fixture = makeFixture()
-
-        fixture.model.toggle()
-
-        #expect(fixture.model.presentation == .expanded)
-        #expect(fixture.haptics.requestCount == 0)
+        #expect(fixture.intents == [
+            NotchInteractionIntent(
+                desiredPresentation: .compact,
+                cause: .pointerExit,
+                hapticEligible: false
+            )
+        ])
     }
 
     @Test
     func invalidationCancelsPendingActivationAndStaleCallback() {
         let fixture = makeFixture()
 
-        fixture.coordinator.pointerMoved(to: insideCompact, layout: layout)
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact
+        )
         #expect(fixture.scheduler.pendingCount == 1)
 
         fixture.coordinator.invalidate()
@@ -166,24 +209,22 @@ struct NotchInteractionCoordinatorTests {
 
         fixture.scheduler.advance(by: 1, invokeCancelled: true)
 
-        #expect(fixture.model.presentation == .compact)
-        #expect(fixture.haptics.requestCount == 0)
+        #expect(fixture.intents.isEmpty)
     }
 
     private func makeFixture() -> Fixture {
-        let model = NotchPanelModel()
         let scheduler = ManualActivationScheduler()
-        let haptics = CountingHapticPerformer()
+        let recorder = IntentRecorder()
         let coordinator = NotchInteractionCoordinator(
-            model: model,
             scheduler: scheduler,
-            haptics: haptics,
-            dwellSeconds: 0.12
+            dwellSeconds: 0.12,
+            emitIntent: { intent in
+                recorder.intents.append(intent)
+            }
         )
         return Fixture(
-            model: model,
             scheduler: scheduler,
-            haptics: haptics,
+            recorder: recorder,
             coordinator: coordinator
         )
     }
@@ -191,19 +232,18 @@ struct NotchInteractionCoordinatorTests {
 
 @MainActor
 private struct Fixture {
-    let model: NotchPanelModel
     let scheduler: ManualActivationScheduler
-    let haptics: CountingHapticPerformer
+    let recorder: IntentRecorder
     let coordinator: NotchInteractionCoordinator
+
+    var intents: [NotchInteractionIntent] {
+        recorder.intents
+    }
 }
 
 @MainActor
-private final class CountingHapticPerformer: NotchHapticPerforming {
-    private(set) var requestCount = 0
-
-    func performExpansionHaptic() {
-        requestCount += 1
-    }
+private final class IntentRecorder {
+    var intents: [NotchInteractionIntent] = []
 }
 
 @MainActor
