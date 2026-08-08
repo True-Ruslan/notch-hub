@@ -150,7 +150,7 @@ The source candidate therefore moved outer clipping ownership to AppKit:
 - the AppKit mask is reasserted on every presentation transition;
 - the hosting view explicitly autoresizes with both panel width and height.
 
-The next target-Mac retest then exposed a second, separate regression: **only the white compact indicator was visible over wallpaper and the intended black compact pлашка was absent**. Root-cause tracing showed this was not a screenshot artifact: `NotchLayout.compactBackgroundOpacity` explicitly returned `0` whenever a hardware notch was detected. That transparency had been introduced as an attempted contour workaround and was incompatible with the intended product UI.
+The next target-Mac retest then exposed a second, separate regression: **only the white compact indicator was visible over wallpaper and the intended black compact panel was absent**. Root-cause tracing showed this was not a screenshot artifact: `NotchLayout.compactBackgroundOpacity` explicitly returned `0` whenever a hardware notch was detected. That transparency had been introduced as an attempted contour workaround and was incompatible with the intended product UI.
 
 The current source fixes the two concerns independently: compact rendering is opaque black, while AppKit owns and preserves the rounded mask.
 
@@ -190,7 +190,7 @@ Before this PR can be accepted/merged, rerun on the target MacBook/macOS 26.6:
 - `NH-HOVER-DELAY-002` — deliberate hover still opens reliably with 120 ms dwell + 4 pt inset;
 - `NH-HAPTIC-001` — one `.levelChange` haptic is present and its feel is acceptable;
 - `NH-HAPTIC-002` — quick/cancelled/retention/collapse produce no physical haptic;
-- `NH-VISUAL-001` — compact mode visibly shows the intended **black rounded pлашка**, aligned with the physical notch, with the white point on black rather than floating over wallpaper and no square-corner leak;
+- `NH-VISUAL-001` — compact mode visibly shows the intended **black rounded panel**, aligned with the physical notch, with the white point on black rather than floating over wallpaper and no square-corner leak;
 - `NH-VISUAL-002` — expanded controls remain visible below the physical notch while the pointer is holding the panel open;
 - `NH-VISUAL-003` — expanded panel keeps its rounded chrome after at least 20 repeated open/collapse cycles, with no transition to square corners.
 
