@@ -117,7 +117,7 @@ struct NotchPanelTransitionCoordinatorTests {
     func nonHapticProgrammaticExpansionNeverRequestsHaptic() {
         let fixture = makeFixture()
 
-        fixture.coordinator.accept(.programmaticExpansion, layout: layout)
+        fixture.coordinator.requestProgrammaticExpansion(layout: layout)
 
         #expect(fixture.driver.requests.count == 1)
         #expect(fixture.haptics.requestCount == 0)
