@@ -15,6 +15,16 @@ struct NotchPanelOwnershipTests {
     }
 
     @Test
+    func transitionOutputsStayAliveForControllerLifetime() throws {
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(!controllerSource.contains("[weak animationDriver]"))
+        #expect(!controllerSource.contains("[weak haptics]"))
+    }
+
+    @Test
     func hostingFactoryOwnsOnlyInitialChromeSetup() throws {
         let factorySource = try sourceText(
             relativePath: "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift"
