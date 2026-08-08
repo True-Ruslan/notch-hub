@@ -21,6 +21,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - One-shot cancellable main-queue dwell scheduling with a named initial `120 ms` candidate and no polling/repeating timer.
 - Public AppKit expansion haptic through `NSHapticFeedbackManager.defaultPerformer`, isolated behind a deterministic test seam.
 - Explicit pointer-monitor ownership/lifecycle tests proving exactly one local and one global `.mouseMoved` registration and idempotent teardown.
+- Stable M1 hardware acceptance IDs `NH-VISUAL-001/002` for preserving the native rounded physical-notch silhouette and keeping expanded primary controls visible below the notch during active hover.
 
 ### Changed
 
@@ -35,8 +36,26 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - M1 compact-to-expanded pointer activation now routes through one cancellable dwell instead of expanding immediately; collapse/retention remains governed by the accepted deterministic screen-space pointer policy.
 - Pointer event monitors now have explicit lifecycle ownership and removal on controller invalidation. The narrow global `.mouseMoved` fallback is intentionally retained until a target-Mac `NSTrackingArea`/window-local experiment proves equal-or-better correctness and resource behavior.
 - Initial panel `show()` pointer synchronization is explicitly non-activating, preventing an unintended dwell/haptic merely because the pointer already overlaps the notch when NotchHub launches.
+- Compact activation now uses a **4 pt inward inset** candidate instead of extending beyond the physical notch edge, requiring slightly more deliberate pointer depth while leaving expanded retention unchanged.
+- The single public AppKit expansion haptic candidate changed from `.generic` to `.levelChange` after target-Mac feedback requested a slightly more noticeable tactile response; exactly one feedback request remains the invariant.
+- Panel-frame presentation changes are synchronized immediately with SwiftUI state in the revised interaction candidate; polished frame animation and Reduced Motion behavior remain a later dedicated M1 hardening step.
 - PR #10 CI initially caught an executable-size regression of `254,000 B` against the unchanged 15% P0 budget; implementation metadata was reduced rather than widening the budget. CI #158 then passed at executable `251,856 B`, app `254,853 B`, and DMG `83,072 B`.
 - Independent review caught the setup-time activation path; RED CI #165 reproduced it and GREEN CI #167 passed **25/25 Swift tests** plus all security/performance/package gates with executable `251,872 B`, app `254,869 B`, and DMG `83,036 B`.
+
+### Fixed
+
+- Hardware-notch compact mode no longer paints black into the visible rounded-corner cutouts around the physical notch, avoiding the square-notch appearance reported on macOS 26.6; non-notch fallback remains opaque.
+- Expanded primary controls now receive an explicit hardware-notch safe top inset and no longer depend on an independently animated AppKit frame, addressing the hardware symptom where a large black panel appeared while controls were hidden under the notch until pointer exit/collapse.
+
+### Testing
+
+- Target-Mac M1 hardware feedback exposed the two visual regressions above despite the original delayed-hover/haptic checks otherwise passing; the candidate was therefore not accepted.
+- RED CI #172 established the hardware-notch visual contract before implementation.
+- CI #177, #181, and #187 rejected successive visual implementations that exceeded the existing P0 size budget; the budget was never widened and the implementation was simplified instead.
+- CI #188 passed the complete pipeline with the revised visual architecture at executable `251,856 B`, app `254,853 B`, and DMG `83,143 B`.
+- RED CI #189 reproduced edge-grazing activation at only 2 pt inside the compact physical boundary.
+- GREEN CI #191 on `ab782262c16163742bb115671f7908255fc08e4a` passed **27/27 Swift tests** and all release/security/performance/package gates with executable `251,856 B`, app `254,853 B`, and DMG `83,117 B`.
+- Revised target-Mac acceptance remains pending for `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and new `NH-VISUAL-001/002`.
 
 ## [0.1.0] - 2026-08-07
 
