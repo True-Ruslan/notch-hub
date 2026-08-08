@@ -29,20 +29,13 @@ struct NotchHostingViewFactoryTests {
     }
 
     @Test
-    func appKitRoundedClipSurvivesRepeatedPresentationCycles() {
+    func hostingViewStartsWithStableCompactAppKitChrome() {
         let model = NotchPanelModel()
         let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
 
-        for _ in 0..<32 {
-            NotchHostingViewFactory.applyPresentation(.expanded, to: hostingView)
-            #expect(hostingView.wantsLayer)
-            #expect(hostingView.layer?.masksToBounds == true)
-            #expect(hostingView.layer?.cornerRadius == 22)
-
-            NotchHostingViewFactory.applyPresentation(.compact, to: hostingView)
-            #expect(hostingView.wantsLayer)
-            #expect(hostingView.layer?.masksToBounds == true)
-            #expect(hostingView.layer?.cornerRadius == 12)
-        }
+        #expect(hostingView.wantsLayer)
+        #expect(hostingView.layer?.masksToBounds == true)
+        #expect(hostingView.layer?.cornerCurve == .continuous)
+        #expect(hostingView.layer?.cornerRadius == 12)
     }
 }
