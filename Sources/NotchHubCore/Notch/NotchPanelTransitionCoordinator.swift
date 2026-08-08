@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-enum NotchPanelTransitionPhase: Equatable, Sendable {
+enum NotchPanelTransitionPhase: Equatable {
     case compact
     case expanding
     case expanded
