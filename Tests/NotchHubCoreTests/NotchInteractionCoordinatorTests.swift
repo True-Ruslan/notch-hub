@@ -67,7 +67,8 @@ struct NotchInteractionCoordinatorTests {
 
         fixture.scheduler.advance(by: 0.01)
 
-        #expect(fixture.intents == [.deliberateExpansion])
+        #expect(fixture.intents.count == 1)
+        #expect(fixture.intents[0].isDeliberateExpansion)
     }
 
     @Test
@@ -86,7 +87,8 @@ struct NotchInteractionCoordinatorTests {
 
         fixture.scheduler.advance(by: 0.12)
 
-        #expect(fixture.intents == [.deliberateExpansion])
+        #expect(fixture.intents.count == 1)
+        #expect(fixture.intents[0].isDeliberateExpansion)
     }
 
     @Test
@@ -134,7 +136,8 @@ struct NotchInteractionCoordinatorTests {
 
         fixture.scheduler.advance(by: 0.07)
 
-        #expect(fixture.intents == [.deliberateExpansion])
+        #expect(fixture.intents.count == 1)
+        #expect(fixture.intents[0].isDeliberateExpansion)
     }
 
     @Test
@@ -166,7 +169,8 @@ struct NotchInteractionCoordinatorTests {
             currentPresentation: .expanded
         )
 
-        #expect(fixture.intents == [.pointerExitCollapse])
+        #expect(fixture.intents.count == 1)
+        #expect(fixture.intents[0].isPointerExitCollapse)
     }
 
     @Test
@@ -203,6 +207,24 @@ struct NotchInteractionCoordinatorTests {
             recorder: recorder,
             coordinator: coordinator
         )
+    }
+}
+
+private extension NotchInteractionIntent {
+    var isDeliberateExpansion: Bool {
+        if case .deliberateExpansion = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    var isPointerExitCollapse: Bool {
+        if case .pointerExitCollapse = self {
+            true
+        } else {
+            false
+        }
     }
 }
 
