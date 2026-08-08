@@ -135,6 +135,31 @@ struct ProbeProcessTests {
         #expect(launcher.launches[0].executableURL.path == "/usr/bin/perl")
         #expect(Array(launcher.launches[0].arguments.suffix(2)) == ["send", "4"])
     }
+
+    @Test
+    func selfTestUsesOnlyFixedAdapterTestCommand() throws {
+        let launcher = FakeProbeProcessLauncher()
+        launcher.nextTerminationStatus = 0
+        let controller = ProbeProcessController(launcher: launcher)
+
+        let status = try controller.runSelfTest(
+            scriptURL: scriptURL,
+            frameworkURL: frameworkURL,
+            testClientURL: testClientURL
+        )
+
+        #expect(status == 0)
+        #expect(launcher.launches.count == 1)
+        #expect(launcher.launches[0].executableURL.path == "/usr/bin/perl")
+        #expect(
+            launcher.launches[0].arguments == [
+                scriptURL.path,
+                frameworkURL.path,
+                testClientURL.path,
+                "test"
+            ]
+        )
+    }
 }
 
 @MainActor
