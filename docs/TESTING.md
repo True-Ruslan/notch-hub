@@ -68,6 +68,8 @@ Tests should:
 - avoid arbitrary sleeps;
 - include boundary/error/denied/stale-callback cases;
 - reproduce reported deterministic regressions before fixes where practical;
+- test exact physical-coordinate boundaries when hardware behavior depends on an inclusive/exclusive edge;
+- never substitute a nearby interior point for a named physical-edge scenario;
 - never fabricate RED when behavior is already correctly testable;
 - use injected schedulers/output closures around OS boundaries;
 - intentionally invoke cancelled/stale callbacks when race safety is part of the contract;
@@ -94,9 +96,11 @@ The suite proves:
 - pointer exit emits non-haptic collapse intent;
 - invalidation cancels pending work;
 - compact activation has **4 pt inward protection on left/right/bottom and no top inset**;
-- a point 2 pt inside the bottom edge is rejected and 4 pt is accepted;
-- a point 1 pt below the top screen edge at notch center is accepted;
-- points only 2 pt inside left/right remain rejected even at the top edge.
+- compact activation uses explicit inclusive directional comparisons rather than `CGRect.contains` half-open maximum-edge semantics;
+- a point 2 pt inside the bottom edge is rejected and exactly 4 pt is accepted;
+- a point at exactly `compactFrame.maxY` at notch center is accepted;
+- points only 2 pt inside left/right remain rejected at the exact top edge;
+- points exactly 4 pt inside left/right are accepted at the exact top edge.
 
 ### Transition lifecycle
 
@@ -152,9 +156,9 @@ The implementation remains event-driven: one pending dwell work item at most; no
 | `NH-HOVER-001` | Deliberate compact hover | One expansion; no oscillation | **PASS**; lifecycle automated |
 | `NH-HOVER-002` | Move within expanded retention | Remains expanded | **PASS**; policy automated |
 | `NH-HOVER-003` | Move outside retention | Collapse once and stay compact | **PASS**; state machine automated |
-| `NH-HOVER-DELAY-001` | Quick transit through/near notch toward second display | Stays compact; zero haptic | **PASS on #319**, targeted regression required after top-edge refinement |
+| `NH-HOVER-DELAY-001` | Quick transit through/near notch toward second display | Stays compact; zero haptic | **PASS on #319**, targeted regression required after exact-edge fix |
 | `NH-HOVER-DELAY-002` | Deliberate hover | Opens once after 120 ms | **PASS; 120 ms accepted** |
-| `NH-HOVER-TOP-001` | Built-in display, pointer deliberately held against top screen edge over notch | Opens once after 120 ms with one haptic; no oscillation | **PENDING targeted physical check**; asymmetric geometry automated |
+| `NH-HOVER-TOP-001` | Built-in display, pointer deliberately held at exact top screen edge over notch | Opens once after 120 ms with one haptic; no oscillation | **FAIL on #325 artifact; corrective #326→#327 automated fix awaiting exact-head physical retest** |
 | `NH-HAPTIC-001` | Successful deliberate hover | Exactly one acceptable tactile event | **PASS; `.levelChange` accepted** |
 | `NH-HAPTIC-002` | Cancelled transit/retention/collapse | No haptic | **PASS** |
 | `NH-VISUAL-001` | Compact physical-notch state | Black rounded surface; no square leakage | **PASS** |
@@ -184,23 +188,35 @@ Physical result: every broad interaction, visual, haptic, animation/reversal, ra
 
 The only follow-up requested from this successful cycle was deliberate activation at the very top screen edge when not using a second-display transit.
 
-### Top-edge refinement TDD
+### Top-edge refinement and physical failure
 
 Requirement: keep 4 pt protection on left/right/bottom, remove top inset entirely.
 
-- RED commit `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 ran **52 tests** and failed only `compactPointerAtTopScreenEdgeActivatesWithoutTopInset`; left/right/bottom boundary tests and every previous behavior stayed green.
-- GREEN source `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**, macOS 26 compatibility, release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG checks and the unchanged P0 size budget.
-- CI #321 sizes: executable `250,000 B`, app `252,997 B`, DMG `84,468 B`.
+Initial cycle:
 
-After documentation, a fresh exact-head CI artifact is required. Only two physical checks remain:
+- RED `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 established the asymmetric geometry;
+- GREEN `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**;
+- clean documented candidate `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed all automated gates and produced artifact `9022296152`;
+- target-Mac `NH-HOVER-TOP-001` on #325 **FAILED**: the cursor held against the physical top edge did not open the panel.
 
-1. `NH-HOVER-TOP-001` — deliberate top-edge activation works.
+The failure exposed a dishonest boundary approximation in the automated test: it used `compactFrame.maxY - 1`, while the real scenario is `compactFrame.maxY`. Production then passed that point to `CGRect.contains`, whose maximum X/Y boundaries are excluded. Therefore the test was green without covering the physical edge it claimed to represent.
+
+Corrective TDD:
+
+- RED `3d0d40b5426cb8a8fe0bd19393688a68247637b0` / CI #326 changed the scenario to exact `y == compactFrame.maxY` and added exact accepted 4 pt left/right boundaries;
+- #326 ran **54 tests** and failed only the three new exact-boundary assertions; all existing behavior remained green;
+- GREEN `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive comparisons and passed **54/54 Swift tests** plus all release/security/performance/package gates and the unchanged P0 size budget;
+- #327 sizes: executable `250,320 B`, app `253,317 B`, DMG `84,679 B`.
+
+After the corrective documentation commit, a fresh exact-head CI artifact is required. Only two physical checks remain:
+
+1. `NH-HOVER-TOP-001` — exact top-edge activation works.
 2. `NH-HOVER-DELAY-001` — quick cross-display transit still does not open/haptic.
 
 If both pass, PR #10 may move from Draft toward protected squash integration without re-running the already accepted broad hardware matrix.
 
 ## Historical TDD highlights
 
-Earlier RED/GREEN evidence remains in Git history and `CHANGELOG.md`: initial interaction seams (#147/#148/#150), size-gate correction (#157/#158), setup synchronization (#165/#167), visual regressions (#172/#189/#196/#204), transition authority and reversal hardening (#225/#231/#273/#279/#283/#292), size optimization (#295/#305/#308), and pointer hot-path optimization (#309/#310).
+Earlier RED/GREEN evidence remains in Git history and `CHANGELOG.md`: initial interaction seams (#147/#148/#150), size-gate correction (#157/#158), setup synchronization (#165/#167), visual regressions (#172/#189/#196/#204), transition authority and reversal hardening (#225/#231/#273/#279/#283/#292), size optimization (#295/#305/#308), pointer hot-path optimization (#309/#310), and the exact-edge correction (#326/#327).
 
 The invariant throughout is unchanged: hardware success does not replace deterministic tests, and green CI does not claim physical behavior it cannot observe.
