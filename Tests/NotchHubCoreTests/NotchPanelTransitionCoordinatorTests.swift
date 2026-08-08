@@ -59,7 +59,7 @@ struct NotchPanelTransitionCoordinatorTests {
         fixture.coordinator.accept(.pointerExitCollapse, layout: layout)
 
         #expect(fixture.driver.requests.count == 2)
-        #expect(fixture.driver.requests[0].handle.cancelCount == 1)
+        #expect(fixture.driver.cancelCount == 1)
         #expect(fixture.coordinator.phase == .collapsing)
         #expect(fixture.model.contentPresentation == .expanded)
 
@@ -83,7 +83,7 @@ struct NotchPanelTransitionCoordinatorTests {
         fixture.coordinator.accept(.deliberateExpansion, layout: layout)
 
         #expect(fixture.driver.requests.count == 2)
-        #expect(fixture.driver.requests[0].handle.cancelCount == 1)
+        #expect(fixture.driver.cancelCount == 1)
         #expect(fixture.coordinator.phase == .expanding)
         #expect(fixture.coordinator.desiredPresentation == .expanded)
         #expect(fixture.haptics.requestCount == 1)
@@ -123,13 +123,13 @@ struct NotchPanelTransitionCoordinatorTests {
     }
 
     @Test
-    func invalidationDuringExpansionCancelsHandleAndMakesCompletionHarmless() {
+    func invalidationDuringExpansionCancelsDriverAndMakesCompletionHarmless() {
         let fixture = makeFixture()
 
         fixture.coordinator.accept(.deliberateExpansion, layout: layout)
         fixture.coordinator.invalidate()
 
-        #expect(fixture.driver.requests[0].handle.cancelCount == 1)
+        #expect(fixture.driver.cancelCount == 1)
         #expect(fixture.coordinator.phase == .expanding)
         #expect(fixture.model.contentPresentation == .expanded)
 
@@ -140,13 +140,13 @@ struct NotchPanelTransitionCoordinatorTests {
     }
 
     @Test
-    func invalidationDuringCollapseCancelsHandleAndMakesCompletionHarmless() {
+    func invalidationDuringCollapseCancelsDriverAndMakesCompletionHarmless() {
         let fixture = makeFixture(initialPresentation: .expanded)
 
         fixture.coordinator.accept(.pointerExitCollapse, layout: layout)
         fixture.coordinator.invalidate()
 
-        #expect(fixture.driver.requests[0].handle.cancelCount == 1)
+        #expect(fixture.driver.cancelCount == 1)
         #expect(fixture.coordinator.phase == .collapsing)
         #expect(fixture.model.contentPresentation == .expanded)
 
@@ -164,7 +164,7 @@ struct NotchPanelTransitionCoordinatorTests {
         fixture.coordinator.invalidate()
         fixture.coordinator.invalidate()
 
-        #expect(fixture.driver.requests[0].handle.cancelCount == 1)
+        #expect(fixture.driver.cancelCount == 1)
     }
 
     private func makeFixture(
@@ -242,41 +242,34 @@ private final class TransitionCountingHapticPerformer: NotchHapticPerforming {
 
 @MainActor
 private final class ManualPanelAnimationDriver: NotchPanelAnimationDriving {
-    final class Handle: NotchPanelAnimationHandle {
-        private(set) var cancelCount = 0
-
-        func cancel() {
-            cancelCount += 1
-        }
-    }
-
     struct Request {
         let frame: CGRect
         let cornerRadius: CGFloat
         let policy: NotchAnimationPolicy
         let completion: @MainActor () -> Void
-        let handle: Handle
     }
 
     private(set) var requests: [Request] = []
+    private(set) var cancelCount = 0
 
     func animate(
         frame: CGRect,
         cornerRadius: CGFloat,
         policy: NotchAnimationPolicy,
         completion: @escaping @MainActor () -> Void
-    ) -> any NotchPanelAnimationHandle {
-        let handle = Handle()
+    ) {
         requests.append(
             Request(
                 frame: frame,
                 cornerRadius: cornerRadius,
                 policy: policy,
-                completion: completion,
-                handle: handle
+                completion: completion
             )
         )
-        return handle
+    }
+
+    func cancel() {
+        cancelCount += 1
     }
 
     func complete(index: Int) {
