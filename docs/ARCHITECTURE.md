@@ -20,6 +20,7 @@ The project prioritizes:
 - Swift 6
 - SwiftUI for view composition
 - AppKit for window/panel behavior and macOS integration
+- Core Animation only for system/compositor-backed visual transitions
 - Swift Package Manager for builds and tests
 - Python standard-library policy tooling for deterministic release/performance development checks
 - GitHub Actions for CI, macOS 26 compatibility, security gates, packaging, and release publication
@@ -32,58 +33,147 @@ Primary physical acceptance target: macOS 26.6.
 ```text
 NotchHubApp
   -> AppDelegate
-      -> NotchPanelController              # thin AppKit/event wiring
-          -> ScreenGeometryInput           # NSScreen adapter
-          -> NotchGeometry                 # pure geometry policy
-          -> NotchPointerMonitor           # lifecycle-owned mouseMoved delivery
-              -> NotchEventMonitorBackend  # current narrow AppKit local/global boundary
-          -> NotchInteractionCoordinator   # dwell/cancellation/haptic state machine
-              -> NotchPointerPolicy        # pure activation/retention policy
-              -> NotchActivationScheduling # one-shot time boundary
-              -> NotchHapticPerforming     # haptic output boundary
-          -> NotchPanelModel               # explicit presentation state
-          -> NotchRootView                 # SwiftUI rendering only
+      -> NotchPanelController                 # thin AppKit/event composition root
+          -> ScreenGeometryInput              # NSScreen adapter
+          -> NotchGeometry                    # pure geometry policy
+          -> NotchPointerMonitor              # lifecycle-owned local/global mouseMoved delivery
+          -> NotchInteractionCoordinator      # dwell/cancellation; emits interaction intents only
+              -> NotchPointerPolicy           # pure activation/retention policy
+              -> one-shot DispatchWorkItem    # injected in tests; no polling/repeating timer
+          -> NotchPanelTransitionCoordinator  # sole presentation-transition authority
+              -> NotchPanelModel              # SwiftUI content presentation only
+              -> animateNotchPanel(...)        # NSAnimationContext + Core Animation boundary
+              -> cancelNotchPanelAnimation(...)
+              -> AppKitNotchHapticPerformer   # one public AppKit feedback request when eligible
+          -> NotchRootView                    # SwiftUI rendering only
 ```
 
-Hardware/interaction decisions are intentionally moved out of view callbacks. `NotchGeometry` and `NotchPointerPolicy` are deterministic and unit-testable without a physical MacBook notch. M1 extends the same principle to time, haptic output, and event-monitor lifecycle: `NotchInteractionCoordinator` is independent from `NSPanel`/`NSEvent`, tests inject a manual scheduler and counting haptic performer, and AppKit remains thin orchestration.
+Hardware/interaction decisions are intentionally kept out of SwiftUI hover callbacks. `NotchGeometry`, `NotchPointerPolicy`, the interaction coordinator, and the transition coordinator expose deterministic state decisions that unit tests can drive without a physical notch.
 
-The first hardware regression proved why this boundary matters: resizing an `NSPanel` directly from raw SwiftUI `onHover` feedback created an oscillation loop. The corrected controller reads pointer location at the AppKit boundary and delegates the state decision to pure screen-space policy. `NSHostingView.sizingOptions = []` keeps actual window geometry owned by AppKit rather than SwiftUI content sizing.
+The original hardware regression demonstrated why ownership matters: resizing an `NSPanel` directly from raw SwiftUI `onHover` feedback created an oscillation loop. M1 therefore separates three concerns explicitly:
+
+1. pointer/time input produces an intent;
+2. one transition coordinator decides lifecycle/content/haptic semantics;
+3. a narrow AppKit animation boundary applies the requested frame/chrome transition.
+
+`NSHostingView.sizingOptions = []` keeps actual window geometry owned by AppKit rather than SwiftUI content sizing.
 
 ## Window and pointer strategy
 
 The UI is hosted in a borderless, non-activating `NSPanel`. It floats above normal windows, can join Spaces, can be a fullscreen auxiliary window, and does not place NotchHub in the Dock (`LSUIElement` + accessory activation policy).
 
-The panel has explicit `compact` and `expanded` states. Global observation remains deliberately restricted to `mouseMoved`, with no persisted pointer history and no keyboard/button/scroll/drag monitoring.
+Global observation remains deliberately restricted to `.mouseMoved`, with no persisted pointer history and no keyboard/button/scroll/drag monitoring.
 
-M1 now gives those event monitors explicit ownership through `NotchPointerMonitor`: one local and one global `.mouseMoved` token are installed at most once and removed idempotently on invalidation. This is lifecycle hardening, not an expansion of input authority.
+`NotchPointerMonitor` owns exactly one local and one global `.mouseMoved` token, installs them at most once, and removes them idempotently. Its production AppKit callbacks are delivered on the main thread and are bridged synchronously through `MainActor.assumeIsolated`; the runtime no longer creates a `Task` for each mouse-move event. This is a hot-path allocation reduction, not an expansion of input authority.
 
-The global observer is still a candidate for removal because P0 measured materially higher active-hover CPU than untouched idle. A reliable `NSTrackingArea`/window-local design is preferred only if target-Mac evidence proves all accepted hover semantics, cross-display transit, and resource behavior remain equal or better. Correctness is not traded away merely to remove the global monitor; `CGEventTap`, Accessibility, Input Monitoring, or broader event capture are not acceptable substitutes.
+The global observer is still a candidate for removal because P0 measured materially higher active-hover CPU than untouched idle. A reliable `NSTrackingArea` / window-local design is preferred only if target-Mac evidence proves accepted hover semantics, cross-display transit, and resource behavior remain equal or better. Correctness is not traded away merely to remove the global monitor; `CGEventTap`, Accessibility, Input Monitoring, or broader event capture are not acceptable substitutes.
 
-## Delayed hover and haptic architecture
+## Delayed hover intent architecture
 
-Compact → expanded pointer activation passes through `NotchInteractionCoordinator` instead of changing presentation immediately.
+Compact -> expanded pointer activation first passes through `NotchInteractionCoordinator`.
 
-The coordinator owns exactly one optional pending activation and a monotonically changing generation value. Its rules are:
+The interaction coordinator owns exactly one optional pending activation and a monotonically changing generation. Its rules are:
 
 - pointer entry into the compact activation region schedules one dwell if none is pending;
-- duplicate movement in that region does not schedule additional work;
+- duplicate movement does not schedule additional work;
 - exit before completion cancels immediately;
-- cancellation clears the currently accepted generation, so a stale callback cannot commit a later transition even if it is invoked by a test/faulty scheduler after cancellation;
+- cancellation invalidates the generation so a stale callback cannot emit a later intent;
 - re-entry receives a fresh generation and full dwell;
-- expanded retention/collapse bypasses activation dwell and never retriggers haptic;
+- expanded retention/collapse bypasses activation dwell;
+- setup/current-pointer synchronization is non-activating;
 - invalidation cancels pending work.
 
-The initial dwell candidate is a named `120 ms` value. Production timing uses a single cancellable `DispatchWorkItem` scheduled with `DispatchQueue.main.asyncAfter`. There is no repeating `Timer`, polling loop, sleep-driven refresh, or periodic idle work. Tests use a deterministic manual scheduler and do not wait on wall-clock sleeps.
+The current timing candidate is `120 ms`; compact activation also uses a `4 pt` inward inset candidate. Production timing is one cancellable `DispatchWorkItem` scheduled with `DispatchQueue.main.asyncAfter`. There is no repeating `Timer`, polling loop, sleep-driven refresh, or periodic idle work.
 
-Haptic output is requested only after the coordinator validates a still-current pointer-initiated dwell and the model actually changes from compact to expanded. Production uses the public API `NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)`. macOS is allowed to suppress physical feedback according to hardware/current touch state/user settings; NotchHub does not retry or synthesize alternative feedback. Programmatic expansion is outside the coordinator's success path and therefore emits no haptic.
+The interaction coordinator does **not** mutate the model, animate the panel, or perform haptics. It emits a small interaction intent to the transition coordinator. This prevents multiple owners from independently committing presentation state.
 
-The `120 ms` value remains provisional until `NH-HOVER-DELAY-001/002` and `NH-HAPTIC-001/002` are accepted on the target MacBook/macOS 26.6.
+## Presentation transition state machine
+
+`NotchPanelTransitionCoordinator` is the sole authority for presentation transitions.
+
+It separates:
+
+- **desired presentation**: where the interaction currently wants the panel to end;
+- **transition phase**: `compact`, `expanding`, `expanded`, or `collapsing`;
+- **content presentation**: what SwiftUI is currently allowed to render.
+
+The separation is deliberate. Expanded SwiftUI content remains staged while collapse is animating and switches to compact only when the matching collapse completion wins. This prevents controls from disappearing before the backing window has visually reached the compact endpoint.
+
+Every started transition advances a generation. Cancellation/reversal invalidates the previous generation. A completion may settle state only when its generation is still current, so an old expansion/collapse callback cannot overwrite a newer desired state.
+
+Reversal therefore follows this rule:
+
+1. cancel the current AppKit/Core Animation output;
+2. invalidate its generation;
+3. preserve the current visible chrome state where the system exposes it;
+4. start the new desired transition;
+5. ignore any later stale completion from the previous generation.
+
+Tests drive stale callbacks deliberately, including a 10,000-reversal stress sequence, so cancellation correctness is not inferred merely from a cooperative fake driver.
+
+## AppKit animation boundary
+
+NotchHub deliberately uses system animation facilities rather than a custom frame loop.
+
+For a normal transition:
+
+- `NSAnimationContext` animates `NSPanel` frame changes through `panel.animator().setFrame(...)`;
+- a `CABasicAnimation` animates `cornerRadius` on the existing layer-backed hosting view;
+- both use the same standard-duration candidate (`0.20 s`) and `.easeInEaseOut` timing;
+- the model-layer corner radius is set to the target while the presentation layer supplies the current visible starting radius.
+
+On cancellation, `cancelNotchPanelAnimation` reads the current presentation-layer radius, writes that visible value back to the model layer with implicit actions disabled, and only then removes the old corner animation. This prevents the rounded chrome from jumping to an obsolete target before a reversal begins.
+
+For Reduced Motion or any zero-duration policy, the exact frame/radius endpoint is applied synchronously and completion runs once without installing a visible animation.
+
+The runtime does not use `CADisplayLink`, `CVDisplayLink`, repeating timers, sleeps, custom interpolation loops, private window APIs, or synthetic input for transition animation.
+
+## Reduced Motion
+
+The standard animation duration policy is intentionally tiny and deterministic:
+
+- normal motion: `0.20 s` candidate;
+- Reduce Motion: `0 s`.
+
+`NotchPanelController` observes `NSWorkspace.accessibilityDisplayOptionsDidChangeNotification` through the selector-based `NotificationCenter` API. It caches only the current boolean to suppress duplicate notifications. On an actual value change, the controller asks `NotchPanelTransitionCoordinator` to retarget the currently desired presentation.
+
+If Reduce Motion becomes enabled during an in-flight transition, the transition is cancelled/restarted to the same desired endpoint using zero duration. This policy retarget must not emit a second haptic. Observer teardown is explicit during controller invalidation.
+
+This is a public display accessibility preference and does not require Accessibility permission, Input Monitoring, or an additional entitlement.
+
+## Haptic architecture
+
+The transition coordinator, not the pointer monitor or view, decides haptic eligibility.
+
+Exactly one feedback request may occur when a deliberate user dwell creates a real compact -> expanded transition. The current hardware candidate is:
+
+```swift
+NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+```
+
+No haptic is requested for quick/cancelled transit, duplicate pointer events, retention, collapse, startup synchronization, programmatic expansion, stale callbacks/completions, or animation-policy retargeting. Reversal cannot create a second feedback request simply because the current visual transition changes direction.
+
+macOS may legitimately vary or suppress physical feedback depending on device/touch state/settings. Physical tactile feel remains a target-Mac acceptance concern.
+
+## Visual ownership
+
+Outer panel clipping has one owner: the AppKit hosting-view layer.
+
+- compact hardware-notch surface is opaque black;
+- `masksToBounds = true` remains required;
+- corner curve is continuous;
+- compact radius is `12 pt`;
+- expanded radius is `22 pt`;
+- the hosting view autoresizes in both width and height;
+- SwiftUI does not independently own the outer clipping contour.
+
+This division was introduced after real-hardware cycles showed square-corner degradation and a separate transparent-compact regression. Visibility and clipping are now independent invariants.
 
 ## Resource-efficiency architecture
 
 Runtime work is event-driven by default. Prefer AppKit/Foundation notifications, tracking areas, permission callbacks, and explicit user actions over periodic refresh loops.
 
-The runtime architecture must not introduce polling, repeating timers, display links, or sleep-driven refresh merely to keep state fresh. A primitive that is genuinely necessary must have a narrow owner, documented cadence/need, deterministic lifecycle tests where possible, and an explicit performance-policy review.
+The runtime architecture must not introduce polling, repeating timers, display links, or sleep-driven refresh merely to keep state fresh. A primitive that is genuinely necessary must have a narrow owner, documented need, deterministic lifecycle tests where possible, and explicit performance review.
 
 Long-lived adapters must expose lifecycle ownership explicitly:
 
@@ -95,18 +185,16 @@ Long-lived adapters must expose lifecycle ownership explicitly:
 
 Performance validation is split deliberately:
 
-1. **deterministic CI invariants** — source-policy scanner, state/lifecycle tests, parser/aggregation correctness, development-tool isolation, reproducible artifact-size checks;
-2. **target-Mac runtime evidence** — CPU, RSS, thread count, stability, and future wakeup/energy measurements on macOS 26.6.
-
-The M1 interaction implementation follows this split. Shared CI proves one-shot scheduling semantics, stale-callback/cancellation behavior, monitor lifecycle, security policy, and artifact-size budgets. It does not claim physical haptic feel, cross-display hover feel, or target-Mac CPU/RSS/thread acceptance.
+1. **deterministic CI invariants** — source-policy scanner, state/lifecycle tests, parser/aggregation correctness, no-per-event pointer task, release-size checks, development-tool isolation;
+2. **target-Mac runtime evidence** — CPU, RSS, thread count, stability, wakeup/energy measurements, compositor continuity, and real pointer feel on macOS 26.6.
 
 Shared runner CPU/RAM values are never used as tight release thresholds. See root `PERFORMANCE.md`.
 
-`scripts/perf-baseline.py` and `scripts/performance_policy.py` are repository development/release tools, not application runtime components. Packaging/security checks must keep them outside `NotchHub.app`; performance measurement is not telemetry.
+`scripts/perf-baseline.py` and `scripts/performance_policy.py` are repository development/release tools, not runtime components. Packaging/security checks keep them outside `NotchHub.app`; performance measurement is not telemetry.
 
 ## Notch geometry
 
-On supported MacBook displays, the camera housing is inferred from:
+On supported MacBook displays, the camera housing is inferred from public `NSScreen` APIs:
 
 - `NSScreen.safeAreaInsets.top`;
 - `NSScreen.auxiliaryTopLeftArea`;
@@ -118,7 +206,7 @@ Real hardware uses the exact detected notch width. A centered fallback width is 
 
 The current app is App Sandbox + Hardened Runtime with no dangerous exception entitlements. M0 has zero external Swift runtime dependencies, no runtime subprocess/shell execution, no direct network/WebKit API, no dynamic plug-in loading, and no telemetry/licensing service. `scripts/security-audit.sh` makes these invariants executable CI gates.
 
-M1 delayed hover/haptic adds only internal state-machine/scheduler boundaries and the public AppKit haptic performer. It adds no entitlement, new process/network surface, sensitive permission, private API, dynamic loading, synthetic input, or broader global input monitoring.
+M1 interaction/animation work adds internal state machines, public AppKit/Core Animation calls, and public accessibility-display preference observation only. It adds no entitlement, process/network surface, sensitive permission, private API, dynamic loading, synthetic input, or broader global input monitoring.
 
 Future modules keep sensitive access behind narrow adapters and explicit permission state machines. See root `SECURITY.md`.
 
@@ -135,7 +223,7 @@ Planned modules are isolated behind feature-specific services/adapters:
 
 ### Shelf
 
-Use sandbox-compatible user-selected/security-scoped file access. Store only references/bookmarks needed for the Shelf; removing an item from Shelf is distinct from deleting its source file.
+Use sandbox-compatible user-selected/security-scoped file access. Removing a Shelf reference is distinct from deleting its source file.
 
 ### Snippets
 
@@ -147,7 +235,7 @@ Prefer public Apple frameworks and explicit permission/availability states. A de
 
 ### Yandex Music
 
-Yandex Music is the primary media target. The media UI depends on a provider protocol rather than a private mechanism directly.
+Yandex Music is the primary media target. Media UI depends on a provider boundary rather than a private mechanism directly.
 
 Provider preference order:
 
@@ -159,11 +247,9 @@ A media fallback may not disable Hardened Runtime/library validation, execute ex
 
 ## Product/UI references
 
-Public products such as NotchNook inform interaction research (gesture ergonomics, multi-monitor/notchless presentation, module density) but are not implementation dependencies. NotchHub does not copy proprietary code/assets or pixel-match private UI. See `docs/PRODUCT_REFERENCES.md`.
+Public products such as NotchNook inform interaction research but are not implementation dependencies. NotchHub does not copy proprietary code/assets or pixel-match private UI. See `docs/PRODUCT_REFERENCES.md`.
 
 ## Distribution architecture
-
-There are three deliberately distinct artifact classes.
 
 ### CI test artifact
 
@@ -171,34 +257,30 @@ There are three deliberately distinct artifact classes.
 - App Sandbox + Hardened Runtime;
 - ad-hoc signed;
 - DMG integrity checked;
-- unversioned development artifact;
-- may trigger normal Gatekeeper trust warnings.
+- development artifact; may trigger normal Gatekeeper trust warnings.
 
 ### Personal Release — current default
 
-- manually dispatched from the exact protected `main` commit;
-- strict `VERSION`/versioned-notes policy;
-- repeats format, security, warnings-as-errors, full tests, packaging, signature, entitlement, system-library, and DMG checks;
-- explicitly verifies `Signature=adhoc` + Hardened Runtime + exact Sandbox entitlement;
-- generates SHA-256 and machine-readable build provenance;
-- publishes `NotchHub.dmg`, `NotchHub.dmg.sha256`, and `build-metadata.json` through an immutable `v<SemVer>` GitHub Release;
-- release title/notes explicitly say `Personal build` / not notarized;
-- cannot overwrite an existing tag/release;
-- requires no Apple credentials and never disables Gatekeeper.
+- manually dispatched from exact protected `main`;
+- strict version/release-note policy;
+- repeats quality/security/package gates;
+- ad-hoc signature + Hardened Runtime + exact Sandbox entitlement;
+- SHA-256 + machine-readable provenance;
+- immutable GitHub Release assets;
+- no Apple credentials and no Gatekeeper weakening.
 
 ### Trusted Release — optional future tier
 
-- manual future-only path behind GitHub `release` environment;
+- future manual path behind a reviewed release environment;
 - Developer ID Application signing;
 - Apple notarization + stapling;
 - Gatekeeper assessment;
-- checksum publication;
-- cannot overwrite a Personal Release or any existing version.
+- cannot overwrite an existing Personal version.
 
-The annual Apple Developer Program dependency is intentionally deferred while NotchHub remains personal-use software. See `docs/RELEASING.md`.
+The annual Apple Developer Program dependency remains intentionally deferred while NotchHub is personal-use software. See `docs/RELEASING.md`.
 
 ## Policy tooling
 
-`scripts/release_policy.py` is intentionally small and standard-library-only. Unit tests cover strict SemVer/tag rules, trust-label requirements, unsafe Gatekeeper-bypass text, immutable workflow boundaries, and provenance metadata validation.
+`scripts/release_policy.py` is standard-library-only and owns deterministic release/distribution rules.
 
-`scripts/performance_policy.py` is likewise standard-library-only and owns deterministic runtime source-policy scanning, process-sample parsing/aggregation, and reproducible budget comparisons. GitHub Actions orchestrates these tested policies rather than embedding policy logic as untestable shell text.
+`scripts/performance_policy.py` is likewise standard-library-only and owns deterministic runtime source-policy scanning, process-sample parsing/aggregation, and reproducible budget comparisons. GitHub Actions orchestrates tested policy rather than embedding it as untestable shell logic.
