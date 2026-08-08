@@ -16,10 +16,20 @@ public final class NotchPanelController: NSObject {
         let geometry = ScreenGeometryInput(screen: screen)
         let resolvedLayout = NotchGeometry.layout(for: geometry)
         let model = NotchPanelModel()
+        let haptics = AppKitNotchHapticPerformer()
         let interactionCoordinator = NotchInteractionCoordinator(
-            model: model,
             scheduler: MainQueueNotchActivationScheduler(),
-            haptics: AppKitNotchHapticPerformer()
+            emitIntent: { intent in
+                switch intent.desiredPresentation {
+                case .compact:
+                    model.setHovered(false)
+                case .expanded:
+                    model.setHovered(true)
+                    if intent.hapticEligible {
+                        haptics.performExpansionHaptic()
+                    }
+                }
+            }
         )
 
         self.layout = resolvedLayout
@@ -44,6 +54,7 @@ public final class NotchPanelController: NSObject {
         interactionCoordinator.pointerMoved(
             to: NSEvent.mouseLocation,
             layout: layout,
+            currentPresentation: model.presentation,
             allowActivation: false
         )
     }
@@ -84,7 +95,11 @@ public final class NotchPanelController: NSObject {
     }
 
     private func updateInteraction(for pointer: CGPoint) {
-        interactionCoordinator.pointerMoved(to: pointer, layout: layout)
+        interactionCoordinator.pointerMoved(
+            to: pointer,
+            layout: layout,
+            currentPresentation: model.presentation
+        )
     }
 
     private func apply(_ presentation: NotchPresentation) {
