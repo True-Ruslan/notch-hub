@@ -74,7 +74,7 @@ The application must augment the physical notch with a visible black compact sur
 Required behavior on hardware-notch displays:
 
 - compact mode is **opaque black**, not transparent;
-- the small white compact indicator therefore appears on a visible black pлашка rather than directly over wallpaper;
+- the small white compact indicator therefore appears on a visible black panel rather than directly over wallpaper;
 - the black compact surface is clipped by the AppKit hosting-view layer and must not leak square corner pixels outside its rounded contour;
 - compact outer radius is `12 pt`, expanded outer radius is `22 pt`, using a continuous corner curve;
 - expanded primary controls must be visible **while the pointer is intentionally holding the panel open**, not only during collapse/exit;
@@ -87,7 +87,7 @@ Required behavior on hardware-notch displays:
 - width/height resizing must not discard or bypass that mask;
 - repeated compact <-> expanded cycles must preserve rounded panel chrome indefinitely; the deterministic regression suite exercises at least 32 cycles, while physical acceptance exercises at least 20 real cycles.
 
-The earlier policy that set hardware-notch compact opacity to `0` was a mistaken workaround for square-corner rendering. It is explicitly rejected: transparency removes the product's compact black pлашка instead of fixing its contour. Rounded clipping is owned by AppKit, so visibility and clipping are now independent invariants.
+The earlier policy that set hardware-notch compact opacity to `0` was a mistaken workaround for square-corner rendering. It is explicitly rejected: transparency removes the product's compact black panel instead of fixing its contour. Rounded clipping is owned by AppKit, so visibility and clipping are now independent invariants.
 
 ## 4. Test-first design
 
@@ -152,7 +152,7 @@ Stable target-Mac IDs:
 - `NH-HOVER-DELAY-002`: deliberate hover expands once after the accepted dwell/depth threshold with no oscillation.
 - `NH-HAPTIC-001`: successful deliberate expansion produces one appropriately noticeable physical haptic on a compatible Force Touch trackpad.
 - `NH-HAPTIC-002`: quick/cancelled hover, retention movement, and collapse produce no haptic.
-- `NH-VISUAL-001`: compact mode shows the intended **black rounded pлашка** aligned with the hardware notch; the indicator is not floating directly over wallpaper and there are no square-corner leaks.
+- `NH-VISUAL-001`: compact mode shows the intended **black rounded panel** aligned with the hardware notch; the indicator is not floating directly over wallpaper and there are no square-corner leaks.
 - `NH-VISUAL-002`: while deliberately hovering the expanded panel, the primary controls are visible below the notch and do not appear only after pointer exit/collapse begins.
 - `NH-VISUAL-003`: after at least 20 physical open/collapse cycles, expanded panel chrome remains rounded on every cycle and never degrades to square corners.
 
