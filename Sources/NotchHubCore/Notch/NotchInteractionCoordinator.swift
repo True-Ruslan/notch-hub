@@ -15,11 +15,6 @@ protocol NotchActivationScheduling: AnyObject {
 }
 
 @MainActor
-protocol NotchHapticPerforming: AnyObject {
-    func performExpansionHaptic()
-}
-
-@MainActor
 final class NotchInteractionCoordinator {
     static let defaultDwellSeconds: TimeInterval = 0.12
 
