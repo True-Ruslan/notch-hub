@@ -17,7 +17,7 @@ struct NotchRootView: View {
 
     var body: some View {
         Group {
-            switch model.presentation {
+            switch model.contentPresentation {
             case .compact:
                 compactContent
             case .expanded:
@@ -26,7 +26,7 @@ struct NotchRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            model.presentation == .compact
+            model.contentPresentation == .compact
                 ? Color.black.opacity(compactBackgroundOpacity)
                 : Color.black
         )
