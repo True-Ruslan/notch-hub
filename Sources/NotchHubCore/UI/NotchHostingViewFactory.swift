@@ -15,14 +15,10 @@ enum NotchHostingViewFactory {
         )
         hostingView.sizingOptions = []
         hostingView.autoresizingMask = [.width, .height]
-        applyPresentation(.compact, to: hostingView)
+        hostingView.wantsLayer = true
+        hostingView.layer?.masksToBounds = true
+        hostingView.layer?.cornerCurve = .continuous
+        hostingView.layer?.cornerRadius = 12
         return hostingView
-    }
-
-    static func applyPresentation(_ presentation: NotchPresentation, to view: NSView) {
-        view.wantsLayer = true
-        view.layer?.masksToBounds = true
-        view.layer?.cornerCurve = .continuous
-        view.layer?.cornerRadius = presentation == .compact ? 12 : 22
     }
 }
