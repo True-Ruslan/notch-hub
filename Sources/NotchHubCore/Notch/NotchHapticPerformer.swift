@@ -4,7 +4,7 @@ import AppKit
 final class AppKitNotchHapticPerformer: NotchHapticPerforming {
     func performExpansionHaptic() {
         NSHapticFeedbackManager.defaultPerformer.perform(
-            .generic,
+            .levelChange,
             performanceTime: .now
         )
     }
