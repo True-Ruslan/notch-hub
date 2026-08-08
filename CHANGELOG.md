@@ -17,7 +17,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - MIT `LICENSE` for public source distribution.
 - `docs/PUBLIC_READINESS.md` recording the repository-history audit, public-fork CI boundary, and mandatory post-visibility checks.
 - Deterministic public pull-request CI validation that rejects write authority, repository secrets, self-hosted runners, privileged triggers, OIDC/write permissions, and persisted checkout credentials.
-- M1 `NotchInteractionCoordinator` with deterministic injected-scheduler coverage for quick transit cancellation, threshold activation, stale-callback rejection, re-entry, duplicate movement, expanded retention, repeated independent activations, programmatic-state exclusion, and lifecycle invalidation.
+- M1 `NotchInteractionCoordinator` with deterministic injected-scheduler coverage for quick transit cancellation, threshold activation, stale-callback rejection, re-entry, duplicate movement, expanded retention, repeated independent activations, programmatic/setup-state exclusion, and lifecycle invalidation.
 - One-shot cancellable main-queue dwell scheduling with a named initial `120 ms` candidate and no polling/repeating timer.
 - Public AppKit expansion haptic through `NSHapticFeedbackManager.defaultPerformer`, isolated behind a deterministic test seam.
 - Explicit pointer-monitor ownership/lifecycle tests proving exactly one local and one global `.mouseMoved` registration and idempotent teardown.
@@ -34,7 +34,9 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Prepared repository policy/documentation for public source visibility while keeping runtime `Sources/` and application entitlements unchanged.
 - M1 compact-to-expanded pointer activation now routes through one cancellable dwell instead of expanding immediately; collapse/retention remains governed by the accepted deterministic screen-space pointer policy.
 - Pointer event monitors now have explicit lifecycle ownership and removal on controller invalidation. The narrow global `.mouseMoved` fallback is intentionally retained until a target-Mac `NSTrackingArea`/window-local experiment proves equal-or-better correctness and resource behavior.
+- Initial panel `show()` pointer synchronization is explicitly non-activating, preventing an unintended dwell/haptic merely because the pointer already overlaps the notch when NotchHub launches.
 - PR #10 CI initially caught an executable-size regression of `254,000 B` against the unchanged 15% P0 budget; implementation metadata was reduced rather than widening the budget. CI #158 then passed at executable `251,856 B`, app `254,853 B`, and DMG `83,072 B`.
+- Independent review caught the setup-time activation path; RED CI #165 reproduced it and GREEN CI #167 passed **25/25 Swift tests** plus all security/performance/package gates with executable `251,872 B`, app `254,869 B`, and DMG `83,036 B`.
 
 ## [0.1.0] - 2026-08-07
 
