@@ -7,37 +7,30 @@ enum NotchInteractionIntent {
 }
 
 @MainActor
-protocol NotchActivationCancellation: AnyObject {
-    func cancel()
-}
-
-@MainActor
-protocol NotchActivationScheduling: AnyObject {
-    func schedule(
-        after delaySeconds: TimeInterval,
-        action: @escaping @MainActor () -> Void
-    ) -> any NotchActivationCancellation
-}
-
-@MainActor
 final class NotchInteractionCoordinator {
+    typealias Cancellation = @MainActor () -> Void
+    typealias Scheduler = @MainActor (
+        TimeInterval,
+        @escaping @MainActor () -> Void
+    ) -> Cancellation
+
     static let defaultDwellSeconds: TimeInterval = 0.12
 
-    private let scheduler: any NotchActivationScheduling
+    private let scheduleActivation: Scheduler
     private let dwellSeconds: TimeInterval
     private let emitIntent: @MainActor (NotchInteractionIntent) -> Void
 
-    private var pendingCancellation: (any NotchActivationCancellation)?
+    private var pendingCancellation: Cancellation?
     private var pendingGeneration: UInt64?
     private var generation: UInt64 = 0
     private var isInvalidated = false
 
     init(
-        scheduler: any NotchActivationScheduling,
+        scheduleActivation: @escaping Scheduler,
         dwellSeconds: TimeInterval = NotchInteractionCoordinator.defaultDwellSeconds,
         emitIntent: @escaping @MainActor (NotchInteractionIntent) -> Void
     ) {
-        self.scheduler = scheduler
+        self.scheduleActivation = scheduleActivation
         self.dwellSeconds = dwellSeconds
         self.emitIntent = emitIntent
     }
@@ -96,13 +89,13 @@ final class NotchInteractionCoordinator {
         generation &+= 1
         let scheduledGeneration = generation
         pendingGeneration = scheduledGeneration
-        pendingCancellation = scheduler.schedule(after: dwellSeconds) { [weak self] in
+        pendingCancellation = scheduleActivation(dwellSeconds) { [weak self] in
             self?.completeActivation(generation: scheduledGeneration)
         }
     }
 
     private func cancelPendingActivation() {
-        pendingCancellation?.cancel()
+        pendingCancellation?()
         pendingCancellation = nil
         pendingGeneration = nil
     }
