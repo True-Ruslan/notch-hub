@@ -129,7 +129,7 @@ All P0 baseline inputs are accepted. Shared runner CPU/RAM/thread values are nev
 
 Authoritative interaction specification: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
-Before implementation, RED-first tests must prove at minimum:
+The current PR #10 deterministic suite proves:
 
 - pointer transit shorter than the dwell threshold does not expand and emits zero haptic requests;
 - deliberate hover expands only when the threshold completes;
@@ -139,9 +139,14 @@ Before implementation, RED-first tests must prove at minimum:
 - re-entry starts a fresh dwell instead of reusing elapsed time;
 - expanded retention does not retrigger haptic feedback;
 - collapse followed by a new deliberate hover may produce one new haptic;
-- controller teardown/state invalidation cancels pending dwell work.
+- programmatic expansion does not emit haptic feedback;
+- controller/state invalidation cancels pending dwell work;
+- pointer-monitor start is idempotent and owns exactly one local plus one global `.mouseMoved` monitor;
+- pointer-monitor invalidation removes both monitor tokens exactly once.
 
-The implementation must remain event-driven: no polling, no repeating timer, and at most one pending activation task/timer. Physical haptic feel remains a real-device acceptance concern because macOS may legitimately suppress trackpad feedback depending on current hardware, touch state, accessibility, and user preferences.
+The implementation remains event-driven: no polling, no repeating timer, and at most one pending activation work item. Production haptic output is public AppKit; physical haptic feel remains a real-device acceptance concern because macOS may legitimately suppress trackpad feedback depending on current hardware, touch state, accessibility, and user preferences.
+
+The initial `120 ms` dwell value is still a candidate until physical acceptance; deterministic tests validate policy semantics rather than declaring that value ergonomically final.
 
 ## Real-hardware / distribution acceptance matrix
 
@@ -157,7 +162,7 @@ Record results in `docs/PROJECT_STATE.md`.
 | `NH-HOVER-003` | Move outside retention region | Content and actual panel frame collapse once and remain compact | Policy/sizing ownership automated; physical window behavior manual |
 | `NH-SANDBOX-001` | Exercise normal panel in Sandbox build | No crash/unexpected permission/loss of behavior | Entitlement/signing automated; runtime manual |
 | `NH-PERSONAL-RELEASE-001` | Download versioned Personal Release from GitHub | Published SHA-256 matches; installation uses only standard Finder / Privacy & Security approval; app opens on macOS 26.6; accepted notch/hover scenarios remain PASS | Release policy/checksum/provenance automated; downloaded quarantine/trust path + hardware behavior manual once for first personal pipeline/version |
-| `NH-HOVER-DELAY-001` | Move pointer through notch toward another display without intentionally stopping | Transit completes before dwell threshold; panel stays compact; zero haptic feedback | Deterministic injected-clock cancellation test; real cross-display pointer feel manual |
+| `NH-HOVER-DELAY-001` | Move pointer through notch toward another display without intentionally stopping | Transit completes before dwell threshold; panel stays compact; zero haptic feedback | Deterministic injected-scheduler cancellation test; real cross-display pointer feel manual |
 | `NH-HOVER-DELAY-002` | Deliberately hover over compact notch | Panel expands once after a short perceptible-but-fast dwell, with no flicker/oscillation | State/time policy automated; final dwell tuning manual |
 | `NH-HAPTIC-001` | Deliberately hover using a compatible Force Touch trackpad while touching it | Exactly one short tactile event accompanies the successful expansion | Haptic request count/reason automated through fake performer; physical tactile result manual |
 | `NH-HAPTIC-002` | Quick/cancelled hover, retention movement, and collapse | No haptic feedback | Deterministic policy/output tests automated; physical negative check manual |
@@ -236,6 +241,22 @@ RED CI #91 failed exactly because the new release-size comparison API did not ye
 CI #94 candidate sizes were executable `214,016 B`, app `217,012 B`, DMG `73,378 B`; all passed the canonical 15% relative allowance and absolute ceilings.
 
 **P0 Performance Foundation acceptance: PASS.**
+
+### 2026-08-08 — cycle 7 / M1 delayed hover + haptic deterministic core
+
+PR #10 uses explicit RED → GREEN evidence:
+
+- RED commit `079e82bcc93dd9d664a5b4200806dd2ee858bd72` added interaction tests before production coordinator/scheduler/haptic APIs existed;
+- RED CI #147 failed on those missing production APIs and also exposed an independent missing `Foundation` import in the test harness;
+- test-only commit `c972198fc8d6e33b588e34fb58d4732f1f4b0808` corrected the import without adding production behavior;
+- RED CI #148 then failed cleanly only on the still-missing interaction production types;
+- pointer-monitor lifecycle tests were added before their production abstraction; RED CI #150 failed on both intended seams;
+- GREEN implementation introduced one-shot dwell scheduling, generation/stale-callback validation, public AppKit haptic output, and explicit monitor lifecycle;
+- CI #157 passed **24/24 Swift tests**, release/performance policy, runtime performance audit, security, warnings-as-errors, packaging/signature/Sandbox/Hardened Runtime/DMG checks, but failed the unchanged P0 size gate because executable `254,000 B` exceeded the 15% threshold `253,644 B` by `356 B`;
+- the P0 budget was not weakened; internal runtime metadata was reduced while all behavioral tests stayed unchanged;
+- CI #158 on implementation head `6b0173b79e457a8749c6f8675681efb8850e4e9e` passed all gates with executable `251,856 B`, app `254,853 B`, and DMG `83,072 B`.
+
+Deterministic implementation status is GREEN. `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and the exact-candidate physical regression matrix remain **NOT YET ACCEPTED** until run on the target MacBook/macOS 26.6. Shared-runner CPU/RSS/thread smoke values are not substituted for that target-hardware evidence.
 
 ## Personal Release TDD evidence
 
