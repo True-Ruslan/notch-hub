@@ -20,7 +20,7 @@ struct ProbeReportTests {
                 "next": true,
                 "previous": false,
                 "seek": true,
-                "toggle": true,
+                "toggle": true
             ],
             cleanTeardown: true,
             orphanProcessDetected: false
