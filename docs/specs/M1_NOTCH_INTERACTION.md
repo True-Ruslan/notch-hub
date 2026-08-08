@@ -1,9 +1,11 @@
 # M1 Notch interaction requirements
 
-Status: **PLANNED / APPROVED**
+Status: **IMPLEMENTED IN PR #10 / HARDWARE ACCEPTANCE PENDING**
 Primary target: MacBook with hardware notch, macOS 26.6
 
 This document is the behavioral contract for delayed hover activation and trackpad haptic feedback in M1. The implementation must follow TDD and preserve the security/performance contracts of the project.
+
+The deterministic implementation exists in PR #10. This status does **not** mark the interaction work accepted: the final dwell value and physical haptic/cross-display behavior remain subject to the real-hardware Definition of Done below.
 
 ## 1. Delayed hover activation
 
@@ -107,9 +109,23 @@ Minimum RED-first automated scenarios:
 9. lifecycle/cancellation test
    - destroying/disabling the controller with pending dwell leaves no delayed transition or retained work.
 
-## 4. Real-hardware acceptance
+PR #10 also covers programmatic-expansion haptic exclusion and explicit pointer-monitor registration/teardown lifecycle. Those are additional deterministic regressions, not replacements for the minimum scenarios above.
 
-Add/retain these stable acceptance IDs in `docs/TESTING.md`:
+## 4. Implementation evidence — 2026-08-08
+
+- RED CI #147 and #148 proved the interaction APIs were absent before production implementation; a test-only import defect discovered by #147 was corrected without introducing production code.
+- RED CI #150 additionally proved the pointer-monitor lifecycle abstraction was absent before its implementation.
+- The production scheduler uses one cancellable `DispatchWorkItem` through `DispatchQueue.main.asyncAfter`; there is no polling or repeating timer.
+- The production haptic performer uses `NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)`.
+- The current narrow local/global `.mouseMoved` observation has explicit ownership and idempotent teardown. It is intentionally retained until a separate target-Mac local-tracking experiment proves a reliable equal-or-better replacement.
+- CI #157 passed correctness/security/policy/package checks but failed the unchanged executable-size budget by `356 B`; the budget was not widened.
+- CI #158 passed all deterministic gates after footprint reduction with executable `251,856 B`, app `254,853 B`, and DMG `83,072 B`.
+
+These CI results establish deterministic implementation readiness only. Shared-runner CPU/RSS/thread values are not accepted target-Mac performance evidence.
+
+## 5. Real-hardware acceptance
+
+Retain these stable acceptance IDs in `docs/TESTING.md`:
 
 - `NH-HOVER-DELAY-001`: normal pointer transit through the notch toward another display finishes before the dwell threshold; panel stays compact and no haptic is felt.
 - `NH-HOVER-DELAY-002`: deliberate hover opens the panel after a short, perceptible-but-fast delay; no visible flicker/oscillation.
@@ -118,7 +134,7 @@ Add/retain these stable acceptance IDs in `docs/TESTING.md`:
 
 Exact tactile feel and final dwell value are real-hardware UX decisions. Deterministic transition/count/cancellation behavior must be automated before manual tuning.
 
-## 5. Definition of done
+## 6. Definition of done
 
 This interaction work is complete only when:
 
@@ -129,3 +145,5 @@ This interaction work is complete only when:
 - all existing notch/hover regression tests remain green;
 - `NH-HOVER-DELAY-001/002` and `NH-HAPTIC-001/002` pass on the target MacBook/macOS 26.6;
 - `CHANGELOG.md`, `PROJECT_STATE.md`, and relevant architecture/testing docs are updated with the accepted behavior and final tuned dwell value.
+
+At the current PR #10 state, the deterministic implementation bullets are satisfied; the real-hardware bullets and final tuned dwell value remain pending and therefore this specification is **not yet fully accepted**.
