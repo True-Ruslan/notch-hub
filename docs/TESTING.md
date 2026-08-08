@@ -132,6 +132,7 @@ Authoritative interaction specification: `docs/specs/M1_NOTCH_INTERACTION.md`.
 The current PR #10 deterministic suite proves:
 
 - pointer transit shorter than the dwell threshold does not expand and emits zero haptic requests;
+- setup-time/current-pointer synchronization does not schedule activation or haptic without a subsequent user mouse-move event;
 - deliberate hover expands only when the threshold completes;
 - one successful user-initiated `compact -> expanded` transition emits exactly one haptic request;
 - repeated `mouseMoved` events do not create duplicate pending work or duplicate haptics;
@@ -254,9 +255,12 @@ PR #10 uses explicit RED → GREEN evidence:
 - GREEN implementation introduced one-shot dwell scheduling, generation/stale-callback validation, public AppKit haptic output, and explicit monitor lifecycle;
 - CI #157 passed **24/24 Swift tests**, release/performance policy, runtime performance audit, security, warnings-as-errors, packaging/signature/Sandbox/Hardened Runtime/DMG checks, but failed the unchanged P0 size gate because executable `254,000 B` exceeded the 15% threshold `253,644 B` by `356 B`;
 - the P0 budget was not weakened; internal runtime metadata was reduced while all behavioral tests stayed unchanged;
-- CI #158 on implementation head `6b0173b79e457a8749c6f8675681efb8850e4e9e` passed all gates with executable `251,856 B`, app `254,853 B`, and DMG `83,072 B`.
+- CI #158 on implementation head `6b0173b79e457a8749c6f8675681efb8850e4e9e` passed all gates with executable `251,856 B`, app `254,853 B`, and DMG `83,072 B`;
+- independent change review found that `show()` could otherwise interpret setup-time current mouse location as a normal activation event and request an unintended launch haptic;
+- RED commit `0b777f8009c6bd76026fb70585a1d9d8debc034f` added `setupPointerSynchronizationInsideCompactDoesNotActivateOrHaptic`; CI #165 failed exactly on the absent `allowActivation` seam;
+- GREEN implementation separated setup pointer synchronization from user movement; CI #167 passed **25/25 Swift tests** and every release/security/performance/package gate with executable `251,872 B`, app `254,869 B`, and DMG `83,036 B`.
 
-Deterministic implementation status is GREEN. `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and the exact-candidate physical regression matrix remain **NOT YET ACCEPTED** until run on the target MacBook/macOS 26.6. Shared-runner CPU/RSS/thread smoke values are not substituted for that target-hardware evidence.
+Deterministic implementation status is GREEN after independent review. `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and the exact-candidate physical regression matrix remain **NOT YET ACCEPTED** until run on the target MacBook/macOS 26.6. Shared-runner CPU/RSS/thread smoke values are not substituted for that target-hardware evidence.
 
 ## Personal Release TDD evidence
 
