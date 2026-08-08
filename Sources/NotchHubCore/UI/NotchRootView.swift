@@ -2,21 +2,25 @@ import SwiftUI
 
 public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
-    private let hasHardwareNotch: Bool
-    private let compactHeight: CGFloat
+    private let compactBackgroundOpacity: Double
+    private let expandedContentTopInset: CGFloat
 
     public init(model: NotchPanelModel) {
-        self.init(model: model, hasHardwareNotch: false, compactHeight: 32)
+        self.init(
+            model: model,
+            compactBackgroundOpacity: 1,
+            expandedContentTopInset: 20
+        )
     }
 
     init(
         model: NotchPanelModel,
-        hasHardwareNotch: Bool,
-        compactHeight: CGFloat
+        compactBackgroundOpacity: Double,
+        expandedContentTopInset: CGFloat
     ) {
         self.model = model
-        self.hasHardwareNotch = hasHardwareNotch
-        self.compactHeight = compactHeight
+        self.compactBackgroundOpacity = compactBackgroundOpacity
+        self.expandedContentTopInset = expandedContentTopInset
     }
 
     public var body: some View {
@@ -31,11 +35,7 @@ public struct NotchRootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             model.presentation == .compact
-                ? Color.black.opacity(
-                    NotchVisualLayoutPolicy.compactBackgroundOpacity(
-                        hasHardwareNotch: hasHardwareNotch
-                    )
-                )
+                ? Color.black.opacity(compactBackgroundOpacity)
                 : Color.black
         )
         .clipShape(
@@ -87,13 +87,7 @@ public struct NotchRootView: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
-        .padding(
-            .top,
-            NotchVisualLayoutPolicy.expandedContentTopInset(
-                hasHardwareNotch: hasHardwareNotch,
-                compactHeight: compactHeight
-            )
-        )
+        .padding(.top, expandedContentTopInset)
     }
 
     private func moduleTile(_ title: String, systemImage: String) -> some View {
