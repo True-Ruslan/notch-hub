@@ -145,9 +145,9 @@ The current PR #10 deterministic suite proves:
 - pointer-monitor start is idempotent and owns exactly one local plus one global `.mouseMoved` monitor;
 - pointer-monitor invalidation removes both monitor tokens exactly once;
 - the revised compact activation policy rejects a pointer only 2 pt inside the physical compact edge and accepts the 4 pt depth candidate;
-- hardware-notch layout resolves a transparent compact app surface so the real notch defines its visible rounded silhouette;
+- hardware-notch layout requires an **opaque compact black surface** (`compactBackgroundOpacity == 1`);
 - hardware-notch expanded content begins at `compactFrame.height + 12 pt`, while no-notch fallback keeps the normal 20 pt inset;
-- non-notch compact fallback remains opaque;
+- no-notch compact fallback is also opaque;
 - panel-frame presentation changes no longer run an independent AppKit animation that can visibly diverge from presentation state;
 - the hosting view tracks panel bounds in both width and height while retaining `sizingOptions == []`;
 - outer panel clipping has one owner at the AppKit boundary: the hosting view is layer-backed, `masksToBounds == true`, and uses a continuous `12 pt` compact / `22 pt` expanded radius;
@@ -175,7 +175,7 @@ Record results in `docs/PROJECT_STATE.md`.
 | `NH-HOVER-DELAY-002` | Deliberately move at least slightly inside and hover over compact notch | Panel expands once after a short perceptible-but-fast dwell, with no flicker/oscillation | State/time/depth policy automated; final dwell/depth tuning manual |
 | `NH-HAPTIC-001` | Deliberately hover using a compatible Force Touch trackpad while touching it | Exactly one appropriately noticeable tactile event accompanies successful expansion | Haptic request count automated through fake performer; physical tactile result manual |
 | `NH-HAPTIC-002` | Quick/cancelled hover, retention movement, and collapse | No haptic feedback | Deterministic policy/output tests automated; physical negative check manual |
-| `NH-VISUAL-001` | Observe compact NotchHub on the physical-notch display | Native physical notch keeps its rounded silhouette; no app-painted black corner pixels make it look square | Hardware/no-notch background policy automated; exact silhouette manual |
+| `NH-VISUAL-001` | Observe compact NotchHub on the physical-notch display | Intended black rounded compact pлашка is visible; white indicator is on black rather than wallpaper; no square-corner leakage | Opaque background policy + AppKit clipping automated; exact physical pixels manual |
 | `NH-VISUAL-002` | Deliberately hold pointer in the expanded panel | Primary controls are visible below the physical notch during active hover, not only after exit/collapse begins | Expanded content inset + frame-state behavior deterministic; physical occlusion/visibility manual |
 | `NH-VISUAL-003` | Open and collapse the expanded panel repeatedly, at least 20 cycles on the target Mac | Rounded panel chrome remains rounded after every cycle; no transition to square bottom corners | AppKit layer mask/radius + 32-cycle deterministic regression automated; exact physical rendering manual |
 | `NH-GATEKEEPER-TRUSTED-001` | Future: download Trusted Release | Gatekeeper identifies `Notarized Developer ID` without personal-build approval workaround | Trusted workflow automated; normal downloaded path manual when tier is first adopted |
@@ -293,7 +293,7 @@ TDD and budget evidence for the revised candidate:
 - RED CI #172 proved the hardware-notch visual contract did not yet exist;
 - successive correctness/security-green visual implementations were rejected by the unchanged P0 artifact budget in CI #177, #181, and #187;
 - no budget was widened and no assertion was weakened; the visual architecture was simplified instead;
-- CI #188 passed the complete pipeline after compact hardware-notch rendering became transparent, expanded content received safe notch spacing, and AppKit frame state stopped animating independently: executable `251,856 B`, app `254,853 B`, DMG `83,143 B`;
+- CI #188 passed the complete pipeline after the initial visual workaround made compact hardware-notch rendering transparent, expanded content received safe notch spacing, and AppKit frame state stopped animating independently: executable `251,856 B`, app `254,853 B`, DMG `83,143 B`;
 - RED commit `488dd14a89ce3ae0d5b784f9b6fa69d6836b6a94` / CI #189 proved a point only 2 pt inside the physical compact boundary still activated under the old policy;
 - GREEN compact activation now uses an inward `4 pt` candidate and leaves expanded retention unchanged;
 - production haptic remains one public AppKit request but uses `.levelChange` instead of `.generic` as the revised tactile candidate;
@@ -304,9 +304,8 @@ Revised hardware acceptance was still pending for `NH-NOTCH-001`, `NH-HOVER-001/
 
 ### 2026-08-08 — cycle 10 / repeated panel-chrome hardware regression
 
-Target MacBook/macOS 26.6 screenshots and repeated interaction clarified the rendering boundary:
+Target MacBook/macOS 26.6 showed:
 
-- the compact screenshot can show the 4 pt indicator over wallpaper because a physical camera notch is hardware and is not captured in the framebuffer; the hardware-notch compact app surface is intentionally transparent, so this screenshot is **not** evidence of an opaque black compact panel;
 - expanded panel corners were initially rounded but became square after several open/collapse cycles;
 - `NH-VISUAL-003`: **FAIL on the previous candidate**.
 
@@ -321,7 +320,21 @@ TDD correction:
 - GREEN source head `446a976591a43a856a2683337cb4df1ada10cc8a` / CI #199 passed **29/29 Swift tests**, including **32 repeated expanded -> compact mask cycles**, plus release/security/performance policies, warnings-as-errors, packaging/signature/Sandbox/Hardened Runtime/DMG checks, harness smoke, and the unchanged P0 size budget;
 - CI #199 sizes improved to executable `248,768 B`, app `251,765 B`, DMG `82,069 B`.
 
-Physical acceptance remains **PENDING**. The revised target-Mac pass must include `NH-VISUAL-003` with at least 20 real open/collapse cycles; deterministic AppKit invariants do not substitute for observing the actual pixels on the target display.
+### 2026-08-08 — cycle 11 / missing compact black surface
+
+Target MacBook/macOS 26.6 then showed a distinct regression: the intended black compact pлашка did not appear at all; only the white 4 pt indicator was visible over wallpaper.
+
+Root-cause tracing found the production geometry policy explicitly returned `compactBackgroundOpacity == 0` whenever `hasHardwareNotch == true`. The prior transparency workaround had therefore removed the compact product surface rather than merely correcting its contour.
+
+TDD correction:
+
+- RED commit `1bb2d1481f31557868651bab6b59745e44ed827b` changed the hardware-notch expectation to opacity `1` before production code was modified;
+- RED CI #204 failed exactly in `detectsHardwareNotchFromAuxiliaryAreas`: actual opacity `0.0`, expected `1.0`; the other 28 Swift tests, including repeated AppKit clipping coverage, stayed green;
+- GREEN source head `29627f5f145d5e60ef1873d988cf4c51b91f097f` restored opaque compact rendering without undoing the AppKit mask fix;
+- GREEN CI #205 passed **29/29 Swift tests**, macOS 26 compatibility, release/security/performance policies, warnings-as-errors, packaging/signature/Sandbox/Hardened Runtime/DMG checks, harness smoke, and the unchanged P0 size budget;
+- CI #205 candidate sizes: executable `248,768 B`, app `251,765 B`, DMG `82,075 B`.
+
+Physical acceptance remains **PENDING**. The next target-Mac pass must confirm both `NH-VISUAL-001` (visible black rounded compact pлашка) and `NH-VISUAL-003` (at least 20 real open/collapse cycles) because deterministic opacity/mask invariants cannot substitute for observing the actual pixels on the target display.
 
 ## Personal Release TDD evidence
 
