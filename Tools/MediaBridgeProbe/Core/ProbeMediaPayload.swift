@@ -73,19 +73,19 @@ public enum ProbePayloadDecoder {
         try validateOptionalText(payload.artworkMimeType)
 
         if let durationMicros = payload.durationMicros,
-           durationMicros > maximumDurationMicros
+            durationMicros > maximumDurationMicros
         {
             throw ProbePayloadDecoderError.durationOutOfRange
         }
 
         if let elapsedTimeMicros = payload.elapsedTimeMicros,
-           elapsedTimeMicros > maximumDurationMicros
+            elapsedTimeMicros > maximumDurationMicros
         {
             throw ProbePayloadDecoderError.elapsedTimeOutOfRange
         }
 
         if let playbackRate = payload.playbackRate,
-           !playbackRate.isFinite || abs(playbackRate) > maximumPlaybackRate
+            !playbackRate.isFinite || abs(playbackRate) > maximumPlaybackRate
         {
             throw ProbePayloadDecoderError.playbackRateOutOfRange
         }
