@@ -32,7 +32,7 @@ CI may fail on reproducible invariants, including:
 - deterministic policy or parser regressions;
 - lifecycle/state behavior that can be proven without wall-clock timing;
 - development performance tooling being copied or referenced into the shipped app bundle;
-- artifact-size regressions against the canonical baseline.
+- reproducible application-payload size regressions and absolute package-size regressions against the canonical baseline.
 
 Shared GitHub runners must **not** enforce tight CPU, RSS, thread, wakeup, or energy thresholds. Their load and hardware are too variable for honest release gates.
 
@@ -86,6 +86,8 @@ Record exact bytes for:
 - aggregate regular-file bytes in `NotchHub.app`;
 - `NotchHub.dmg`.
 
+Executable and aggregate `.app` payload bytes are reproducible CI metrics. The compressed UDZO DMG byte count is still recorded on every run and is subject to an absolute ceiling, but repeated CI evidence has shown small container-level byte variance even when the executable and `.app` payload are identical. It therefore is not used as a tight relative regression metric.
+
 ### `NH-PERF-STATE-001`
 
 Run exactly 100,000 deterministic pointer/presentation policy decisions in Swift test code. Assert behavior/state invariants only; do not use elapsed wall-clock time as a CI threshold.
@@ -119,7 +121,7 @@ Stability-specific evidence:
 - RSS end-minus-start: `-3,712 KiB` (`-3.625 MiB`);
 - thread start / first quartile / end: `4 / 3 / 5`.
 
-The 10-minute run therefore shows no sustained RSS accumulation. The working set decreases rather than grows, while thread count stays small with bounded transient variation. Idle median CPU is zero. Hover is intentionally the heavier path and is the key comparison baseline for the M1 investigation of the current global `.mouseMoved` monitor versus reliable window-local tracking.
+The 10-minute run therefore shows no sustained RSS accumulation. The working set decreases rather than grows, while thread count stays small with bounded transient variation. Idle median CPU is zero. Hover is intentionally the heavier path and is the key comparison baseline for the later P1 investigation of the current global `.mouseMoved` monitor versus reliable window-local tracking.
 
 ### Accepted release artifact sizes
 
@@ -162,24 +164,28 @@ Budget derivation intentionally rounds upward from observed values instead of fi
 - thread ceilings allow two additional transient threads above observed maxima;
 - stability allows up to 8 MiB positive RSS drift over ten minutes even though the accepted baseline drift is negative, preventing a one-run baseline from becoming an unrealistically tight leak detector.
 
-Crossing a target-Mac ceiling blocks acceptance until investigated. A material regression should still be investigated even below a ceiling, especially if M1 changes pointer observation. Shared GitHub runners continue to validate only deterministic policy/schema/package behavior.
+Crossing a target-Mac ceiling blocks acceptance until investigated. A material regression should still be investigated even below a ceiling, especially if M1/P1 changes pointer observation. Shared GitHub runners continue to validate only deterministic policy/schema/package behavior.
 
-## Deterministic artifact-size budget
+## Artifact-size budget
 
-Artifact byte sizes are reproducible enough to enforce in shared CI, unlike runtime CPU/RSS/thread measurements.
+Artifact size remains a mandatory CI concern, but the gate distinguishes reproducible application payload bytes from compressed container bytes.
 
-Two independent constraints are recorded in the canonical baseline and both must pass:
+Two independent constraints are recorded in the canonical baseline:
 
-1. **Relative regression allowance:** no artifact may grow more than `15%` from the accepted `v0.1.0` baseline without an explicit baseline/budget review.
-2. **Absolute safety ceiling:** `120%` of the accepted size, rounded upward to the next 4 KiB boundary.
+1. **Relative regression allowance for reproducible payload metrics:** executable and aggregate `.app` bytes may not grow more than `15%` from the accepted `v0.1.0` baseline without an explicit baseline/budget review.
+2. **Absolute safety ceiling for every artifact:** executable, `.app`, and DMG each retain the existing `120%`-derived hard ceilings rounded upward to 4 KiB boundaries.
 
-| Artifact | Baseline | 15% relative threshold | Absolute ceiling |
+| Artifact | Baseline | Relative gate | Absolute ceiling |
 | --- | ---: | ---: | ---: |
-| Executable | `220,560 B` | `253,644 B` | `266,240 B` |
-| `.app` | `223,555 B` | `257,088 B` maximum whole-byte value | `270,336 B` |
-| DMG | `73,955 B` | `85,048 B` maximum whole-byte value | `90,112 B` |
+| Executable | `220,560 B` | `253,644 B` (15%) | `266,240 B` |
+| `.app` | `223,555 B` | `257,088 B` maximum whole-byte value (15%) | `270,336 B` |
+| DMG | `73,955 B` | not used; compressed container bytes vary | `90,112 B` |
 
-The relative gate is intentionally tighter for the current baseline. The separate absolute ceiling is retained as a fail-closed hard cap and makes the budget contract explicit rather than encoding only a percentage.
+The executable and `.app` relative gates remain unchanged and intentionally tighter than their absolute ceilings. The DMG absolute ceiling is also unchanged.
+
+The DMG policy correction is evidence-driven rather than a feature-budget increase. During M6.1 probe development, CI #374 produced executable/app sizes `250,320 B / 253,317 B` while the DMG was `85,220 B`, 172 bytes above the former relative threshold of `85,048 B`. Re-running the failed job on the exact same source without changing code passed the old gate. A later CI #381 again produced the identical executable/app sizes but DMG `85,219 B`. The application payload was therefore stable while the compressed UDZO container crossed the tight relative threshold independently of application growth.
+
+The canonical baseline now declares `relativeRegressionMetrics` explicitly. The checker rejects a missing, empty, duplicate, non-string, or unknown relative-metric list. All three required artifacts must still exist as non-negative integer measurements and all three always pass their absolute ceilings.
 
 CI records the actual candidate sizes in `build/perf-size.json` and executes:
 
@@ -189,7 +195,7 @@ python3 scripts/performance_policy.py check-size-budget \
   --baseline performance/baseline-v0.1.0.json
 ```
 
-The checker rejects unsupported baseline schema versions, missing required size metrics, non-integer byte sizes, non-finite/negative regression settings, and malformed ceilings. Tests independently cover relative-limit and absolute-limit failures.
+The checker rejects unsupported baseline schema versions, missing required size metrics, non-integer byte sizes, non-finite/negative regression settings, malformed relative-metric policy, and malformed ceilings. Tests independently cover relative-limit, absolute-limit, compressed-DMG, and malformed-policy behavior.
 
 ## Canonical commands
 
@@ -242,19 +248,20 @@ It is complete and records:
 3. idle/hover/stability summaries and stability growth evidence;
 4. exact immutable-release executable/app/DMG byte sizes;
 5. target-Mac runtime acceptance ceilings;
-6. deterministic relative and absolute artifact-size budgets.
+6. reproducible executable/app relative-size gates plus absolute executable/app/DMG ceilings.
 
-CPU/RSS/thread ceilings remain target-Mac acceptance gates. Artifact-size limits are deterministic shared-CI gates.
+CPU/RSS/thread ceilings remain target-Mac acceptance gates. Reproducible application-payload size limits and absolute package-size ceilings are shared-CI gates.
 
-If future repeated measurements show that a runtime threshold is unstable, methodology or the threshold is corrected from evidence rather than weakening tests merely to obtain green status. Intentional feature growth that needs more artifact-size budget requires an explicit reviewed baseline/budget update; CI must never silently widen it.
+If future repeated measurements show that a runtime or packaging threshold is unstable, methodology or the metric classification is corrected from evidence rather than repeatedly rerunning or weakening production behavior merely to obtain green status. Intentional feature growth that needs more executable/app relative budget or any absolute artifact ceiling requires an explicit reviewed baseline/budget update; CI must never silently widen it.
 
 ## Regression policy
 
 After the first baseline is accepted:
 
-- deterministic artifact-size limits are CI gates;
+- reproducible executable/app relative-size limits are CI gates;
+- executable/app/DMG absolute size limits are CI gates;
 - deterministic scanner/state/lifecycle invariants remain mandatory CI gates;
 - CPU/RSS/thread comparisons remain target-Mac evidence unless a future measurement method proves sufficiently stable for automation;
 - material regression requires investigation before acceptance, even when an absolute ceiling is not crossed.
 
-A performance optimization is accepted only when existing notch/hover/security behavior remains correct and measured resource use is equal or better. In particular, M1 may replace the current global `.mouseMoved` observer with local AppKit tracking only after correctness and resource measurements support the change.
+A performance optimization is accepted only when existing notch/hover/security behavior remains correct and measured resource use is equal or better. In particular, P1 may replace the current global `.mouseMoved` observer with local AppKit tracking only after correctness and resource measurements support the change.
