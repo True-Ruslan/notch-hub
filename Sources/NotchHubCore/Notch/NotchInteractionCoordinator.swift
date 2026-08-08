@@ -23,10 +23,9 @@ protocol NotchHapticPerforming: AnyObject {
 final class NotchInteractionCoordinator {
     static let defaultDwellSeconds: TimeInterval = 0.12
 
-    private let model: NotchPanelModel
     private let scheduler: any NotchActivationScheduling
-    private let haptics: any NotchHapticPerforming
     private let dwellSeconds: TimeInterval
+    private let emitIntent: @MainActor (NotchInteractionIntent) -> Void
 
     private var pendingCancellation: (any NotchActivationCancellation)?
     private var pendingGeneration: UInt64?
@@ -34,27 +33,26 @@ final class NotchInteractionCoordinator {
     private var isInvalidated = false
 
     init(
-        model: NotchPanelModel,
         scheduler: any NotchActivationScheduling,
-        haptics: any NotchHapticPerforming,
-        dwellSeconds: TimeInterval = NotchInteractionCoordinator.defaultDwellSeconds
+        dwellSeconds: TimeInterval = NotchInteractionCoordinator.defaultDwellSeconds,
+        emitIntent: @escaping @MainActor (NotchInteractionIntent) -> Void
     ) {
-        self.model = model
         self.scheduler = scheduler
-        self.haptics = haptics
         self.dwellSeconds = dwellSeconds
+        self.emitIntent = emitIntent
     }
 
     func pointerMoved(
         to pointer: CGPoint,
         layout: NotchLayout,
+        currentPresentation: NotchPresentation,
         allowActivation: Bool = true
     ) {
         guard !isInvalidated else {
             return
         }
 
-        switch model.presentation {
+        switch currentPresentation {
         case .compact:
             let target = NotchPointerPolicy.presentation(
                 current: .compact,
@@ -76,7 +74,13 @@ final class NotchInteractionCoordinator {
                 layout: layout
             )
             if target == .compact {
-                model.setHovered(false)
+                emitIntent(
+                    NotchInteractionIntent(
+                        desiredPresentation: .compact,
+                        cause: .pointerExit,
+                        hapticEligible: false
+                    )
+                )
             }
         }
     }
@@ -112,15 +116,19 @@ final class NotchInteractionCoordinator {
     private func completeActivation(generation scheduledGeneration: UInt64) {
         guard
             !isInvalidated,
-            pendingGeneration == scheduledGeneration,
-            model.presentation == .compact
+            pendingGeneration == scheduledGeneration
         else {
             return
         }
 
         pendingCancellation = nil
         pendingGeneration = nil
-        model.setHovered(true)
-        haptics.performExpansionHaptic()
+        emitIntent(
+            NotchInteractionIntent(
+                desiredPresentation: .expanded,
+                cause: .deliberateHover,
+                hapticEligible: true
+            )
+        )
     }
 }
