@@ -9,7 +9,6 @@ public final class NotchPanelController: NSObject {
     private let transitionCoordinator: NotchPanelTransitionCoordinator
     private let pointerMonitor: NotchPointerMonitor
     private let layout: NotchLayout
-    private var accessibilityObserver: NSObjectProtocol?
     private var reduceMotionEnabled: Bool
 
     public override init() {
@@ -108,18 +107,15 @@ public final class NotchPanelController: NSObject {
 
     private func configureAccessibilityObservation() {
         let workspace = NSWorkspace.shared
-        accessibilityObserver = workspace.notificationCenter.addObserver(
-            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.accessibilityDisplayOptionsDidChange()
-            }
-        }
+        workspace.notificationCenter.addObserver(
+            self,
+            selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
+            name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: workspace
+        )
     }
 
-    private func accessibilityDisplayOptionsDidChange() {
+    @objc private func accessibilityDisplayOptionsDidChange(_ notification: Notification) {
         let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         guard reduceMotion != reduceMotionEnabled else {
             return
@@ -130,12 +126,12 @@ public final class NotchPanelController: NSObject {
     }
 
     private func removeAccessibilityObserver() {
-        guard let accessibilityObserver else {
-            return
-        }
-
-        NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver)
-        self.accessibilityObserver = nil
+        let workspace = NSWorkspace.shared
+        workspace.notificationCenter.removeObserver(
+            self,
+            name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: workspace
+        )
     }
 
     private func configurePanel() {
