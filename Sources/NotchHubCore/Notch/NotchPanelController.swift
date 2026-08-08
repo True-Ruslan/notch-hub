@@ -68,8 +68,8 @@ public final class NotchPanelController: NSObject {
                 )
                 return { workItem.cancel() }
             },
-            emitIntent: { [weak transitionCoordinator] intent in
-                transitionCoordinator?.accept(intent, layout: resolvedLayout)
+            emitIntent: { intent in
+                transitionCoordinator.accept(intent, layout: resolvedLayout)
             }
         )
 
