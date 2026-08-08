@@ -6,12 +6,12 @@ enum NotchHostingViewFactory {
         model: NotchPanelModel,
         layout: NotchLayout
     ) -> NSHostingView<NotchRootView> {
-        let metrics = NotchVisualLayoutPolicy.metrics(
-            hasHardwareNotch: layout.hasHardwareNotch,
-            compactHeight: layout.compactFrame.height
-        )
         let hostingView = NSHostingView(
-            rootView: NotchRootView(model: model, visualMetrics: metrics)
+            rootView: NotchRootView(
+                model: model,
+                hasHardwareNotch: layout.hasHardwareNotch,
+                compactHeight: layout.compactFrame.height
+            )
         )
         hostingView.sizingOptions = []
         return hostingView
