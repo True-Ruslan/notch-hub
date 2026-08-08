@@ -18,6 +18,8 @@ struct NotchGeometryTests {
         #expect(layout.hardwareNotchWidth == 188)
         #expect(layout.compactFrame.midX == input.frame.midX)
         #expect(layout.compactFrame.maxY == input.frame.maxY)
+        #expect(layout.compactBackgroundOpacity == 0)
+        #expect(layout.expandedContentTopInset == layout.compactFrame.height + 12)
     }
 
     @Test
@@ -52,6 +54,8 @@ struct NotchGeometryTests {
         #expect(layout.compactFrame.width == 180)
         #expect(layout.compactFrame.height == 32)
         #expect(layout.compactFrame.midX == input.frame.midX)
+        #expect(layout.compactBackgroundOpacity == 1)
+        #expect(layout.expandedContentTopInset == 20)
     }
 
     @Test
