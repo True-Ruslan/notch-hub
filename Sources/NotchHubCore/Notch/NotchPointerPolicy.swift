@@ -5,24 +5,25 @@ public enum NotchPointerPolicy {
         current: NotchPresentation,
         pointer: CGPoint,
         layout: NotchLayout,
-        activationPadding: CGFloat = 2,
+        activationInset: CGFloat = 4,
         retentionPadding: CGFloat = 8
     ) -> NotchPresentation {
-        let activeFrame: CGRect
-
         switch current {
         case .compact:
-            activeFrame = layout.compactFrame.insetBy(
-                dx: -activationPadding,
-                dy: -activationPadding
-            )
+            let frame = layout.compactFrame
+            let isInsideActivationRegion =
+                pointer.x >= frame.minX + activationInset
+                && pointer.x <= frame.maxX - activationInset
+                && pointer.y >= frame.minY + activationInset
+                && pointer.y <= frame.maxY
+
+            return isInsideActivationRegion ? .expanded : .compact
         case .expanded:
-            activeFrame = layout.expandedFrame.insetBy(
+            let activeFrame = layout.expandedFrame.insetBy(
                 dx: -retentionPadding,
                 dy: -retentionPadding
             )
+            return activeFrame.contains(pointer) ? .expanded : .compact
         }
-
-        return activeFrame.contains(pointer) ? .expanded : .compact
     }
 }

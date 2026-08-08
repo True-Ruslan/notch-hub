@@ -1,15 +1,23 @@
 import SwiftUI
 
-public struct NotchRootView: View {
+struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
+    private let compactBackgroundOpacity: Double
+    private let expandedContentTopInset: CGFloat
 
-    public init(model: NotchPanelModel) {
+    init(
+        model: NotchPanelModel,
+        compactBackgroundOpacity: Double,
+        expandedContentTopInset: CGFloat
+    ) {
         self.model = model
+        self.compactBackgroundOpacity = compactBackgroundOpacity
+        self.expandedContentTopInset = expandedContentTopInset
     }
 
-    public var body: some View {
+    var body: some View {
         Group {
-            switch model.presentation {
+            switch model.contentPresentation {
             case .compact:
                 compactContent
             case .expanded:
@@ -17,15 +25,12 @@ public struct NotchRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: model.presentation == .compact ? 12 : 22,
-                style: .continuous
-            )
+        .background(
+            model.contentPresentation == .compact
+                ? Color.black.opacity(compactBackgroundOpacity)
+                : Color.black
         )
         .contentShape(Rectangle())
-        .animation(.snappy(duration: 0.22), value: model.presentation)
     }
 
     private var compactContent: some View {
@@ -65,7 +70,9 @@ public struct NotchRootView: View {
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.55))
         }
-        .padding(20)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
+        .padding(.top, expandedContentTopInset)
     }
 
     private func moduleTile(_ title: String, systemImage: String) -> some View {

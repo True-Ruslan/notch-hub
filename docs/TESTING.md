@@ -2,9 +2,9 @@
 
 ## Goal
 
-Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer feel, exact macOS trust/permission surfaces, third-party app integration, target-hardware resource measurements, and other behavior CI cannot honestly reproduce.
+Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer feel, compositor/window-animation continuity, physical haptic feel, exact macOS trust/permission surfaces, third-party app integration, and target-hardware resource measurements.
 
-A green pipeline is necessary but is not proof of real-device UX or target-Mac efficiency. Conversely, manual success never replaces deterministic automated coverage that can reasonably exist.
+A green pipeline is necessary but is not proof of real-device UX or target-Mac efficiency. Manual success likewise never replaces deterministic automated coverage that can reasonably exist.
 
 ## Required CI gate
 
@@ -13,240 +13,221 @@ Protected-branch check: `Build, test and package`, dependent on `macOS 26 compat
 Current CI validates:
 
 1. Swift package structure.
-2. deterministic Personal/Trusted release-policy unit/static tests.
+2. deterministic Personal/Trusted release-policy tests.
 3. deterministic performance-policy/parser/aggregation/budget tests.
-4. project-configured strict Swift formatting.
+4. strict Swift formatting.
 5. shell/plist syntax.
-6. executable repository security baseline (`scripts/security-audit.sh`).
-7. deterministic runtime performance-policy audit (`scripts/performance_policy.py audit Sources`).
+6. executable repository security baseline.
+7. deterministic runtime performance-policy source audit.
 8. macOS 26 compilation with warnings as errors.
 9. macOS 26 complete Swift test suite.
 10. packaging-runner compilation with warnings as errors.
-11. complete Swift tests with coverage instrumentation, including deterministic state-stress coverage.
+11. complete Swift tests with coverage instrumentation, including state/reversal stress.
 12. release app/DMG packaging.
 13. semantic version/build-number stamping.
 14. ad-hoc code-signature verification.
 15. Hardened Runtime verification.
 16. exact effective App Sandbox entitlement verification.
-17. linked-library inspection (system libraries only at the current milestone).
-18. DMG integrity with `hdiutil verify`.
+17. linked-library inspection; system libraries only at the current milestone.
+18. DMG integrity through `hdiutil verify`.
 19. deterministic executable/app/DMG byte-size capture.
-20. fail-closed comparison of candidate artifact sizes against `performance/baseline-v0.1.0.json`.
+20. fail-closed comparison against `performance/baseline-v0.1.0.json`.
 21. short development-harness compatibility/schema smoke on a shared runner, with no CPU/RAM magnitude gate.
 22. artifact upload.
 
-Do not lower assertions, delete useful tests, weaken security/release/performance policy, or weaken production behavior merely to make CI green.
+Do not lower assertions, delete useful tests, weaken security/release/performance policy, widen accepted budgets, or weaken production behavior merely to make CI green.
 
-## Release-policy test boundary
+## Policy boundaries
 
-`scripts/test_release_policy.py` and `scripts/release_policy.py` cover deterministic distribution rules:
+### Release/security
 
-- strict release SemVer/tag derivation;
-- versioned Personal Release notes exist and lead with the mandatory not-notarized warning;
-- unsafe Gatekeeper-bypass instructions are rejected;
-- provenance/build metadata has an exact schema and validated source/checksum/size inputs;
-- Personal Release requires manual `main` publication, ad-hoc signature verification, Sandbox/Hardened Runtime, checksum/provenance, and immutable `gh release create` semantics;
-- Personal Release rejects Apple signing/notary secrets, `environment: release`, `--clobber`, release uploads, or Gatekeeper-bypass commands;
-- Trusted Release remains a separate Developer ID/notarization tier;
-- ambiguous legacy `release.yml` is prohibited.
+Deterministic release/security checks cover strict SemVer/tag derivation, mandatory Personal Release trust warnings, Gatekeeper-bypass rejection, exact provenance metadata, manual protected-`main` release authority, App Sandbox/Hardened Runtime, immutable release semantics, system-only runtime linkage, no unreviewed subprocess/network/dynamic-loading surface, and separation from the optional future Trusted Release tier.
 
-The same Personal Release boundary is rechecked by `scripts/security-audit.sh` so a workflow cannot bypass unit tests simply by being omitted from the normal test command.
+### Performance
 
-## Security test boundary
+`PERFORMANCE.md` and `performance/baseline-v0.1.0.json` are authoritative. CI deterministically enforces source-policy and artifact-size rules; shared-runner CPU/RSS/thread magnitudes are **not** target-Mac acceptance data.
 
-The executable security baseline verifies, among other things:
+Accepted immutable `v0.1.0` baseline:
 
-- zero external Swift runtime dependencies;
-- no runtime subprocess/shell execution APIs;
-- no direct network/WebKit surface;
-- no dynamic code loading/private-symbol bridging primitives;
-- no global keyboard/button/drag/scroll/modifier monitoring;
-- no embedded common credential/private-key formats;
-- exactly the expected sandbox entitlement set;
-- no dangerous Hardened Runtime exception entitlements;
-- no LaunchAgents/LaunchDaemons/privileged-helper surfaces;
-- immutable full-SHA GitHub Action references;
-- no `pull_request_target` workflows;
-- explicit Personal/Trusted release-tier boundaries and immutable release assets;
-- performance measurement tooling remains development-only and is not copied/referenced into the application bundle.
-
-Future capabilities that legitimately require a currently forbidden surface must update policy and tests explicitly in the same reviewed PR.
-
-## Performance test boundary
-
-`PERFORMANCE.md` is authoritative for runtime resource policy, accepted target-Mac values, budgets, and methodology. `performance/baseline-v0.1.0.json` is the canonical machine-readable baseline.
-
-`scripts/test_performance_policy.py` and `scripts/performance_policy.py` deterministically cover:
-
-- forbidden unreviewed polling/timer/sleep/display-link primitives in runtime Swift sources;
-- strict `/bin/ps` CPU/RSS/thread sample parsing;
-- Darwin `ps -M` thread-row parsing;
-- median/max aggregation without inventing empty measurements;
-- stability start/end/quartile evidence;
-- baseline-harness configuration validation;
-- deterministic flat runtime-budget comparison and malformed/non-finite input rejection;
-- release-size budget success below both limits;
-- named absolute-ceiling failure;
-- named relative-regression failure;
-- fail-closed baseline schema/version and required-metric validation;
-- fail-closed `check-size-budget` CLI behavior.
-
-`scripts/perf-baseline.py` is development/release tooling only. CI runs only a short compatibility/schema smoke and must not enforce runner CPU/RSS/thread values. Canonical runtime values come from the target MacBook/macOS 26.6 under the stable scenarios below. Artifact sizes are deterministic enough to be enforced in shared CI.
+- executable `220,560 B`;
+- app aggregate `223,555 B`;
+- DMG `73,955 B`;
+- target-Mac idle CPU median/max `0.0% / 0.7%`;
+- hover CPU median/max `5.95% / 22.3%`;
+- stability CPU median/max `0.0% / 6.8%`;
+- stability RSS delta `-3,712 KiB`.
 
 ## Test design
 
-Prefer pure deterministic policies for geometry, parsing, permissions, state, transitions, release rules, resource-policy rules, time-dependent interaction decisions, and AppKit/SwiftUI boundary configuration. AppKit/SwiftUI/GitHub orchestration should be thin around tested policies.
+Prefer deterministic policies/state machines for geometry, release/security policy, resource policy, dwell behavior, transition lifecycle, accessibility duration policy, and AppKit boundary configuration.
 
 Tests should:
 
 - state one behavior in the name;
 - assert externally meaningful results;
-- avoid mocks unless an OS/third-party boundary cannot reasonably be exercised;
-- avoid arbitrary sleeps in unit tests;
-- include boundary/error/denied cases;
+- avoid arbitrary sleeps;
+- include boundary/error/denied/stale-callback cases;
 - reproduce reported deterministic regressions before fixes where practical;
-- never fabricate a RED phase if a behavior is already correctly testable;
-- prefer deterministic fake adapters around external boundaries over live services;
-- inject a monotonic clock/scheduler for dwell/debounce behavior instead of waiting in real time;
-- inject a haptic output abstraction so tests assert request count/reason without requiring physical trackpad vibration;
-- never use noisy shared-runner timing values as tight performance gates.
+- test exact physical-coordinate boundaries when hardware behavior depends on an inclusive/exclusive edge;
+- never substitute a nearby interior point for a named physical-edge scenario;
+- never fabricate RED when behavior is already correctly testable;
+- use injected schedulers/output closures around OS boundaries;
+- intentionally invoke cancelled/stale callbacks when race safety is part of the contract;
+- never use noisy shared-runner timing/resource values as tight gates.
 
-No arbitrary global code-coverage percentage is used. Coverage instrumentation is enabled to find untested deterministic logic; component-specific thresholds may be introduced only where they remain meaningful.
+No arbitrary global coverage percentage is used.
 
-## P0 performance contracts
+## M1 deterministic interaction/transition contract
 
-| ID | Scenario | Expected result | Automation |
-| --- | --- | --- | --- |
-| `NH-PERF-IDLE-001` | Accepted Personal Release, 10 s warmup then untouched compact mode for 60 s sampled every 1 s | Stable idle CPU/RSS/thread summary; no app-initiated periodic work discovered by policy/review | Sampling automated on target Mac; interaction/manual environment control |
-| `NH-PERF-HOVER-001` | 60 s sampler while repeating documented 5-second expand/retain/collapse cycle | Active summary captured without synthesized input; accepted hover behavior remains intact | Sampling automated; interaction manual |
-| `NH-PERF-STABILITY-001` | 10 min untouched run sampled every 5 s | No unexplained sustained RSS/thread growth | Sampling automated on target Mac; interpretation reviewed |
-| `NH-PERF-SIZE-001` | Accepted release executable/app/DMG | Exact byte sizes recorded in canonical baseline and later candidates kept within reviewed budget | Release metadata + shared-CI deterministic gate |
-| `NH-PERF-STATE-001` | Exactly 100,000 pure pointer/presentation decisions | Correct final/count invariants with no retained history/state growth API; no wall-clock assertion | Fully automated Swift test |
+Authoritative specification: `docs/specs/M1_NOTCH_INTERACTION.md`.
+Transition hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
 
-All P0 baseline inputs are accepted. Shared runner CPU/RAM/thread values are never substituted for target-Mac acceptance. Canonical values and budgets are stored in `performance/baseline-v0.1.0.json` and explained in `PERFORMANCE.md`.
+### Pointer intent / dwell
 
-## M1 delayed-hover and haptic contract
+The suite proves:
 
-Authoritative interaction specification: `docs/specs/M1_NOTCH_INTERACTION.md`.
+- quick transit shorter than the accepted `120 ms` dwell emits no expansion intent/haptic;
+- setup/current-pointer synchronization is non-activating;
+- deliberate hover emits one eligible expansion intent only when threshold completes;
+- duplicate `mouseMoved` events keep one pending activation;
+- cancelled dwell cannot later win from a stale callback;
+- re-entry starts a fresh dwell;
+- expanded retention emits no new intent;
+- pointer exit emits non-haptic collapse intent;
+- invalidation cancels pending work;
+- compact activation has **4 pt inward protection on left/right/bottom and no top inset**;
+- compact activation uses explicit inclusive directional comparisons rather than `CGRect.contains` half-open maximum-edge semantics;
+- a point 2 pt inside the bottom edge is rejected and exactly 4 pt is accepted;
+- a point at exactly `compactFrame.maxY` at notch center is accepted;
+- points only 2 pt inside left/right remain rejected at the exact top edge;
+- points exactly 4 pt inside left/right are accepted at the exact top edge.
 
-Before implementation, RED-first tests must prove at minimum:
+### Transition lifecycle
 
-- pointer transit shorter than the dwell threshold does not expand and emits zero haptic requests;
-- deliberate hover expands only when the threshold completes;
-- one successful user-initiated `compact -> expanded` transition emits exactly one haptic request;
-- repeated `mouseMoved` events do not create duplicate pending work or duplicate haptics;
-- a cancelled dwell cannot fire later from a stale callback;
-- re-entry starts a fresh dwell instead of reusing elapsed time;
-- expanded retention does not retrigger haptic feedback;
-- collapse followed by a new deliberate hover may produce one new haptic;
-- controller teardown/state invalidation cancels pending dwell work.
+The suite proves:
 
-The implementation must remain event-driven: no polling, no repeating timer, and at most one pending activation task/timer. Physical haptic feel remains a real-device acceptance concern because macOS may legitimately suppress trackpad feedback depending on current hardware, touch state, accessibility, and user preferences.
+- expansion settles only after its matching completion;
+- collapse retains expanded SwiftUI content until matching completion;
+- stale expansion/collapse completions cannot win after reversal;
+- duplicate desired expansion does not duplicate transition/haptic;
+- programmatic expansion remains non-haptic;
+- invalidation makes later completion harmless;
+- Reduce Motion retarget creates no second haptic;
+- 10,000 reversal requests retain only latest-generation authority without production history accumulation.
+
+### AppKit animation/chrome
+
+The suite proves:
+
+- zero-duration path reaches exact frame/radius endpoint synchronously once;
+- positive-duration path installs public Core Animation radius output and does not complete synchronously;
+- accepted normal duration is `0.20 s` with ease-in-out timing;
+- cancellation freezes current presentation-layer radius before removing the prior animation;
+- at least 32 immediate endpoint cycles retain exact frame and AppKit mask/radius invariants;
+- outer clipping is owned by the layer-backed AppKit hosting view;
+- compact/expanded radii remain `12 pt / 22 pt`;
+- hardware-notch compact surface is opaque black;
+- expanded hardware-notch content begins below occlusion.
+
+### Accessibility motion policy
+
+- normal motion resolves to `0.20 s`;
+- Reduce Motion resolves to `0 s`;
+- controller observes `NSWorkspace.accessibilityDisplayOptionsDidChangeNotification` through selector ownership;
+- block observer token/closure ownership is absent;
+- observer removal is explicit at controller teardown.
+
+### Pointer monitor lifecycle/performance
+
+- exactly one local and one global `.mouseMoved` monitor are registered;
+- repeated start cannot duplicate registrations;
+- invalidation removes both tokens exactly once;
+- live `.mouseMoved` delivery contains no per-event `Task { @MainActor ... }` allocation;
+- main-thread AppKit callbacks route through `MainActor.assumeIsolated`;
+- no broader input mask or sensitive permission is introduced.
+
+The implementation remains event-driven: one pending dwell work item at most; no polling, repeating timer, display link, sleep loop, or custom per-frame animation loop.
 
 ## Real-hardware / distribution acceptance matrix
 
-Record results in `docs/PROJECT_STATE.md`.
-
-| ID | Scenario | Expected result | Automation |
+| ID | Scenario | Expected result | Status / automation |
 | --- | --- | --- | --- |
-| `NH-BOOT-001` | Install/open CI-produced DMG | App launches and panel appears | Packaging automated; launch UX manual |
-| `NH-OS26-001` | Run accepted test build on target macOS 26.6 | App launches, sandboxed runtime works, no unexpected permission prompt | macOS 26 CI automated; exact 26.6 hardware manual |
-| `NH-NOTCH-001` | Observe compact panel on hardware-notch MacBook | Center/width match physical notch | Geometry unit-tested; physical alignment manual |
-| `NH-HOVER-001` | Enter compact activation region and hold >=3 s | One expansion; no oscillation | Pointer policy unit-tested; AppKit delivery manual |
-| `NH-HOVER-002` | Move within expanded panel | Remains expanded | Retention unit-tested; AppKit delivery manual |
-| `NH-HOVER-003` | Move outside retention region | Content and actual panel frame collapse once and remain compact | Policy/sizing ownership automated; physical window behavior manual |
-| `NH-SANDBOX-001` | Exercise normal panel in Sandbox build | No crash/unexpected permission/loss of behavior | Entitlement/signing automated; runtime manual |
-| `NH-PERSONAL-RELEASE-001` | Download versioned Personal Release from GitHub | Published SHA-256 matches; installation uses only standard Finder / Privacy & Security approval; app opens on macOS 26.6; accepted notch/hover scenarios remain PASS | Release policy/checksum/provenance automated; downloaded quarantine/trust path + hardware behavior manual once for first personal pipeline/version |
-| `NH-HOVER-DELAY-001` | Move pointer through notch toward another display without intentionally stopping | Transit completes before dwell threshold; panel stays compact; zero haptic feedback | Deterministic injected-clock cancellation test; real cross-display pointer feel manual |
-| `NH-HOVER-DELAY-002` | Deliberately hover over compact notch | Panel expands once after a short perceptible-but-fast dwell, with no flicker/oscillation | State/time policy automated; final dwell tuning manual |
-| `NH-HAPTIC-001` | Deliberately hover using a compatible Force Touch trackpad while touching it | Exactly one short tactile event accompanies the successful expansion | Haptic request count/reason automated through fake performer; physical tactile result manual |
-| `NH-HAPTIC-002` | Quick/cancelled hover, retention movement, and collapse | No haptic feedback | Deterministic policy/output tests automated; physical negative check manual |
-| `NH-GATEKEEPER-TRUSTED-001` | Future: download Trusted Release | Gatekeeper identifies `Notarized Developer ID` without personal-build approval workaround | Trusted workflow automated; normal downloaded path manual when tier is first adopted |
-| `NH-SPACE-001` | Switch Spaces/fullscreen | Behavior matches M1 policy | Planned M1 |
+| `NH-NOTCH-001` | Compact panel on physical-notch MacBook | Center/width match physical notch | **PASS** on CI #319 artifact; geometry automated |
+| `NH-HOVER-001` | Deliberate compact hover | One expansion; no oscillation | **PASS**; lifecycle automated |
+| `NH-HOVER-002` | Move within expanded retention | Remains expanded | **PASS**; policy automated |
+| `NH-HOVER-003` | Move outside retention | Collapse once and stay compact | **PASS**; state machine automated |
+| `NH-HOVER-DELAY-001` | Quick transit through/near notch toward second display | Stays compact; zero haptic | **PASS on exact CI #332 artifact**; dwell/cancellation automated |
+| `NH-HOVER-DELAY-002` | Deliberate hover | Opens once after 120 ms | **PASS; 120 ms accepted** |
+| `NH-HOVER-TOP-001` | Built-in display, pointer deliberately held at exact top screen edge over notch | Opens once after 120 ms with one haptic; no oscillation | **PASS on exact CI #332 artifact**; exact inclusive boundary automated |
+| `NH-HAPTIC-001` | Successful deliberate hover | Exactly one acceptable tactile event | **PASS; `.levelChange` accepted** |
+| `NH-HAPTIC-002` | Cancelled transit/retention/collapse | No haptic | **PASS** |
+| `NH-VISUAL-001` | Compact physical-notch state | Black rounded surface; no square leakage | **PASS** |
+| `NH-VISUAL-002` | Hold expanded state | Controls visible below notch | **PASS** |
+| `NH-VISUAL-003` | At least 20 open/collapse cycles | Rounded chrome remains rounded | **PASS**; 32-cycle deterministic regression |
+| `NH-ANIM-001` | Normal expansion/collapse | Both directions smooth | **PASS; 0.20 s accepted** |
+| `NH-ANIM-002` | Reverse expansion -> collapse | No snap/flicker/stale endpoint/extra haptic | **PASS** |
+| `NH-ANIM-003` | Reverse collapse -> expansion | Same continuity rules | **PASS** |
+| `NH-ANIM-004` | Rapid hover/leave churn | No stuck phase/stale completion | **PASS**; 10k stress automated |
+| `NH-MOTION-001` | Reduce Motion enabled before transition | Immediate exact endpoint | **PASS** |
+| `NH-MOTION-002` | Toggle Reduce Motion during transition | Immediate desired endpoint, no duplicate haptic/flicker | **PASS** |
+| Startup pointer overlap | Launch while pointer already overlaps notch | No startup-only activation/haptic | **PASS** |
+| `NH-SPACE-001` | Switch Spaces/fullscreen | Behavior matches future M1 policy | Planned M1 |
 | `NH-DISPLAY-001` | Connect/move between displays | Correct target-display geometry/migration | Planned M1 |
 
-## Acceptance history
+## M1 acceptance evidence — 2026-08-08
 
-### 2026-08-07 — cycle 1
+### Broad hardware acceptance
 
-- `NH-BOOT-001`: PASS enough to run application.
-- `NH-HOVER-001`: FAIL — compact/expanded oscillation.
-- RED `eb4fb4d`: expected failing retention regression.
-- GREEN `eff9bde`: raw SwiftUI hover authority replaced by deterministic screen-space policy.
+Exact target-Mac artifact:
 
-### 2026-08-07 — cycle 2
+- source SHA `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4`;
+- CI #319 / run `31257399497`;
+- `NotchHub-dmg` artifact ID `9021802122`.
 
-Target MacBook/macOS 26.6:
+Physical result: every broad interaction, visual, haptic, animation/reversal, rapid-churn, Reduce Motion and startup check listed above passed. This accepts `120 ms`, `.levelChange`, `0.20 s`, the transition authority, AppKit chrome ownership and the existing side/bottom activation depth.
 
-- `NH-OS26-001`: PASS.
-- `NH-NOTCH-001`: FAIL — compact panel a few pixels too wide.
-- `NH-HOVER-001`: PASS.
-- `NH-HOVER-002`: PASS.
-- `NH-HOVER-003`: FAIL — compact content while expanded black panel frame remained.
-- `NH-SANDBOX-001`: earlier report was inferred as PASS by matrix order because the source message repeated the last label; that ambiguity remains documented rather than rewritten.
+The only follow-up requested from this successful cycle was deliberate activation at the very top screen edge when not using a second-display transit.
 
-RED `c518326` produced exactly the two intended CI failures (`180` vs `176`; hosting sizing options `7` vs empty). GREEN `3bb1bbb` fixed both. CI then reached **10/10 PASS** plus full security/package gates.
+### Top-edge refinement and physical failure
 
-### 2026-08-07 — cycle 3 / M0 final acceptance
+Requirement: keep 4 pt protection on left/right/bottom, remove top inset entirely.
 
-Target MacBook/macOS 26.6:
+Initial cycle:
 
-- `NH-NOTCH-001`: **PASS**.
-- `NH-HOVER-001`: **PASS**.
-- `NH-HOVER-002`: **PASS**.
-- `NH-HOVER-003`: **PASS**.
+- RED `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 established the asymmetric geometry;
+- GREEN `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**;
+- clean documented candidate `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed all automated gates and produced artifact `9022296152`;
+- target-Mac `NH-HOVER-TOP-001` on #325 **FAILED**: the cursor held against the physical top edge did not open the panel.
 
-**M0 mandatory physical acceptance: PASS.**
+The failure exposed an inaccurate boundary approximation in the automated test: it used `compactFrame.maxY - 1`, while the real scenario is `compactFrame.maxY`. Production then passed that point to `CGRect.contains`, whose maximum X/Y boundaries are excluded. Therefore the test was green without covering the physical edge it claimed to represent.
 
-### 2026-08-07 — cycle 4 / Personal Release acceptance
+Corrective TDD:
 
-Downloaded immutable GitHub Personal Release `v0.1.0` on the target MacBook/macOS 26.6:
+- RED `3d0d40b5426cb8a8fe0bd19393688a68247637b0` / CI #326 changed the scenario to exact `y == compactFrame.maxY` and added exact accepted 4 pt left/right boundaries;
+- #326 ran **54 tests** and failed only the three new exact-boundary assertions; all existing behavior remained green;
+- GREEN `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive comparisons and passed **54/54 Swift tests** plus all release/security/performance/package gates and the unchanged P0 size budget;
+- #327 sizes: executable `250,320 B`, app `253,317 B`, DMG `84,679 B`.
 
-- `NH-PERSONAL-RELEASE-001`: **PASS**.
-- published checksum/install/standard macOS first-launch path: **PASS**;
-- application launch: **PASS**;
-- accepted `NH-NOTCH-001`, `NH-HOVER-001`, `NH-HOVER-002`, `NH-HOVER-003` behavior on the downloaded release: **PASS**.
+### Final targeted hardware acceptance
 
-**R0.1 Personal Release acceptance: PASS.**
+Exact corrected artifact:
 
-### 2026-08-07 — cycle 5 / P0 runtime baseline
+- source SHA `6d4c13739216503ec97fe3e71eada0fc9b32f298`;
+- CI #332 / run `31260116337`;
+- `NotchHub-dmg` artifact ID `9022551570`;
+- digest `sha256:f79a01f5dd65f6056d3021231667ac15cb7f340d32c4fc8bf383ccea0723a758`.
 
-Accepted Personal Release `v0.1.0` (`8e913dcddfdec7d9aa920df8c37afb23b8c40884`) on target macOS 26.6 / `Mac16,8`, measured using P0 tooling commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0`:
+Physical target-Mac result:
 
-- `NH-PERF-IDLE-001`: **BASELINE ACCEPTED** — 60 samples / `60.017 s`; CPU median/max `0.0% / 0.7%`; RSS median/max `33,648 / 33,808 KiB`; threads `4 / 4`;
-- `NH-PERF-HOVER-001`: **BASELINE ACCEPTED** — 60 samples / `60.018 s`; CPU median/max `5.95% / 22.3%`; RSS median/max `38,456 / 38,816 KiB`; threads `6 / 7`;
-- `NH-PERF-STABILITY-001`: **BASELINE ACCEPTED** — 120 samples / `600.013 s`; CPU median/max `0.0% / 6.8%`; RSS median/max `30,992 / 34,384 KiB`; threads `3 / 7`;
-- stability RSS `34,256 -> 30,544 KiB`, delta `-3,712 KiB`: **no sustained RSS growth detected**;
-- stability threads `4 -> 5`, max `7`: bounded transient behavior; no runaway thread accumulation detected.
+- `NH-HOVER-TOP-001`: **PASS**;
+- `NH-HOVER-DELAY-001`: **PASS**.
 
-Initial target-Mac CPU/RSS/thread ceilings are recorded in `PERFORMANCE.md` with conservative headroom and are not used as shared-runner CI thresholds.
+The corrected exact-edge behavior and cross-display regression are therefore physically accepted together on the same artifact. Final accepted compact geometry is **inclusive 4 pt left/right/bottom, inclusive 0 pt top** with the already accepted 120 ms dwell.
 
-### 2026-08-07 — cycle 6 / P0 size baseline and budget gate
+Acceptance-record commits after source `6d4c13739216503ec97fe3e71eada0fc9b32f298` are documentation-only. They require a fresh exact-head CI before integration but do not require another target-Mac physical run.
 
-Immutable `v0.1.0` release metadata supplied the exact `NH-PERF-SIZE-001` baseline:
+## Historical TDD highlights
 
-- executable: `220,560 B`;
-- app aggregate: `223,555 B`;
-- DMG: `73,955 B`;
-- source commit: `8e913dcddfdec7d9aa920df8c37afb23b8c40884`;
-- DMG SHA-256: `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`.
+Earlier RED/GREEN evidence remains in Git history and `CHANGELOG.md`: initial interaction seams (#147/#148/#150), size-gate correction (#157/#158), setup synchronization (#165/#167), visual regressions (#172/#189/#196/#204), transition authority and reversal hardening (#225/#231/#273/#279/#283/#292), size optimization (#295/#305/#308), pointer hot-path optimization (#309/#310), and the exact-edge correction (#326/#327).
 
-RED CI #91 failed exactly because the new release-size comparison API did not yet exist. GREEN CI #94 then passed **22/22 Python performance-policy tests**, security/policy audits, **11/11 Swift tests**, packaging/signature/Sandbox/Hardened Runtime/DMG checks, deterministic size capture, the new release-size budget gate, harness smoke, and artifact upload.
-
-CI #94 candidate sizes were executable `214,016 B`, app `217,012 B`, DMG `73,378 B`; all passed the canonical 15% relative allowance and absolute ceilings.
-
-**P0 Performance Foundation acceptance: PASS.**
-
-## Personal Release TDD evidence
-
-PR #3 records release-policy RED/GREEN evidence independently from app runtime:
-
-- initial release policy tests failed because `release_policy.py` was absent;
-- first implementation exposed and fixed a false-positive Gatekeeper rule (`Do not disable Gatekeeper` must be allowed while actual bypass instructions are forbidden);
-- versioned release-note integration test failed until `docs/releases/v0.1.0.md` existed;
-- Personal Release workflow contract failed until `.github/workflows/personal-release.yml` existed;
-- tier-separation test failed until `trusted-release.yml` existed and legacy `release.yml` was removed;
-- trust-boundary tests failed until the executable workflow validator existed;
-- final Trusted pre-publish recheck received an additional RED-first fail-closed regression test before its fix.
-
-`v0.1.0` Personal Release was published from accepted `main` and subsequently passed `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6.
+The invariant throughout is unchanged: hardware success does not replace deterministic tests, and green CI does not claim physical behavior it cannot observe.

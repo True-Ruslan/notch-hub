@@ -22,6 +22,83 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
+    func compactPointerJustInsidePhysicalBottomEdgeDoesNotActivate() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: 500, y: 870),
+            layout: layout
+        )
+
+        #expect(result == .compact)
+    }
+
+    @Test
+    func compactPointerFourPointsInsideBottomEdgeActivates() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: 500, y: 872),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
+    func compactPointerAtExactTopScreenEdgeActivatesWithoutTopInset() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: 500, y: layout.compactFrame.maxY),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
+    func compactPointerJustInsideLeftEdgeStillDoesNotActivate() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.minX + 2, y: layout.compactFrame.maxY),
+            layout: layout
+        )
+
+        #expect(result == .compact)
+    }
+
+    @Test
+    func compactPointerAtExactLeftInsetActivates() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.minX + 4, y: layout.compactFrame.maxY),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
+    func compactPointerJustInsideRightEdgeStillDoesNotActivate() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.maxX - 2, y: layout.compactFrame.maxY),
+            layout: layout
+        )
+
+        #expect(result == .compact)
+    }
+
+    @Test
+    func compactPointerAtExactRightInsetActivates() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.maxX - 4, y: layout.compactFrame.maxY),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
     func expandedPointerInsideExpandedRetentionRegionStaysExpanded() {
         let result = NotchPointerPolicy.presentation(
             current: .expanded,

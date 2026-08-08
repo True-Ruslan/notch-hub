@@ -1,40 +1,137 @@
 import AppKit
-import Combine
+import Dispatch
 import SwiftUI
 
 @MainActor
 public final class NotchPanelController: NSObject {
     private let panel: NSPanel
-    private let model: NotchPanelModel
-    private var layout: NotchLayout
-    private var cancellables = Set<AnyCancellable>()
-    private var localPointerMonitor: Any?
-    private var globalPointerMonitor: Any?
+    private let interactionCoordinator: NotchInteractionCoordinator
+    private let transitionCoordinator: NotchPanelTransitionCoordinator
+    private let pointerMonitor: NotchPointerMonitor
+    private let layout: NotchLayout
+    private var reduceMotionEnabled: Bool
 
     public override init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
-        let geometry = ScreenGeometryInput(screen: screen)
-        let resolvedLayout = NotchGeometry.layout(for: geometry)
+        let resolvedLayout = NotchGeometry.layout(
+            for: ScreenGeometryInput(screen: screen)
+        )
         let model = NotchPanelModel()
-
-        self.layout = resolvedLayout
-        self.model = model
-        self.panel = NSPanel(
+        let panel = NSPanel(
             contentRect: resolvedLayout.compactFrame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
+        let hostingView = NotchHostingViewFactory.make(
+            model: model,
+            layout: resolvedLayout
+        )
+        panel.contentView = hostingView
+
+        let workspace = NSWorkspace.shared
+        let initialReduceMotion = workspace.accessibilityDisplayShouldReduceMotion
+        let haptics = AppKitNotchHapticPerformer()
+        let transitionCoordinator = NotchPanelTransitionCoordinator(
+            model: model,
+            animationDuration: {
+                notchAnimationDuration(
+                    reduceMotion: workspace.accessibilityDisplayShouldReduceMotion
+                )
+            },
+            animate: { frame, cornerRadius, duration, completion in
+                animateNotchPanel(
+                    panel: panel,
+                    chromeView: hostingView,
+                    frame: frame,
+                    cornerRadius: cornerRadius,
+                    duration: duration,
+                    completion: completion
+                )
+            },
+            cancelAnimation: {
+                cancelNotchPanelAnimation(chromeView: hostingView)
+            },
+            performExpansionHaptic: {
+                haptics.performExpansionHaptic()
+            }
+        )
+        let interactionCoordinator = NotchInteractionCoordinator(
+            scheduleActivation: { delaySeconds, action in
+                let workItem = DispatchWorkItem {
+                    MainActor.assumeIsolated {
+                        action()
+                    }
+                }
+                DispatchQueue.main.asyncAfter(
+                    deadline: .now() + delaySeconds,
+                    execute: workItem
+                )
+                return { workItem.cancel() }
+            },
+            emitIntent: { intent in
+                transitionCoordinator.accept(intent, layout: resolvedLayout)
+            }
+        )
+
+        self.panel = panel
+        self.interactionCoordinator = interactionCoordinator
+        self.transitionCoordinator = transitionCoordinator
+        self.pointerMonitor = NotchPointerMonitor()
+        self.layout = resolvedLayout
+        self.reduceMotionEnabled = initialReduceMotion
 
         super.init()
+
+        configureAccessibilityObservation()
         configurePanel()
-        bindModel()
         configurePointerMonitoring()
     }
 
     public func show() {
         panel.orderFrontRegardless()
-        updatePresentation(for: NSEvent.mouseLocation)
+        interactionCoordinator.pointerMoved(
+            to: NSEvent.mouseLocation,
+            layout: layout,
+            currentPresentation: transitionCoordinator.desiredPresentation,
+            allowActivation: false
+        )
+    }
+
+    func invalidate() {
+        pointerMonitor.invalidate()
+        interactionCoordinator.invalidate()
+        transitionCoordinator.invalidate()
+        removeAccessibilityObserver()
+    }
+
+    private func configureAccessibilityObservation() {
+        let workspace = NSWorkspace.shared
+        workspace.notificationCenter.addObserver(
+            self,
+            selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
+            name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: workspace
+        )
+    }
+
+    @objc private func accessibilityDisplayOptionsDidChange(_ notification: Notification) {
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard reduceMotion != reduceMotionEnabled else {
+            return
+        }
+
+        reduceMotionEnabled = reduceMotion
+        transitionCoordinator.animationPolicyDidChange(layout: layout)
+    }
+
+    private func removeAccessibilityObserver() {
+        let workspace = NSWorkspace.shared
+        workspace.notificationCenter.removeObserver(
+            self,
+            name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: workspace
+        )
     }
 
     private func configurePanel() {
@@ -48,48 +145,19 @@ public final class NotchPanelController: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isMovable = false
         panel.acceptsMouseMovedEvents = true
-        panel.contentView = NotchHostingViewFactory.make(model: model)
-    }
-
-    private func bindModel() {
-        model.$presentation
-            .removeDuplicates()
-            .sink { [weak self] presentation in
-                self?.apply(presentation)
-            }
-            .store(in: &cancellables)
     }
 
     private func configurePointerMonitoring() {
-        let mask: NSEvent.EventTypeMask = .mouseMoved
-
-        localPointerMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
-            let pointer = NSEvent.mouseLocation
-            Task { @MainActor [weak self] in
-                self?.updatePresentation(for: pointer)
-            }
-            return event
-        }
-
-        globalPointerMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] _ in
-            let pointer = NSEvent.mouseLocation
-            Task { @MainActor [weak self] in
-                self?.updatePresentation(for: pointer)
-            }
+        pointerMonitor.start { [weak self] pointer in
+            self?.updateInteraction(for: pointer)
         }
     }
 
-    private func updatePresentation(for pointer: CGPoint) {
-        let target = NotchPointerPolicy.presentation(
-            current: model.presentation,
-            pointer: pointer,
-            layout: layout
+    private func updateInteraction(for pointer: CGPoint) {
+        interactionCoordinator.pointerMoved(
+            to: pointer,
+            layout: layout,
+            currentPresentation: transitionCoordinator.desiredPresentation
         )
-        model.setHovered(target == .expanded)
-    }
-
-    private func apply(_ presentation: NotchPresentation) {
-        let targetFrame = presentation == .compact ? layout.compactFrame : layout.expandedFrame
-        panel.setFrame(targetFrame, display: true, animate: true)
     }
 }

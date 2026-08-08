@@ -7,15 +7,11 @@ public enum NotchPresentation: Equatable, Sendable {
 
 @MainActor
 public final class NotchPanelModel: ObservableObject {
-    @Published public private(set) var presentation: NotchPresentation = .compact
+    @Published public private(set) var contentPresentation: NotchPresentation = .compact
 
     public init() {}
 
-    public func setHovered(_ isHovered: Bool) {
-        presentation = isHovered ? .expanded : .compact
-    }
-
-    public func toggle() {
-        presentation = presentation == .compact ? .expanded : .compact
+    public func setContentPresentation(_ presentation: NotchPresentation) {
+        contentPresentation = presentation
     }
 }
