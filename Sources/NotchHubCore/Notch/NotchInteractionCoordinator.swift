@@ -45,7 +45,11 @@ final class NotchInteractionCoordinator {
         self.dwellSeconds = dwellSeconds
     }
 
-    func pointerMoved(to pointer: CGPoint, layout: NotchLayout) {
+    func pointerMoved(
+        to pointer: CGPoint,
+        layout: NotchLayout,
+        allowActivation: Bool = true
+    ) {
         guard !isInvalidated else {
             return
         }
@@ -58,7 +62,7 @@ final class NotchInteractionCoordinator {
                 layout: layout
             )
 
-            if target == .expanded {
+            if target == .expanded && allowActivation {
                 scheduleActivationIfNeeded()
             } else {
                 cancelPendingActivation()
