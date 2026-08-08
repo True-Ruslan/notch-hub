@@ -24,19 +24,34 @@ public final class NotchPanelController: NSObject {
         let interactionCoordinator = NotchInteractionCoordinator(
             scheduler: MainQueueNotchActivationScheduler(),
             emitIntent: { intent in
-                model.setContentPresentation(intent.desiredPresentation)
+                let presentation: NotchPresentation
+                let hapticEligible: Bool
+
+                switch intent {
+                case .deliberateExpansion:
+                    presentation = .expanded
+                    hapticEligible = true
+                case .pointerExitCollapse:
+                    presentation = .compact
+                    hapticEligible = false
+                case .programmaticExpansion:
+                    presentation = .expanded
+                    hapticEligible = false
+                }
+
+                model.setContentPresentation(presentation)
                 if let contentView = panel.contentView {
                     NotchHostingViewFactory.applyPresentation(
-                        intent.desiredPresentation,
+                        presentation,
                         to: contentView
                     )
                 }
                 let targetFrame =
-                    intent.desiredPresentation == .compact
+                    presentation == .compact
                     ? resolvedLayout.compactFrame
                     : resolvedLayout.expandedFrame
                 panel.setFrame(targetFrame, display: true)
-                if intent.hapticEligible {
+                if hapticEligible {
                     haptics.performExpansionHaptic()
                 }
             }
