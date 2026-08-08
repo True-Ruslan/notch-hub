@@ -7,9 +7,10 @@ public final class NotchPanelController: NSObject {
     private let panel: NSPanel
     private let interactionCoordinator: NotchInteractionCoordinator
     private let transitionCoordinator: NotchPanelTransitionCoordinator
-    private let animationDurationProvider: NotchAnimationDurationProvider
     private let pointerMonitor: NotchPointerMonitor
     private let layout: NotchLayout
+    private var accessibilityObserver: NSObjectProtocol?
+    private var reduceMotionEnabled: Bool
 
     public override init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
@@ -29,19 +30,20 @@ public final class NotchPanelController: NSObject {
         )
         panel.contentView = hostingView
 
-        let animationDurationProvider = NotchAnimationDurationProvider.live()
-        let animationDriver = AppKitNotchPanelAnimationDriver(
-            panel: panel,
-            chromeView: hostingView
-        )
+        let workspace = NSWorkspace.shared
+        let initialReduceMotion = workspace.accessibilityDisplayShouldReduceMotion
         let haptics = AppKitNotchHapticPerformer()
         let transitionCoordinator = NotchPanelTransitionCoordinator(
             model: model,
-            animationDuration: { [weak animationDurationProvider] in
-                animationDurationProvider?.currentDuration ?? 0
+            animationDuration: {
+                notchAnimationDuration(
+                    reduceMotion: workspace.accessibilityDisplayShouldReduceMotion
+                )
             },
             animate: { frame, cornerRadius, duration, completion in
-                animationDriver.animate(
+                animateNotchPanel(
+                    panel: panel,
+                    chromeView: hostingView,
                     frame: frame,
                     cornerRadius: cornerRadius,
                     duration: duration,
@@ -49,7 +51,7 @@ public final class NotchPanelController: NSObject {
                 )
             },
             cancelAnimation: {
-                animationDriver.cancel()
+                cancelNotchPanelAnimation(chromeView: hostingView)
             },
             performExpansionHaptic: {
                 haptics.performExpansionHaptic()
@@ -76,15 +78,13 @@ public final class NotchPanelController: NSObject {
         self.panel = panel
         self.interactionCoordinator = interactionCoordinator
         self.transitionCoordinator = transitionCoordinator
-        self.animationDurationProvider = animationDurationProvider
         self.pointerMonitor = NotchPointerMonitor()
         self.layout = resolvedLayout
+        self.reduceMotionEnabled = initialReduceMotion
 
         super.init()
 
-        animationDurationProvider.onDurationChange = { [weak transitionCoordinator] _ in
-            transitionCoordinator?.animationPolicyDidChange(layout: resolvedLayout)
-        }
+        configureAccessibilityObservation()
         configurePanel()
         configurePointerMonitoring()
     }
@@ -103,7 +103,39 @@ public final class NotchPanelController: NSObject {
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
         transitionCoordinator.invalidate()
-        animationDurationProvider.invalidate()
+        removeAccessibilityObserver()
+    }
+
+    private func configureAccessibilityObservation() {
+        let workspace = NSWorkspace.shared
+        accessibilityObserver = workspace.notificationCenter.addObserver(
+            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.accessibilityDisplayOptionsDidChange()
+            }
+        }
+    }
+
+    private func accessibilityDisplayOptionsDidChange() {
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard reduceMotion != reduceMotionEnabled else {
+            return
+        }
+
+        reduceMotionEnabled = reduceMotion
+        transitionCoordinator.animationPolicyDidChange(layout: layout)
+    }
+
+    private func removeAccessibilityObserver() {
+        guard let accessibilityObserver else {
+            return
+        }
+
+        NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver)
+        self.accessibilityObserver = nil
     }
 
     private func configurePanel() {
