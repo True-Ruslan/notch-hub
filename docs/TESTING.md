@@ -125,7 +125,7 @@ No arbitrary global code-coverage percentage is used. Coverage instrumentation i
 
 All P0 baseline inputs are accepted. Shared runner CPU/RAM/thread values are never substituted for target-Mac acceptance. Canonical values and budgets are stored in `performance/baseline-v0.1.0.json` and explained in `PERFORMANCE.md`.
 
-## M1 delayed-hover and haptic contract
+## M1 delayed-hover, haptic, and notch-visual contract
 
 Authoritative interaction specification: `docs/specs/M1_NOTCH_INTERACTION.md`.
 
@@ -143,11 +143,16 @@ The current PR #10 deterministic suite proves:
 - programmatic expansion does not emit haptic feedback;
 - controller/state invalidation cancels pending dwell work;
 - pointer-monitor start is idempotent and owns exactly one local plus one global `.mouseMoved` monitor;
-- pointer-monitor invalidation removes both monitor tokens exactly once.
+- pointer-monitor invalidation removes both monitor tokens exactly once;
+- the revised compact activation policy rejects a pointer only 2 pt inside the physical compact edge and accepts the 4 pt depth candidate;
+- hardware-notch layout resolves a transparent compact app surface so the real notch defines its visible rounded silhouette;
+- hardware-notch expanded content begins at `compactFrame.height + 12 pt`, while no-notch fallback keeps the normal 20 pt inset;
+- non-notch compact fallback remains opaque;
+- panel-frame presentation changes no longer run an independent AppKit animation that can visibly diverge from the SwiftUI presentation state.
 
-The implementation remains event-driven: no polling, no repeating timer, and at most one pending activation work item. Production haptic output is public AppKit; physical haptic feel remains a real-device acceptance concern because macOS may legitimately suppress trackpad feedback depending on current hardware, touch state, accessibility, and user preferences.
+The implementation remains event-driven: no polling, no repeating timer, and at most one pending activation work item. Production haptic output is public AppKit. The revised tactile candidate is one `.levelChange` request per successful expansion; AppKit exposes patterns rather than an arbitrary strength scalar, so stronger feedback is not simulated by duplicate haptic requests.
 
-The initial `120 ms` dwell value is still a candidate until physical acceptance; deterministic tests validate policy semantics rather than declaring that value ergonomically final.
+The `120 ms` dwell, `4 pt` activation inset, and `.levelChange` pattern are target-Mac candidates until the revised physical acceptance cycle. Deterministic tests validate their policy semantics but cannot declare the physical feel or native silhouette ergonomically accepted.
 
 ## Real-hardware / distribution acceptance matrix
 
@@ -163,10 +168,12 @@ Record results in `docs/PROJECT_STATE.md`.
 | `NH-HOVER-003` | Move outside retention region | Content and actual panel frame collapse once and remain compact | Policy/sizing ownership automated; physical window behavior manual |
 | `NH-SANDBOX-001` | Exercise normal panel in Sandbox build | No crash/unexpected permission/loss of behavior | Entitlement/signing automated; runtime manual |
 | `NH-PERSONAL-RELEASE-001` | Download versioned Personal Release from GitHub | Published SHA-256 matches; installation uses only standard Finder / Privacy & Security approval; app opens on macOS 26.6; accepted notch/hover scenarios remain PASS | Release policy/checksum/provenance automated; downloaded quarantine/trust path + hardware behavior manual once for first personal pipeline/version |
-| `NH-HOVER-DELAY-001` | Move pointer through notch toward another display without intentionally stopping | Transit completes before dwell threshold; panel stays compact; zero haptic feedback | Deterministic injected-scheduler cancellation test; real cross-display pointer feel manual |
-| `NH-HOVER-DELAY-002` | Deliberately hover over compact notch | Panel expands once after a short perceptible-but-fast dwell, with no flicker/oscillation | State/time policy automated; final dwell tuning manual |
-| `NH-HAPTIC-001` | Deliberately hover using a compatible Force Touch trackpad while touching it | Exactly one short tactile event accompanies the successful expansion | Haptic request count/reason automated through fake performer; physical tactile result manual |
+| `NH-HOVER-DELAY-001` | Move pointer through/near notch toward another display without intentionally stopping | Transit completes before dwell/depth threshold; panel stays compact; zero haptic feedback | Deterministic scheduler + edge-depth policy tests; real cross-display pointer feel manual |
+| `NH-HOVER-DELAY-002` | Deliberately move at least slightly inside and hover over compact notch | Panel expands once after a short perceptible-but-fast dwell, with no flicker/oscillation | State/time/depth policy automated; final dwell/depth tuning manual |
+| `NH-HAPTIC-001` | Deliberately hover using a compatible Force Touch trackpad while touching it | Exactly one appropriately noticeable tactile event accompanies successful expansion | Haptic request count automated through fake performer; physical tactile result manual |
 | `NH-HAPTIC-002` | Quick/cancelled hover, retention movement, and collapse | No haptic feedback | Deterministic policy/output tests automated; physical negative check manual |
+| `NH-VISUAL-001` | Observe compact NotchHub on the physical-notch display | Native physical notch keeps its rounded silhouette; no app-painted black corner pixels make it look square | Hardware/no-notch background policy automated; exact silhouette manual |
+| `NH-VISUAL-002` | Deliberately hold pointer in the expanded panel | Primary controls are visible below the physical notch during active hover, not only after exit/collapse begins | Expanded content inset + frame-state behavior deterministic; physical occlusion/visibility manual |
 | `NH-GATEKEEPER-TRUSTED-001` | Future: download Trusted Release | Gatekeeper identifies `Notarized Developer ID` without personal-build approval workaround | Trusted workflow automated; normal downloaded path manual when tier is first adopted |
 | `NH-SPACE-001` | Switch Spaces/fullscreen | Behavior matches M1 policy | Planned M1 |
 | `NH-DISPLAY-001` | Connect/move between displays | Correct target-display geometry/migration | Planned M1 |
@@ -260,7 +267,36 @@ PR #10 uses explicit RED → GREEN evidence:
 - RED commit `0b777f8009c6bd76026fb70585a1d9d8debc034f` added `setupPointerSynchronizationInsideCompactDoesNotActivateOrHaptic`; CI #165 failed exactly on the absent `allowActivation` seam;
 - GREEN implementation separated setup pointer synchronization from user movement; CI #167 passed **25/25 Swift tests** and every release/security/performance/package gate with executable `251,872 B`, app `254,869 B`, and DMG `83,036 B`.
 
-Deterministic implementation status is GREEN after independent review. `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and the exact-candidate physical regression matrix remain **NOT YET ACCEPTED** until run on the target MacBook/macOS 26.6. Shared-runner CPU/RSS/thread smoke values are not substituted for that target-hardware evidence.
+This established deterministic readiness for the first physical M1 cycle, not M1 acceptance.
+
+### 2026-08-08 — cycle 8 / first M1 target-Mac hardware feedback
+
+Target MacBook/macOS 26.6:
+
+- the requested delayed-hover/haptic interaction checks were reported **PASS**;
+- expanded visual state: **FAIL** — the panel became a large black surface while primary controls were not visible during the active hover; controls appeared only as pointer exit/collapse began and were positioned under the physical notch;
+- compact physical-notch silhouette: **FAIL** — app-painted black corner pixels protruded into the physical notch's rounded-corner cutouts, making the notch appear square;
+- haptic: functional, but user requested a slightly more noticeable feel;
+- activation geometry: functional, but user requested that the cursor move slightly deeper inside the physical notch rather than triggering at its edge;
+- no separate dwell complaint was reported, so `120 ms` remained the candidate.
+
+Because two real visual defects remained, the first M1 hardware candidate was **NOT ACCEPTED**, despite the original interaction checks otherwise passing.
+
+### 2026-08-08 — cycle 9 / revised visual + activation/haptic candidate
+
+TDD and budget evidence for the revised candidate:
+
+- RED CI #172 proved the hardware-notch visual contract did not yet exist;
+- successive correctness/security-green visual implementations were rejected by the unchanged P0 artifact budget in CI #177, #181, and #187;
+- no budget was widened and no assertion was weakened; the visual architecture was simplified instead;
+- CI #188 passed the complete pipeline after compact hardware-notch rendering became transparent, expanded content received safe notch spacing, and AppKit frame state stopped animating independently: executable `251,856 B`, app `254,853 B`, DMG `83,143 B`;
+- RED commit `488dd14a89ce3ae0d5b784f9b6fa69d6836b6a94` / CI #189 proved a point only 2 pt inside the physical compact boundary still activated under the old policy;
+- GREEN compact activation now uses an inward `4 pt` candidate and leaves expanded retention unchanged;
+- production haptic remains one public AppKit request but uses `.levelChange` instead of `.generic` as the revised tactile candidate;
+- GREEN CI #191 on `ab782262c16163742bb115671f7908255fc08e4a` passed **27/27 Swift tests**, all release/security/performance policy gates, packaging/signature/Sandbox/Hardened Runtime/DMG verification, unchanged artifact-size budgets, harness smoke, and artifact upload;
+- CI #191 sizes: executable `251,856 B`, app `254,853 B`, DMG `83,117 B`.
+
+Revised hardware acceptance is **PENDING** for `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, and `NH-VISUAL-001/002`.
 
 ## Personal Release TDD evidence
 
