@@ -9,7 +9,6 @@ MACOS_DIR="$CONTENTS_DIR/MacOS"
 VERSION_FILE="$ROOT_DIR/VERSION"
 ENTITLEMENTS_FILE="$ROOT_DIR/Resources/NotchHub.entitlements"
 SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
-LINK_MAP="$ROOT_DIR/build/NotchHub.linkmap"
 
 if [[ ! -f "$VERSION_FILE" ]]; then
     echo "Missing VERSION file" >&2
@@ -35,55 +34,15 @@ if [[ ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]] || [[ "$BUILD_NUMBER" == "0" ]]; then
 fi
 
 cd "$ROOT_DIR"
-build_args=(-c "$CONFIGURATION")
-if [[ "$CONFIGURATION" == "release" ]]; then
-    rm -f "$LINK_MAP"
-    build_args+=(
-        -Xlinker -map
-        -Xlinker "$LINK_MAP"
-    )
-fi
-swift build "${build_args[@]}"
+swift build -c "$CONFIGURATION"
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 
-if [[ "$CONFIGURATION" == "release" && -f "$LINK_MAP" ]]; then
-    python3 - "$LINK_MAP" <<'PY'
-import collections
-import re
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-objects = {}
-sizes = collections.Counter()
-in_objects = False
-in_symbols = False
-for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
-    if raw == "# Object files:":
-        in_objects = True
-        in_symbols = False
-        continue
-    if raw == "# Symbols:":
-        in_objects = False
-        in_symbols = True
-        continue
-    if raw.startswith("#"):
-        if in_objects:
-            in_objects = False
-        continue
-    if in_objects:
-        match = re.match(r"\[\s*(\d+)\]\s+(.+)$", raw)
-        if match:
-            objects[int(match.group(1))] = Path(match.group(2)).name
-    elif in_symbols:
-        match = re.match(r"0x[0-9A-Fa-f]+\s+0x([0-9A-Fa-f]+)\s+\[\s*(\d+)\]", raw)
-        if match:
-            sizes[objects.get(int(match.group(2)), "<unknown>")] += int(match.group(1), 16)
-
-print("Release link-map top object contributions:")
-for name, size in sizes.most_common(20):
-    print(f"{size:8d} B  {name}")
-PY
+if [[ "$CONFIGURATION" == "release" ]]; then
+    echo "Release top symbols by linked size:"
+    nm -S "$BIN_DIR/NotchHub" \
+        | sort -k2,2r \
+        | head -n 40 \
+        | swift demangle || true
 fi
 
 rm -rf "$APP_DIR"
