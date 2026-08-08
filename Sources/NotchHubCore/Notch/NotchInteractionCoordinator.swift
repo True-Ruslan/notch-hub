@@ -4,7 +4,6 @@ import Foundation
 enum NotchInteractionIntent: Equatable {
     case deliberateExpansion
     case pointerExitCollapse
-    case programmaticExpansion
 }
 
 @MainActor
