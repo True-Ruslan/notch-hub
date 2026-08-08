@@ -55,9 +55,6 @@ final class NotchPanelTransitionCoordinator {
         case .pointerExitCollapse:
             presentation = .compact
             hapticEligible = false
-        case .programmaticExpansion:
-            presentation = .expanded
-            hapticEligible = false
         }
 
         guard !isInvalidated, presentation != desiredPresentation else {
@@ -68,6 +65,18 @@ final class NotchPanelTransitionCoordinator {
             to: presentation,
             layout: layout,
             hapticEligible: hapticEligible
+        )
+    }
+
+    func requestProgrammaticExpansion(layout: NotchLayout) {
+        guard !isInvalidated, desiredPresentation != .expanded else {
+            return
+        }
+
+        beginTransition(
+            to: .expanded,
+            layout: layout,
+            hapticEligible: false
         )
     }
 
