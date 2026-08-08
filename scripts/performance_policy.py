@@ -232,6 +232,17 @@ def compare_size_summary_to_baseline(
     if set(ceilings) != expected_metrics:
         raise ValueError("baseline size absolute ceilings must contain exactly the required size metrics")
 
+    relative_metrics_value = budget.get("relativeRegressionMetrics")
+    if not isinstance(relative_metrics_value, list) or not relative_metrics_value:
+        raise ValueError("baseline size relativeRegressionMetrics must be a non-empty array")
+    if any(not isinstance(value, str) for value in relative_metrics_value):
+        raise ValueError("baseline size relativeRegressionMetrics must contain only metric names")
+    relative_metrics = set(relative_metrics_value)
+    if len(relative_metrics) != len(relative_metrics_value):
+        raise ValueError("baseline size relativeRegressionMetrics must not contain duplicates")
+    if not relative_metrics.issubset(expected_metrics):
+        raise ValueError("baseline size relativeRegressionMetrics contains an unknown metric")
+
     regression_value = budget.get("maxRegressionPercent")
     if isinstance(regression_value, bool) or not isinstance(regression_value, (int, float)):
         raise ValueError("baseline size maxRegressionPercent must be numeric")
@@ -250,19 +261,22 @@ def compare_size_summary_to_baseline(
         if absolute_ceiling < baseline_bytes:
             raise ValueError(f"baseline size absolute ceiling for {key} cannot be below baseline")
 
-        relative_ceiling = (
-            Decimal(baseline_bytes) * (Decimal(100) + regression_percent) / Decimal(100)
-        )
-
         if actual > absolute_ceiling:
             violations.append(
                 f"{key}: actual {actual} exceeds absolute ceiling {absolute_ceiling}"
             )
-        if Decimal(actual) > relative_ceiling:
-            violations.append(
-                f"{key}: actual {actual} exceeds {regression_value:g}% regression allowance "
-                f"from baseline {baseline_bytes}"
+
+        if key in relative_metrics:
+            relative_ceiling = (
+                Decimal(baseline_bytes)
+                * (Decimal(100) + regression_percent)
+                / Decimal(100)
             )
+            if Decimal(actual) > relative_ceiling:
+                violations.append(
+                    f"{key}: actual {actual} exceeds {regression_value:g}% regression allowance "
+                    f"from baseline {baseline_bytes}"
+                )
 
     return violations
 
@@ -357,12 +371,15 @@ def _build_parser() -> argparse.ArgumentParser:
     summarize_parser.add_argument("--input", required=True, type=pathlib.Path)
     summarize_parser.add_argument("--output", type=pathlib.Path)
 
-    budget_parser = subparsers.add_parser("check-budget", help="compare a summary JSON object to a budget JSON object")
+    budget_parser = subparsers.add_parser(
+        "check-budget", help="compare a summary JSON object to a budget JSON object"
+    )
     budget_parser.add_argument("--summary", required=True, type=pathlib.Path)
     budget_parser.add_argument("--budget", required=True, type=pathlib.Path)
 
     size_budget_parser = subparsers.add_parser(
-        "check-size-budget", help="compare deterministic release artifact sizes to the canonical baseline"
+        "check-size-budget",
+        help="compare release artifact sizes to the canonical baseline",
     )
     size_budget_parser.add_argument("--summary", required=True, type=pathlib.Path)
     size_budget_parser.add_argument("--baseline", required=True, type=pathlib.Path)
