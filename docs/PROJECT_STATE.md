@@ -8,7 +8,7 @@ Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
 Current product milestone: M1 `Notch Core hardening and interaction` — **IN PROGRESS**
-Active implementation PR: #10 `M1 delayed hover and haptic interaction core` — **CURRENT SLICE HARDWARE ACCEPTED / INTEGRATION PENDING**
+Accepted interaction/transition slice: PR #10 `M1 delayed hover and haptic interaction core` — **ACCEPTED AND SQUASH-MERGED** as `094b494bd597643244e733baf5787a13b61fb4eb`
 
 ## Product
 
@@ -65,8 +65,9 @@ Public-source hardening is merged. Ordinary public pull-request CI remains read-
 
 ## M1 interaction and transition hardening
 
-Status: **CURRENT INTERACTION / TRANSITION SLICE HARDWARE ACCEPTED**.
+Status: **CURRENT INTERACTION / TRANSITION SLICE ACCEPTED AND MERGED**.
 
+Merge commit: `094b494bd597643244e733baf5787a13b61fb4eb`.
 Authoritative requirements: `docs/specs/M1_NOTCH_INTERACTION.md`.
 Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
 Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
@@ -90,7 +91,7 @@ Accepted/implemented invariants:
 - setup/current-pointer synchronization is non-activating;
 - one `DispatchWorkItem` via `DispatchQueue.main.asyncAfter`; no polling or repeating timer.
 
-The exact top-edge geometry is now physically accepted through `NH-HOVER-TOP-001` on the exact CI #332 artifact.
+The exact top-edge geometry is physically accepted through `NH-HOVER-TOP-001` on the exact CI #332 artifact.
 
 ### Single transition authority
 
@@ -211,9 +212,9 @@ This accepts the final compact activation geometry as **inclusive 4 pt left/righ
 
 The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f298`.
 
-## Final acceptance-record verification
+## Final exact-head verification and integration
 
-Documentation-only acceptance head `705ed9f5ce6dbb706def2c1bcf28519e488e998a` passed CI #337 / run `31260754621`:
+Final pre-merge branch head `7e04acd46414f39cf3d910b8c310deb22f9b9b9e` passed CI #338 / run `31260909901`:
 
 - macOS 26 compatibility: PASS;
 - **54/54 Swift tests**: PASS;
@@ -223,9 +224,9 @@ Documentation-only acceptance head `705ed9f5ce6dbb706def2c1bcf28519e488e998a` pa
 - App Sandbox + Hardened Runtime + ad-hoc signature: PASS;
 - system-only dynamic linkage and DMG integrity: PASS;
 - unchanged P0 artifact-size budget: PASS;
-- exact sizes: executable `250,320 B`, app `253,317 B`, DMG `84,684 B`.
+- exact sizes: executable `250,320 B`, app `253,317 B`, DMG `84,686 B`.
 
-No production source changed after the physically accepted CI #332 artifact, so no additional physical run is required before integration.
+PR #10 was then squash-merged into protected `main` as `094b494bd597643244e733baf5787a13b61fb4eb`. No production source changed after the physically accepted CI #332 artifact except the already verified exact-boundary correction; acceptance-record commits were documentation-only. No additional physical run is required for this merged slice.
 
 ## Security baseline
 
@@ -240,7 +241,7 @@ No production source changed after the physically accepted CI #332 artifact, so 
 
 ## Next optimal step
 
-1. PR #10 can move to Ready for Review: hardware acceptance and exact-head deterministic verification are complete for the current slice.
-2. Integrate PR #10 only after the explicit branch-integration decision required by repository workflow.
-3. After this interaction slice is merged, run the measured `NSTrackingArea` / window-local pointer experiment against accepted `NH-PERF-HOVER-001` before deciding whether the global `.mouseMoved` fallback can be removed.
-4. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration changes, click/pin, and gestures.
+1. Run a measured `NSTrackingArea` / window-local pointer-observation experiment against the accepted `NH-PERF-HOVER-001` baseline and the accepted physical notch/cross-display interaction matrix.
+2. Replace the narrow global `.mouseMoved` fallback only if the experiment proves equal-or-better correctness and resource behavior; otherwise retain the current fallback.
+3. Continue M1 with active-display migration / `NH-DISPLAY-001`, then Spaces/fullscreen / `NH-SPACE-001` and screen-configuration changes.
+4. After display/Space hardening, design click/pin and gesture interaction without broadening permissions or adding polling.
