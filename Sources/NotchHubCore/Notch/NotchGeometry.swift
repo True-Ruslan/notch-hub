@@ -6,6 +6,14 @@ public struct NotchLayout: Equatable, Sendable {
     public let compactFrame: CGRect
     public let expandedFrame: CGRect
 
+    var compactBackgroundOpacity: Double {
+        hasHardwareNotch ? 0 : 1
+    }
+
+    var expandedContentTopInset: CGFloat {
+        hasHardwareNotch ? compactFrame.height + 12 : 20
+    }
+
     public init(
         hasHardwareNotch: Bool,
         hardwareNotchWidth: CGFloat,
