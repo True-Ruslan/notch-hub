@@ -5,7 +5,7 @@ Primary target: MacBook with hardware notch, macOS 26.6
 
 This document is the behavioral contract for delayed hover activation, trackpad haptic feedback, and the notch-adjacent visual surface in M1. The implementation must follow TDD and preserve the security/performance contracts of the project.
 
-The deterministic implementation exists in PR #10. Physical cycles confirmed the interaction logic but exposed visual regressions that require exact target-Mac acceptance: expanded controls could be hidden during active hover, compact rendering could visually square the physical notch, and expanded panel corners could become square after repeated open/collapse cycles. The current candidate addresses all three deterministic boundaries but is not physically accepted until retested.
+The deterministic implementation exists in PR #10. Physical cycles confirmed the interaction logic but exposed visual regressions that require exact target-Mac acceptance: expanded controls could be hidden during active hover, the compact black surface was mistakenly made transparent, and expanded panel corners could become square after repeated open/collapse cycles. The current candidate addresses all three deterministic boundaries but is not physically accepted until retested.
 
 ## 1. Delayed hover activation
 
@@ -69,23 +69,25 @@ No haptic feedback is emitted for quick/cancelled transit, duplicate movement, e
 
 ## 3. Physical notch visual contract
 
-The application must augment the physical notch, not redraw its bounding rectangle in a way that degrades the native silhouette.
+The application must augment the physical notch with a visible black compact surface while keeping that surface correctly clipped and aligned.
 
 Required behavior on hardware-notch displays:
 
-- compact mode must not paint black pixels into the visible rounded-corner cutouts surrounding the physical notch;
-- the native physical notch therefore retains its real rounded contour in compact mode;
-- a framebuffer screenshot may legitimately show compact UI over wallpaper because the physical camera notch is hardware and is not part of the captured framebuffer; this must not be misclassified as an opaque compact panel by itself;
+- compact mode is **opaque black**, not transparent;
+- the small white compact indicator therefore appears on a visible black pлашка rather than directly over wallpaper;
+- the black compact surface is clipped by the AppKit hosting-view layer and must not leak square corner pixels outside its rounded contour;
+- compact outer radius is `12 pt`, expanded outer radius is `22 pt`, using a continuous corner curve;
 - expanded primary controls must be visible **while the pointer is intentionally holding the panel open**, not only during collapse/exit;
 - expanded interactive content starts below the physical notch occlusion with a small safe spacing;
 - the revised candidate uses `compactFrame.height + 12 pt` as the expanded top-content inset on a hardware-notch display;
-- non-notch displays retain an opaque compact fallback surface and the normal 20 pt expanded content inset;
+- no-notch displays also retain an opaque compact surface and the normal 20 pt expanded content inset;
 - AppKit panel frame and presentation content must not animate independently into visibly different states. The revised interaction-core candidate uses an immediate AppKit frame update; polished animation and Reduced Motion behavior remain a later dedicated M1 hardening step;
 - outer panel clipping has exactly one owner at the AppKit hosting-view boundary rather than independent SwiftUI and AppKit owners;
 - the hosting view must remain layer-backed and clipped with `masksToBounds` throughout presentation changes;
-- compact outer radius is `12 pt`, expanded outer radius is `22 pt`, using a continuous corner curve;
 - width/height resizing must not discard or bypass that mask;
 - repeated compact <-> expanded cycles must preserve rounded panel chrome indefinitely; the deterministic regression suite exercises at least 32 cycles, while physical acceptance exercises at least 20 real cycles.
+
+The earlier policy that set hardware-notch compact opacity to `0` was a mistaken workaround for square-corner rendering. It is explicitly rejected: transparency removes the product's compact black pлашка instead of fixing its contour. Rounded clipping is owned by AppKit, so visibility and clipping are now independent invariants.
 
 ## 4. Test-first design
 
@@ -105,7 +107,7 @@ Minimum automated interaction/visual scenarios include:
 10. setup-time pointer synchronization does not activate or haptic;
 11. a point only 2 pt inside the physical compact edge does not activate with the revised policy;
 12. a point 4 pt inside the compact edge does activate;
-13. hardware-notch layout resolves transparent compact background behavior and an expanded content inset below the occluded region;
+13. hardware-notch layout resolves an **opaque** compact background and an expanded content inset below the occluded region;
 14. no-notch fallback remains opaque with its normal content inset;
 15. the hosting view follows panel width and height while not owning window sizing;
 16. AppKit layer clipping is enabled with the correct continuous radius in both presentations;
@@ -124,7 +126,7 @@ Core RED -> GREEN evidence remains:
 
 Hardware-feedback revision evidence:
 
-- first physical cycle reported all requested interaction checks otherwise PASS but exposed two additional visual defects: hidden expanded controls during active hover and compact corner pixels visually squaring the notch;
+- first physical cycle reported all requested interaction checks otherwise PASS but exposed hidden expanded controls and incorrect compact contour behavior;
 - RED CI #172 established the new hardware-notch visual policy did not yet exist;
 - initial visual implementations passed correctness/security checks but CI #177, #181, and #187 rejected their executable/app footprint against the unchanged P0 size budget;
 - the budget was never widened; the visual design was simplified instead, including removing independent frame/view animation from this interaction-core path;
@@ -134,7 +136,10 @@ Hardware-feedback revision evidence:
 - a later physical cycle showed expanded corners could begin rounded and become square after several open/collapse cycles, establishing `NH-VISUAL-003` as a distinct regression;
 - RED commit `8088df8df655183d3fbe1a0cff54d23dfc936034` / CI #196 failed exactly because the desired AppKit presentation-mask API did not yet exist;
 - GREEN source head `446a976591a43a856a2683337cb4df1ada10cc8a` / CI #199 moved outer clipping ownership to the AppKit hosting-view layer and passed **29/29 Swift tests**, including host width/height autoresizing and 32 repeated layer-mask/radius cycles;
-- CI #199 passed every release/security/performance/package gate without widening the P0 size budget and improved candidate sizes to executable `248,768 B`, app `251,765 B`, DMG `82,069 B`;
+- the next target-Mac retest showed only the white compact indicator over wallpaper. Root-cause tracing found `NotchLayout.compactBackgroundOpacity` explicitly returned `0` whenever a hardware notch existed;
+- RED commit `1bb2d1481f31557868651bab6b59745e44ed827b` / CI #204 changed the hardware-notch contract to require opacity `1` and failed exactly with actual `0.0 == expected 1.0`;
+- GREEN source head `29627f5f145d5e60ef1873d988cf4c51b91f097f` / CI #205 restored the opaque compact surface while retaining the AppKit clipping fix and passed **29/29 Swift tests**, macOS 26 compatibility, release/security/performance/package gates, and the unchanged P0 size budget;
+- CI #205 sizes: executable `248,768 B`, app `251,765 B`, DMG `82,075 B`;
 - the production haptic candidate remains one `.levelChange` public AppKit feedback request.
 
 Shared-runner CPU/RSS/thread values remain compatibility/schema evidence only and are not target-Mac performance acceptance data.
@@ -147,7 +152,7 @@ Stable target-Mac IDs:
 - `NH-HOVER-DELAY-002`: deliberate hover expands once after the accepted dwell/depth threshold with no oscillation.
 - `NH-HAPTIC-001`: successful deliberate expansion produces one appropriately noticeable physical haptic on a compatible Force Touch trackpad.
 - `NH-HAPTIC-002`: quick/cancelled hover, retention movement, and collapse produce no haptic.
-- `NH-VISUAL-001`: compact mode preserves the physical notch's native rounded silhouette; no app-painted black corner pixels make it appear square.
+- `NH-VISUAL-001`: compact mode shows the intended **black rounded pлашка** aligned with the hardware notch; the indicator is not floating directly over wallpaper and there are no square-corner leaks.
 - `NH-VISUAL-002`: while deliberately hovering the expanded panel, the primary controls are visible below the notch and do not appear only after pointer exit/collapse begins.
 - `NH-VISUAL-003`: after at least 20 physical open/collapse cycles, expanded panel chrome remains rounded on every cycle and never degrades to square corners.
 
@@ -159,6 +164,7 @@ This interaction slice is complete only when:
 
 - deterministic RED-first coverage remains green;
 - production behavior stays event-driven and cancellation-safe;
+- compact hardware-notch surface remains opaque black;
 - AppKit remains the single owner of outer panel clipping and repeated-cycle mask coverage remains green;
 - security capability is not broadened;
 - performance policy and the existing size budget remain green;
