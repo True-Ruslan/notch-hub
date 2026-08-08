@@ -16,9 +16,18 @@ let package = Package(
             name: "NotchHubApp",
             dependencies: ["NotchHubCore"]
         ),
+        .target(
+            name: "MediaBridgeProbeCore",
+            path: "Tools/MediaBridgeProbe/Core"
+        ),
         .testTarget(
             name: "NotchHubCoreTests",
             dependencies: ["NotchHubCore"]
+        ),
+        .testTarget(
+            name: "MediaBridgeProbeCoreTests",
+            dependencies: ["MediaBridgeProbeCore"],
+            path: "Tests/MediaBridgeProbeCoreTests"
         )
     ]
 )
