@@ -18,16 +18,17 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - `docs/PUBLIC_READINESS.md` recording repository-history audit, public-fork CI boundary, and mandatory post-visibility checks.
 - Deterministic public pull-request CI validation rejecting write authority, repository secrets, self-hosted runners, privileged triggers, OIDC/write permissions, and persisted checkout credentials.
 - M1 `NotchInteractionCoordinator` with deterministic injected-scheduler coverage for quick transit cancellation, threshold activation, stale-callback rejection, re-entry, duplicate movement, expanded retention, setup-state exclusion, and lifecycle invalidation.
-- One-shot cancellable main-queue dwell scheduling with a named initial `120 ms` candidate and no polling/repeating timer.
-- Public AppKit expansion haptic through `NSHapticFeedbackManager.defaultPerformer`; the current target-Mac tactile candidate is one `.levelChange` request per eligible deliberate expansion.
+- One-shot cancellable main-queue dwell scheduling with accepted `120 ms` dwell and no polling/repeating timer.
+- Public AppKit expansion haptic through `NSHapticFeedbackManager.defaultPerformer`; the accepted target-Mac tactile behavior is one `.levelChange` request per eligible deliberate expansion.
 - Explicit pointer-monitor ownership/lifecycle tests proving exactly one local and one global `.mouseMoved` registration and idempotent teardown.
 - Stable M1 hardware acceptance IDs `NH-VISUAL-001/002/003` for visible rounded compact chrome, expanded-control visibility, and rounded panel chrome across repeated open/collapse cycles.
 - `NotchPanelTransitionCoordinator` as the single compact/expanded transition authority with explicit `compact`, `expanding`, `expanded`, and `collapsing` lifecycle phases.
 - Deterministic transition coverage for content staging, duplicate requests, programmatic no-haptic expansion, invalidation, expansion/collapse reversals, stale animation completions, Reduce Motion retargeting, and exactly-once haptic authority.
 - A 10,000-reversal transition stress test proving only the latest generation can settle state without retained transition history.
-- Public AppKit/Core Animation transition output: `NSAnimationContext` for panel frame and `CABasicAnimation` for corner radius, sharing a `0.20 s` / ease-in-out candidate policy.
+- Public AppKit/Core Animation transition output: `NSAnimationContext` for panel frame and `CABasicAnimation` for corner radius, sharing an accepted `0.20 s` / ease-in-out policy.
 - Reduce Motion policy using public `NSWorkspace.accessibilityDisplayShouldReduceMotion` and `accessibilityDisplayOptionsDidChangeNotification`, with zero-duration exact endpoints and in-flight retargeting.
 - M1 transition/animation hardening implementation plan under `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
+- Stable `NH-HOVER-TOP-001` hardware gate for deliberate built-in-display activation while the pointer is held against the top screen edge over the notch.
 
 ### Changed
 
@@ -40,15 +41,15 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Prepared repository policy/documentation for public source visibility while keeping runtime entitlements unchanged.
 - M1 compact-to-expanded pointer activation routes through one cancellable dwell instead of expanding immediately; collapse/retention remains governed by deterministic screen-space pointer policy.
 - Initial panel `show()` pointer synchronization is explicitly non-activating, preventing unintended dwell/haptic merely because the pointer already overlaps the notch when NotchHub launches.
-- Compact activation uses a **4 pt inward inset** candidate instead of extending beyond the physical notch edge.
-- The haptic candidate changed from `.generic` to `.levelChange` after target-Mac feedback requested a slightly more noticeable tactile response; exactly one feedback request remains the invariant.
+- Compact activation geometry is now asymmetric: **4 pt inward on left/right/bottom, 0 pt on top**. The top edge stays eligible so a cursor intentionally pushed against the top screen boundary over the notch can activate; cross-display quick transit remains protected by the 120 ms dwell.
+- The haptic changed from `.generic` to the now physically accepted `.levelChange`; exactly one feedback request remains the invariant.
 - Hardware-notch compact rendering is **opaque black**. Transparency is no longer used as a contour workaround; visible compact chrome and rounded clipping are separate invariants.
 - Outer panel clipping has one owner at the AppKit hosting-view boundary; the layer uses continuous `12 pt` compact / `22 pt` expanded radii and the hosting view follows panel width and height.
 - Pointer intents no longer own presentation state/haptic output. `NotchInteractionCoordinator` emits intent to `NotchPanelTransitionCoordinator`, which is now the sole presentation-transition authority.
 - SwiftUI content presentation is intentionally staged separately from the desired window endpoint: expanded controls remain rendered during collapse until the matching animation completion.
-- Panel frame transitions are now system-animated through `NSAnimationContext`; corner radius follows a matching Core Animation transition. No custom frame timer/display link/interpolation loop was added.
-- Transition cancellation now freezes the current presentation-layer corner radius into the model layer before removing the old animation, so reversal starts from the current visible radius rather than an obsolete target.
-- Reduce Motion now maps the animation duration to zero and can retarget an in-flight transition to the same desired endpoint without a second haptic.
+- Panel frame transitions are system-animated through `NSAnimationContext`; corner radius follows a matching Core Animation transition. No custom frame timer/display link/interpolation loop was added.
+- Transition cancellation freezes the current presentation-layer corner radius into the model layer before removing the old animation, so reversal starts from the current visible radius rather than an obsolete target.
+- Reduce Motion maps the animation duration to zero and can retarget an in-flight transition to the same desired endpoint without a second haptic.
 - Accessibility display-option observation is owned by the existing `NotchPanelController` through selector-based `NotificationCenter` registration, eliminating a separate block-observer token/closure lifecycle.
 - Live AppKit `.mouseMoved` callbacks no longer allocate `Task { @MainActor ... }` for every event. They deliver synchronously through `MainActor.assumeIsolated` on the documented main-thread event-monitor boundary while retaining the same one-local/one-global `.mouseMoved` scope.
 - The narrow global `.mouseMoved` fallback remains intentionally retained until a measured `NSTrackingArea` / window-local experiment proves equal-or-better target-Mac correctness and resource behavior.
@@ -63,6 +64,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Animation reversal no longer discards the current visible corner radius before beginning the opposite transition.
 - Reduce Motion changes during an active transition no longer require waiting for the obsolete animation path and do not duplicate haptic feedback.
 - Removed avoidable per-mouse-event Swift concurrency task allocation from the pointer-monitor hot path.
+- Removed the top 4 pt compact activation dead band while retaining the accepted side/bottom accidental-grazing protection.
 
 ### Testing
 
@@ -84,9 +86,12 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - CI #308 passed all deterministic behavior/security/package checks and brought executable/app under budget, while DMG still failed the unchanged size allowance.
 - RED CI #309 added the no-per-event-Task pointer hot-path invariant and failed only that new contract while all prior 48 Swift tests remained green.
 - GREEN CI #310 on source `12c5ff26dc409dd0391f3b296866c2be9515ce7e` passed **49/49 Swift tests**, macOS 26 compatibility, release/public policy, runtime performance audit, security baseline, warnings-as-errors, Sandbox/Hardened Runtime/signature/DMG verification, performance-harness smoke, artifact uploads, and the unchanged P0 size budget.
-- CI #310 sizes: executable `250,000 B`, app `252,997 B`, DMG `84,422 B`.
-- Temporary release-symbol diagnostics used to attribute size were removed after #310. A fresh clean exact-head CI after documentation is required before target-Mac testing.
-- Revised target-Mac acceptance remains pending for `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, `NH-VISUAL-001/002/003`, normal animation continuity, both reversal directions, rapid churn, and Reduce Motion behavior.
+- Clean exact-head CI #319 on `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4` produced the target-Mac candidate. Physical acceptance passed `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, `NH-HAPTIC-001/002`, `NH-VISUAL-001/002/003`, `NH-ANIM-001/002/003/004`, `NH-MOTION-001/002`, startup non-activation, and accepted 120 ms / `.levelChange` / 0.20 s tuning.
+- That accepted cycle requested one geometry refinement: no top activation inset while keeping 4 pt left/right/bottom.
+- RED commit `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 ran 52 Swift tests and failed only `compactPointerAtTopScreenEdgeActivatesWithoutTopInset`; the new side/right/bottom protection tests and every prior behavior stayed green.
+- GREEN source `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**, macOS 26 compatibility, all release/security/performance/package gates, and the unchanged P0 size budget.
+- CI #321 sizes: executable `250,000 B`, app `252,997 B`, DMG `84,468 B`.
+- Only targeted physical checks `NH-HOVER-TOP-001` and `NH-HOVER-DELAY-001` remain for the asymmetric activation geometry; the already accepted broad visual/animation/motion matrix need not be repeated unless a regression appears.
 
 ## [0.1.0] - 2026-08-07
 
@@ -117,7 +122,7 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 - Prevented hover resize feedback that caused compact/expanded oscillation on real hardware. Pointer state is resolved through deterministic screen-space policy instead of raw SwiftUI `onHover` resize feedback.
 - Real hardware notch widths are no longer inflated to the 180 pt fallback minimum; fallback is used only when no hardware notch is detected.
 - Disabled `NSHostingView` window-sizing ownership so compact content cannot leave the actual `NSPanel` frame expanded.
-- Corrected Personal Release note validation so the safe warning `Do not disable Gatekeeper` is allowed while actual Gatekeeper/quarantine bypass instructions remain prohibited.
+- Corrected Personal Release note validation so the safe warning `Do not disable Gatekeeper` is allowed while actual Gatekeeper/quarantine-stripping instructions remain prohibited.
 
 ### Testing
 
