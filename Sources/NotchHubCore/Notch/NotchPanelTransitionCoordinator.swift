@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-enum NotchPanelTransitionPhase: Equatable {
+enum NotchPanelTransitionPhase {
     case compact
     case expanding
     case expanded
@@ -154,13 +154,23 @@ final class NotchPanelTransitionCoordinator {
 
         if !isInvalidated,
             generation == scheduledGeneration,
-            phase == expectedPhase
+            phaseMatches(expectedPhase)
         {
             hasActiveAnimation = true
         }
 
         if hapticEligible, presentation == .expanded {
             performExpansionHaptic()
+        }
+    }
+
+    private func phaseMatches(_ expectedPhase: NotchPanelTransitionPhase) -> Bool {
+        switch (phase, expectedPhase) {
+        case (.compact, .compact), (.expanding, .expanding), (.expanded, .expanded),
+            (.collapsing, .collapsing):
+            true
+        default:
+            false
         }
     }
 
