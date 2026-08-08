@@ -88,6 +88,9 @@ public final class NotchPanelController: NSObject {
     }
 
     private func apply(_ presentation: NotchPresentation) {
+        if let contentView = panel.contentView {
+            NotchHostingViewFactory.applyPresentation(presentation, to: contentView)
+        }
         let targetFrame = presentation == .compact ? layout.compactFrame : layout.expandedFrame
         panel.setFrame(targetFrame, display: true)
     }
