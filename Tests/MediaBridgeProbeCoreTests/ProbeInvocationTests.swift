@@ -8,19 +8,11 @@ struct ProbeInvocationTests {
             arguments: [
                 "observe",
                 "--seconds",
-                "15",
-                "--report",
-                "build/probe-report.json"
+                "15"
             ]
         )
 
-        #expect(
-            invocation
-                == .observe(
-                    seconds: 15,
-                    reportPath: "build/probe-report.json"
-                )
-        )
+        #expect(invocation == .observe(seconds: 15))
     }
 
     @Test
@@ -31,12 +23,25 @@ struct ProbeInvocationTests {
                     arguments: [
                         "observe",
                         "--seconds",
-                        seconds,
-                        "--report",
-                        "build/probe-report.json"
+                        seconds
                     ]
                 )
             }
+        }
+    }
+
+    @Test
+    func observeRejectsArbitraryReportPathSurface() {
+        #expect(throws: ProbeInvocationError.invalidArguments) {
+            try ProbeInvocation.parse(
+                arguments: [
+                    "observe",
+                    "--seconds",
+                    "15",
+                    "--report",
+                    "/tmp/probe.json"
+                ]
+            )
         }
     }
 
