@@ -5,22 +5,59 @@ import SwiftUI
 @MainActor
 public final class NotchPanelController: NSObject {
     private let panel: NSPanel
-    private let model: NotchPanelModel
     private let interactionCoordinator: NotchInteractionCoordinator
+    private let transitionCoordinator: NotchPanelTransitionCoordinator
+    private let animationDurationProvider: NotchAnimationDurationProvider
     private let pointerMonitor: NotchPointerMonitor
-    private var layout: NotchLayout
+    private let layout: NotchLayout
 
     public override init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
-        let geometry = ScreenGeometryInput(screen: screen)
-        let resolvedLayout = NotchGeometry.layout(for: geometry)
+        let resolvedLayout = NotchGeometry.layout(
+            for: ScreenGeometryInput(screen: screen)
+        )
         let model = NotchPanelModel()
-        let haptics = AppKitNotchHapticPerformer()
         let panel = NSPanel(
             contentRect: resolvedLayout.compactFrame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
+        )
+        let hostingView = NotchHostingViewFactory.make(
+            model: model,
+            layout: resolvedLayout
+        )
+        panel.contentView = hostingView
+
+        let animationDurationProvider = NotchAnimationDurationProvider.live()
+        let animationDriver = AppKitNotchPanelAnimationDriver(
+            panel: panel,
+            chromeView: hostingView
+        )
+        let haptics = AppKitNotchHapticPerformer()
+        let transitionCoordinator = NotchPanelTransitionCoordinator(
+            model: model,
+            animationDuration: { [weak animationDurationProvider] in
+                animationDurationProvider?.currentDuration ?? 0
+            },
+            animate: { [weak animationDriver] frame, cornerRadius, duration, completion in
+                guard let animationDriver else {
+                    completion()
+                    return
+                }
+                animationDriver.animate(
+                    frame: frame,
+                    cornerRadius: cornerRadius,
+                    duration: duration,
+                    completion: completion
+                )
+            },
+            cancelAnimation: { [weak animationDriver] in
+                animationDriver?.cancel()
+            },
+            performExpansionHaptic: { [weak haptics] in
+                haptics?.performExpansionHaptic()
+            }
         )
         let interactionCoordinator = NotchInteractionCoordinator(
             scheduleActivation: { delaySeconds, action in
@@ -35,44 +72,23 @@ public final class NotchPanelController: NSObject {
                 )
                 return { workItem.cancel() }
             },
-            emitIntent: { intent in
-                let presentation: NotchPresentation
-                let hapticEligible: Bool
-
-                switch intent {
-                case .deliberateExpansion:
-                    presentation = .expanded
-                    hapticEligible = true
-                case .pointerExitCollapse:
-                    presentation = .compact
-                    hapticEligible = false
-                }
-
-                model.setContentPresentation(presentation)
-                if let contentView = panel.contentView {
-                    NotchHostingViewFactory.applyPresentation(
-                        presentation,
-                        to: contentView
-                    )
-                }
-                let targetFrame =
-                    presentation == .compact
-                    ? resolvedLayout.compactFrame
-                    : resolvedLayout.expandedFrame
-                panel.setFrame(targetFrame, display: true)
-                if hapticEligible {
-                    haptics.performExpansionHaptic()
-                }
+            emitIntent: { [weak transitionCoordinator] intent in
+                transitionCoordinator?.accept(intent, layout: resolvedLayout)
             }
         )
 
-        self.layout = resolvedLayout
-        self.model = model
-        self.interactionCoordinator = interactionCoordinator
-        self.pointerMonitor = NotchPointerMonitor()
         self.panel = panel
+        self.interactionCoordinator = interactionCoordinator
+        self.transitionCoordinator = transitionCoordinator
+        self.animationDurationProvider = animationDurationProvider
+        self.pointerMonitor = NotchPointerMonitor()
+        self.layout = resolvedLayout
 
         super.init()
+
+        animationDurationProvider.onDurationChange = { [weak transitionCoordinator] _ in
+            transitionCoordinator?.animationPolicyDidChange(layout: resolvedLayout)
+        }
         configurePanel()
         configurePointerMonitoring()
     }
@@ -82,7 +98,7 @@ public final class NotchPanelController: NSObject {
         interactionCoordinator.pointerMoved(
             to: NSEvent.mouseLocation,
             layout: layout,
-            currentPresentation: model.contentPresentation,
+            currentPresentation: transitionCoordinator.desiredPresentation,
             allowActivation: false
         )
     }
@@ -90,6 +106,8 @@ public final class NotchPanelController: NSObject {
     func invalidate() {
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
+        transitionCoordinator.invalidate()
+        animationDurationProvider.invalidate()
     }
 
     private func configurePanel() {
@@ -103,7 +121,6 @@ public final class NotchPanelController: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isMovable = false
         panel.acceptsMouseMovedEvents = true
-        panel.contentView = NotchHostingViewFactory.make(model: model, layout: layout)
     }
 
     private func configurePointerMonitoring() {
@@ -116,7 +133,7 @@ public final class NotchPanelController: NSObject {
         interactionCoordinator.pointerMoved(
             to: pointer,
             layout: layout,
-            currentPresentation: model.contentPresentation
+            currentPresentation: transitionCoordinator.desiredPresentation
         )
     }
 }
