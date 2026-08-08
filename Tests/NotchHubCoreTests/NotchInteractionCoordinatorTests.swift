@@ -67,15 +67,7 @@ struct NotchInteractionCoordinatorTests {
 
         fixture.scheduler.advance(by: 0.01)
 
-        #expect(
-            fixture.intents == [
-                NotchInteractionIntent(
-                    desiredPresentation: .expanded,
-                    cause: .deliberateHover,
-                    hapticEligible: true
-                )
-            ]
-        )
+        #expect(fixture.intents == [.deliberateExpansion])
     }
 
     @Test
@@ -94,15 +86,7 @@ struct NotchInteractionCoordinatorTests {
 
         fixture.scheduler.advance(by: 0.12)
 
-        #expect(
-            fixture.intents == [
-                NotchInteractionIntent(
-                    desiredPresentation: .expanded,
-                    cause: .deliberateHover,
-                    hapticEligible: true
-                )
-            ]
-        )
+        #expect(fixture.intents == [.deliberateExpansion])
     }
 
     @Test
@@ -150,15 +134,7 @@ struct NotchInteractionCoordinatorTests {
 
         fixture.scheduler.advance(by: 0.07)
 
-        #expect(
-            fixture.intents == [
-                NotchInteractionIntent(
-                    desiredPresentation: .expanded,
-                    cause: .deliberateHover,
-                    hapticEligible: true
-                )
-            ]
-        )
+        #expect(fixture.intents == [.deliberateExpansion])
     }
 
     @Test
@@ -190,15 +166,7 @@ struct NotchInteractionCoordinatorTests {
             currentPresentation: .expanded
         )
 
-        #expect(
-            fixture.intents == [
-                NotchInteractionIntent(
-                    desiredPresentation: .compact,
-                    cause: .pointerExit,
-                    hapticEligible: false
-                )
-            ]
-        )
+        #expect(fixture.intents == [.pointerExitCollapse])
     }
 
     @Test
