@@ -132,7 +132,8 @@ Implemented deterministically:
 - re-entry starts a fresh full dwell;
 - expanded retention/collapse stays independent from the activation dwell;
 - one successful pointer-initiated `compact -> expanded` transition requests exactly one haptic;
-- quick/cancelled transit, duplicate movement, retention, collapse, programmatic expansion, and stale callbacks request no haptic;
+- quick/cancelled transit, duplicate movement, retention, collapse, programmatic expansion, setup-time pointer synchronization, and stale callbacks request no haptic;
+- initial `show()` pointer synchronization is explicitly non-activating, so launching while the cursor already overlaps the notch cannot schedule dwell/haptic without a subsequent user mouse-move event;
 - production haptic uses public `NSHapticFeedbackManager.defaultPerformer` with `.generic` / `.now`;
 - the dwell scheduler is one `DispatchWorkItem` via `DispatchQueue.main.asyncAfter`, not polling or a repeating timer;
 - pointer-monitor ownership is explicit: one local and one global `.mouseMoved` monitor are registered once and removed idempotently on invalidation;
@@ -147,6 +148,9 @@ Implemented deterministically:
 - GREEN CI #157 passed macOS 26 compatibility, 24/24 Swift tests, release/performance policy, runtime performance audit, security baseline, build/package/signature/Sandbox/Hardened Runtime/DMG gates, but correctly failed the unchanged artifact-size budget: executable `254,000 B` exceeded the 15% relative limit `253,644 B` by `356 B`.
 - The budget was **not widened**. Runtime metadata/structure was reduced without changing tested behavior.
 - GREEN CI #158 on implementation head `6b0173b79e457a8749c6f8675681efb8850e4e9e` passed all gates. Candidate sizes: executable `251,856 B`, app `254,853 B`, DMG `83,072 B`.
+- Independent change review then found one P2 setup-path risk: `show()` could feed the current mouse location through the normal activation path and request a haptic after launch without a fresh user movement.
+- RED CI #165 on `0b777f8009c6bd76026fb70585a1d9d8debc034f` failed exactly because the new `allowActivation` regression seam did not yet exist.
+- GREEN CI #167 on reviewed implementation head `693ca834043b4b690f05e419aae5061af68163c2` passed the complete pipeline with **25/25 Swift tests**, all release/security/performance policy gates, package/signature/Sandbox/Hardened Runtime/DMG checks, and unchanged artifact-size budgets. Candidate sizes: executable `251,872 B`, app `254,869 B`, DMG `83,036 B`.
 
 The shared-runner 5-second performance harness in CI remains schema/compatibility evidence only; its CPU/RSS/thread values are not target-Mac acceptance data.
 
@@ -170,13 +174,14 @@ The `120 ms` value therefore remains the **candidate**, not a final hardware-tun
 
 - initial target-Mac runtime ceilings are based on one canonical run per scenario and intentionally include conservative headroom;
 - the narrow global `.mouseMoved` fallback remains in the M1 candidate; it now has explicit lifecycle ownership but is not yet replaced;
+- the current AppKit event backend still uses a main-actor task hop for delivered `.mouseMoved` events; this is retained until the measured pointer-tracking optimization step rather than changed speculatively;
 - a window-local `NSTrackingArea`/AppKit replacement may be accepted only after target-Mac correctness, cross-display behavior, and resource evidence are equal or better than the P0 baseline;
 - final dwell timing is pending physical UX acceptance;
 - active-display migration, Spaces/fullscreen policy, screen-configuration handling, notchless mode, click/pin policy, animation/reduced-motion tuning, gestures, product modules, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Complete final exact-head PR CI after documentation synchronization and review PR #10 for regressions/security/resource implications.
+1. Complete final exact-head PR CI after this evidence/documentation synchronization.
 2. Exercise the exact PR candidate on the target MacBook/macOS 26.6 and record `NH-NOTCH-001`, `NH-HOVER-001/002/003`, `NH-HOVER-DELAY-001/002`, and `NH-HAPTIC-001/002` honestly.
 3. Tune the named dwell value only from that physical evidence; if changed, preserve deterministic coverage and rerun exact-head CI/hardware acceptance.
 4. Run the separate M1 local-tracking experiment against the accepted P0 `NH-PERF-HOVER-001` baseline. Remove global `.mouseMoved` only if local tracking remains reliable during notch/multi-display transit and resource/input-observation evidence is equal or better.
