@@ -22,6 +22,7 @@ Moving the pointer through the hardware-notch region on the way to another displ
 - Re-entering after cancellation starts a fresh dwell.
 - Duplicate `mouseMoved` events while one dwell is pending must not create additional timers/tasks.
 - No activation dwell is started while the panel is already expanded.
+- Setup-time/current-pointer synchronization is non-activating; launching while the pointer already overlaps the notch must not schedule dwell by itself.
 - Retention/collapse behavior remains independent from the activation dwell.
 
 ### Initial timing
@@ -56,7 +57,7 @@ Do not implement custom low-level trackpad drivers, private haptic APIs, synthet
 
 Haptic feedback is emitted **exactly once** when all conditions are true:
 
-1. activation was initiated by the user's pointer entering/remaining in the compact notch activation region;
+1. activation was initiated by the user's pointer entering/remaining in the compact notch activation region through an actual user pointer event;
 2. the dwell threshold completed without cancellation;
 3. the state actually transitions `compact -> expanded`.
 
@@ -109,7 +110,7 @@ Minimum RED-first automated scenarios:
 9. lifecycle/cancellation test
    - destroying/disabling the controller with pending dwell leaves no delayed transition or retained work.
 
-PR #10 also covers programmatic-expansion haptic exclusion and explicit pointer-monitor registration/teardown lifecycle. Those are additional deterministic regressions, not replacements for the minimum scenarios above.
+PR #10 also covers programmatic-expansion haptic exclusion, setup-time pointer synchronization exclusion, and explicit pointer-monitor registration/teardown lifecycle. Those are additional deterministic regressions, not replacements for the minimum scenarios above.
 
 ## 4. Implementation evidence — 2026-08-08
 
@@ -120,6 +121,8 @@ PR #10 also covers programmatic-expansion haptic exclusion and explicit pointer-
 - The current narrow local/global `.mouseMoved` observation has explicit ownership and idempotent teardown. It is intentionally retained until a separate target-Mac local-tracking experiment proves a reliable equal-or-better replacement.
 - CI #157 passed correctness/security/policy/package checks but failed the unchanged executable-size budget by `356 B`; the budget was not widened.
 - CI #158 passed all deterministic gates after footprint reduction with executable `251,856 B`, app `254,853 B`, and DMG `83,072 B`.
+- Independent change review then found a setup-path defect: `show()` could feed the current pointer position through normal activation and potentially haptic after launch without a fresh mouse event.
+- RED CI #165 proved the reviewed setup-exclusion seam was absent; GREEN CI #167 passed **25/25 Swift tests** and every policy/security/package/size gate after setup synchronization became explicitly non-activating. Candidate sizes were executable `251,872 B`, app `254,869 B`, and DMG `83,036 B`.
 
 These CI results establish deterministic implementation readiness only. Shared-runner CPU/RSS/thread values are not accepted target-Mac performance evidence.
 
