@@ -31,6 +31,22 @@ struct NotchInteractionCoordinatorTests {
     }
 
     @Test
+    func setupPointerSynchronizationInsideCompactDoesNotActivateOrHaptic() {
+        let fixture = makeFixture()
+
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            allowActivation: false
+        )
+        fixture.scheduler.advance(by: 1)
+
+        #expect(fixture.model.presentation == .compact)
+        #expect(fixture.haptics.requestCount == 0)
+        #expect(fixture.scheduler.pendingCount == 0)
+    }
+
+    @Test
     func deliberateHoverExpandsOnlyAfterThreshold() {
         let fixture = makeFixture()
 
