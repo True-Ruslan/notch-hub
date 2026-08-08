@@ -138,6 +138,7 @@ final class NotchPanelTransitionCoordinator {
             cornerRadius = Self.expandedCornerRadius
         }
 
+        hasActiveAnimation = true
         animate(
             frame,
             cornerRadius,
@@ -149,25 +150,8 @@ final class NotchPanelTransitionCoordinator {
             )
         }
 
-        if !isInvalidated,
-            generation == scheduledGeneration,
-            desiredPresentation == presentation,
-            isTransitioning
-        {
-            hasActiveAnimation = true
-        }
-
         if hapticEligible, presentation == .expanded {
             performExpansionHaptic()
-        }
-    }
-
-    private var isTransitioning: Bool {
-        switch phase {
-        case .expanding, .collapsing:
-            true
-        case .compact, .expanded:
-            false
         }
     }
 
