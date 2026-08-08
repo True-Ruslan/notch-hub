@@ -37,14 +37,17 @@ struct NotchPanelOwnershipTests {
     }
 
     @Test
-    func reduceMotionObservationIsControllerOwnedAndIdempotent() throws {
+    func reduceMotionObservationUsesSelectorWithoutObserverToken() throws {
         let controllerSource = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
         )
 
         #expect(controllerSource.contains("accessibilityDisplayOptionsDidChangeNotification"))
         #expect(controllerSource.contains("reduceMotion != reduceMotionEnabled"))
-        #expect(controllerSource.contains("notificationCenter.removeObserver(accessibilityObserver)"))
+        #expect(!controllerSource.contains("accessibilityObserver: NSObjectProtocol?"))
+        #expect(controllerSource.contains("selector: #selector(accessibilityDisplayOptionsDidChange)"))
+        #expect(controllerSource.contains("notificationCenter.removeObserver(self"))
+        #expect(controllerSource.contains("@objc private func accessibilityDisplayOptionsDidChange"))
         #expect(controllerSource.contains("transitionCoordinator.animationPolicyDidChange"))
     }
 
