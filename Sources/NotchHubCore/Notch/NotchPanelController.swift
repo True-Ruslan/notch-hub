@@ -1,4 +1,5 @@
 import AppKit
+import Dispatch
 import SwiftUI
 
 @MainActor
@@ -22,7 +23,18 @@ public final class NotchPanelController: NSObject {
             defer: false
         )
         let interactionCoordinator = NotchInteractionCoordinator(
-            scheduler: MainQueueNotchActivationScheduler(),
+            scheduleActivation: { delaySeconds, action in
+                let workItem = DispatchWorkItem {
+                    MainActor.assumeIsolated {
+                        action()
+                    }
+                }
+                DispatchQueue.main.asyncAfter(
+                    deadline: .now() + delaySeconds,
+                    execute: workItem
+                )
+                return { workItem.cancel() }
+            },
             emitIntent: { intent in
                 let presentation: NotchPresentation
                 let hapticEligible: Bool
