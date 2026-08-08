@@ -4,17 +4,45 @@ import Testing
 
 @MainActor
 struct NotchHostingViewFactoryTests {
+    private let layout = NotchLayout(
+        hasHardwareNotch: true,
+        hardwareNotchWidth: 176,
+        compactFrame: CGRect(x: 412, y: 868, width: 176, height: 32),
+        expandedFrame: CGRect(x: 240, y: 650, width: 520, height: 250)
+    )
+
     @Test
     func hostingViewDoesNotOwnWindowSizing() {
         let model = NotchPanelModel()
-        let layout = NotchLayout(
-            hasHardwareNotch: true,
-            hardwareNotchWidth: 176,
-            compactFrame: CGRect(x: 412, y: 868, width: 176, height: 32),
-            expandedFrame: CGRect(x: 240, y: 650, width: 520, height: 250)
-        )
         let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
 
         #expect(hostingView.sizingOptions == [])
+    }
+
+    @Test
+    func hostingViewTracksPanelBoundsInBothDimensions() {
+        let model = NotchPanelModel()
+        let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
+
+        #expect(hostingView.autoresizingMask.contains(.width))
+        #expect(hostingView.autoresizingMask.contains(.height))
+    }
+
+    @Test
+    func appKitRoundedClipSurvivesRepeatedPresentationCycles() {
+        let model = NotchPanelModel()
+        let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
+
+        for _ in 0..<32 {
+            NotchHostingViewFactory.applyPresentation(.expanded, to: hostingView)
+            #expect(hostingView.wantsLayer)
+            #expect(hostingView.layer?.masksToBounds == true)
+            #expect(hostingView.layer?.cornerRadius == 22)
+
+            NotchHostingViewFactory.applyPresentation(.compact, to: hostingView)
+            #expect(hostingView.wantsLayer)
+            #expect(hostingView.layer?.masksToBounds == true)
+            #expect(hostingView.layer?.cornerRadius == 12)
+        }
     }
 }
