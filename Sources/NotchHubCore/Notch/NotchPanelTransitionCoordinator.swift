@@ -7,11 +7,6 @@ public enum NotchPanelTransitionPhase: Equatable, Sendable {
     case collapsing
 }
 
-struct NotchPanelAnimationTarget: Equatable, Sendable {
-    let frame: CGRect
-    let cornerRadius: CGFloat
-}
-
 @MainActor
 protocol NotchPanelAnimationHandle: AnyObject {
     func cancel()
@@ -20,7 +15,8 @@ protocol NotchPanelAnimationHandle: AnyObject {
 @MainActor
 protocol NotchPanelAnimationDriving: AnyObject {
     func animate(
-        to target: NotchPanelAnimationTarget,
+        frame: CGRect,
+        cornerRadius: CGFloat,
         policy: NotchAnimationPolicy,
         completion: @escaping @MainActor () -> Void
     ) -> any NotchPanelAnimationHandle
@@ -33,7 +29,7 @@ final class NotchPanelTransitionCoordinator {
 
     private let model: NotchPanelModel
     private let animationDriver: any NotchPanelAnimationDriving
-    private let animationPolicy: any NotchAnimationPolicyProviding
+    private let currentAnimationPolicy: @MainActor () -> NotchAnimationPolicy
     private let haptics: any NotchHapticPerforming
 
     private(set) var phase: NotchPanelTransitionPhase
@@ -46,13 +42,13 @@ final class NotchPanelTransitionCoordinator {
     init(
         model: NotchPanelModel,
         animationDriver: any NotchPanelAnimationDriving,
-        animationPolicy: any NotchAnimationPolicyProviding,
+        animationPolicy: @escaping @MainActor () -> NotchAnimationPolicy,
         haptics: any NotchHapticPerforming,
         initialPresentation: NotchPresentation = .compact
     ) {
         self.model = model
         self.animationDriver = animationDriver
-        self.animationPolicy = animationPolicy
+        self.currentAnimationPolicy = animationPolicy
         self.haptics = haptics
         self.desiredPresentation = initialPresentation
         self.phase = initialPresentation == .compact ? .compact : .expanded
@@ -116,30 +112,28 @@ final class NotchPanelTransitionCoordinator {
         activeAnimation = nil
 
         let expectedPhase: NotchPanelTransitionPhase
-        let target: NotchPanelAnimationTarget
+        let frame: CGRect
+        let cornerRadius: CGFloat
 
         switch presentation {
         case .compact:
             phase = .collapsing
             expectedPhase = .collapsing
-            target = NotchPanelAnimationTarget(
-                frame: layout.compactFrame,
-                cornerRadius: Self.compactCornerRadius
-            )
+            frame = layout.compactFrame
+            cornerRadius = Self.compactCornerRadius
 
         case .expanded:
             phase = .expanding
             expectedPhase = .expanding
             model.setContentPresentation(.expanded)
-            target = NotchPanelAnimationTarget(
-                frame: layout.expandedFrame,
-                cornerRadius: Self.expandedCornerRadius
-            )
+            frame = layout.expandedFrame
+            cornerRadius = Self.expandedCornerRadius
         }
 
         let handle = animationDriver.animate(
-            to: target,
-            policy: animationPolicy.currentPolicy
+            frame: frame,
+            cornerRadius: cornerRadius,
+            policy: currentAnimationPolicy()
         ) { [weak self] in
             self?.completeTransition(
                 generation: scheduledGeneration,
