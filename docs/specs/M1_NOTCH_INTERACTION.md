@@ -1,6 +1,6 @@
 # M1 Notch interaction requirements
 
-Status: **CORE HARDWARE ACCEPTED / TOP-EDGE REFINEMENT TARGETED RETEST PENDING**
+Status: **CORE HARDWARE ACCEPTED / EXACT TOP-EDGE TARGETED RETEST PENDING**
 Primary target: MacBook with hardware notch, macOS 26.6
 
 This document is the behavioral contract for delayed hover activation, transition animation, trackpad haptic feedback, accessibility motion policy, and notch-adjacent visual behavior in M1. The implementation must follow TDD and preserve the security/performance contracts of the project.
@@ -9,7 +9,7 @@ This document is the behavioral contract for delayed hover activation, transitio
 
 ### Goal
 
-Moving the pointer through the hardware-notch region on the way to another display must not immediately open NotchHub. Deliberate hover should still feel fast. On the built-in display, a deliberate pointer pushed all the way to the top screen edge over the notch must remain able to activate the panel.
+Moving the pointer through the hardware-notch region on the way to another display must not immediately open NotchHub. Deliberate hover should still feel fast. On the built-in display, a deliberate pointer pushed all the way to the exact top screen edge over the notch must remain able to activate the panel.
 
 ### Required behavior
 
@@ -20,7 +20,12 @@ Moving the pointer through the hardware-notch region on the way to another displ
   - **4 pt inward inset on the right**;
   - **4 pt inward inset on the bottom**;
   - **0 pt inset on the top**.
-- The top edge is intentionally unrestricted so a pointer held against the physical top screen boundary over the notch can activate NotchHub on a single-display workflow.
+- Boundary semantics are explicit and inclusive for accepted compact edges:
+  - `pointer.x >= compactFrame.minX + 4`;
+  - `pointer.x <= compactFrame.maxX - 4`;
+  - `pointer.y >= compactFrame.minY + 4`;
+  - `pointer.y <= compactFrame.maxY`.
+- The exact top edge `pointer.y == compactFrame.maxY` is intentionally eligible. Compact activation must not delegate this contract to `CGRect.contains`, whose maximum-edge semantics do not match the product requirement.
 - The side/bottom inset still rejects accidental edge grazing.
 - Cross-display transit remains protected by the cancellable 120 ms dwell rather than by removing the topmost activation band.
 - The panel remains compact until the dwell threshold is reached.
@@ -196,30 +201,34 @@ Minimum deterministic scenarios include:
 8. setup synchronization -> no activation/haptic;
 9. invalidation -> pending activation cancelled;
 10. pointer only 2 pt inside the **bottom** edge is rejected;
-11. pointer 4 pt inside the bottom edge is accepted;
-12. pointer 1 pt below the **top screen edge** at the center of the notch is accepted with no top inset;
-13. pointer only 2 pt inside the left edge remains rejected even at the top edge;
-14. pointer only 2 pt inside the right edge remains rejected even at the top edge;
-15. transition phase settles only on matching completion;
-16. collapse retains expanded content until matching completion;
-17. stale expansion completion cannot win after collapse reversal;
-18. stale collapse completion cannot win after expansion reversal;
-19. duplicate desired expansion does not duplicate transition/haptic;
-20. programmatic expansion remains non-haptic;
-21. transition invalidation makes later completion harmless;
-22. Reduce Motion duration resolves to zero;
-23. normal duration resolves to 0.20 s;
-24. in-flight Reduce Motion retarget does not create second haptic;
-25. 10,000 reversal stress keeps only latest generation authoritative;
-26. zero-duration AppKit path applies exact endpoint synchronously once;
-27. animated path installs system corner animation and does not complete synchronously;
-28. at least 32 immediate endpoint cycles retain AppKit chrome/frame invariants;
-29. cancellation freezes visible presentation-layer radius before removing animation;
-30. controller source has no competing presentation `setFrame` path;
-31. Reduce Motion observation uses selector ownership without a block observer token;
-32. pointer-monitor live path has no per-event `Task` allocation;
-33. pointer monitor still registers/removes exactly one local + one global `.mouseMoved` monitor;
-34. hardware-notch compact surface remains opaque and AppKit-owned clipping remains continuous.
+11. pointer exactly 4 pt inside the bottom edge is accepted;
+12. pointer at the **exact top screen edge** (`y == compactFrame.maxY`) at notch center is accepted with no top inset;
+13. pointer only 2 pt inside the left edge remains rejected at the exact top edge;
+14. pointer exactly 4 pt inside the left edge is accepted at the exact top edge;
+15. pointer only 2 pt inside the right edge remains rejected at the exact top edge;
+16. pointer exactly 4 pt inside the right edge is accepted at the exact top edge;
+17. transition phase settles only on matching completion;
+18. collapse retains expanded content until matching completion;
+19. stale expansion completion cannot win after collapse reversal;
+20. stale collapse completion cannot win after expansion reversal;
+21. duplicate desired expansion does not duplicate transition/haptic;
+22. programmatic expansion remains non-haptic;
+23. transition invalidation makes later completion harmless;
+24. Reduce Motion duration resolves to zero;
+25. normal duration resolves to 0.20 s;
+26. in-flight Reduce Motion retarget does not create second haptic;
+27. 10,000 reversal stress keeps only latest generation authoritative;
+28. zero-duration AppKit path applies exact endpoint synchronously once;
+29. animated path installs system corner animation and does not complete synchronously;
+30. at least 32 immediate endpoint cycles retain AppKit chrome/frame invariants;
+31. cancellation freezes visible presentation-layer radius before removing animation;
+32. controller source has no competing presentation `setFrame` path;
+33. Reduce Motion observation uses selector ownership without a block observer token;
+34. pointer-monitor live path has no per-event `Task` allocation;
+35. pointer monitor still registers/removes exactly one local + one global `.mouseMoved` monitor;
+36. hardware-notch compact surface remains opaque and AppKit-owned clipping remains continuous.
+
+A test named for a physical edge must use that exact coordinate. `maxY - 1` is an interior-point test and cannot stand in for the top screen edge.
 
 ## 9. TDD / CI evidence — 2026-08-08
 
@@ -240,14 +249,17 @@ Transition-animation hardening evidence:
 - CI #309: RED specifically for the remaining per-mouse-event `Task` hot path while all previous 48 Swift tests passed;
 - CI #310 on `12c5ff26dc409dd0391f3b296866c2be9515ce7e`: GREEN with **49/49 Swift tests**, macOS 26 compatibility, release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG checks, performance harness smoke, and the unchanged P0 artifact-size budget;
 - clean exact-head CI #319 on `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4` produced the hardware candidate subsequently accepted for all broad interaction/visual/animation/motion checks;
-- RED commit `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 added asymmetric activation-edge coverage and failed only the new top-edge activation expectation while all 51 other Swift tests stayed green;
-- GREEN source `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests** and all release/security/performance/package gates with the unchanged P0 budget.
+- RED `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 established asymmetric activation geometry;
+- GREEN `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**;
+- clean exact-head `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed every automated gate, but its target-Mac `NH-HOVER-TOP-001` **FAILED** because the test had modeled `maxY - 1` instead of exact `maxY`;
+- RED `3d0d40b5426cb8a8fe0bd19393688a68247637b0` / CI #326 corrected the test model and failed only three new exact-boundary expectations out of 54 tests;
+- GREEN `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive directional bounds and passed **54/54 Swift tests** plus all release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG gates and the unchanged P0 size budget.
 
-CI #321 sizes:
+CI #327 sizes:
 
-- executable `250,000 B`;
-- app `252,997 B`;
-- DMG `84,468 B`.
+- executable `250,320 B`;
+- app `253,317 B`;
+- DMG `84,679 B`.
 
 Shared-runner CPU/RSS/thread values are compatibility/schema evidence only, never target-Mac performance acceptance.
 
@@ -264,13 +276,20 @@ Broad target-Mac acceptance on exact candidate `f6de06f5d045fc9375b3b31b0a7feb97
 - `NH-ANIM-001/002/003/004`: **PASS**.
 - `NH-MOTION-001/002`: **PASS**.
 - startup while pointer already overlaps the notch: **PASS**.
-- physical tuning accepted: 120 ms dwell, 0.20 s animation, `.levelChange`, 4 pt protection on the edges where protection is desired.
+- physical tuning accepted: 120 ms dwell, 0.20 s animation, `.levelChange`, 4 pt side/bottom protection.
 
-The only post-acceptance product refinement is asymmetric top-edge activation. New stable physical gate:
+Post-acceptance top-edge history:
 
-- `NH-HOVER-TOP-001`: on the built-in display, deliberately push/hold the pointer against the top screen edge over the notch. It must remain eligible and open once after 120 ms with one haptic and no oscillation. Left/right/bottom still use 4 pt inward protection.
+- `NH-HOVER-TOP-001` on CI #325 artifact: **FAIL** — exact physical top edge did not activate;
+- the failure invalidated the previous nearby-point automation as evidence for this exact boundary;
+- corrective CI #326/#327 now tests and implements exact inclusive `maxY` semantics.
 
-Because removing the top inset restores a 4 pt-high activation band, `NH-HOVER-DELAY-001` must be rerun once on the new exact artifact to confirm quick cross-display transit remains compact/no haptic. No other broad hardware checks need repeating unless either targeted scenario fails.
+The next exact artifact must rerun only:
+
+- `NH-HOVER-TOP-001`: built-in display, pointer held at exact top edge over notch -> opens once after 120 ms, one haptic, no oscillation;
+- `NH-HOVER-DELAY-001`: quick cross-display transit -> remains compact, zero haptic.
+
+No broad visual/animation/Reduce Motion retest is required unless either targeted scenario exposes a regression.
 
 ## 11. Definition of done
 
@@ -282,8 +301,8 @@ This interaction/animation slice is complete only when:
 - runtime remains event-driven and cancellation-safe;
 - no permissions/entitlements/input surface are broadened;
 - broad physical acceptance remains recorded as PASS;
-- new `NH-HOVER-TOP-001` passes on the exact asymmetric-inset candidate;
+- corrected exact-edge `NH-HOVER-TOP-001` passes on target hardware;
 - `NH-HOVER-DELAY-001` remains PASS on that same candidate;
-- final accepted geometry is recorded as **4 pt left/right/bottom, 0 pt top**, with 120 ms dwell, `.levelChange`, and 0.20 s animation.
+- final accepted geometry is recorded as **inclusive 4 pt left/right/bottom, inclusive 0 pt top**, with 120 ms dwell, `.levelChange`, and 0.20 s animation.
 
 Until the two targeted physical checks pass, PR #10 remains Draft and unmerged.
