@@ -18,7 +18,7 @@ final class NotchPointerMonitor {
         self.addLocal = { handler in
             NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { event in
                 let pointer = NSEvent.mouseLocation
-                Task { @MainActor in
+                MainActor.assumeIsolated {
                     handler(pointer)
                 }
                 return event
@@ -27,7 +27,7 @@ final class NotchPointerMonitor {
         self.addGlobal = { handler in
             NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { _ in
                 let pointer = NSEvent.mouseLocation
-                Task { @MainActor in
+                MainActor.assumeIsolated {
                     handler(pointer)
                 }
             }
