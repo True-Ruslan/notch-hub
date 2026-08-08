@@ -156,9 +156,9 @@ The implementation remains event-driven: one pending dwell work item at most; no
 | `NH-HOVER-001` | Deliberate compact hover | One expansion; no oscillation | **PASS**; lifecycle automated |
 | `NH-HOVER-002` | Move within expanded retention | Remains expanded | **PASS**; policy automated |
 | `NH-HOVER-003` | Move outside retention | Collapse once and stay compact | **PASS**; state machine automated |
-| `NH-HOVER-DELAY-001` | Quick transit through/near notch toward second display | Stays compact; zero haptic | **PASS on #319**, targeted regression required after exact-edge fix |
+| `NH-HOVER-DELAY-001` | Quick transit through/near notch toward second display | Stays compact; zero haptic | **PASS on exact CI #332 artifact**; dwell/cancellation automated |
 | `NH-HOVER-DELAY-002` | Deliberate hover | Opens once after 120 ms | **PASS; 120 ms accepted** |
-| `NH-HOVER-TOP-001` | Built-in display, pointer deliberately held at exact top screen edge over notch | Opens once after 120 ms with one haptic; no oscillation | **FAIL on #325 artifact; corrective #326→#327 automated fix awaiting exact-head physical retest** |
+| `NH-HOVER-TOP-001` | Built-in display, pointer deliberately held at exact top screen edge over notch | Opens once after 120 ms with one haptic; no oscillation | **PASS on exact CI #332 artifact**; exact inclusive boundary automated |
 | `NH-HAPTIC-001` | Successful deliberate hover | Exactly one acceptable tactile event | **PASS; `.levelChange` accepted** |
 | `NH-HAPTIC-002` | Cancelled transit/retention/collapse | No haptic | **PASS** |
 | `NH-VISUAL-001` | Compact physical-notch state | Black rounded surface; no square leakage | **PASS** |
@@ -199,7 +199,7 @@ Initial cycle:
 - clean documented candidate `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed all automated gates and produced artifact `9022296152`;
 - target-Mac `NH-HOVER-TOP-001` on #325 **FAILED**: the cursor held against the physical top edge did not open the panel.
 
-The failure exposed a dishonest boundary approximation in the automated test: it used `compactFrame.maxY - 1`, while the real scenario is `compactFrame.maxY`. Production then passed that point to `CGRect.contains`, whose maximum X/Y boundaries are excluded. Therefore the test was green without covering the physical edge it claimed to represent.
+The failure exposed an inaccurate boundary approximation in the automated test: it used `compactFrame.maxY - 1`, while the real scenario is `compactFrame.maxY`. Production then passed that point to `CGRect.contains`, whose maximum X/Y boundaries are excluded. Therefore the test was green without covering the physical edge it claimed to represent.
 
 Corrective TDD:
 
@@ -208,12 +208,23 @@ Corrective TDD:
 - GREEN `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive comparisons and passed **54/54 Swift tests** plus all release/security/performance/package gates and the unchanged P0 size budget;
 - #327 sizes: executable `250,320 B`, app `253,317 B`, DMG `84,679 B`.
 
-After the corrective documentation commit, a fresh exact-head CI artifact is required. Only two physical checks remain:
+### Final targeted hardware acceptance
 
-1. `NH-HOVER-TOP-001` — exact top-edge activation works.
-2. `NH-HOVER-DELAY-001` — quick cross-display transit still does not open/haptic.
+Exact corrected artifact:
 
-If both pass, PR #10 may move from Draft toward protected squash integration without re-running the already accepted broad hardware matrix.
+- source SHA `6d4c13739216503ec97fe3e71eada0fc9b32f298`;
+- CI #332 / run `31260116337`;
+- `NotchHub-dmg` artifact ID `9022551570`;
+- digest `sha256:f79a01f5dd65f6056d3021231667ac15cb7f340d32c4fc8bf383ccea0723a758`.
+
+Physical target-Mac result:
+
+- `NH-HOVER-TOP-001`: **PASS**;
+- `NH-HOVER-DELAY-001`: **PASS**.
+
+The corrected exact-edge behavior and cross-display regression are therefore physically accepted together on the same artifact. Final accepted compact geometry is **inclusive 4 pt left/right/bottom, inclusive 0 pt top** with the already accepted 120 ms dwell.
+
+Acceptance-record commits after source `6d4c13739216503ec97fe3e71eada0fc9b32f298` are documentation-only. They require a fresh exact-head CI before integration but do not require another target-Mac physical run.
 
 ## Historical TDD highlights
 
