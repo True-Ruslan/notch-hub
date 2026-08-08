@@ -8,7 +8,7 @@ Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
 Current product milestone: M1 `Notch Core hardening and interaction` — **IN PROGRESS**
-Active implementation PR: #10 `M1 delayed hover and haptic interaction core` — **DRAFT / TARGETED TOP-EDGE RETEST PENDING**
+Active implementation PR: #10 `M1 delayed hover and haptic interaction core` — **DRAFT / EXACT TOP-EDGE RETEST PENDING**
 
 ## Product
 
@@ -65,7 +65,7 @@ Public-source hardening is merged. Ordinary public pull-request CI remains read-
 
 ## M1 interaction and transition hardening
 
-Status: **CORE HARDWARE ACCEPTED; TARGETED TOP-EDGE REFINEMENT RETEST PENDING**.
+Status: **CORE HARDWARE ACCEPTED; EXACT TOP-EDGE BOUNDARY RETEST PENDING**.
 
 Authoritative requirements: `docs/specs/M1_NOTCH_INTERACTION.md`.
 Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
@@ -80,7 +80,8 @@ Accepted/implemented invariants:
 - one cancellable one-shot compact -> expanded dwell;
 - **accepted dwell: `120 ms`**;
 - compact activation requires **4 pt inward depth on left, right and bottom only**;
-- **no top inset**: a deliberate pointer held against the top screen edge above the notch remains eligible for activation;
+- **no top inset**: a deliberate pointer held against the exact top screen edge above the notch remains eligible for activation;
+- compact hit-testing uses explicit inclusive directional bounds instead of `CGRect.contains`, because Core Graphics excludes `maxX`/`maxY` edges from rectangle membership;
 - duplicate movement cannot create duplicate pending activation;
 - leaving before threshold cancels immediately;
 - generation validation makes cancelled/stale callbacks harmless;
@@ -89,7 +90,7 @@ Accepted/implemented invariants:
 - setup/current-pointer synchronization is non-activating;
 - one `DispatchWorkItem` via `DispatchQueue.main.asyncAfter`; no polling or repeating timer.
 
-The asymmetric top-edge geometry is the only behavior added after the broad hardware acceptance cycle and therefore has its own targeted physical gate `NH-HOVER-TOP-001`.
+The exact top-edge geometry is the only behavior added after the broad hardware acceptance cycle and therefore has its own targeted physical gate `NH-HOVER-TOP-001`.
 
 ### Single transition authority
 
@@ -164,9 +165,9 @@ Target MacBook/macOS 26.6 results reported on 2026-08-08:
 - startup with pointer already over notch: **PASS** — no automatic activation/haptic;
 - accepted tuning: `120 ms` dwell, `.levelChange` haptic, `0.20 s` animation, 4 pt side/bottom activation depth.
 
-This accepts the interaction, visual, animation, reversal, haptic, startup and Reduce Motion architecture on the target hardware. The only requested change after that acceptance is the top-edge activation geometry described below.
+This accepts the interaction, visual, animation, reversal, haptic, startup and Reduce Motion architecture on the target hardware. The only requested change after that acceptance is the exact top-edge activation geometry described below.
 
-## Top-edge activation refinement — TDD follow-up
+## Top-edge activation refinement — hardware finding and corrective TDD
 
 Product requirement from the accepted hardware cycle:
 
@@ -175,17 +176,32 @@ Product requirement from the accepted hardware cycle:
 - the accepted `4 pt` inward protection remains on **left, right and bottom**;
 - cross-display quick transit must remain protected by the `120 ms` dwell.
 
-TDD evidence:
+Initial follow-up:
 
-- RED commit `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 added top/side/bottom boundary tests before production changed;
-- CI #320 ran 52 Swift tests and failed **only** `compactPointerAtTopScreenEdgeActivatesWithoutTopInset`, while left/right/bottom rejection tests and all prior behavior stayed green;
-- GREEN source `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**, macOS 26 compatibility, release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG gates and the unchanged P0 size budget;
-- CI #321 deterministic sizes: executable `250,000 B`, app `252,997 B`, DMG `84,468 B`.
+- RED `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 established the asymmetric 4/4/4/0 geometry;
+- GREEN `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed 52/52 Swift tests;
+- clean documented source `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed all automated gates and produced artifact `9022296152`;
+- target-Mac `NH-HOVER-TOP-001` on that artifact **FAILED**: holding the pointer against the exact top screen edge did not open the panel.
 
-A documentation-only exact-head CI is still required after this state update. Then only a targeted physical retest is needed:
+Root cause:
 
-- `NH-HOVER-TOP-001`: on the built-in display, with no second-display transit involved, push/hold the pointer against the top edge over the notch; after the accepted 120 ms dwell the panel opens once, with one haptic and no oscillation;
-- `NH-HOVER-DELAY-001`: quick cross-display transit remains compact/no haptic despite the newly restored top 4 pt band.
+- the CI test named as a top-edge test actually used `compactFrame.maxY - 1`, not the exact edge;
+- production delegated compact membership to `CGRect.contains`;
+- Core Graphics rectangle membership includes minimum edges but excludes maximum X/Y edges, so a real point at `pointer.y == compactFrame.maxY` was rejected;
+- this was a test-model defect and a production boundary-semantics defect, not a dwell, monitor, animation or haptic failure.
+
+Corrective TDD:
+
+- RED source `3d0d40b5426cb8a8fe0bd19393688a68247637b0` / CI #326 changed the test to exact `y == compactFrame.maxY` and added exact accepted left/right 4 pt boundary checks;
+- CI #326 ran 54 tests and failed only the three new exact-boundary assertions while all prior behavior remained green;
+- GREEN source `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive directional comparisons;
+- CI #327 passed **54/54 Swift tests**, macOS 26 compatibility, release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG checks and the unchanged P0 size budget;
+- CI #327 sizes: executable `250,320 B`, app `253,317 B`, DMG `84,679 B`.
+
+A documentation-only exact-head CI is required after this state update. Then only a targeted physical retest is needed:
+
+- `NH-HOVER-TOP-001`: on the built-in display, push/hold the pointer against the **exact** top edge over the notch; after the accepted 120 ms dwell the panel opens once, with one haptic and no oscillation;
+- `NH-HOVER-DELAY-001`: quick cross-display transit remains compact/no haptic.
 
 No broad re-run of visual/reversal/Reduce Motion scenarios is required unless these two checks expose a regression.
 
@@ -202,8 +218,8 @@ No broad re-run of visual/reversal/Reduce Motion scenarios is required unless th
 
 ## Next optimal step
 
-1. Run fresh exact-head CI after the acceptance/refinement documentation commit.
+1. Run fresh exact-head CI after this corrective acceptance documentation commit.
 2. Use only that exact artifact for `NH-HOVER-TOP-001` and the narrow `NH-HOVER-DELAY-001` regression check.
-3. If both pass, record the asymmetric activation geometry as accepted, mark PR #10 ready, and complete protected squash integration according to repository policy.
+3. If both pass, record the explicit inclusive asymmetric activation geometry as accepted, mark PR #10 ready, and complete protected squash integration according to repository policy.
 4. After this interaction slice is merged, run the measured `NSTrackingArea` / window-local pointer experiment against accepted `NH-PERF-HOVER-001` before deciding whether the global `.mouseMoved` fallback can be removed.
 5. Continue M1 with active-display migration, Spaces/fullscreen, screen-configuration changes, click/pin, and gestures.
