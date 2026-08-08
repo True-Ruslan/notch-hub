@@ -25,6 +25,17 @@ struct NotchPanelOwnershipTests {
     }
 
     @Test
+    func animationCancellationFreezesVisibleCornerRadiusBeforeRemovingAnimation() throws {
+        let driverSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelAnimationDriver.swift"
+        )
+
+        #expect(driverSource.contains("freezeVisibleCornerRadius()"))
+        #expect(driverSource.contains("layer.presentation()?.cornerRadius ?? layer.cornerRadius"))
+        #expect(driverSource.contains("setCornerRadius(visibleCornerRadius, on: layer)"))
+    }
+
+    @Test
     func hostingFactoryOwnsOnlyInitialChromeSetup() throws {
         let factorySource = try sourceText(
             relativePath: "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift"
