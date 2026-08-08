@@ -33,7 +33,7 @@ struct ProbeProcessTests {
                 testClientURL.path,
                 "stream",
                 "--no-diff",
-                "--micros",
+                "--micros"
             ]
         )
         #expect(controller.state == .running)
