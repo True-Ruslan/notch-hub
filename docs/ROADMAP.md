@@ -73,13 +73,13 @@ Public repository, ordinary fork PR CI, release authority, protected branch rule
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **IN PROGRESS — PR #10 DRAFT; ONLY EXACT TOP-EDGE RETEST REMAINS FOR CURRENT SLICE**
+Status: **IN PROGRESS — PR #10; CURRENT INTERACTION/TRANSITION SLICE HARDWARE ACCEPTED**
 
 Interaction contract: `docs/specs/M1_NOTCH_INTERACTION.md`.
 Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
 Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
 
-### Interaction intent core — implemented; broad hardware accepted
+### Interaction intent core — implemented and hardware accepted
 
 - [x] short cancellable hover dwell before compact -> expanded activation;
 - [x] **120 ms dwell accepted** on target Mac;
@@ -92,8 +92,8 @@ Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-trans
 - [x] `.levelChange` tactile feedback accepted on target Mac;
 - [x] no haptic for cancellation, duplicate movement, retention, collapse, setup/programmatic paths, stale callbacks, or transition-policy retarget;
 - [x] explicit local/global `.mouseMoved` monitor ownership and teardown;
-- [ ] pass corrected `NH-HOVER-TOP-001` on the exact final artifact;
-- [ ] reconfirm `NH-HOVER-DELAY-001` quick cross-display transit on that same artifact.
+- [x] corrected `NH-HOVER-TOP-001` passed on exact CI #332 artifact;
+- [x] `NH-HOVER-DELAY-001` quick cross-display transit reconfirmed on the same exact artifact.
 
 ### Transition / animation hardening — implemented and hardware accepted
 
@@ -145,7 +145,7 @@ Broad exact-artifact hardware acceptance on CI #319 is complete:
 - [x] Reduce Motion retarget during transition;
 - [x] startup with pointer already over the notch remains non-activating.
 
-Top-edge refinement history:
+Top-edge refinement history and acceptance:
 
 - [x] initial asymmetric geometry RED #320 -> GREEN #321;
 - [x] exact-head CI #325 fully automated GREEN;
@@ -153,12 +153,12 @@ Top-edge refinement history:
 - [x] root cause identified: test used `maxY - 1`, while exact `maxY` was rejected by `CGRect.contains`;
 - [x] corrective exact-boundary RED #326;
 - [x] corrective GREEN #327: **54/54 tests** plus all security/performance/package gates, unchanged P0 size budget;
-- [ ] final documented exact-head artifact: `NH-HOVER-TOP-001` PASS;
-- [ ] same artifact: `NH-HOVER-DELAY-001` quick cross-display regression PASS.
+- [x] exact CI #332 artifact `9022551570`: `NH-HOVER-TOP-001` **PASS**;
+- [x] same exact artifact: `NH-HOVER-DELAY-001` quick cross-display regression **PASS**.
 
-If exact top-edge activation still fails on hardware after the inclusive-boundary correction, do not widen the zone or add polling. Investigate actual event delivery/coordinates at the physical edge and add a lower-level deterministic/instrumented boundary before further production changes.
+The current interaction/transition slice has completed its physical gate. Acceptance-record commits after the CI #332 source are documentation-only; one fresh exact-head CI remains before PR integration.
 
-### Remaining M1 product hardening after current acceptance
+### Remaining M1 product hardening after current slice
 
 - [ ] measured pointer-observation experiment described above;
 - [ ] multiple displays and active-screen migration;
