@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-enum NotchInteractionIntent: Equatable {
+enum NotchInteractionIntent {
     case deliberateExpansion
     case pointerExitCollapse
 }
