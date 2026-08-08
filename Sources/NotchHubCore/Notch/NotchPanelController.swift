@@ -40,11 +40,7 @@ public final class NotchPanelController: NSObject {
             animationDuration: { [weak animationDurationProvider] in
                 animationDurationProvider?.currentDuration ?? 0
             },
-            animate: { [weak animationDriver] frame, cornerRadius, duration, completion in
-                guard let animationDriver else {
-                    completion()
-                    return
-                }
+            animate: { frame, cornerRadius, duration, completion in
                 animationDriver.animate(
                     frame: frame,
                     cornerRadius: cornerRadius,
@@ -52,11 +48,11 @@ public final class NotchPanelController: NSObject {
                     completion: completion
                 )
             },
-            cancelAnimation: { [weak animationDriver] in
-                animationDriver?.cancel()
+            cancelAnimation: {
+                animationDriver.cancel()
             },
-            performExpansionHaptic: { [weak haptics] in
-                haptics?.performExpansionHaptic()
+            performExpansionHaptic: {
+                haptics.performExpansionHaptic()
             }
         )
         let interactionCoordinator = NotchInteractionCoordinator(
