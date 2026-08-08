@@ -74,13 +74,7 @@ final class NotchInteractionCoordinator {
                 layout: layout
             )
             if target == .compact {
-                emitIntent(
-                    NotchInteractionIntent(
-                        desiredPresentation: .compact,
-                        cause: .pointerExit,
-                        hapticEligible: false
-                    )
-                )
+                emitIntent(.pointerExitCollapse)
             }
         }
     }
@@ -123,12 +117,6 @@ final class NotchInteractionCoordinator {
 
         pendingCancellation = nil
         pendingGeneration = nil
-        emitIntent(
-            NotchInteractionIntent(
-                desiredPresentation: .expanded,
-                cause: .deliberateHover,
-                hapticEligible: true
-            )
-        )
+        emitIntent(.deliberateExpansion)
     }
 }
