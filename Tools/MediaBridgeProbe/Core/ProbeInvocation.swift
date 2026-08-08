@@ -3,7 +3,7 @@ public enum ProbeInvocationError: Error, Equatable {
 }
 
 public enum ProbeInvocation: Equatable, Sendable {
-    case observe(seconds: UInt64, reportPath: String)
+    case observe(seconds: UInt64)
     case command(ProbeMediaCommand)
     case selfTest
 
@@ -54,18 +54,16 @@ public enum ProbeInvocation: Equatable, Sendable {
 
         case "observe":
             guard
-                arguments.count == 5,
+                arguments.count == 3,
                 arguments[1] == "--seconds",
                 let seconds = UInt64(arguments[2]),
                 seconds > 0,
-                seconds <= maximumObserveSeconds,
-                arguments[3] == "--report",
-                !arguments[4].isEmpty
+                seconds <= maximumObserveSeconds
             else {
                 throw ProbeInvocationError.invalidArguments
             }
 
-            return .observe(seconds: seconds, reportPath: arguments[4])
+            return .observe(seconds: seconds)
 
         default:
             throw ProbeInvocationError.invalidArguments
