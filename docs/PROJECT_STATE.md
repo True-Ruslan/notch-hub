@@ -7,10 +7,12 @@ Primary physical target: macOS `26.6`
 Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
-Current product state: M1 interaction/transition slice **ACCEPTED AND MERGED**; next active slice is M6.1 **Universal Media Bridge compatibility/security probe**
+Current product state: M1 interaction/transition slice **ACCEPTED AND MERGED**; active slice M6.1 **Universal Media Bridge compatibility/security probe — IMPLEMENTED, PHYSICAL ACCEPTANCE IN PROGRESS**
 Accepted interaction/transition slice: PR #10 `M1 delayed hover and haptic interaction core` — **ACCEPTED AND SQUASH-MERGED** as `094b494bd597643244e733baf5787a13b61fb4eb`
 Approved Universal Media design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`
-First Universal Media implementation plan: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`
+Universal Media probe plan: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`
+Current probe PR: #13 `M6.1 Universal Media bridge compatibility probe` — **DRAFT, TRANSPORT DECISION PENDING**
+Current exact physical candidate: source `cda05bb4ff367d2c4a5d9d438c3f555f3788d186`, CI #443 / run `31304052700`, artifact ID `9035397233`, digest `sha256:5cd10a0c6e9b61d8f060ca29ab8a84a7b1a1ba2408f2769b88ea86bf908be5c0`
 
 ## Product
 
@@ -65,233 +67,142 @@ Status: **ACCEPTED**.
 
 Public-source hardening is merged. Ordinary public pull-request CI remains read-only/unprivileged; Personal Release publication is isolated from untrusted PR execution; Trusted Release remains dormant without Apple credentials/environment.
 
-## M1 interaction and transition hardening
+## M1 — Interaction and transition hardening
 
-Status: **CURRENT INTERACTION / TRANSITION SLICE ACCEPTED AND MERGED**.
+Status: **ACCEPTED AND MERGED**.
 
 Merge commit: `094b494bd597643244e733baf5787a13b61fb4eb`.
 Authoritative requirements: `docs/specs/M1_NOTCH_INTERACTION.md`.
-Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
-Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
 
-### Interaction intent layer
+Accepted behavior includes:
 
-`NotchInteractionCoordinator` owns pointer-intent timing/cancellation. It does not own panel geometry, presentation animation, content rendering, or haptic output.
+- `120 ms` one-shot dwell with cancellation and stale-callback protection;
+- exact compact activation geometry with inclusive 4 pt left/right/bottom and no top inset;
+- exact top-edge physical activation acceptance;
+- one public AppKit `.levelChange` haptic for successful deliberate expansion only;
+- AppKit-owned `0.20 s` frame/corner transition with Reduce Motion support;
+- no polling/repeating timer/display link/custom frame loop;
+- one local and one narrow global `.mouseMoved` monitor with synchronous main-actor delivery;
+- App Sandbox + Hardened Runtime boundary unchanged.
 
-Accepted/implemented invariants:
+The narrow global `.mouseMoved` fallback remains accepted. Its `NSTrackingArea` / window-local experiment is deferred to P1 after the functional media slice so resource value is measured against the real application.
 
-- one cancellable one-shot compact -> expanded dwell;
-- **accepted dwell: `120 ms`**;
-- compact activation requires **4 pt inward depth on left, right and bottom only**;
-- **no top inset**: a deliberate pointer held against the exact top screen edge above the notch remains eligible for activation;
-- compact hit-testing uses explicit inclusive directional bounds instead of `CGRect.contains`, because Core Graphics excludes `maxX`/`maxY` edges from rectangle membership;
-- duplicate movement cannot create duplicate pending activation;
-- leaving before threshold cancels immediately;
-- generation validation makes cancelled/stale callbacks harmless;
-- re-entry starts a fresh full dwell;
-- expanded retention/collapse is independent from activation dwell;
-- setup/current-pointer synchronization is non-activating;
-- one `DispatchWorkItem` via `DispatchQueue.main.asyncAfter`; no polling or repeating timer.
+## M6.1 — Universal Media Bridge compatibility/security probe
 
-The exact top-edge geometry is physically accepted through `NH-HOVER-TOP-001` on the exact CI #332 artifact.
+Status: **IMPLEMENTED; DETERMINISTIC CI ACCEPTED; CURRENT TARGET-MAC ACCEPTANCE IN PROGRESS**.
 
-### Single transition authority
+PR: #13 `M6.1 Universal Media bridge compatibility probe`.
+Physical procedure: `docs/testing/MEDIA_BRIDGE_PROBE.md`.
+Evidence ledger: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
 
-`NotchPanelTransitionCoordinator` is the sole owner of compact/expanded presentation transitions.
+### Implemented development-only boundary
 
-It owns:
+- all probe code remains outside shipping `Sources/**`;
+- fixed `/usr/bin/perl` process boundary, no shell string execution;
+- pinned upstream `ungive/mediaremote-adapter` revision `3ac3d4bdf862c7b5399b4fba4df5689f5c38609a`;
+- repo-owned deterministic capability patch SHA-256 `f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974`;
+- event-driven `stream --no-diff --micros`, no repeated `get` polling;
+- typed toggle/next/previous/bounded-seek allowlist only;
+- authoritative one-shot previous/next/seek capabilities with strict `supported|unsupported|unknown` semantics;
+- no-session/indeterminate capability state fails safe to `unknown`;
+- bounded stdout/stderr/protocol handling and fail-closed process lifecycle;
+- privacy-safe report surface with no title/artist/album/artwork bytes/raw payload/listening history;
+- observation schema v2 records only `observedSessionDisappearance` and `sourceSwitchCount` in addition to existing aggregate evidence;
+- sandbox-only entitlement and Hardened Runtime remain mandatory;
+- no Accessibility, Input Monitoring, Screen Recording, Automation, synthetic input, SIP weakening, or Gatekeeper weakening;
+- shipping `NotchHub.app` remains probe-free and retains the accepted runtime/security boundary.
 
-- explicit `compact`, `expanding`, `expanded`, and `collapsing` lifecycle phases;
-- desired presentation independent from currently staged SwiftUI content;
-- expanded content retention during collapse until the matching animation completes;
-- cancellation/reversal through generation validation so stale completions cannot win;
-- exactly-once haptic eligibility for a deliberate user expansion;
-- programmatic expansion without haptic;
-- animation-policy retarget while a transition is in flight without a second haptic.
+### Current deterministic candidate
 
-`NotchPanelController` has no competing direct presentation `setFrame` path. `NotchPanelModel` represents content presentation only.
+Source `cda05bb4ff367d2c4a5d9d438c3f555f3788d186` passed CI #443 / run `31304052700` completely:
 
-### AppKit animation and visual ownership
-
-Panel animation uses public system APIs only:
-
-- `NSAnimationContext` + `panel.animator().setFrame(...)` for the window frame;
-- `CABasicAnimation(keyPath: "cornerRadius")` for backing-layer corner radius;
-- shared `.easeInEaseOut` timing;
-- **accepted standard duration: `0.20 s`**;
-- Reduced Motion resolves duration to `0`, applying the exact endpoint synchronously;
-- cancellation freezes the current Core Animation presentation-layer corner radius into the model layer before removing the animation, preventing a radius jump during reversal;
-- no display link, frame timer, polling loop, custom interpolation loop, or private animation API.
-
-Outer clipping remains AppKit-owned. The hardware-notch compact surface is opaque black; continuous corner radii remain `12 pt` compact / `22 pt` expanded; the hosting view follows panel width and height while `sizingOptions == []` keeps window geometry AppKit-owned.
-
-### Reduce Motion
-
-`NotchPanelController`, already an `NSObject`, observes `NSWorkspace.accessibilityDisplayOptionsDidChangeNotification` through the selector-based `NotificationCenter` API.
-
-The controller caches the current boolean only to suppress duplicate policy updates. On an actual value change it asks the transition coordinator to retarget the current desired presentation. Teardown removes the observer explicitly.
-
-This replaced a block-observer/token object after size attribution showed unnecessary runtime metadata/closure cost. No accessibility permission or entitlement is requested; this is a public display accessibility preference exposed by AppKit.
-
-### Pointer event hot path
-
-The current narrow input boundary remains exactly one local and one global `.mouseMoved` monitor with explicit ownership and idempotent removal.
-
-The monitor does not allocate `Task { @MainActor ... }` for every mouse-move event. AppKit event-monitor callbacks are delivered on the main thread, so delivery uses `MainActor.assumeIsolated` synchronously. This removes avoidable hot-path task allocation without broadening the observed event mask or permissions.
-
-The global `.mouseMoved` fallback remains accepted. The `NSTrackingArea` / window-local experiment is intentionally deferred to the P1 whole-app performance review after Universal Media integration so its correctness/resource value is measured in the real application rather than optimized speculatively in isolation.
-
-### Haptic policy
-
-**Accepted physical feedback:** one public AppKit `.levelChange` request for a successful deliberate compact -> expanded activation.
-
-No haptic is requested for quick/cancelled transit, duplicate pointer movement, retention, collapse, startup synchronization, programmatic expansion, stale completion, or Reduce Motion retargeting. Reversal does not create a second haptic merely because an in-flight transition changes direction.
-
-## Broad hardware acceptance — CI #319 candidate
-
-The broad M1 hardware acceptance used source SHA `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4`, exact-head CI #319 / run `31257399497`, artifact `NotchHub-dmg` ID `9021802122`.
-
-Target MacBook/macOS 26.6 results reported on 2026-08-08:
-
-- `NH-NOTCH-001`: **PASS**;
-- `NH-HOVER-001/002/003`: **PASS**;
-- `NH-HOVER-DELAY-001`: **PASS** for cross-display transit, with a product refinement requested for deliberate single-display top-edge activation;
-- `NH-HOVER-DELAY-002`: **PASS** — `120 ms` feels correct;
-- `NH-HAPTIC-001/002`: **PASS** — `.levelChange` accepted;
-- `NH-VISUAL-001/002`: **PASS**;
-- `NH-VISUAL-003`: **PASS** after repeated cycles;
-- `NH-ANIM-001`: **PASS**;
-- `NH-ANIM-002/003`: **PASS**;
-- `NH-ANIM-004`: **PASS**;
-- `NH-MOTION-001`: **PASS**;
-- `NH-MOTION-002`: **PASS**;
-- startup with pointer already over notch: **PASS** — no automatic activation/haptic;
-- accepted tuning: `120 ms` dwell, `.levelChange` haptic, `0.20 s` animation, 4 pt side/bottom activation depth.
-
-This accepted the interaction, visual, animation, reversal, haptic, startup and Reduce Motion architecture on the target hardware. The only requested follow-up was the exact top-edge activation geometry described below.
-
-## Top-edge activation refinement — hardware finding and corrective TDD
-
-Product requirement from the accepted hardware cycle:
-
-- with no second monitor in use, deliberately pushing the cursor to the **very top screen edge** over the notch should still open NotchHub;
-- therefore the compact activation zone has **no top inset**;
-- the accepted `4 pt` inward protection remains on **left, right and bottom**;
-- cross-display quick transit must remain protected by the `120 ms` dwell.
-
-Initial follow-up:
-
-- RED `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 established the asymmetric 4/4/4/0 geometry;
-- GREEN `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed 52/52 Swift tests;
-- clean documented source `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed all automated gates and produced artifact `9022296152`;
-- target-Mac `NH-HOVER-TOP-001` on that artifact **FAILED**: holding the pointer against the exact top screen edge did not open the panel.
-
-Root cause:
-
-- the CI test named as a top-edge test actually used `compactFrame.maxY - 1`, not the exact edge;
-- production delegated compact membership to `CGRect.contains`;
-- Core Graphics rectangle membership includes minimum edges but excludes maximum X/Y edges, so a real point at `pointer.y == compactFrame.maxY` was rejected;
-- this was a test-model defect and a production boundary-semantics defect, not a dwell, monitor, animation or haptic failure.
-
-Corrective TDD:
-
-- RED source `3d0d40b5426cb8a8fe0bd19393688a68247637b0` / CI #326 changed the test to exact `y == compactFrame.maxY` and added exact accepted left/right 4 pt boundary checks;
-- CI #326 ran 54 tests and failed only the three new exact-boundary assertions while all prior behavior remained green;
-- GREEN source `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive directional comparisons;
-- CI #327 passed **54/54 Swift tests**, macOS 26 compatibility, release/security/performance/package/signature/Sandbox/Hardened Runtime/DMG checks and the unchanged P0 size budget;
-- CI #327 sizes: executable `250,320 B`, app `253,317 B`, DMG `84,679 B`.
-
-## Final targeted hardware acceptance — CI #332 candidate
-
-The corrected exact artifact used source SHA `6d4c13739216503ec97fe3e71eada0fc9b32f298`, CI #332 / run `31260116337`, `NotchHub-dmg` artifact ID `9022551570`, digest `sha256:f79a01f5dd65f6056d3021231667ac15cb7f340d32c4fc8bf383ccea0723a758`.
-
-Target MacBook/macOS 26.6 results reported on 2026-08-08:
-
-- `NH-HOVER-TOP-001`: **PASS** — holding the pointer at the exact top edge over the notch activates once after the accepted dwell;
-- `NH-HOVER-DELAY-001`: **PASS** — quick cross-display transit remains compact and produces no haptic.
-
-This accepts the final compact activation geometry as **inclusive 4 pt left/right/bottom, inclusive 0 pt top**, while preserving the accepted `120 ms` dwell and cross-display protection. No broad hardware rerun is required because the corrective change was limited to compact hit-test boundary semantics and both directly affected physical gates passed on the exact artifact.
-
-The hardware acceptance is tied to source `6d4c13739216503ec97fe3e71eada0fc9b32f298`.
-
-## Final exact-head verification and integration
-
-Final pre-merge branch head `7e04acd46414f39cf3d910b8c310deb22f9b9b9e` passed CI #338 / run `31260909901`:
-
-- macOS 26 compatibility: PASS;
-- **54/54 Swift tests**: PASS;
-- **16/16 release-policy tests**: PASS;
-- **22/22 performance-policy tests**: PASS;
-- security/performance audits: PASS;
-- App Sandbox + Hardened Runtime + ad-hoc signature: PASS;
-- system-only dynamic linkage and DMG integrity: PASS;
+- **93/93 Swift tests PASS**;
+- macOS 26 build and probe executable build with warnings as errors: PASS;
+- pinned adapter patch/build: PASS;
+- sandboxed/Hardened Runtime candidate verification: PASS;
+- real one-shot `capabilities` invocation and exact tri-state schema validation: PASS;
+- real one-second `observe` invocation and privacy-safe schema-v2 validation: PASS;
+- signature-preserving ZIP round-trip and post-extraction provenance/entitlement verification: PASS;
+- release/performance/media policy tests and source/security audit: PASS;
+- shipping NotchHub DMG/signature/Sandbox/Hardened Runtime verification: PASS;
 - unchanged P0 artifact-size budget: PASS;
-- exact sizes: executable `250,320 B`, app `253,317 B`, DMG `84,686 B`.
+- performance harness smoke: PASS;
+- probe isolation from shipping `NotchHub.app`: PASS.
 
-PR #10 was then squash-merged into protected `main` as `094b494bd597643244e733baf5787a13b61fb4eb`. No production source changed after the physically accepted CI #332 artifact except the already verified exact-boundary correction; acceptance-record commits were documentation-only. No additional physical run is required for this merged slice.
+Exact artifact:
 
-## Universal Media design — APPROVED, IMPLEMENTATION NOT STARTED
+- artifact `MediaBridgeProbe-candidate`;
+- artifact ID `9035397233`;
+- digest `sha256:5cd10a0c6e9b61d8f060ca29ab8a84a7b1a1ba2408f2769b88ea86bf908be5c0`.
 
-The approved product target is **system-wide macOS Now Playing**, not a Yandex-specific integration. If macOS itself exposes an application as the active Now Playing source, NotchHub should observe/control that source subject to the capabilities the source actually publishes. Applications that do not publish a system media session are outside the first milestone.
+Hosted macOS 26 no-session capability evidence correctly returned:
 
-Authoritative design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`.
-First TDD plan: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`.
-Design/documentation PR: #12 `Document universal media, gestures, and haptics design`.
+```json
+{"next":"unknown","previous":"unknown","seek":"unknown"}
+```
 
-Approved architecture:
+### Target-Mac evidence so far
 
-- `SystemMediaBridge` is the only boundary allowed to contain a private MediaRemote compatibility mechanism;
-- the rest of NotchHub depends on player-agnostic `MediaProvider`, immutable `MediaSessionSnapshot`, and MainActor `MediaSessionController` contracts;
-- UI/gestures never contain Spotify/Yandex/Apple Music-specific branches;
-- the current system Now Playing source selected by macOS is authoritative when multiple players exist;
-- capabilities are explicit; unsupported/unknown commands are not guessed or emulated;
-- bridge failure is fail-closed for media only and must not destabilize Notch Core;
-- metadata/artwork are untrusted inputs; listening history is not persisted and production logs do not record track metadata;
-- event-driven updates are required; one-second current-track polling is explicitly rejected.
+The previous exact candidate `231ada7baf83a3a1e9d2e38e35fc80a3f6d53758` produced strong first physical evidence on `Mac16,8` / macOS 26.6 build `25G72` with Yandex Music:
 
-Approved media UX:
+- source bundle identifier `ru.yandex.desktop.music` observed;
+- 60-second event-driven observation produced 5 events;
+- active session/playing state/artwork observed;
+- clean teardown true;
+- orphan process false;
+- authoritative capability output: next/previous/seek all `supported`.
 
-- active media in compact mode: artwork on the left and a lightweight playback/status indicator on the right;
-- paused media preserves context with a quieter state; no session returns to ordinary compact NotchHub;
-- expanding while media is active opens media-first content; disappearing media while expanded returns content to Home without collapsing the panel;
-- horizontal swipe left/right means next/previous in both compact and expanded states;
-- compact swipe down expands; expanded swipe up collapses; progress drag performs seek only when supported; play/pause is click/tap;
-- no gesture volume control in the first slice;
-- gestures are local to NotchHub's own window; no global `.scrollWheel` capture;
-- horizontal gestures use `idle -> tracking -> armed -> committed/cancelled`, commit only on physical release, use hysteresis, ignore momentum as an arming/commit source, and request one `.levelChange` haptic on each semantic `armed` transition;
-- initial threshold candidate is `clamp(28% of interactive width, 70 pt ... 120 pt)` with `20 pt` disarm hysteresis, subject to one target-trackpad tuning cycle before being frozen in regression tests.
+That run demonstrates the transport mechanism but is retained as historical evidence because the probe evidence schema was subsequently strengthened. Final acceptance must use current source `cda05bb4...`.
 
-Approved implementation/acceptance cadence:
+### Remaining physical gates
 
-1. transport compatibility/security probe;
-2. production media provider/state boundary only if transport passes;
-3. media UI;
-4. gesture/haptic/seek engine;
-5. multi-source target-Mac hardware acceptance;
-6. P1 whole-app performance review;
-7. evidence-driven optimization or redesign.
+Highest-signal remaining checks on the current exact candidate:
 
-P1 intentionally includes the previously proposed `NSTrackingArea` / window-local pointer experiment so performance work happens against the real post-media application rather than as a speculative standalone optimization.
+1. no active system Now Playing source returns `unknown/unknown/unknown` on the target Mac;
+2. Yandex Music rerun plus actual toggle/next/previous/seek behavior;
+3. schema-v2 source-disappearance evidence (`observedSessionDisappearance=true`);
+4. schema-v2 active-source-switch evidence (`sourceSwitchCount > 0`);
+5. Apple Music, Spotify, browser media, and one additional independent Now Playing source;
+6. explicit confirmation that no sensitive permission prompt appears;
+7. target-Mac parent/perl CPU/RSS/thread measurements including a stability run.
+
+PR #13 intentionally remains Draft. Do not record `ACCEPT_TRANSPORT` before these physical/resource gates are reviewed.
+
+## Universal Media production design — APPROVED, PRODUCTION IMPLEMENTATION BLOCKED ON M6.1
+
+The approved target is system-wide macOS Now Playing, not an application-specific integration. The production architecture remains:
+
+- `SystemMediaBridge` as the only private compatibility boundary;
+- player-agnostic `MediaProvider`;
+- immutable `MediaSessionSnapshot`;
+- `@MainActor MediaSessionController`;
+- capabilities drive UI; unsupported/unknown commands are never fabricated;
+- failure is fail-closed for media only;
+- metadata/artwork are untrusted inputs and listening history is not persisted;
+- event-driven updates only.
+
+Production media implementation, media UI, gestures/haptics/seek, and later P1 whole-app performance work must not begin until M6.1 ends with `ACCEPT_TRANSPORT`.
 
 ## Security baseline
 
-`SECURITY.md` remains authoritative. The currently merged M1 runtime adds no runtime entitlement, telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, Accessibility/Input Monitoring permission, synthetic input, or broader global input capture. Global observation remains exactly `.mouseMoved`; pointer coordinates/history are not persisted.
+`SECURITY.md` remains authoritative. M1 shipping runtime adds no telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, Accessibility/Input Monitoring permission, synthetic input, or broad input capture. Universal Media currently introduces private MediaRemote compatibility **only in the development probe**, not in shipping `Sources/**` or `NotchHub.app`.
 
-The Universal Media design approves one **future narrow exception** for private MediaRemote compatibility behind `SystemMediaBridge`, but no such runtime code exists yet. The next slice is deliberately development-only: it must test the candidate mechanism under the same Sandbox/Hardened Runtime posture before any production security-policy change is considered. A failed probe is rejected/redesigned, not repaired by disabling Sandbox/Hardened Runtime/library validation or adding broad permissions.
+A failed probe is rejected/redesigned rather than repaired by weakening Sandbox, Hardened Runtime, library validation, OS security, or adding broad permissions.
 
 ## Known limitations / technical debt
 
 - target-Mac runtime ceilings still derive from one canonical run per scenario with conservative headroom;
-- the narrow global `.mouseMoved` fallback remains; its `NSTrackingArea` / window-local comparison is deferred to P1 after media integration;
 - GitHub-hosted runner resource values are not representative of the target Mac;
-- Universal Media private transport is approved in design only and remains unproven on the target sandboxed Personal Release configuration;
-- authoritative previous/next/seek capability discovery is a required bridge acceptance criterion and may force transport redesign even if basic metadata/commands work;
+- the narrow global `.mouseMoved` fallback remains pending the P1 `NSTrackingArea` / window-local comparison;
+- production Universal Media transport is not yet accepted;
+- current physical probe matrix/resource evidence is incomplete;
 - active-display migration, Spaces/fullscreen, screen-configuration handling, notchless mode, click/pin policy, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Implement `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md` using TDD, with all probe code kept outside shipping `Sources/**`.
-2. Exercise the exact sandboxed/Hardened Runtime probe on macOS 26.6 against Yandex Music, Apple Music, Spotify, browser media, and one independent system Now Playing source.
-3. Accept the transport only if event-driven observation, artwork/commands, authoritative capability handling, clean child-process lifecycle, no new sensitive permission, and bounded resource behavior are proven; otherwise reject/redesign the transport without weakening NotchHub security.
-4. Only after `ACCEPT_TRANSPORT`, create the production `MediaProvider` / `MediaSessionController` / `SystemMediaBridge` implementation plan, then proceed to media UI and gesture/haptic slices.
-5. After the complete functional media slice passes hardware acceptance, run P1 whole-app resource measurements and the deferred `NSTrackingArea` experiment before deciding whether optimization is necessary.
+1. Finish the current exact-candidate M6.1 physical matrix using `docs/testing/MEDIA_BRIDGE_PROBE.md`.
+2. Record results in `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md` without storing media metadata.
+3. Run target-Mac probe parent/perl resource and stability measurements.
+4. Decide exactly one of `ACCEPT_TRANSPORT`, `NEEDS_TRANSPORT_REDESIGN`, or `REJECT_TRANSPORT`.
+5. Only after `ACCEPT_TRANSPORT`, create and execute the production `MediaProvider` / `MediaSessionController` / `SystemMediaBridge` TDD plan, followed by media UI and gesture/haptic/seek slices.
+6. After the complete functional media slice passes hardware acceptance, run P1 whole-app resource measurements and the deferred `NSTrackingArea` experiment before deciding whether optimization is necessary.
