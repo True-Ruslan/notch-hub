@@ -34,7 +34,7 @@ jobs:
         run: swift build -Xswiftc -warnings-as-errors
 
       - name: Build media bridge probe CLI with warnings as errors
-        run: swift build --target MediaBridgeProbe -Xswiftc -warnings-as-errors
+        run: swift build --product MediaBridgeProbe -Xswiftc -warnings-as-errors
 
       - name: Test
         run: swift test --parallel
@@ -138,7 +138,7 @@ jobs:
         run: swift build -Xswiftc -warnings-as-errors
 
       - name: Build media bridge probe CLI with warnings as errors
-        run: swift build --target MediaBridgeProbe -Xswiftc -warnings-as-errors
+        run: swift build --product MediaBridgeProbe -Xswiftc -warnings-as-errors
 
       - name: Test with coverage instrumentation
         run: swift test --parallel --enable-code-coverage
