@@ -45,6 +45,25 @@ jobs:
         run: |
           bash scripts/build-media-bridge-probe-app.sh
           bash scripts/verify-media-bridge-probe.sh
+
+          build/MediaBridgeProbe.app/Contents/MacOS/MediaBridgeProbe capabilities \
+            > build/media-bridge-capabilities.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('build/media-bridge-capabilities.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          expected_keys = {'next', 'previous', 'seek'}
+          allowed_values = {'supported', 'unsupported', 'unknown'}
+          if set(data) != expected_keys:
+              raise SystemExit(f'Unexpected capability keys: {sorted(data)}')
+          invalid = {key: value for key, value in data.items() if value not in allowed_values}
+          if invalid:
+              raise SystemExit(f'Unexpected capability values: {invalid!r}')
+          PY
+          cat build/media-bridge-capabilities.json
+
           rm -f build/MediaBridgeProbe.zip
           ditto -c -k --sequesterRsrc --keepParent \
             build/MediaBridgeProbe.app \
@@ -56,6 +75,8 @@ jobs:
         run: |
           readonly ROUNDTRIP_ROOT="build/media-bridge-probe-archive-roundtrip"
           readonly APP="$ROUNDTRIP_ROOT/MediaBridgeProbe.app"
+          readonly PATCH_FILE="Tools/MediaBridgeProbe/patches/mediaremote-adapter-capabilities.patch"
+          readonly PATCH_SHA256="$(shasum -a 256 "$PATCH_FILE" | awk '{print $1}')"
 
           rm -rf "$ROUNDTRIP_ROOT"
           mkdir -p "$ROUNDTRIP_ROOT"
@@ -65,6 +86,8 @@ jobs:
           test "$(plutil -extract ProbeSourceCommit raw "$APP/Contents/Info.plist")" = "$SOURCE_COMMIT"
           test "$(plutil -extract ProbeAdapterCommit raw "$APP/Contents/Info.plist")" = \
             "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
+          test "$(plutil -extract ProbeAdapterPatchSHA256 raw "$APP/Contents/Info.plist")" = \
+            "$PATCH_SHA256"
 
           codesign --verify --deep --strict "$APP"
           codesign -dv --verbose=4 "$APP" 2> build/media-probe-archive-codesign.txt
