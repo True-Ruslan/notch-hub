@@ -8,7 +8,8 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "NotchHub", targets: ["NotchHubApp"])
+        .executable(name: "NotchHub", targets: ["NotchHubApp"]),
+        .executable(name: "MediaTransportCandidate", targets: ["MediaTransportCandidate"])
     ],
     targets: [
         .target(name: "NotchHubCore"),
@@ -16,6 +17,11 @@ let package = Package(
         .executableTarget(
             name: "NotchHubApp",
             dependencies: ["NotchHubCore"]
+        ),
+        .executableTarget(
+            name: "MediaTransportCandidate",
+            dependencies: ["NotchHubMediaCore"],
+            path: "Tools/ProductionMediaTransportCandidate/CLI"
         ),
         .target(
             name: "MediaBridgeProbeCore",
