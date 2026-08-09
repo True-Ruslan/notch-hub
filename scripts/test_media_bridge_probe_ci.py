@@ -73,6 +73,8 @@ class MediaBridgeProbeCITests(unittest.TestCase):
             "MRMediaRemoteGetSupportedCommandsForOrigin",
             "MRMediaRemoteCommandInfoGetCommand",
             "MRMediaRemoteCommandInfoGetEnabled",
+            "MRMediaRemoteGetNowPlayingApplicationPID",
+            "activeNowPlayingSessionState",
             "kMRANextTrack",
             "kMRAPreviousTrack",
             "kMRASeekToPlaybackPosition = 24",
