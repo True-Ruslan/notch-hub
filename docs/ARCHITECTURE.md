@@ -28,7 +28,29 @@ The project prioritizes:
 Minimum deployment target: macOS 14.
 Primary physical acceptance target: macOS 26.6.
 
-## Runtime structure
+## Package and shipping boundaries
+
+The package deliberately separates code that is already part of the current Personal Release from production media architecture that is implemented and tested but not yet composed into the app:
+
+```text
+NotchHub product
+  -> NotchHubApp
+      -> NotchHubCore
+
+NotchHubMediaCore                    # production media domain/controller boundary
+  -> no dependency from NotchHubApp yet
+  -> built and tested by CI
+
+MediaBridgeProbe                     # development-only M6.1 acceptance tool
+  -> MediaBridgeProbeCore
+  -> never bundled into NotchHub.app
+```
+
+`NotchHubMediaCore` is intentionally a separate Swift target. M6.2 proved that placing an otherwise dormant media controller directly in `NotchHubCore` caused the shipping executable to exceed the unchanged P0 relative size budget even before media was composed into the app. Moving the production media boundary into its own target restored the shipping payload exactly to the accepted pre-M6.2 values while retaining full build/test coverage.
+
+This isolation is not a claim that production media will have zero cost. The concrete transport/composition slice must explicitly link the media module into the shipping application, measure the real feature cost, and pass a fresh security/performance/package review rather than hiding that cost in an inactive build.
+
+## Current Notch runtime structure
 
 ```text
 NotchHubApp
@@ -66,7 +88,7 @@ Global observation remains deliberately restricted to `.mouseMoved`, with no per
 
 `NotchPointerMonitor` owns exactly one local and one global `.mouseMoved` token, installs them at most once, and removes them idempotently. Its production AppKit callbacks are delivered on the main thread and are bridged synchronously through `MainActor.assumeIsolated`; the runtime no longer creates a `Task` for each mouse-move event. This is a hot-path allocation reduction, not an expansion of input authority.
 
-The global observer is still a candidate for removal because P0 measured materially higher active-hover CPU than untouched idle. A reliable `NSTrackingArea` / window-local design is preferred only if target-Mac evidence proves accepted hover semantics, cross-display transit, and resource behavior remain equal or better. That comparison is now deliberately scheduled inside P1 after Universal Media integration, so the optimization is measured against the real application rather than an isolated pre-feature build. Correctness is not traded away merely to remove the global monitor; `CGEventTap`, Accessibility, Input Monitoring, or broader event capture are not acceptable substitutes.
+The global observer remains a candidate for removal because P0 measured materially higher active-hover CPU than untouched idle. A reliable `NSTrackingArea` / window-local design is preferred only if target-Mac evidence proves accepted hover semantics, cross-display transit, and resource behavior remain equal or better. That comparison is deliberately scheduled inside P1 after the functional Universal Media slice so optimization is measured against the real application. `CGEventTap`, Accessibility, Input Monitoring, or broader event capture are not acceptable substitutes.
 
 ## Delayed hover intent architecture
 
@@ -97,9 +119,7 @@ It separates:
 - **transition phase**: `compact`, `expanding`, `expanded`, or `collapsing`;
 - **content presentation**: what SwiftUI is currently allowed to render.
 
-Expanded SwiftUI content remains staged while collapse is animating and switches to compact only when the matching collapse completion wins. This prevents controls from disappearing before the backing window has visually reached the compact endpoint.
-
-Every started transition advances a generation. Cancellation/reversal invalidates the previous generation. A completion may settle state only when its generation is still current, so an old expansion/collapse callback cannot overwrite a newer desired state.
+Expanded SwiftUI content remains staged while collapse is animating and switches to compact only when the matching collapse completion wins. Every started transition advances a generation. Cancellation/reversal invalidates the previous generation, and only the current generation may settle state.
 
 Reversal follows this rule:
 
@@ -109,7 +129,7 @@ Reversal follows this rule:
 4. start the new desired transition;
 5. ignore any later stale completion from the previous generation.
 
-Tests drive stale callbacks deliberately, including a 10,000-reversal stress sequence, so cancellation correctness is not inferred merely from a cooperative fake driver.
+Tests drive stale callbacks deliberately, including a 10,000-reversal stress sequence.
 
 ## AppKit animation boundary
 
@@ -122,7 +142,7 @@ For a normal transition:
 - both use the accepted `0.20 s` duration and `.easeInEaseOut` timing;
 - the model-layer corner radius is set to the target while the presentation layer supplies the current visible starting radius.
 
-On cancellation, `cancelNotchPanelAnimation` reads the current presentation-layer radius, writes that visible value back to the model layer with implicit actions disabled, and only then removes the old corner animation. This prevents the rounded chrome from jumping to an obsolete target before a reversal begins.
+On cancellation, `cancelNotchPanelAnimation` reads the current presentation-layer radius, writes that visible value back to the model layer with implicit actions disabled, and only then removes the old corner animation.
 
 For Reduced Motion or any zero-duration policy, the exact frame/radius endpoint is applied synchronously and completion runs once without installing a visible animation.
 
@@ -130,7 +150,7 @@ The runtime does not use `CADisplayLink`, `CVDisplayLink`, repeating timers, sle
 
 ## Reduced Motion
 
-The standard animation duration policy is intentionally tiny and deterministic:
+The standard animation duration policy is:
 
 - normal motion: `0.20 s`;
 - Reduce Motion: `0 s`.
@@ -153,8 +173,6 @@ NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: 
 
 No haptic is requested for quick/cancelled transit, duplicate pointer events, retention, collapse, startup synchronization, programmatic expansion, stale callbacks/completions, or animation-policy retargeting. Reversal cannot create a second feedback request simply because the current visual transition changes direction.
 
-macOS may legitimately vary or suppress physical feedback depending on device/touch state/settings. Physical tactile feel remains a target-Mac acceptance concern.
-
 ## Visual ownership
 
 Outer panel clipping has one owner: the AppKit hosting-view layer.
@@ -167,30 +185,102 @@ Outer panel clipping has one owner: the AppKit hosting-view layer.
 - the hosting view autoresizes in both width and height;
 - SwiftUI does not independently own the outer clipping contour.
 
-This division was introduced after real-hardware cycles showed square-corner degradation and a separate transparent-compact regression. Visibility and clipping are now independent invariants.
+## Universal Media production core — M6.2
+
+M6.1 accepted the system Now Playing transport mechanism. M6.2 establishes the production application-side boundary before any concrete private transport is shipped.
+
+Current structure:
+
+```text
+future concrete system transport
+  -> SystemMediaTransport             # injected typed transport protocol; implementation not yet present
+      -> SystemMediaBridge             # player-agnostic provider adapter / callback owner
+          -> MediaProvider             # NotchHub semantic provider contract
+              -> MediaSessionController # @MainActor ordering/lifecycle/capability authority
+                  -> MediaSessionSnapshot
+
+NotchHubApp
+  -X-> NotchHubMediaCore               # deliberately not composed/linked yet
+```
+
+### Normalized domain
+
+`NotchHubMediaCore` contains immutable normalized media values:
+
+- `MediaSequence(generation, revision)` is the sole ordering primitive and compares generation first, then revision;
+- `MediaCapabilityState` is exactly `supported / unsupported / unknown`;
+- `MediaCommandCapabilities` carries previous/next/seek independently;
+- `MediaPlaybackState` is `paused / playing`;
+- `MediaSourceIdentity` stores normalized source identity without player-specific policy;
+- `MediaSessionSnapshot` carries normalized optional metadata/artwork/timing/capability state and fabricates no defaults;
+- `MediaCommand` is a closed semantic surface: toggle, previous, next, bounded seek;
+- `MediaSubsystemState` is `unavailable / idle / paused / playing`.
+
+The snapshot is intentionally not made broadly `Equatable`. Ordering/deduplication authority is `MediaSequence`; full metadata/artwork equality is neither required by the product contract nor used to infer freshness.
+
+### MediaProvider
+
+`MediaProvider` is an event-driven `@MainActor` protocol with exactly one event handler, explicit `start()` / `stop()`, and typed asynchronous command dispatch. It exposes only normalized provider events: ready, session, no-session, failed, stopped.
+
+No source-specific strings, private command IDs, arbitrary command passthrough, polling, persistence, or UI concepts cross this boundary.
+
+### MediaSessionController
+
+`MediaSessionController` owns media state, not Notch presentation state. Its deterministic rules are:
+
+- start is idempotent and owns one active provider handler;
+- `.ready` without a session becomes `.idle`;
+- only strictly newer `MediaSequence` values are accepted;
+- same-sequence duplicates/conflicts and older events are ignored;
+- a newer generation supersedes any revision in an older generation;
+- newer no-session clears media state only;
+- playback state maps authoritatively to paused/playing;
+- previous/next/seek are sent only when their capability is `.supported`;
+- invalid seek values and unknown/unsupported capabilities fail closed locally;
+- command failure does not mutate the authoritative snapshot;
+- the first unexpected provider failure clears media state and performs exactly one controlled stop/start restart;
+- stale callbacks from the old generation are ignored;
+- a second unexpected failure becomes terminal unavailable for that controller lifecycle and cannot create a restart loop;
+- explicit stop is terminal for that controller lifecycle.
+
+The controller uses no polling/repeating timer and does not log or persist media metadata.
+
+### SystemMediaBridge
+
+`SystemMediaBridge` is implemented over an injected `SystemMediaTransport` protocol. In M6.2 it contains **no MediaRemote/private API/process/dynamic-loading implementation**.
+
+Its responsibilities are deliberately narrow:
+
+- repeated start is idempotent;
+- one start owns one transport callback;
+- stop invalidates the callback generation and clears the transport handler before transport teardown;
+- stale transport callbacks cannot surface after stop/restart;
+- normalized transport events are forwarded into the provider contract;
+- typed commands are forwarded only while the bridge is started;
+- the bridge contains no UI, gesture, panel, source-priority, logging, persistence, or player-specific policy.
+
+The next security-sensitive slice is to implement the concrete system transport behind this injected boundary using the accepted M6.1 evidence. That future change is the first point at which `NotchHubMediaCore` may be composed into the shipping app, and it requires a fresh security/size/runtime review.
 
 ## Resource-efficiency architecture
 
-Runtime work is event-driven by default. Prefer AppKit/Foundation notifications, tracking areas, permission callbacks, and explicit user actions over periodic refresh loops.
-
-The runtime architecture must not introduce polling, repeating timers, display links, or sleep-driven refresh merely to keep state fresh. A primitive that is genuinely necessary must have a narrow owner, documented need, deterministic lifecycle tests where possible, and explicit performance review.
+Runtime work is event-driven by default. Prefer AppKit/Foundation notifications, transport callbacks, tracking areas, permission callbacks, and explicit user actions over periodic refresh loops.
 
 Long-lived adapters must expose lifecycle ownership explicitly:
 
 - event monitors/observers are removed when their owner is torn down;
 - tasks/subscriptions are cancellable;
 - security-scoped resources are balanced;
-- future caches/collections are bounded;
-- future media/calendar adapters prefer change notifications over fixed polling.
+- caches/collections are bounded;
+- media/calendar adapters prefer change notifications over fixed polling.
 
 Performance validation is split deliberately:
 
-1. **deterministic CI invariants** — source-policy scanner, state/lifecycle tests, parser/aggregation correctness, no-per-event pointer task, release-size checks, development-tool isolation;
-2. **target-Mac runtime evidence** — CPU, RSS, thread count, stability, wakeup/energy measurements, compositor continuity, and real pointer feel on macOS 26.6.
+1. **deterministic CI invariants** — source-policy scanner, state/lifecycle tests, parser/aggregation correctness, release-size checks, development-tool isolation;
+2. **target-Mac runtime evidence** — CPU, RSS, thread count, stability, wakeup/energy measurements, compositor continuity, and real interaction feel on macOS 26.6.
+
+M6.2 retains the unchanged shipping payload while the media core remains uncomposed: CI #500 on code head `52d6d76b564c603cb21f0ec49bff4fa958c3aac7` passed 117 Swift tests and produced executable/app payloads `250,320 B / 253,317 B`, matching the accepted pre-M6.2 shipping payload exactly. The size budget was not widened.
 
 Shared runner CPU/RAM values are never used as tight release thresholds. See root `PERFORMANCE.md`.
-
-`scripts/perf-baseline.py` and `scripts/performance_policy.py` are repository development/release tools, not runtime components. Packaging/security checks keep them outside `NotchHub.app`; performance measurement is not telemetry.
 
 ## Notch geometry
 
@@ -204,17 +294,17 @@ Real hardware uses the exact detected notch width. A centered fallback width is 
 
 ## Security architecture
 
-The current app is App Sandbox + Hardened Runtime with no dangerous exception entitlements. M0 has zero external Swift runtime dependencies, no runtime subprocess/shell execution, no direct network/WebKit API, no dynamic plug-in loading, and no telemetry/licensing service. `scripts/security-audit.sh` makes these invariants executable CI gates.
+The shipping app remains App Sandbox + Hardened Runtime with no dangerous exception entitlements. The accepted baseline has no telemetry/licensing service, direct networking, privileged helper, runtime shell/subprocess execution, dynamic plug-in loading, or sensitive input permissions. `scripts/security-audit.sh` and performance policy make these invariants executable CI gates.
 
-M1 interaction/animation work adds internal state machines, public AppKit/Core Animation calls, and public accessibility-display preference observation only. It adds no entitlement, process/network surface, sensitive permission, private API, dynamic loading, synthetic input, or broader global input monitoring.
+M6.1 proved a development-only MediaRemote-compatible transport can satisfy the required target-Mac boundary. M6.2 does **not** move that mechanism into the shipping app. `NotchHubMediaCore` currently contains only normalized domain types, deterministic state/lifecycle logic, provider/transport protocols, and the injected bridge adapter. CI #500 passed the existing security/performance policies without any policy weakening or entitlement change.
 
-The approved Universal Media design introduces one **future and optional compatibility exception**: a private MediaRemote mechanism may exist only behind `SystemMediaBridge`. That exception is not yet runtime code. Before production adoption, a development-only probe must demonstrate that the mechanism can preserve the current App Sandbox + Hardened Runtime posture, avoid sensitive permission prompts, operate event-driven, terminate its helper cleanly, and expose enough authoritative media/capability state. A failed probe is rejected or redesigned rather than made to pass by weakening the app.
+A concrete private system transport remains a separately reviewed exception. It must stay behind the accepted bridge boundary, preserve App Sandbox + Hardened Runtime, avoid Accessibility/Input Monitoring/Automation/synthetic input, remain event-driven, and pass new package/security/resource evidence before composition into `NotchHubApp`.
 
 Future modules keep sensitive access behind narrow adapters and explicit permission state machines. See root `SECURITY.md`.
 
 ## Feature-module boundaries
 
-Planned modules are isolated behind feature-specific services/adapters:
+Planned modules remain isolated behind feature-specific services/adapters:
 
 1. Shelf
 2. Snippets
@@ -237,45 +327,25 @@ Prefer public Apple frameworks and explicit permission/availability states. A de
 
 ### Universal Media / System Now Playing
 
-The first media milestone follows the system Now Playing source chosen by macOS. Yandex Music is an important acceptance source, not a special architecture branch. The same player-agnostic path must support Apple Music, Spotify, browser media, and other applications when they publish a system media session.
+The media milestone follows the system Now Playing source chosen by macOS. Yandex Music and Yandex Browser are physically verified transport sources. Apple Music, Spotify, and another independent player remain deferred compatibility checks and must not be claimed as verified until tested.
 
-The intended production structure is:
+Only the isolated media boundary may know the concrete system transport. UI, gesture code, and product state cannot branch on Spotify/Yandex/Apple Music or import private APIs.
 
-```text
-macOS system Now Playing
-  -> SystemMediaBridge                # only private compatibility boundary
-  -> MediaProvider                    # player-agnostic NotchHub protocol
-  -> MediaSessionController           # MainActor normalization/lifecycle/commands
-  -> MediaSessionSnapshot             # immutable validated state + capabilities
-  -> compact / expanded Media UI
-
-local NotchHub gesture
-  -> MediaGestureCoordinator          # deterministic semantic intent
-  -> MediaSessionController
-  -> MediaProvider
-  -> SystemMediaBridge
-```
-
-Only `SystemMediaBridge` may know the MediaRemote implementation mechanism. UI, gesture code, and product state cannot branch on Spotify/Yandex/Apple Music or import private APIs.
-
-The media capability contract is fail-closed:
+The capability contract remains fail-closed:
 
 - unsupported or unknown previous/next/seek actions are not guessed or emulated;
-- no Accessibility/Input Monitoring or synthetic media keys are used to manufacture missing control support;
+- no Accessibility/Input Monitoring or synthetic media keys are used to manufacture missing support;
 - multiple active players follow macOS system source priority;
 - transport failure invalidates media state only and leaves Notch Core operational;
 - listening history and normal production track metadata are not persisted/logged;
-- artwork/metadata are untrusted inputs with bounded decoding/validation;
+- artwork/metadata are untrusted inputs with bounded validation at the concrete transport boundary;
 - current-track state is event-driven rather than refreshed with a permanent one-second timer.
 
-The approved gesture layer is local to NotchHub's own window. Horizontal swipes control previous/next in compact and expanded media states; vertical gestures retain expand/collapse semantics; seek owns the progress interaction; no global `.scrollWheel` monitor is introduced. Horizontal media commands commit only on release after an armed threshold, use hysteresis to avoid chatter, and request one public `.levelChange` haptic on each semantic armed transition rather than every raw scroll event.
+The approved future gesture layer is local to NotchHub's own window. Horizontal swipes control previous/next in compact and expanded media states; vertical gestures retain expand/collapse semantics; seek owns the progress interaction; no global `.scrollWheel` monitor is introduced. Horizontal commands commit on release after an armed threshold, use hysteresis, and request one public `.levelChange` haptic per semantic armed transition rather than every raw event.
 
 Authoritative design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`.
-First transport plan: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`.
-
-## Product/UI references
-
-Public products such as NotchNook inform interaction research but are not implementation dependencies. NotchHub does not copy proprietary code/assets or pixel-match private UI. See `docs/PRODUCT_REFERENCES.md`.
+Accepted transport evidence: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
+M6.2 implementation plan: `docs/superpowers/plans/2026-08-09-production-media-boundary.md`.
 
 ## Distribution architecture
 
@@ -309,6 +379,6 @@ The annual Apple Developer Program dependency remains intentionally deferred whi
 
 ## Policy tooling
 
-`scripts/release_policy.py` is standard-library-only and owns deterministic release/distribution rules.
+`scripts/release_policy.py` owns deterministic release/distribution rules.
 
-`scripts/performance_policy.py` is likewise standard-library-only and owns deterministic runtime source-policy scanning, process-sample parsing/aggregation, and reproducible budget comparisons. GitHub Actions orchestrates tested policy rather than embedding it as untestable shell logic.
+`scripts/performance_policy.py` owns deterministic runtime source-policy scanning, process-sample parsing/aggregation, and reproducible budget comparisons. GitHub Actions orchestrates tested policy rather than embedding it as untestable shell logic.
