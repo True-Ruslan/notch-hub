@@ -19,7 +19,9 @@ The current exact candidate supersedes the first physical artifact because the p
 
 CI #443 passed both jobs completely. It additionally executed a real one-second observation from the packaged Sandbox/Hardened Runtime candidate and validated the privacy-safe schema-v2 fields `observedSessionDisappearance` and `sourceSwitchCount`. The MediaRemote adapter revision, capability patch, command surface, runtime entitlements, and shipping NotchHub boundary did not change.
 
-Because probe code changed, final physical acceptance must use this new exact candidate. Evidence from the earlier candidate is retained below as historical transport evidence and is not silently promoted to final acceptance for the new artifact.
+Documentation-only commits after `cda05bb4...` do not change the candidate. Any later probe-code, packaging, security-policy, pinned-adapter, or capability-patch change requires a new exact candidate.
+
+Because probe code changed since the first Yandex run, final physical acceptance must use this new exact candidate. Evidence from the earlier candidate is retained below as historical transport evidence and is not silently promoted to final acceptance for the new artifact.
 
 ## Historical first Yandex evidence — superseded candidate
 
