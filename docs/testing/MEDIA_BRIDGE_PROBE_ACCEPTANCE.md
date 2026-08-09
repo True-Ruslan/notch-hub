@@ -1,6 +1,6 @@
 # Universal Media Bridge Probe — Physical Acceptance Evidence
 
-Status: **TARGET-MAC CORE TRANSPORT ACCEPTED SO FAR — RESOURCE GATE PENDING**
+Status: **ACCEPTED — `ACCEPT_TRANSPORT`**
 
 Authoritative physical procedure: `docs/testing/MEDIA_BRIDGE_PROBE.md`.
 
@@ -80,7 +80,7 @@ A separate transition run on the same candidate recorded:
 
 The stable run shows that schema-v2 transition counters do not invent transitions. The transition run directly proves event-driven source switching and disappearance because `sourceSwitchCount` increments only between distinct non-null bundle identifiers and `observedSessionDisappearance` is set only after an observed real session later becomes no-session.
 
-Physical command behavior was also explicitly confirmed by the user on the target Mac:
+Physical command behavior was explicitly confirmed on the target Mac:
 
 - toggle paused playback: PASS;
 - second toggle resumed playback: PASS;
@@ -128,7 +128,7 @@ A target-Mac crash injection is intentionally not required because the exact can
 - one-shot timeout terminates, performs the final wait, clears handlers, and throws `timedOut`;
 - the concrete exact-candidate implementation contains no automatic observation restart path.
 
-These tests are part of the 93/93 exact-candidate Swift test suite executed by CI #443. Physical evidence already separately proves ordinary clean teardown/no orphan behavior on the target Mac. Artificially killing the adapter on the personal machine would therefore add lower-quality, timing-dependent evidence without exercising a different production branch.
+These tests are part of the 93/93 exact-candidate Swift test suite executed by CI #443. Physical evidence separately proves ordinary clean teardown/no orphan behavior on the target Mac.
 
 ## Source-coverage policy for this Personal Release
 
@@ -140,11 +140,53 @@ On the actual personal target Mac:
 - `NH-MEDIA-BRIDGE-005` — Spotify: **NOT TESTED / DEFERRED** — Spotify is not installed/available on the target Mac;
 - `NH-MEDIA-BRIDGE-007` — additional independent player: **NOT TESTED / DEFERRED** — no such player is installed/used on the target Mac.
 
-These are explicitly **not FAIL**. We will not install or subscribe to otherwise-unused media products solely to satisfy a synthetic compatibility matrix for a personal application. The consequence is equally explicit: this M6.1 acceptance may justify the transport for the user's actual Personal Release environment, but it must not claim verified compatibility with Apple Music, Spotify, or arbitrary third-party players until those sources are tested in the future.
+These are explicitly **not FAIL**. We will not install or subscribe to otherwise-unused media products solely to satisfy a synthetic compatibility matrix for a personal application. The consequence is equally explicit: this M6.1 acceptance justifies the transport for the user's actual Personal Release environment, but it does not claim verified compatibility with Apple Music, Spotify, or arbitrary third-party players until those sources are tested in the future.
 
-The transport itself is already demonstrated across two distinct real system Now Playing publishers on the same target Mac: Yandex Music (`ru.yandex.desktop.music`) and Yandex Browser (`ru.yandex.desktop.yandex-browser`), plus a continuous source-switch/disappearance run.
+The transport is demonstrated across two distinct real system Now Playing publishers on the same target Mac: Yandex Music (`ru.yandex.desktop.music`) and Yandex Browser (`ru.yandex.desktop.yandex-browser`), plus continuous source-switch/disappearance evidence.
 
-## Current gate ledger
+## Resource evidence
+
+The target-Mac resource cycle used the exact current candidate with Yandex Music active. The existing privacy-safe sampler attached independently to the parent probe and its owned `/usr/bin/perl` adapter.
+
+### 60-second steady-state measurements
+
+Both processes were sampled for exactly 60 one-second samples after a 10-second warmup:
+
+- parent probe: CPU median/max `0.0% / 0.0%`, RSS median/max `5,680 / 5,680 KiB`, threads median/max `2 / 2`;
+- owned adapter: CPU median/max `0.0% / 0.0%`, RSS median/max `20,288 / 20,288 KiB`, threads median/max `2 / 2`;
+- combined steady-state RSS from the two synchronized summaries: `25,968 KiB` (~25.4 MiB), 4 threads, sampled CPU `0.0%`.
+
+The first attempted 10-minute resource measurement was invalid because the manually configured 700-second observer reached its natural end before the later stability samplers completed. That orchestration mistake is retained as **INVALID / RETRIED**, not as a transport failure; the valid 60-second evidence remained accepted.
+
+### 10-minute stability measurements
+
+The corrected stability-only run used `observe --seconds 640`, then started both resource samplers immediately. Each sampler produced exactly 120 samples at 5-second intervals over ~600 seconds.
+
+Parent probe:
+
+- CPU median/max: `0.0% / 0.0%`;
+- RSS median/max: `5,664 / 7,328 KiB`;
+- RSS start/first-quartile/end: `5,680 / 5,664 / 5,552 KiB`;
+- RSS end-minus-start: `-128 KiB`;
+- threads median/max: `2 / 2`;
+- thread start/end: `2 / 2`.
+
+Owned adapter:
+
+- CPU median/max: `0.0% / 0.1%`;
+- RSS median/max: `20,368 / 24,480 KiB`;
+- RSS start/first-quartile/end: `20,288 / 20,256 / 20,256 KiB`;
+- RSS end-minus-start: `-32 KiB`;
+- threads median/max: `2 / 6`;
+- thread start/end: `2 / 2`.
+
+Combined end-minus-start RSS drift is `-160 KiB`; combined ending thread count is unchanged at 4. Individual RSS maxima provide a conservative simultaneous upper bound of `31,808 KiB` (~31.1 MiB), still below the accepted whole-app P0 stability RSS ceiling of `45,056 KiB`; this comparison is contextual only because M6.1 measures the development transport probe rather than shipping NotchHub.
+
+The same 640-second observer run recorded 21 events, a real Yandex Music session/artwork/playing state, `observedSessionDisappearance=true`, `sourceSwitchCount=6`, `cleanTeardown=true`, and `orphanProcessDetected=false`. Shell lifecycle verification after natural completion independently returned `PROBE_TEARDOWN=PASS` and `PERL_TEARDOWN=PASS`.
+
+There is no sustained CPU, RSS, or thread growth in the accepted target-Mac evidence.
+
+## Final gate ledger
 
 PASS:
 
@@ -162,7 +204,9 @@ PASS:
 - `NH-MEDIA-BRIDGE-015` — bounded failure lifecycle/no restart loop, deterministic CI-backed;
 - `NH-MEDIA-BRIDGE-016` — authoritative capability surface;
 - `NH-MEDIA-BRIDGE-017` — no sensitive permission prompt;
-- `NH-MEDIA-BRIDGE-018` — shipping isolation, CI-backed by exact-candidate CI.
+- `NH-MEDIA-BRIDGE-018` — shipping isolation, CI-backed by exact-candidate CI;
+- target-Mac 60-second resource evidence — PASS;
+- target-Mac 10-minute stability evidence — PASS.
 
 DEFERRED / NOT TESTED because source is unavailable and not part of the user's current personal environment:
 
@@ -170,21 +214,22 @@ DEFERRED / NOT TESTED because source is unavailable and not part of the user's c
 - `NH-MEDIA-BRIDGE-005` — Spotify;
 - `NH-MEDIA-BRIDGE-007` — additional independent player.
 
-Pending:
-
-- target-Mac parent + owned-adapter resource measurements and planned stability run.
-
-## Historical first Yandex evidence — superseded candidate
-
-The first target-Mac run used source `231ada7baf83a3a1e9d2e38e35fc80a3f6d53758`, CI #432 / run `31302447286`, artifact ID `9034919275`. It remains useful historical transport evidence, but all final PASS statuses above are tied to the current `cda05bb4...` candidate.
-
-## Remaining acceptance work
-
-1. Collect target-Mac parent/owned-perl CPU, RSS, and thread measurements, including the planned stability run.
-2. Review all evidence and record exactly one final outcome: `ACCEPT_TRANSPORT`, `NEEDS_TRANSPORT_REDESIGN`, or `REJECT_TRANSPORT`.
-
-No title, artist, album, artwork bytes, raw MediaRemote payload, or listening history is retained in this ledger.
+No required gate for the actual Personal Release environment remains pending.
 
 ## Transport decision
 
-No final transport outcome is recorded yet. The current evidence strongly supports the transport for the actual Personal Release environment; only target-Mac resource/stability evidence remains before the decision.
+**`ACCEPT_TRANSPORT`**
+
+Rationale:
+
+1. the transport works under the required App Sandbox + Hardened Runtime boundary without sensitive permissions or OS-security weakening;
+2. observation is event-driven and the shipping app remains free of probe/private compatibility code;
+3. authoritative command capabilities fail closed to `unknown` and expose real supported states on active sources;
+4. real Yandex Music and browser system Now Playing publishers are observed on the target Mac;
+5. actual play/pause, previous/next, and seek behavior works on the physically tested source;
+6. source switching, source disappearance, clean teardown, bounded failures, and no-restart-loop behavior are proven;
+7. 60-second and 10-minute target-Mac measurements show negligible sampled CPU, bounded RSS/threads, negative RSS drift, and no sustained resource accumulation.
+
+This decision authorizes planning and implementation of the production `MediaProvider` / `MediaSessionSnapshot` / `MediaSessionController` / isolated `SystemMediaBridge` architecture defined by the approved Universal Media design. It does **not** authorize copying the development probe wholesale into shipping code, broadening permissions, adding polling, or claiming verified Apple Music/Spotify/arbitrary-player compatibility before those sources are actually tested.
+
+No title, artist, album, artwork bytes, raw MediaRemote payload, or listening history is retained in this ledger.
