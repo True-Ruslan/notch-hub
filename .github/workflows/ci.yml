@@ -39,6 +39,58 @@ jobs:
       - name: Test
         run: swift test --parallel
 
+      - name: Build and verify media bridge probe candidate
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          ./scripts/build-media-bridge-probe-app.sh
+          ./scripts/verify-media-bridge-probe.sh
+          rm -f build/MediaBridgeProbe.zip
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/MediaBridgeProbe.app \
+            build/MediaBridgeProbe.zip
+
+      - name: Verify archived media bridge probe candidate
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          readonly ROUNDTRIP_ROOT="build/media-bridge-probe-archive-roundtrip"
+          readonly APP="$ROUNDTRIP_ROOT/MediaBridgeProbe.app"
+
+          rm -rf "$ROUNDTRIP_ROOT"
+          mkdir -p "$ROUNDTRIP_ROOT"
+          ditto -x -k build/MediaBridgeProbe.zip "$ROUNDTRIP_ROOT"
+
+          test -x "$APP/Contents/MacOS/MediaBridgeProbe"
+          test "$(plutil -extract ProbeSourceCommit raw "$APP/Contents/Info.plist")" = "$SOURCE_COMMIT"
+          test "$(plutil -extract ProbeAdapterCommit raw "$APP/Contents/Info.plist")" = \
+            "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
+
+          codesign --verify --deep --strict "$APP"
+          codesign -dv --verbose=4 "$APP" 2> build/media-probe-archive-codesign.txt
+          grep -Eq 'flags=.*runtime' build/media-probe-archive-codesign.txt
+
+          codesign --display --entitlements - --xml "$APP" \
+            > build/media-probe-archive-entitlements.plist
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          with Path('build/media-probe-archive-entitlements.plist').open('rb') as handle:
+              entitlements = plistlib.load(handle)
+
+          expected = {'com.apple.security.app-sandbox': True}
+          if entitlements != expected:
+              raise SystemExit(f'Unexpected probe archive entitlements: {entitlements!r}')
+          PY
+
+      - name: Upload media bridge probe candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: MediaBridgeProbe-candidate
+          path: build/MediaBridgeProbe.zip
+          if-no-files-found: error
+
   build-test-package:
     name: Build, test and package
     needs: macos-26-compatibility
