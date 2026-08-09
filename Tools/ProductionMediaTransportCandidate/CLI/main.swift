@@ -29,7 +29,10 @@ struct MediaTransportCandidateMain {
                 try writeJSON(CandidateCommandResult(sent: await runner.send(command)))
             }
         } catch {
-            FileHandle.standardError.write(Data("media transport candidate failed\n".utf8))
+            let code = ProductionMediaTransportCandidateFailureCode.classify(error)
+            FileHandle.standardError.write(
+                Data("media transport candidate failed: \(code.rawValue)\n".utf8)
+            )
             Foundation.exit(EXIT_FAILURE)
         }
     }
