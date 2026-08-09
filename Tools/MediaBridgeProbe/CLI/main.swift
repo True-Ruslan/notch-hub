@@ -45,7 +45,6 @@ private enum ProbeCLIError: Error {
     case missingBundledResources
     case missingBuildProvenance
     case reportEncodingFailed
-    case capabilitiesUnavailable
 }
 
 @MainActor
@@ -104,7 +103,13 @@ private struct MediaBridgeProbeCLI {
                 exit(status == 0 ? ExitCode.success : ExitCode.software)
 
             case .capabilities:
-                throw ProbeCLIError.capabilitiesUnavailable
+                let capabilities = try controller.runCapabilities(
+                    scriptURL: assets.scriptURL,
+                    frameworkURL: assets.frameworkURL,
+                    testClientURL: assets.testClientURL
+                )
+                try writeCapabilities(capabilities)
+                exit(ExitCode.success)
 
             case .command(let command):
                 let status = try controller.runCommand(
@@ -173,6 +178,14 @@ private struct MediaBridgeProbeCLI {
             cleanTeardown: true,
             orphanProcessDetected: false
         )
+    }
+
+    private static func writeCapabilities(_ capabilities: ProbeMediaCapabilities) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        var data = try encoder.encode(capabilities)
+        data.append(0x0A)
+        FileHandle.standardOutput.write(data)
     }
 
     private static func writeReport(_ report: ProbeReport) throws {
