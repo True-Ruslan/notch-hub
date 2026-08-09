@@ -44,7 +44,7 @@ diff --git a/src/adapter/capabilities.m b/src/adapter/capabilities.m
 new file mode 100644
 --- /dev/null
 +++ b/src/adapter/capabilities.m
-@@ -0,0 +1,150 @@
+@@ -0,0 +1,196 @@
 +// NotchHub development-only compatibility probe extension.
 +// This file is applied as a repo-owned patch over the pinned upstream adapter.
 +
@@ -63,12 +63,21 @@ new file mode 100644
 +typedef void (*MRMediaRemoteCopySupportedCommands_t)(
 +    dispatch_queue_t queue,
 +    void (^completion)(NSArray *commands));
++typedef void (*MRMediaRemoteGetNowPlayingApplicationPID_t)(
++    dispatch_queue_t queue,
++    void (^completion)(int PID));
 +typedef NSInteger (*MRMediaRemoteCommandInfoGetCommand_t)(id commandInfo);
 +typedef Boolean (*MRMediaRemoteCommandInfoGetEnabled_t)(id commandInfo);
 +
 +typedef enum {
 +    kMRASeekToPlaybackPosition = 24,
 +} MRACapabilityCommand;
++
++typedef enum {
++    kMRAActiveSessionUnknown,
++    kMRAActiveSessionAbsent,
++    kMRAActiveSessionPresent,
++} MRAActiveSessionState;
 +
 +static NSString *const kMRAStateSupported = @"supported";
 +static NSString *const kMRAStateUnsupported = @"unsupported";
@@ -87,6 +96,36 @@ new file mode 100644
 +        return NULL;
 +    }
 +    return CFBundleGetFunctionPointerForName(bundle, name);
++}
++
++static MRAActiveSessionState activeNowPlayingSessionState(CFBundleRef bundle) {
++    MRMediaRemoteGetNowPlayingApplicationPID_t getNowPlayingApplicationPID =
++        (MRMediaRemoteGetNowPlayingApplicationPID_t)functionPointer(
++            bundle, CFSTR("MRMediaRemoteGetNowPlayingApplicationPID"));
++    if (getNowPlayingApplicationPID == NULL) {
++        return kMRAActiveSessionUnknown;
++    }
++
++    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
++    dispatch_queue_t queue =
++        dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0);
++    __block int activePID = 0;
++    __block bool completed = false;
++
++    getNowPlayingApplicationPID(queue, ^(int PID) {
++        activePID = PID;
++        completed = true;
++        dispatch_semaphore_signal(semaphore);
++    });
++
++    if (dispatch_semaphore_wait(
++            semaphore,
++            dispatch_time(DISPATCH_TIME_NOW, kMRACapabilityTimeoutNanoseconds)) != 0 ||
++        !completed) {
++        return kMRAActiveSessionUnknown;
++    }
++
++    return activePID > 0 ? kMRAActiveSessionPresent : kMRAActiveSessionAbsent;
 +}
 +
 +static NSArray *copySupportedCommands(CFBundleRef bundle) {
@@ -167,6 +206,13 @@ new file mode 100644
 +    NSMutableDictionary *result = unknownCapabilities();
 +    CFBundleRef bundle = createMediaRemoteBundle();
 +    if (bundle == NULL) {
++        printOut(serializeJsonDictionarySafe(result, false));
++        return;
++    }
++
++    MRAActiveSessionState sessionState = activeNowPlayingSessionState(bundle);
++    if (sessionState != kMRAActiveSessionPresent) {
++        CFRelease(bundle);
 +        printOut(serializeJsonDictionarySafe(result, false));
 +        return;
 +    }
