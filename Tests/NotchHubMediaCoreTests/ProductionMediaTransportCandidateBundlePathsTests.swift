@@ -5,7 +5,10 @@ import Testing
 struct ProductionMediaTransportCandidateBundlePathsTests {
     @Test
     func resolvesOnlyCandidateResourcesFromBundleInputs() throws {
-        let bundleURL = URL(fileURLWithPath: "/tmp/ProductionMediaTransportCandidate.app", isDirectory: true)
+        let bundleURL = URL(
+            fileURLWithPath: "/tmp/ProductionMediaTransportCandidate.app",
+            isDirectory: true
+        )
         let resourcesURL = bundleURL
             .appendingPathComponent("Contents", isDirectory: true)
             .appendingPathComponent("Resources", isDirectory: true)
@@ -33,7 +36,10 @@ struct ProductionMediaTransportCandidateBundlePathsTests {
 
     @Test
     func rejectsMissingResourcesAndMalformedSourceProvenance() {
-        let bundleURL = URL(fileURLWithPath: "/tmp/ProductionMediaTransportCandidate.app", isDirectory: true)
+        let bundleURL = URL(
+            fileURLWithPath: "/tmp/ProductionMediaTransportCandidate.app",
+            isDirectory: true
+        )
         let resourcesURL = bundleURL
             .appendingPathComponent("Contents", isDirectory: true)
             .appendingPathComponent("Resources", isDirectory: true)
