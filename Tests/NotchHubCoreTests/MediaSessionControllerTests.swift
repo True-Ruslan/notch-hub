@@ -204,7 +204,7 @@ struct MediaSessionControllerTests {
                 .togglePlayPause,
                 .previous,
                 .next,
-                .seek(seconds: 42),
+                .seek(seconds: 42)
             ]
         )
     }
