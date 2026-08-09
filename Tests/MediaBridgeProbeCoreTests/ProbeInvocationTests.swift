@@ -90,6 +90,14 @@ struct ProbeInvocationTests {
     }
 
     @Test
+    func parsesCapabilitiesWithoutAdditionalSurface() throws {
+        #expect(try ProbeInvocation.parse(arguments: ["capabilities"]) == .capabilities)
+        #expect(throws: ProbeInvocationError.invalidArguments) {
+            try ProbeInvocation.parse(arguments: ["capabilities", "next"])
+        }
+    }
+
+    @Test
     func parsesSelfTestWithoutAdditionalSurface() throws {
         #expect(try ProbeInvocation.parse(arguments: ["self-test"]) == .selfTest)
     }
