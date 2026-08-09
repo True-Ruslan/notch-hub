@@ -12,6 +12,9 @@ readonly INFO_PLIST="$APP/Contents/Info.plist"
 readonly EXECUTABLE="$APP/Contents/MacOS/MediaTransportCandidate"
 readonly RESOURCES_DIR="$APP/Contents/Resources"
 readonly PROVENANCE="$RESOURCES_DIR/production-media-transport-provenance.json"
+readonly ACCEPTANCE_TOOL="$ROOT_DIR/scripts/production_media_transport_acceptance.py"
+readonly PREFLIGHT_SMOKE="$ROOT_DIR/build/production-media-transport-preflight-smoke.json"
+readonly OBSERVE_SMOKE="$ROOT_DIR/build/production-media-transport-observe-smoke.json"
 
 if ! test -d "$APP"; then
   echo "Missing production media transport candidate bundle: $APP" >&2
@@ -24,7 +27,8 @@ for required in \
   "$RESOURCES_DIR/mediaremote-adapter.pl" \
   "$RESOURCES_DIR/MediaRemoteAdapter.framework" \
   "$RESOURCES_DIR/MediaRemoteAdapter-LICENSE.txt" \
-  "$PROVENANCE"; do
+  "$PROVENANCE" \
+  "$ACCEPTANCE_TOOL"; do
   test -e "$required"
 done
 
@@ -99,6 +103,17 @@ otool -L "$EXECUTABLE" | tail -n +2 | awk '{print $1}' | while read -r library; 
     *) echo "Unexpected candidate dynamic library: $library" >&2; exit 1 ;;
   esac
 done
+
+python3 "$ACCEPTANCE_TOOL" preflight \
+  --app "$APP" \
+  --source-commit "$ACTUAL_SOURCE_COMMIT" \
+  --output "$PREFLIGHT_SMOKE"
+
+python3 "$ACCEPTANCE_TOOL" observe \
+  --app "$APP" \
+  --source-commit "$ACTUAL_SOURCE_COMMIT" \
+  --seconds 1 \
+  --output "$OBSERVE_SMOKE"
 
 bash "$ROOT_DIR/scripts/build-app.sh" release
 if find "$ROOT_DIR/build/NotchHub.app" -type f \( \
