@@ -9,7 +9,8 @@ struct ProductionMediaTransportCandidateBundlePathsTests {
             fileURLWithPath: "/tmp/ProductionMediaTransportCandidate.app",
             isDirectory: true
         )
-        let resourcesURL = bundleURL
+        let resourcesURL =
+            bundleURL
             .appendingPathComponent("Contents", isDirectory: true)
             .appendingPathComponent("Resources", isDirectory: true)
         let sourceCommit = String(repeating: "a", count: 40)
@@ -40,7 +41,8 @@ struct ProductionMediaTransportCandidateBundlePathsTests {
             fileURLWithPath: "/tmp/ProductionMediaTransportCandidate.app",
             isDirectory: true
         )
-        let resourcesURL = bundleURL
+        let resourcesURL =
+            bundleURL
             .appendingPathComponent("Contents", isDirectory: true)
             .appendingPathComponent("Resources", isDirectory: true)
 
