@@ -127,7 +127,7 @@ struct ProductionMediaTransportCandidateCollector {
     }
 }
 
-private extension ProductionMediaTransportCandidateCapabilities {
+extension ProductionMediaTransportCandidateCapabilities {
     init(_ capabilities: MediaCommandCapabilities) {
         previous = ProductionMediaTransportCandidateCapabilityState(capabilities.previous)
         next = ProductionMediaTransportCandidateCapabilityState(capabilities.next)
@@ -135,7 +135,7 @@ private extension ProductionMediaTransportCandidateCapabilities {
     }
 }
 
-private extension ProductionMediaTransportCandidateCapabilityState {
+extension ProductionMediaTransportCandidateCapabilityState {
     init(_ state: MediaCapabilityState) {
         switch state {
         case .supported:
