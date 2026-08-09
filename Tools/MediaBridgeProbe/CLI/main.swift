@@ -47,27 +47,6 @@ private enum ProbeCLIError: Error {
     case reportEncodingFailed
 }
 
-@MainActor
-private final class ObservationEvidence {
-    private(set) var sourceBundleIdentifier: String?
-    private(set) var observedSession = false
-    private(set) var observedArtwork = false
-    private(set) var observedPlayingState = false
-    private(set) var eventCount = 0
-
-    func record(_ payload: ProbeMediaPayload?) {
-        eventCount += 1
-        guard let payload else {
-            return
-        }
-
-        observedSession = true
-        observedPlayingState = true
-        observedArtwork = observedArtwork || payload.artworkByteCount > 0
-        sourceBundleIdentifier = payload.bundleIdentifier
-    }
-}
-
 @main
 private struct MediaBridgeProbeCLI {
     @MainActor
@@ -121,7 +100,7 @@ private struct MediaBridgeProbeCLI {
                 exit(status == 0 ? ExitCode.success : ExitCode.software)
 
             case .observe(let seconds):
-                let evidence = ObservationEvidence()
+                let evidence = ProbeObservationEvidence()
                 controller.onPayload = { payload in
                     evidence.record(payload)
                 }
@@ -149,7 +128,7 @@ private struct MediaBridgeProbeCLI {
     }
 
     @MainActor
-    private static func makeReport(evidence: ObservationEvidence) throws -> ProbeReport {
+    private static func makeReport(evidence: ProbeObservationEvidence) throws -> ProbeReport {
         guard
             let sourceCommit = Bundle.main.object(
                 forInfoDictionaryKey: "ProbeSourceCommit"
@@ -164,7 +143,7 @@ private struct MediaBridgeProbeCLI {
         }
 
         return ProbeReport(
-            schemaVersion: 1,
+            schemaVersion: 2,
             sourceCommit: sourceCommit,
             macOSVersion: ProcessInfo.processInfo.operatingSystemVersionString,
             hardwareModel: hardwareModel(),
@@ -173,6 +152,8 @@ private struct MediaBridgeProbeCLI {
             observedSession: evidence.observedSession,
             observedArtwork: evidence.observedArtwork,
             observedPlayingState: evidence.observedPlayingState,
+            observedSessionDisappearance: evidence.observedSessionDisappearance,
+            sourceSwitchCount: evidence.sourceSwitchCount,
             eventCount: evidence.eventCount,
             commandResults: [:],
             cleanTeardown: true,
