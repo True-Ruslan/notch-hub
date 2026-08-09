@@ -7,16 +7,18 @@ Primary physical target: macOS `26.6`
 Protected branch target: `main`
 P0 merge commit: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`
 Public-readiness hardening merge: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`
-Current product state: M1 interaction/transition slice **ACCEPTED AND MERGED**; active slice M6.1 **Universal Media Bridge compatibility/security probe — IMPLEMENTED, PHYSICAL ACCEPTANCE IN PROGRESS**
+Current product state: M1 interaction/transition slice **ACCEPTED AND MERGED**; M6.1 Universal Media transport probe **ACCEPTED (`ACCEPT_TRANSPORT`)**; next active slice is the production Universal Media state/controller/bridge boundary
 Accepted interaction/transition slice: PR #10 `M1 delayed hover and haptic interaction core` — **ACCEPTED AND SQUASH-MERGED** as `094b494bd597643244e733baf5787a13b61fb4eb`
 Approved Universal Media design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`
 Universal Media probe plan: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`
-Current probe PR: #13 `M6.1 Universal Media bridge compatibility probe` — **DRAFT, TRANSPORT DECISION PENDING**
-Current exact physical candidate: source `cda05bb4ff367d2c4a5d9d438c3f555f3788d186`, CI #443 / run `31304052700`, artifact ID `9035397233`, digest `sha256:5cd10a0c6e9b61d8f060ca29ab8a84a7b1a1ba2408f2769b88ea86bf908be5c0`
+Current probe PR: #13 `M6.1 Universal Media bridge compatibility probe` — **PHYSICAL/RESOURCE ACCEPTANCE COMPLETE; `ACCEPT_TRANSPORT` RECORDED**
+Accepted exact physical candidate: source `cda05bb4ff367d2c4a5d9d438c3f555f3788d186`, CI #443 / run `31304052700`, artifact ID `9035397233`, digest `sha256:5cd10a0c6e9b61d8f060ca29ab8a84a7b1a1ba2408f2769b88ea86bf908be5c0`
 
 ## Product
 
-NotchHub is a personal, native, local-first macOS productivity hub built around the MacBook notch. Planned modules are Shelf, Snippets, Calendar, Translator, and universal media controls that follow the system Now Playing source selected by macOS rather than targeting one music application. Yandex Music is one required real-world acceptance source alongside Apple Music, Spotify, browser media, and another independent player.
+NotchHub is a personal, native, local-first macOS productivity hub built around the MacBook notch. Planned modules are Shelf, Snippets, Calendar, Translator, and universal media controls that follow the system Now Playing source selected by macOS rather than targeting one music application.
+
+The accepted M6.1 transport has been physically verified with Yandex Music and Yandex Browser on the actual Personal Release target. Apple Music, Spotify, and another independent player remain future compatibility checks rather than claims of already verified support.
 
 NotchNook is a public product/UI research reference only; NotchHub remains an independent implementation.
 
@@ -105,13 +107,13 @@ The narrow global `.mouseMoved` fallback remains accepted. Its `NSTrackingArea` 
 
 ## M6.1 — Universal Media Bridge compatibility/security probe
 
-Status: **IMPLEMENTED; DETERMINISTIC CI ACCEPTED; CURRENT TARGET-MAC ACCEPTANCE IN PROGRESS**.
+Status: **ACCEPTED — `ACCEPT_TRANSPORT`**.
 
 PR: #13 `M6.1 Universal Media bridge compatibility probe`.
 Physical procedure: `docs/testing/MEDIA_BRIDGE_PROBE.md`.
 Evidence ledger: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
 
-### Implemented development-only boundary
+### Accepted development-only boundary
 
 - all probe code remains outside shipping `Sources/**`;
 - fixed `/usr/bin/perl` process boundary, no shell string execution;
@@ -128,7 +130,7 @@ Evidence ledger: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
 - no Accessibility, Input Monitoring, Screen Recording, Automation, synthetic input, SIP weakening, or Gatekeeper weakening;
 - shipping `NotchHub.app` remains probe-free and retains the accepted runtime/security boundary.
 
-### Current deterministic candidate
+### Deterministic candidate and CI
 
 Source `cda05bb4ff367d2c4a5d9d438c3f555f3788d186` passed CI #443 / run `31304052700` completely:
 
@@ -151,40 +153,38 @@ Exact artifact:
 - artifact ID `9035397233`;
 - digest `sha256:5cd10a0c6e9b61d8f060ca29ab8a84a7b1a1ba2408f2769b88ea86bf908be5c0`.
 
-Hosted macOS 26 no-session capability evidence correctly returned:
+### Accepted target-Mac evidence
 
-```json
-{"next":"unknown","previous":"unknown","seek":"unknown"}
-```
+On `Mac16,8`, macOS 26.6 build `25G72`:
 
-### Target-Mac evidence so far
+- sandbox-only entitlement verified exactly;
+- local Hardened Runtime verified (`adhoc,runtime`);
+- no Accessibility/Input Monitoring/Automation/Screen Recording prompt appeared;
+- no active media session returns `unknown/unknown/unknown` capabilities;
+- Yandex Music returns authoritative `supported/supported/supported` and publishes session/artwork/playing state;
+- Yandex Browser publishes an independently observed system Now Playing session and authoritative capabilities;
+- actual Yandex play/pause, previous, next, and seek-to-42s behavior passed;
+- source switching and source disappearance were observed through the continuous event stream;
+- clean teardown/no orphan behavior passed repeatedly;
+- deterministic failure tests prove nonzero-exit fail-closed behavior, protocol failure termination, bounded timeout handling, and no restart loop;
+- `NH-MEDIA-BRIDGE-004` Apple Music, `005` Spotify, and `007` another independent player are **NOT TESTED / DEFERRED**, because those sources are not available/used on the Personal Release target and are not required to prove the transport architecture.
 
-The previous exact candidate `231ada7baf83a3a1e9d2e38e35fc80a3f6d53758` produced strong first physical evidence on `Mac16,8` / macOS 26.6 build `25G72` with Yandex Music:
+Accepted resource evidence:
 
-- source bundle identifier `ru.yandex.desktop.music` observed;
-- 60-second event-driven observation produced 5 events;
-- active session/playing state/artwork observed;
-- clean teardown true;
-- orphan process false;
-- authoritative capability output: next/previous/seek all `supported`.
+- 60-second parent: CPU median/max `0.0% / 0.0%`, RSS `5,680 KiB`, threads `2`;
+- 60-second adapter: CPU median/max `0.0% / 0.0%`, RSS `20,288 KiB`, threads `2`;
+- 10-minute parent: CPU median/max `0.0% / 0.0%`, RSS median/max `5,664 / 7,328 KiB`, RSS drift `-128 KiB`, threads start/end/max `2 / 2 / 2`;
+- 10-minute adapter: CPU median/max `0.0% / 0.1%`, RSS median/max `20,368 / 24,480 KiB`, RSS drift `-32 KiB`, threads start/end/max `2 / 2 / 6`;
+- combined RSS drift `-160 KiB`; ending combined thread count unchanged at `4`;
+- 640-second observer completed with `cleanTeardown=true`, no orphan process, and shell verification `PROBE_TEARDOWN=PASS` / `PERL_TEARDOWN=PASS`.
 
-That run demonstrates the transport mechanism but is retained as historical evidence because the probe evidence schema was subsequently strengthened. Final acceptance must use current source `cda05bb4...`.
+### Decision
 
-### Remaining physical gates
+`ACCEPT_TRANSPORT` is recorded because the system-wide transport works under the required sandbox/Hardened Runtime boundary, provides authoritative capability information, functions across the two real system Now Playing publishers available on the target Mac, fails closed without restart loops, and shows no sustained CPU/RSS/thread accumulation.
 
-Highest-signal remaining checks on the current exact candidate:
+This acceptance authorizes the production architecture plan. It does not authorize copying the development probe wholesale into shipping code or claiming compatibility with deferred sources that were not physically tested.
 
-1. no active system Now Playing source returns `unknown/unknown/unknown` on the target Mac;
-2. Yandex Music rerun plus actual toggle/next/previous/seek behavior;
-3. schema-v2 source-disappearance evidence (`observedSessionDisappearance=true`);
-4. schema-v2 active-source-switch evidence (`sourceSwitchCount > 0`);
-5. Apple Music, Spotify, browser media, and one additional independent Now Playing source;
-6. explicit confirmation that no sensitive permission prompt appears;
-7. target-Mac parent/perl CPU/RSS/thread measurements including a stability run.
-
-PR #13 intentionally remains Draft. Do not record `ACCEPT_TRANSPORT` before these physical/resource gates are reviewed.
-
-## Universal Media production design — APPROVED, PRODUCTION IMPLEMENTATION BLOCKED ON M6.1
+## Universal Media production design — APPROVED, M6.1 GATE CLEARED
 
 The approved target is system-wide macOS Now Playing, not an application-specific integration. The production architecture remains:
 
@@ -197,28 +197,28 @@ The approved target is system-wide macOS Now Playing, not an application-specifi
 - metadata/artwork are untrusted inputs and listening history is not persisted;
 - event-driven updates only.
 
-Production media implementation, media UI, gestures/haptics/seek, and later P1 whole-app performance work must not begin until M6.1 ends with `ACCEPT_TRANSPORT`.
+The M6.1 transport gate is now cleared. The next implementation work is to create the production TDD plan and build the narrow production media state/controller/bridge boundary while preserving the accepted security, lifecycle, privacy, and resource constraints.
 
 ## Security baseline
 
-`SECURITY.md` remains authoritative. M1 shipping runtime adds no telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, Accessibility/Input Monitoring permission, synthetic input, or broad input capture. Universal Media currently introduces private MediaRemote compatibility **only in the development probe**, not in shipping `Sources/**` or `NotchHub.app`.
+`SECURITY.md` remains authoritative. M1 shipping runtime adds no telemetry, analytics, networking, subprocess/shell, dynamic loading, private API, privileged helper, Accessibility/Input Monitoring permission, synthetic input, or broad input capture. Universal Media private MediaRemote compatibility remains constrained to the accepted isolated design boundary; production integration must be separately reviewed and tested before it enters shipping `Sources/**`.
 
-A failed probe is rejected/redesigned rather than repaired by weakening Sandbox, Hardened Runtime, library validation, OS security, or adding broad permissions.
+Any production bridge regression is rejected/redesigned rather than repaired by weakening Sandbox, Hardened Runtime, library validation, OS security, or adding broad permissions.
 
 ## Known limitations / technical debt
 
-- target-Mac runtime ceilings still derive from one canonical run per scenario with conservative headroom;
+- target-Mac runtime ceilings still derive from one canonical whole-app run per scenario with conservative headroom;
 - GitHub-hosted runner resource values are not representative of the target Mac;
 - the narrow global `.mouseMoved` fallback remains pending the P1 `NSTrackingArea` / window-local comparison;
-- production Universal Media transport is not yet accepted;
-- current physical probe matrix/resource evidence is incomplete;
+- Apple Music, Spotify, and arbitrary independent-player compatibility are not physically verified yet and must not be claimed as accepted support;
+- production Universal Media code has not yet been implemented; only the transport mechanism and boundary feasibility are accepted;
 - active-display migration, Spaces/fullscreen, screen-configuration handling, notchless mode, click/pin policy, and optional trusted distribution remain later work.
 
 ## Next optimal step
 
-1. Finish the current exact-candidate M6.1 physical matrix using `docs/testing/MEDIA_BRIDGE_PROBE.md`.
-2. Record results in `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md` without storing media metadata.
-3. Run target-Mac probe parent/perl resource and stability measurements.
-4. Decide exactly one of `ACCEPT_TRANSPORT`, `NEEDS_TRANSPORT_REDESIGN`, or `REJECT_TRANSPORT`.
-5. Only after `ACCEPT_TRANSPORT`, create and execute the production `MediaProvider` / `MediaSessionController` / `SystemMediaBridge` TDD plan, followed by media UI and gesture/haptic/seek slices.
+1. Write the production Universal Media TDD implementation plan for `MediaProvider`, immutable `MediaSessionSnapshot`, `@MainActor MediaSessionController`, and isolated `SystemMediaBridge` using the accepted M6.1 constraints.
+2. Implement deterministic fake-provider/state/controller tests first, then the smallest production bridge boundary without broadening permissions, polling, logging, or dependency surface.
+3. Add compact + expanded media-first UI only after the production state/controller boundary is reliable.
+4. Implement local-window gesture/haptic/seek state machines under TDD.
+5. Run target-Mac media acceptance on the sources actually available, recording deferred compatibility honestly.
 6. After the complete functional media slice passes hardware acceptance, run P1 whole-app resource measurements and the deferred `NSTrackingArea` experiment before deciding whether optimization is necessary.
