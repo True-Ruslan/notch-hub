@@ -41,7 +41,7 @@ final class MediaSessionController {
         publish(state: .unavailable, snapshot: nil)
     }
 
-    func send(_ command: MediaCommand) -> MediaCommandResult {
+    func send(_ command: MediaCommand) async -> MediaCommandResult {
         guard isStarted, !isTerminal, let snapshot else {
             return .failed
         }
@@ -67,7 +67,7 @@ final class MediaSessionController {
             }
         }
 
-        return provider.send(command)
+        return await provider.send(command)
     }
 
     private func installHandlerAndStartProvider() {
