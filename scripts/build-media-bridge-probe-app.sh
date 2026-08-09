@@ -5,6 +5,8 @@ readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly BUILD_ROOT="$ROOT_DIR/build/media-bridge-probe"
 readonly VENDOR_SOURCE="$BUILD_ROOT/vendor/source"
 readonly ADAPTER_COMMIT="3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
+readonly PATCH_FILE="$ROOT_DIR/Tools/MediaBridgeProbe/patches/mediaremote-adapter-capabilities.patch"
+readonly PATCH_SHA256="$(shasum -a 256 "$PATCH_FILE" | awk '{print $1}')"
 readonly FRAMEWORK_SOURCE="$VENDOR_SOURCE/build/MediaRemoteAdapter.framework"
 readonly TEST_CLIENT_SOURCE="$VENDOR_SOURCE/build/MediaRemoteAdapterTestClient"
 readonly SCRIPT_SOURCE="$VENDOR_SOURCE/bin/mediaremote-adapter.pl"
@@ -20,9 +22,15 @@ if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
   echo "Invalid source commit: $SOURCE_COMMIT" >&2
   exit 1
 fi
+if [[ ! "$PATCH_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "Invalid adapter patch SHA-256: $PATCH_SHA256" >&2
+  exit 1
+fi
 
 bash "$ROOT_DIR/scripts/bootstrap-media-bridge-probe.sh"
 test "$(git -C "$VENDOR_SOURCE" rev-parse HEAD)" = "$ADAPTER_COMMIT"
+git -C "$VENDOR_SOURCE" diff --check
+git -C "$VENDOR_SOURCE" apply --reverse --check "$PATCH_FILE"
 
 swift build \
   --package-path "$ROOT_DIR" \
@@ -67,6 +75,8 @@ cat > "$CONTENTS/Info.plist" <<PLIST
   <string>$SOURCE_COMMIT</string>
   <key>ProbeAdapterCommit</key>
   <string>$ADAPTER_COMMIT</string>
+  <key>ProbeAdapterPatchSHA256</key>
+  <string>$PATCH_SHA256</string>
 </dict>
 </plist>
 PLIST
@@ -80,3 +90,4 @@ codesign --force --options runtime \
   --sign - "$APP"
 
 printf 'Built %s\n' "$APP"
+printf 'Adapter capability patch SHA-256: %s\n' "$PATCH_SHA256"
