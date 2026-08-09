@@ -36,6 +36,46 @@ public struct ProductionMediaTransportCandidateReport: Codable, Sendable {
     public let sourceBundleIdentifier: String?
     public let capabilities: ProductionMediaTransportCandidateCapabilities
     public let cleanTeardown: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case sourceCommit
+        case adapterCommit
+        case eventCount
+        case observedSession
+        case observedArtwork
+        case observedPlayingState
+        case observedSessionDisappearance
+        case observedArtworkClearOnSourceSwitch
+        case sourceSwitchCount
+        case sourceBundleIdentifier
+        case capabilities
+        case cleanTeardown
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(sourceCommit, forKey: .sourceCommit)
+        try container.encode(adapterCommit, forKey: .adapterCommit)
+        try container.encode(eventCount, forKey: .eventCount)
+        try container.encode(observedSession, forKey: .observedSession)
+        try container.encode(observedArtwork, forKey: .observedArtwork)
+        try container.encode(observedPlayingState, forKey: .observedPlayingState)
+        try container.encode(observedSessionDisappearance, forKey: .observedSessionDisappearance)
+        try container.encode(
+            observedArtworkClearOnSourceSwitch,
+            forKey: .observedArtworkClearOnSourceSwitch
+        )
+        try container.encode(sourceSwitchCount, forKey: .sourceSwitchCount)
+        if let sourceBundleIdentifier {
+            try container.encode(sourceBundleIdentifier, forKey: .sourceBundleIdentifier)
+        } else {
+            try container.encodeNil(forKey: .sourceBundleIdentifier)
+        }
+        try container.encode(capabilities, forKey: .capabilities)
+        try container.encode(cleanTeardown, forKey: .cleanTeardown)
+    }
 }
 
 public enum ProductionMediaTransportCandidateFailureCode: String, Codable, Equatable, Sendable {
