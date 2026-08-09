@@ -126,7 +126,7 @@ final class MediaRemoteProcessClient {
                 frameworkURL.path,
                 "stream",
                 "--no-diff",
-                "--micros",
+                "--micros"
             ],
             standardOutputMode: .stream
         )
@@ -189,7 +189,7 @@ final class MediaRemoteProcessClient {
             arguments: [
                 scriptURL.path,
                 frameworkURL.path,
-                "capabilities",
+                "capabilities"
             ],
             standardOutputMode: .capture,
             maximumStdoutBytes: Self.maximumCapabilityBytes
