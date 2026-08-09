@@ -41,6 +41,7 @@ struct ProductionMediaTransportCandidateTests {
         #expect(report.observedArtwork)
         #expect(report.observedPlayingState)
         #expect(report.observedSessionDisappearance)
+        #expect(report.observedArtworkClearOnSourceSwitch)
         #expect(report.sourceSwitchCount == 1)
         #expect(report.sourceBundleIdentifier == "source.b")
         #expect(report.capabilities.previous == .unsupported)
@@ -59,7 +60,7 @@ struct ProductionMediaTransportCandidateTests {
     }
 
     @Test
-    func stableSourceDoesNotFabricateSwitchOrDisappearance() {
+    func stableSourceDoesNotFabricateSwitchDisappearanceOrArtworkClear() {
         var collector = ProductionMediaTransportCandidateCollector(sourceCommit: String(repeating: "b", count: 40))
         collector.record(
             state: .playing,
@@ -69,7 +70,7 @@ struct ProductionMediaTransportCandidateTests {
                 source: "source.a",
                 title: "A",
                 artist: nil,
-                artwork: nil,
+                artwork: Data([9]),
                 capabilities: supportedCapabilities
             ))
         collector.record(
@@ -87,6 +88,7 @@ struct ProductionMediaTransportCandidateTests {
         let report = collector.report(cleanTeardown: true)
         #expect(report.sourceSwitchCount == 0)
         #expect(!report.observedSessionDisappearance)
+        #expect(!report.observedArtworkClearOnSourceSwitch)
     }
 
     @Test
