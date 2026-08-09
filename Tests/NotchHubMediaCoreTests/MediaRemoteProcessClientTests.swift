@@ -24,7 +24,7 @@ struct MediaRemoteProcessClientTests {
                 frameworkURL.path,
                 "stream",
                 "--no-diff",
-                "--micros",
+                "--micros"
             ])
         #expect(launcher.configurations[0].standardOutputMode == .stream)
         #expect(client.state == .running)
@@ -153,7 +153,7 @@ struct MediaRemoteProcessClientTests {
             launcher.configurations[0].arguments == [
                 scriptURL.path,
                 frameworkURL.path,
-                "capabilities",
+                "capabilities"
             ])
         #expect(launcher.configurations[0].standardOutputMode == .capture)
         #expect(capabilities.next == .supported)
