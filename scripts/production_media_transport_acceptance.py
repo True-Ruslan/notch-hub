@@ -21,7 +21,7 @@ from performance_policy import (
     summarize_stability_samples,
 )
 
-EXPECTED_SOURCE_COMMIT = "3932426bcf063162ee7de1378ed301c9ce664746"
+EXPECTED_SOURCE_COMMIT = "c63f39c40b90d647e48271b9dc1d5ffd6e612c0b"
 EXPECTED_ADAPTER_COMMIT = "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
 EXPECTED_PATCH_SHA256 = "f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974"
 EXPECTED_BUNDLE_IDENTIFIER = "ru.trueruslan.notchhub.media-transport-candidate"
@@ -319,106 +319,80 @@ def collect_preflight(app: pathlib.Path, source_commit: str) -> dict[str, Any]:
         "adapterCommit": EXPECTED_ADAPTER_COMMIT,
         "adapterPatchSHA256": EXPECTED_PATCH_SHA256,
         "bundleIdentifier": EXPECTED_BUNDLE_IDENTIFIER,
-        "codesignVerified": True,
-        "sandboxOnly": True,
-        "hardenedRuntime": True,
-        "capabilities": capabilities,
         "platform": _platform(),
+        "codesignVerified": True,
+        "hardenedRuntime": True,
+        "sandboxOnly": True,
+        "capabilities": capabilities,
     }
-
-
-def collect_observation(app: pathlib.Path, source_commit: str, seconds: float) -> dict[str, Any]:
-    source_commit = _validated_source_commit(source_commit)
-    if not math.isfinite(seconds) or seconds <= 0 or seconds > 1_200:
-        raise ValueError("observation seconds must be finite and in (0, 1200]")
-    executable = _candidate_executable(app)
-    result = subprocess.run(
-        [str(executable), "observe", "--seconds", f"{seconds:g}"],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=seconds + 20,
-    )
-    return validate_candidate_report(_load_json_output(result.stdout), source_commit)
-
-
-def _process_table() -> str:
-    return _run_text(["/bin/ps", "-axo", "pid=,ppid=,command="])
-
-
-def _sample_process(pid: int):
-    metrics = subprocess.run(
-        ["/bin/ps", "-p", str(pid), "-o", "%cpu=", "-o", "rss="],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if metrics.returncode != 0:
-        raise RuntimeError(f"CPU/RSS sampling failed for pid {pid}")
-    fields = metrics.stdout.strip().split()
-    if len(fields) != 2:
-        raise RuntimeError(f"CPU/RSS sampling returned an invalid row for pid {pid}")
-
-    threads = subprocess.run(
-        ["/bin/ps", "-M", str(pid)],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if threads.returncode != 0:
-        raise RuntimeError(f"thread sampling failed for pid {pid}")
-    thread_count = count_ps_thread_rows(threads.stdout)
-    return parse_ps_sample(f"{fields[0]} {fields[1]} {thread_count}")
-
-
-def _discover_owned_adapter(parent_pid: int) -> int:
-    deadline = time.monotonic() + _ADAPTER_DISCOVERY_TIMEOUT_SECONDS
-    last_error: ValueError | None = None
-    while time.monotonic() < deadline:
-        try:
-            return find_owned_adapter_pid(_process_table(), parent_pid)
-        except ValueError as error:
-            last_error = error
-            time.sleep(0.1)
-    raise RuntimeError("owned media adapter process was not established within the bounded discovery window") from last_error
 
 
 def _utc_now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _sample_pair_for_duration(
-    parent_pid: int,
-    adapter_pid: int,
-    warmup_seconds: float,
-    duration_seconds: float,
-    interval_seconds: float,
-    observer: subprocess.Popen[str],
-):
-    if warmup_seconds:
-        time.sleep(warmup_seconds)
-    sample_count = int(round(duration_seconds / interval_seconds))
-    if sample_count <= 0 or not math.isclose(
-        sample_count * interval_seconds,
-        duration_seconds,
-        rel_tol=0,
-        abs_tol=1e-9,
-    ):
-        raise ValueError("resource duration must be an exact positive multiple of interval")
+def collect_observation(
+    app: pathlib.Path, source_commit: str, seconds: float
+) -> dict[str, Any]:
+    source_commit = _validated_source_commit(source_commit)
+    executable = _candidate_executable(app)
+    if not math.isfinite(seconds) or seconds <= 0 or seconds > 1_200:
+        raise ValueError("observation seconds must be finite, positive, and <= 1200")
+    result = subprocess.run(
+        [str(executable), "observe", "--seconds", str(seconds)],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=seconds + _OBSERVER_MARGIN_SECONDS,
+    )
+    report = _load_json_output(result.stdout)
+    return validate_candidate_report(report, source_commit)
 
-    parent_samples = []
-    adapter_samples = []
-    started_monotonic = time.monotonic()
-    for index in range(1, sample_count + 1):
-        scheduled = started_monotonic + (interval_seconds * index)
-        remaining = scheduled - time.monotonic()
-        if remaining > 0:
-            time.sleep(remaining)
-        if observer.poll() is not None:
-            raise RuntimeError("candidate observer exited before resource sampling completed")
-        parent_samples.append(_sample_process(parent_pid))
-        adapter_samples.append(_sample_process(adapter_pid))
-    return parent_samples, adapter_samples
+
+def _ps_table() -> str:
+    return _run_text(["/bin/ps", "-axo", "pid=,ppid=,command="])
+
+
+def _sample_process(pid: int) -> dict[str, Any]:
+    result = subprocess.run(
+        ["/bin/ps", "-p", str(pid), "-o", "%cpu=,rss=,command="],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    cpu, rss = parse_ps_sample(result.stdout)
+    threads = count_ps_thread_rows(
+        _run_text(["/bin/ps", "-M", "-p", str(pid), "-o", "pid="])
+    )
+    return {
+        "elapsedSeconds": 0.0,
+        "cpuPercent": cpu,
+        "rssKiB": rss,
+        "threads": threads,
+    }
+
+
+def _sleep_until(target: float) -> None:
+    delay = target - time.monotonic()
+    if delay > 0:
+        time.sleep(delay)
+
+
+def _discover_owned_adapter(parent_pid: int) -> int:
+    deadline = time.monotonic() + _ADAPTER_DISCOVERY_TIMEOUT_SECONDS
+    while True:
+        try:
+            return find_owned_adapter_pid(_ps_table(), parent_pid)
+        except ValueError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.1)
+
+
+def _ensure_process_alive(process: subprocess.Popen[str], name: str) -> None:
+    status = process.poll()
+    if status is not None:
+        raise RuntimeError(f"{name} exited before acceptance sampling completed: {status}")
 
 
 def collect_resources(app: pathlib.Path, source_commit: str, mode: str) -> dict[str, Any]:
@@ -434,30 +408,42 @@ def collect_resources(app: pathlib.Path, source_commit: str, mode: str) -> dict[
         duration_seconds = _STABILITY_DURATION_SECONDS
         interval_seconds = _STABILITY_INTERVAL_SECONDS
     else:
-        raise ValueError("resource mode must be steady or stability")
+        raise ValueError("mode must be steady or stability")
 
     observer_seconds = warmup_seconds + duration_seconds + _OBSERVER_MARGIN_SECONDS
     observer = subprocess.Popen(
-        [str(executable), "observe", "--seconds", f"{observer_seconds:g}"],
+        [str(executable), "observe", "--seconds", str(observer_seconds)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
     )
     started_at = _utc_now()
+    parent_samples: list[dict[str, Any]] = []
+    adapter_samples: list[dict[str, Any]] = []
     adapter_pid: int | None = None
     try:
         adapter_pid = _discover_owned_adapter(observer.pid)
-        parent_samples, adapter_samples = _sample_pair_for_duration(
-            observer.pid,
-            adapter_pid,
-            warmup_seconds,
-            duration_seconds,
-            interval_seconds,
-            observer,
-        )
-        stdout, _ = observer.communicate(timeout=_OBSERVER_MARGIN_SECONDS + 10)
+        _sleep_until(time.monotonic() + warmup_seconds)
+        sample_start = time.monotonic()
+        sample_count = int(round(duration_seconds / interval_seconds))
+        for index in range(sample_count):
+            _ensure_process_alive(observer, "candidate observer")
+            parent = _sample_process(observer.pid)
+            adapter = _sample_process(adapter_pid)
+            elapsed = time.monotonic() - sample_start
+            parent["elapsedSeconds"] = round(elapsed, 6)
+            adapter["elapsedSeconds"] = round(elapsed, 6)
+            parent_samples.append(parent)
+            adapter_samples.append(adapter)
+            if index + 1 < sample_count:
+                _sleep_until(sample_start + ((index + 1) * interval_seconds))
+
+        _ensure_process_alive(observer, "candidate observer")
+        stdout, stderr = observer.communicate(timeout=_OBSERVER_MARGIN_SECONDS + 10)
         if observer.returncode != 0:
-            raise RuntimeError(f"candidate observer exited with code {observer.returncode}")
+            raise RuntimeError(f"candidate observer exited {observer.returncode}")
+        if stderr.strip():
+            raise RuntimeError("candidate observer emitted unexpected stderr")
         observer_report = validate_candidate_report(_load_json_output(stdout), source_commit)
     finally:
         if observer.poll() is None:
@@ -468,9 +454,11 @@ def collect_resources(app: pathlib.Path, source_commit: str, mode: str) -> dict[
                 observer.kill()
                 observer.wait(timeout=5)
 
-    remaining_adapter_pids = _candidate_adapter_pids(_process_table(), script_path)
+    remaining_adapter_pids = _candidate_adapter_pids(_ps_table(), script_path)
     if remaining_adapter_pids:
-        raise RuntimeError("candidate left an owned media adapter process after teardown")
+        raise RuntimeError(
+            f"owned adapter process remained after observer teardown: {remaining_adapter_pids}"
+        )
 
     parent_summary = summarize_samples(parent_samples)
     adapter_summary = summarize_samples(adapter_samples)
