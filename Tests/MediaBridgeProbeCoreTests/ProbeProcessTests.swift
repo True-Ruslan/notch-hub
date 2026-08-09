@@ -137,6 +137,44 @@ struct ProbeProcessTests {
     }
 
     @Test
+    func capabilitiesUseOneFixedPerlProcessAndReturnStrictPayload() throws {
+        let launcher = FakeProbeProcessLauncher()
+        launcher.nextTerminationStatus = 0
+        launcher.nextCapturedStdout = Data(
+            #"{"next":"supported","previous":"unsupported","seek":"unknown"}"#.utf8
+        )
+        let controller = ProbeProcessController(launcher: launcher)
+
+        let capabilities = try controller.runCapabilities(
+            scriptURL: scriptURL,
+            frameworkURL: frameworkURL,
+            testClientURL: testClientURL
+        )
+
+        #expect(
+            capabilities
+                == ProbeMediaCapabilities(
+                    next: .supported,
+                    previous: .unsupported,
+                    seek: .unknown
+                )
+        )
+        #expect(launcher.launches.count == 1)
+        #expect(launcher.launches[0].executableURL.path == "/usr/bin/perl")
+        #expect(
+            launcher.launches[0].arguments == [
+                scriptURL.path,
+                frameworkURL.path,
+                testClientURL.path,
+                "capabilities"
+            ]
+        )
+        let process = try #require(launcher.lastProcess)
+        #expect(process.lastStdoutLimit == ProbeMediaCapabilitiesDecoder.maximumLineBytes)
+        #expect(process.clearHandlerCount == 1)
+    }
+
+    @Test
     func oneShotCommandTimeoutTerminatesAndFailsClosed() throws {
         let launcher = FakeProbeProcessLauncher()
         launcher.nextTerminationStatus = 0
@@ -191,6 +229,7 @@ private final class FakeProbeProcessLauncher: ProbeProcessLaunching {
     var lastProcess: FakeProbeProcess?
     var nextTerminationStatus: Int32 = 0
     var nextWaitCompletes = true
+    var nextCapturedStdout = Data()
 
     private var stdoutHandler: (@MainActor @Sendable (Data) -> Void)?
     private var stderrHandler: (@MainActor @Sendable (Data) -> Void)?
@@ -209,7 +248,8 @@ private final class FakeProbeProcessLauncher: ProbeProcessLaunching {
 
         let process = FakeProbeProcess(
             terminationStatus: nextTerminationStatus,
-            waitCompletes: nextWaitCompletes
+            waitCompletes: nextWaitCompletes,
+            capturedStdout: nextCapturedStdout
         )
         lastProcess = process
         return process
@@ -239,11 +279,14 @@ private final class FakeProbeProcess: ProbeProcessHandle {
     var unboundedWaitCount = 0
     var clearHandlerCount = 0
     var lastTimeoutSeconds: TimeInterval?
+    var lastStdoutLimit: Int?
     private let waitCompletes: Bool
+    private let capturedStdout: Data
 
-    init(terminationStatus: Int32, waitCompletes: Bool) {
+    init(terminationStatus: Int32, waitCompletes: Bool, capturedStdout: Data) {
         self.terminationStatus = terminationStatus
         self.waitCompletes = waitCompletes
+        self.capturedStdout = capturedStdout
     }
 
     func terminate() {
@@ -264,6 +307,11 @@ private final class FakeProbeProcess: ProbeProcessHandle {
             isRunning = false
         }
         return waitCompletes
+    }
+
+    func readStdout(maximumBytes: Int) throws -> Data {
+        lastStdoutLimit = maximumBytes
+        return capturedStdout
     }
 
     func clearHandlers() {
