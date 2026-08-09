@@ -11,7 +11,8 @@ public struct ProductionMediaTransportCandidateBundlePaths: Equatable, Sendable 
         sourceCommit: String?
     ) throws -> Self {
         let normalizedBundleURL = bundleURL.standardizedFileURL
-        let expectedResourceURL = normalizedBundleURL
+        let expectedResourceURL =
+            normalizedBundleURL
             .appendingPathComponent("Contents", isDirectory: true)
             .appendingPathComponent("Resources", isDirectory: true)
             .standardizedFileURL
