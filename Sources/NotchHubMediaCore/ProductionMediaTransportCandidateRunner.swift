@@ -2,6 +2,7 @@ import Foundation
 
 public enum ProductionMediaTransportCandidateError: Error, Equatable, Sendable {
     case invalidObservationDuration
+    case invalidArguments
 }
 
 @MainActor
