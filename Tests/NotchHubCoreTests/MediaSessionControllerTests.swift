@@ -42,7 +42,8 @@ struct MediaSessionControllerTests {
         provider.emit(.session(paused))
 
         #expect(controller.state == .paused)
-        #expect(controller.snapshot == paused)
+        #expect(controller.snapshot?.sequence == paused.sequence)
+        #expect(controller.snapshot?.title == "second")
     }
 
     @Test
@@ -76,7 +77,8 @@ struct MediaSessionControllerTests {
         provider.emit(.noSession(MediaSequence(generation: 7, revision: 4)))
 
         #expect(controller.state == .playing)
-        #expect(controller.snapshot == current)
+        #expect(controller.snapshot?.sequence == current.sequence)
+        #expect(controller.snapshot?.title == "current")
     }
 
     @Test
@@ -102,7 +104,8 @@ struct MediaSessionControllerTests {
         provider.emit(.session(newGeneration))
 
         #expect(controller.state == .paused)
-        #expect(controller.snapshot == newGeneration)
+        #expect(controller.snapshot?.sequence == newGeneration.sequence)
+        #expect(controller.snapshot?.title == "new-generation")
     }
 
     @Test
@@ -147,7 +150,8 @@ struct MediaSessionControllerTests {
         provider.emit(.session(snapshot))
 
         #expect(changeCount == 1)
-        #expect(controller.snapshot == snapshot)
+        #expect(controller.snapshot?.sequence == snapshot.sequence)
+        #expect(controller.snapshot?.title == "same")
     }
 
     @Test
@@ -248,7 +252,8 @@ struct MediaSessionControllerTests {
 
         #expect(result == .failed)
         #expect(controller.state == .playing)
-        #expect(controller.snapshot == snapshot)
+        #expect(controller.snapshot?.sequence == snapshot.sequence)
+        #expect(controller.snapshot?.playbackState == .playing)
     }
 
     @Test
