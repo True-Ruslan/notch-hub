@@ -23,11 +23,11 @@ struct MediaProviderContractTests {
     }
 
     @Test
-    func providerReceivesOnlyTypedSemanticCommands() {
+    func providerReceivesOnlyTypedSemanticCommands() async {
         let provider = FakeMediaProvider()
         provider.nextCommandResult = .sent
 
-        let result = provider.send(.seek(seconds: 42))
+        let result = await provider.send(.seek(seconds: 42))
 
         #expect(result == .sent)
         #expect(provider.commands == [.seek(seconds: 42)])
@@ -93,7 +93,7 @@ private final class FakeMediaProvider: MediaProvider {
         stopCount += 1
     }
 
-    func send(_ command: MediaCommand) -> MediaCommandResult {
+    func send(_ command: MediaCommand) async -> MediaCommandResult {
         commands.append(command)
         return nextCommandResult
     }
