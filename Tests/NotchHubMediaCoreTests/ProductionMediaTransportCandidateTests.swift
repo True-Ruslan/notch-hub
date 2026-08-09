@@ -107,11 +107,12 @@ struct ProductionMediaTransportCandidateTests {
         let data = try JSONEncoder().encode(capabilities)
         let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: String])
 
-        #expect(object == [
-            "previous": "supported",
-            "next": "unsupported",
-            "seek": "unknown",
-        ])
+        #expect(
+            object == [
+                "previous": "supported",
+                "next": "unsupported",
+                "seek": "unknown"
+            ])
     }
 
     private var supportedCapabilities: MediaCommandCapabilities {
