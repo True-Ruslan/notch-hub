@@ -31,6 +31,7 @@ public struct ProductionMediaTransportCandidateReport: Codable, Sendable {
     public let observedArtwork: Bool
     public let observedPlayingState: Bool
     public let observedSessionDisappearance: Bool
+    public let observedArtworkClearOnSourceSwitch: Bool
     public let sourceSwitchCount: Int
     public let sourceBundleIdentifier: String?
     public let capabilities: ProductionMediaTransportCandidateCapabilities
@@ -66,8 +67,10 @@ struct ProductionMediaTransportCandidateCollector {
     private var observedArtwork = false
     private var observedPlayingState = false
     private var observedSessionDisappearance = false
+    private var observedArtworkClearOnSourceSwitch = false
     private var sourceSwitchCount = 0
     private var sourceBundleIdentifier: String?
+    private var lastSnapshotHadArtwork = false
     private var capabilities = ProductionMediaTransportCandidateCapabilities(
         previous: .unknown,
         next: .unknown,
@@ -92,12 +95,16 @@ struct ProductionMediaTransportCandidateCollector {
             previousSource != snapshot.source.bundleIdentifier
         {
             sourceSwitchCount += 1
+            if lastSnapshotHadArtwork, snapshot.artworkData == nil {
+                observedArtworkClearOnSourceSwitch = true
+            }
         }
 
         observedSession = true
         observedArtwork = observedArtwork || snapshot.artworkData != nil
         observedPlayingState = observedPlayingState || state == .playing || snapshot.playbackState == .playing
         sourceBundleIdentifier = snapshot.source.bundleIdentifier
+        lastSnapshotHadArtwork = snapshot.artworkData != nil
         capabilities = ProductionMediaTransportCandidateCapabilities(snapshot.capabilities)
     }
 
@@ -111,6 +118,7 @@ struct ProductionMediaTransportCandidateCollector {
             observedArtwork: observedArtwork,
             observedPlayingState: observedPlayingState,
             observedSessionDisappearance: observedSessionDisappearance,
+            observedArtworkClearOnSourceSwitch: observedArtworkClearOnSourceSwitch,
             sourceSwitchCount: sourceSwitchCount,
             sourceBundleIdentifier: sourceBundleIdentifier,
             capabilities: capabilities,
