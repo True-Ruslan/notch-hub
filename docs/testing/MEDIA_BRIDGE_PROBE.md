@@ -1,8 +1,10 @@
 # Universal Media Bridge Probe — Target-Mac Acceptance
 
-Status: **EXACT CI CANDIDATE READY — PHYSICAL ACCEPTANCE PENDING**
+Status: **EXACT CI CANDIDATE READY — PHYSICAL ACCEPTANCE IN PROGRESS**
 
 Primary target: MacBook with hardware notch, macOS 26.6.
+
+Physical evidence ledger: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
 
 This procedure validates only the development-only Universal Media transport probe. It does **not** accept a production `SystemMediaBridge`, does not change NotchHub runtime entitlements, and does not authorize shipping MediaRemote/private compatibility code.
 
