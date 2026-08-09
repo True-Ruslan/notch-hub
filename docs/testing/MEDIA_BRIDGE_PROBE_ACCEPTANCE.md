@@ -1,6 +1,6 @@
 # Universal Media Bridge Probe — Physical Acceptance Evidence
 
-Status: **TARGET-MAC CORE TRANSPORT ACCEPTED SO FAR — RESOURCE/FAILURE GATES PENDING**
+Status: **TARGET-MAC CORE TRANSPORT ACCEPTED SO FAR — RESOURCE GATE PENDING**
 
 Authoritative physical procedure: `docs/testing/MEDIA_BRIDGE_PROBE.md`.
 
@@ -115,6 +115,21 @@ Schema-v2 report:
 
 `NH-MEDIA-BRIDGE-006`: **PASS** — browser media publishes a system Now Playing session and is observed through the same event-driven transport.
 
+## Failure lifecycle
+
+`NH-MEDIA-BRIDGE-015`: **PASS (deterministic exact-candidate coverage)**.
+
+A target-Mac crash injection is intentionally not required because the exact candidate's process boundary is deterministic and its failure properties are stronger when asserted without timing or manual intervention:
+
+- a non-zero owned adapter exit transitions to `.failed(exitCode:)`;
+- launch count remains exactly one, proving no automatic restart loop;
+- an oversized/protocol-invalid stream fails closed to `.protocolFailure`, terminates the owned process, and waits for it;
+- explicit stop clears handlers, terminates only the owned running process, waits for exit, and becomes `.stopped`;
+- one-shot timeout terminates, performs the final wait, clears handlers, and throws `timedOut`;
+- the concrete exact-candidate implementation contains no automatic observation restart path.
+
+These tests are part of the 93/93 exact-candidate Swift test suite executed by CI #443. Physical evidence already separately proves ordinary clean teardown/no orphan behavior on the target Mac. Artificially killing the adapter on the personal machine would therefore add lower-quality, timing-dependent evidence without exercising a different production branch.
+
 ## Source-coverage policy for this Personal Release
 
 The original compatibility matrix also listed Apple Music, Spotify, and one additional independent player. These are useful breadth checks, but they are not architectural proof of the MediaRemote transport itself.
@@ -144,6 +159,7 @@ PASS:
 - `NH-MEDIA-BRIDGE-012` — seek;
 - `NH-MEDIA-BRIDGE-013` — source disappearance;
 - `NH-MEDIA-BRIDGE-014` — clean teardown/no orphan;
+- `NH-MEDIA-BRIDGE-015` — bounded failure lifecycle/no restart loop, deterministic CI-backed;
 - `NH-MEDIA-BRIDGE-016` — authoritative capability surface;
 - `NH-MEDIA-BRIDGE-017` — no sensitive permission prompt;
 - `NH-MEDIA-BRIDGE-018` — shipping isolation, CI-backed by exact-candidate CI.
@@ -156,7 +172,6 @@ DEFERRED / NOT TESTED because source is unavailable and not part of the user's c
 
 Pending:
 
-- `NH-MEDIA-BRIDGE-015` — failure lifecycle review / fault-injection decision;
 - target-Mac parent + owned-adapter resource measurements and planned stability run.
 
 ## Historical first Yandex evidence — superseded candidate
@@ -165,12 +180,11 @@ The first target-Mac run used source `231ada7baf83a3a1e9d2e38e35fc80a3f6d53758`,
 
 ## Remaining acceptance work
 
-1. Resolve `NH-MEDIA-BRIDGE-015` using the deterministic failure-path tests first; perform target-Mac fault injection only if it adds meaningful evidence without weakening the security boundary.
-2. Collect target-Mac parent/owned-perl CPU, RSS, and thread measurements, including the planned stability run.
-3. Review all evidence and record exactly one final outcome: `ACCEPT_TRANSPORT`, `NEEDS_TRANSPORT_REDESIGN`, or `REJECT_TRANSPORT`.
+1. Collect target-Mac parent/owned-perl CPU, RSS, and thread measurements, including the planned stability run.
+2. Review all evidence and record exactly one final outcome: `ACCEPT_TRANSPORT`, `NEEDS_TRANSPORT_REDESIGN`, or `REJECT_TRANSPORT`.
 
 No title, artist, album, artwork bytes, raw MediaRemote payload, or listening history is retained in this ledger.
 
 ## Transport decision
 
-No final transport outcome is recorded yet. The current evidence strongly supports the transport for the actual Personal Release environment, but the decision remains pending until failure-lifecycle and resource evidence are closed.
+No final transport outcome is recorded yet. The current evidence strongly supports the transport for the actual Personal Release environment; only target-Mac resource/stability evidence remains before the decision.
