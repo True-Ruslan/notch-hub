@@ -1,6 +1,6 @@
 # Universal Media Bridge Probe — Target-Mac Acceptance
 
-Status: **IMPLEMENTATION CANDIDATE — PHYSICAL ACCEPTANCE PENDING**
+Status: **EXACT CI CANDIDATE READY — PHYSICAL ACCEPTANCE PENDING**
 
 Primary target: MacBook with hardware notch, macOS 26.6.
 
@@ -23,9 +23,58 @@ The accepted candidate must preserve all of these conditions:
 
 A failure is recorded rather than bypassed. Never rerun an acceptance candidate with Sandbox/Hardened Runtime disabled merely to obtain PASS.
 
-## Build candidate
+## Exact CI candidate — preferred acceptance path
 
-From the exact PR/commit to be tested:
+The current exact deterministic candidate was produced from PR #13 head:
+
+- source SHA: `0cc3b57beceb00a2d3b9746ae323712b26306329`;
+- CI run: **#411**, Actions run ID `31300701923`;
+- artifact: `MediaBridgeProbe-candidate`;
+- artifact ID: `9034404531`;
+- artifact digest: `sha256:51103a58b8b3df880ae68b4aa26c9b3537cf70bdddb377a88c454a5003c19e4b`;
+- pinned adapter SHA: `3ac3d4bdf862c7b5399b4fba4df5689f5c38609a`.
+
+CI #411 passed both jobs completely. The macOS 26 job compiled the linked `MediaBridgeProbe` executable product with warnings as errors, ran all Swift tests, built the pinned upstream adapter, packaged the sandboxed/Hardened Runtime probe, verified the bundle, performed a signature-preserving ZIP round-trip, re-verified signature/entitlements/provenance after extraction, and uploaded the candidate. The normal NotchHub shipping job simultaneously passed release/performance/media policy tests, security audit, coverage tests, shipping DMG verification, Sandbox/Hardened Runtime checks, artifact-size budget, performance harness smoke, and shipping-bundle probe isolation.
+
+Prefer this exact CI artifact for physical acceptance rather than rebuilding locally.
+
+Using GitHub CLI from a checkout of the repository:
+
+```bash
+rm -rf build/ci-media-probe-candidate
+mkdir -p build/ci-media-probe-candidate
+
+gh run download 31300701923 \
+  -n MediaBridgeProbe-candidate \
+  -D build/ci-media-probe-candidate
+
+mkdir -p build/ci-media-probe-candidate/unpacked
+ditto -x -k \
+  build/ci-media-probe-candidate/MediaBridgeProbe.zip \
+  build/ci-media-probe-candidate/unpacked
+
+APP="build/ci-media-probe-candidate/unpacked/MediaBridgeProbe.app"
+SOURCE_SHA="0cc3b57beceb00a2d3b9746ae323712b26306329"
+
+test "$(plutil -extract ProbeSourceCommit raw "$APP/Contents/Info.plist")" = "$SOURCE_SHA"
+test "$(plutil -extract ProbeAdapterCommit raw "$APP/Contents/Info.plist")" = \
+  "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
+codesign --verify --deep --strict "$APP"
+codesign -dv --verbose=4 "$APP" 2>&1 | grep -Eq 'flags=.*runtime'
+```
+
+For the commands below, set:
+
+```bash
+PROBE_APP="build/ci-media-probe-candidate/unpacked/MediaBridgeProbe.app"
+PROBE="$PROBE_APP/Contents/MacOS/MediaBridgeProbe"
+```
+
+Do not substitute a newer branch head or locally rebuilt app during the same acceptance cycle. If probe code, packaging, security policy, or the adapter revision changes, obtain a new exact-head CI candidate and restart the affected acceptance evidence.
+
+## Local candidate build — fallback only
+
+When CI artifact access is unavailable, a local candidate may be built from the exact commit being tested:
 
 ```bash
 SOURCE_SHA="$(git rev-parse HEAD)"
@@ -35,10 +84,17 @@ SOURCE_COMMIT="$SOURCE_SHA" bash scripts/build-media-bridge-probe-app.sh
 bash scripts/verify-media-bridge-probe.sh
 ```
 
-The resulting candidate is:
+The resulting fallback candidate is:
 
 ```text
 build/MediaBridgeProbe.app
+```
+
+For the commands below set:
+
+```bash
+PROBE_APP="build/MediaBridgeProbe.app"
+PROBE="$PROBE_APP/Contents/MacOS/MediaBridgeProbe"
 ```
 
 The probe is not a normal NotchHub release artifact.
@@ -48,24 +104,23 @@ The probe is not a normal NotchHub release artifact.
 Adapter self-test:
 
 ```bash
-build/MediaBridgeProbe.app/Contents/MacOS/MediaBridgeProbe self-test
+"$PROBE" self-test
 ```
 
 Observe for a bounded interval and write privacy-safe JSON through shell redirection outside the sandboxed process:
 
 ```bash
-build/MediaBridgeProbe.app/Contents/MacOS/MediaBridgeProbe \
-  observe --seconds 60 \
+"$PROBE" observe --seconds 60 \
   > build/media-bridge-observe.json
 ```
 
 Typed command examples:
 
 ```bash
-build/MediaBridgeProbe.app/Contents/MacOS/MediaBridgeProbe send toggle
-build/MediaBridgeProbe.app/Contents/MacOS/MediaBridgeProbe send next
-build/MediaBridgeProbe.app/Contents/MacOS/MediaBridgeProbe send previous
-build/MediaBridgeProbe.app/Contents/MacOS/MediaBridgeProbe seek 42000000
+"$PROBE" send toggle
+"$PROBE" send next
+"$PROBE" send previous
+"$PROBE" seek 42000000
 ```
 
 Do not infer capability merely because a command exits successfully. `NH-MEDIA-BRIDGE-016` separately requires an authoritative capability signal suitable for a future capability-driven UI.
@@ -99,9 +154,11 @@ Do not infer capability merely because a command exits successfully. `NH-MEDIA-B
 
 The recorder accepts only known scenario IDs and the fixed status set `PASS|FAIL|NOT_SUPPORTED|NEEDS_REDESIGN`.
 
-Example:
+For the exact CI #411 candidate:
 
 ```bash
+SOURCE_SHA="0cc3b57beceb00a2d3b9746ae323712b26306329"
+
 python3 scripts/media-bridge-probe-acceptance.py \
   --source-commit "$SOURCE_SHA" \
   --macos "26.6" \
@@ -111,6 +168,8 @@ python3 scripts/media-bridge-probe-acceptance.py \
   --result NH-MEDIA-BRIDGE-016=NEEDS_REDESIGN \
   --output build/media-bridge-probe-acceptance.json
 ```
+
+The example statuses above are illustrative only. Do not pre-mark `NH-MEDIA-BRIDGE-016` or any other physical scenario before executing it on the target Mac.
 
 The output has no free-form notes or media-content fields.
 
