@@ -233,3 +233,7 @@ Rationale:
 This decision authorizes planning and implementation of the production `MediaProvider` / `MediaSessionSnapshot` / `MediaSessionController` / isolated `SystemMediaBridge` architecture defined by the approved Universal Media design. It does **not** authorize copying the development probe wholesale into shipping code, broadening permissions, adding polling, or claiming verified Apple Music/Spotify/arbitrary-player compatibility before those sources are actually tested.
 
 No title, artist, album, artwork bytes, raw MediaRemote payload, or listening history is retained in this ledger.
+
+## Integration note
+
+The physical acceptance decision is independent of PR mergeability. PR #13 must still satisfy the repository's normal protected-branch integration checks and be reconciled with the latest `main` if GitHub reports a conflict before merge.
