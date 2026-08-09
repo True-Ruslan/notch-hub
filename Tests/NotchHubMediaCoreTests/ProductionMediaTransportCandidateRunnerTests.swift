@@ -53,6 +53,31 @@ struct ProductionMediaTransportCandidateRunnerTests {
     }
 
     @Test
+    func capabilitiesUseProductionProcessClientAndNormalizeTriState() async throws {
+        let client = CandidateRunnerFakeProcessClient(
+            capabilities: MediaCommandCapabilities(
+                previous: .unsupported,
+                next: .supported,
+                seek: .unknown
+            )
+        )
+        let runner = ProductionMediaTransportCandidateRunner(
+            sourceCommit: String(repeating: "f", count: 40),
+            processClient: client,
+            wait: { _ in }
+        )
+
+        let capabilities = try await runner.capabilities()
+
+        #expect(capabilities.previous == .unsupported)
+        #expect(capabilities.next == .supported)
+        #expect(capabilities.seek == .unknown)
+        #expect(client.capabilitiesCount == 1)
+        #expect(client.startCount == 0)
+        #expect(client.stopCount == 0)
+    }
+
+    @Test
     func sendUsesTypedProductionTransportAndAlwaysStops() async {
         let client = CandidateRunnerFakeProcessClient(commandResult: .sent)
         let runner = ProductionMediaTransportCandidateRunner(
@@ -103,6 +128,7 @@ private final class CandidateRunnerFakeProcessClient: MediaRemoteProcessClientPr
 
     private(set) var startCount = 0
     private(set) var stopCount = 0
+    private(set) var capabilitiesCount = 0
     private(set) var sentCommands: [MediaCommand] = []
     private(set) var handlersWereNilWhenStopped = false
 
@@ -138,6 +164,7 @@ private final class CandidateRunnerFakeProcessClient: MediaRemoteProcessClientPr
     }
 
     func capabilities() async throws -> MediaCommandCapabilities {
-        capabilityResult
+        capabilitiesCount += 1
+        return capabilityResult
     }
 }
