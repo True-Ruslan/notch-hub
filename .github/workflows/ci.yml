@@ -64,6 +64,28 @@ jobs:
           PY
           cat build/media-bridge-capabilities.json
 
+          build/MediaBridgeProbe.app/Contents/MacOS/MediaBridgeProbe observe --seconds 1 \
+            > build/media-bridge-observation.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('build/media-bridge-observation.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          if data.get('schemaVersion') != 2:
+              raise SystemExit(f'Unexpected observation schema version: {data!r}')
+          if not isinstance(data.get('observedSessionDisappearance'), bool):
+              raise SystemExit('Missing boolean observedSessionDisappearance')
+          switch_count = data.get('sourceSwitchCount')
+          if not isinstance(switch_count, int) or switch_count < 0:
+              raise SystemExit(f'Invalid sourceSwitchCount: {switch_count!r}')
+          forbidden_keys = {'title', 'artist', 'album', 'artworkData', 'rawPayload'}
+          leaked = forbidden_keys.intersection(data)
+          if leaked:
+              raise SystemExit(f'Unexpected metadata keys in observation report: {sorted(leaked)}')
+          PY
+          cat build/media-bridge-observation.json
+
           rm -f build/MediaBridgeProbe.zip
           ditto -c -k --sequesterRsrc --keepParent \
             build/MediaBridgeProbe.app \
