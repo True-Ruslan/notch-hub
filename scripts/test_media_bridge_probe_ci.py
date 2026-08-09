@@ -1,6 +1,8 @@
 import unittest
 from pathlib import Path
 
+from test_production_media_transport_candidate_ci import ProductionMediaTransportCandidateCITests
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
