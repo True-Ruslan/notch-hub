@@ -117,6 +117,55 @@ struct ProductionMediaTransportCandidateTests {
             ])
     }
 
+    @Test
+    func failureCodesAreOperationalOnlyAndNeverSerializeUnderlyingErrors() {
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                ProductionMediaTransportCandidateError.invalidArguments
+            ) == .invalidArguments
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                ProductionMediaTransportCandidateError.invalidObservationDuration
+            ) == .invalidObservationDuration
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                MediaRemoteProcessClientError.timedOut
+            ) == .processTimedOut
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                MediaRemoteProcessClientError.operationFailed(exitCode: 17)
+            ) == .processFailed
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                MediaRemoteProcessClientError.standardOutputUnavailable
+            ) == .outputUnavailable
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                MediaRemoteProcessClientError.standardOutputTooLarge
+            ) == .outputTooLarge
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                MediaRemoteCapabilityDecoderError.invalidSchema
+            ) == .capabilityProtocol
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                NSError(domain: NSCocoaErrorDomain, code: NSFileNoSuchFileError)
+            ) == .processLaunch
+        )
+
+        let encoded = try? JSONEncoder().encode(
+            ProductionMediaTransportCandidateFailureCode.processLaunch
+        )
+        #expect(encoded == Data("\"processLaunch\"".utf8))
+    }
+
     private var supportedCapabilities: MediaCommandCapabilities {
         MediaCommandCapabilities(previous: .supported, next: .supported, seek: .supported)
     }
