@@ -38,6 +38,53 @@ public struct ProductionMediaTransportCandidateReport: Codable, Sendable {
     public let cleanTeardown: Bool
 }
 
+public enum ProductionMediaTransportCandidateFailureCode: String, Codable, Equatable, Sendable {
+    case invalidArguments
+    case invalidObservationDuration
+    case processTimedOut
+    case processFailed
+    case outputUnavailable
+    case outputTooLarge
+    case capabilityProtocol
+    case processLaunch
+    case unexpectedRuntimeFailure
+
+    public static func classify(_ error: any Error) -> Self {
+        if let candidateError = error as? ProductionMediaTransportCandidateError {
+            switch candidateError {
+            case .invalidArguments:
+                return .invalidArguments
+            case .invalidObservationDuration:
+                return .invalidObservationDuration
+            }
+        }
+
+        if let processError = error as? MediaRemoteProcessClientError {
+            switch processError {
+            case .timedOut:
+                return .processTimedOut
+            case .operationFailed:
+                return .processFailed
+            case .standardOutputUnavailable:
+                return .outputUnavailable
+            case .standardOutputTooLarge:
+                return .outputTooLarge
+            }
+        }
+
+        if error is MediaRemoteCapabilityDecoderError {
+            return .capabilityProtocol
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSCocoaErrorDomain {
+            return .processLaunch
+        }
+
+        return .unexpectedRuntimeFailure
+    }
+}
+
 public enum ProductionMediaTransportCandidateCommand: Equatable, Sendable {
     case toggle
     case previous
