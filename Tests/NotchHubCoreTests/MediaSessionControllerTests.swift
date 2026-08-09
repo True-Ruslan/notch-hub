@@ -155,7 +155,7 @@ struct MediaSessionControllerTests {
     }
 
     @Test
-    func unsupportedOrUnknownCommandsFailClosedWithoutProviderCall() async {
+    func unsupportedOrUnknownCommandsFailClosedWithoutProviderCall() {
         let provider = ControllerFakeMediaProvider()
         let controller = MediaSessionController(provider: provider)
         controller.start()
@@ -174,9 +174,9 @@ struct MediaSessionControllerTests {
             )
         )
 
-        let previous = await controller.send(.previous)
-        let next = await controller.send(.next)
-        let seek = await controller.send(.seek(seconds: 42))
+        let previous = controller.send(.previous)
+        let next = controller.send(.next)
+        let seek = controller.send(.seek(seconds: 42))
 
         #expect(previous == .failed)
         #expect(next == .failed)
@@ -185,7 +185,7 @@ struct MediaSessionControllerTests {
     }
 
     @Test
-    func supportedCommandsAndToggleUseTypedProviderChannel() async {
+    func supportedCommandsAndToggleUseTypedProviderChannel() {
         let provider = ControllerFakeMediaProvider()
         let controller = MediaSessionController(provider: provider)
         controller.start()
@@ -199,10 +199,10 @@ struct MediaSessionControllerTests {
             )
         )
 
-        #expect(await controller.send(.togglePlayPause) == .sent)
-        #expect(await controller.send(.previous) == .sent)
-        #expect(await controller.send(.next) == .sent)
-        #expect(await controller.send(.seek(seconds: 42)) == .sent)
+        #expect(controller.send(.togglePlayPause) == .sent)
+        #expect(controller.send(.previous) == .sent)
+        #expect(controller.send(.next) == .sent)
+        #expect(controller.send(.seek(seconds: 42)) == .sent)
         #expect(
             provider.commands == [
                 .togglePlayPause,
@@ -214,12 +214,12 @@ struct MediaSessionControllerTests {
     }
 
     @Test
-    func invalidSeekAndCommandsWithoutSessionFailClosed() async {
+    func invalidSeekAndCommandsWithoutSessionFailClosed() {
         let provider = ControllerFakeMediaProvider()
         let controller = MediaSessionController(provider: provider)
         controller.start()
 
-        #expect(await controller.send(.togglePlayPause) == .failed)
+        #expect(controller.send(.togglePlayPause) == .failed)
         provider.emit(
             .session(
                 makeSnapshot(
@@ -230,13 +230,13 @@ struct MediaSessionControllerTests {
             )
         )
 
-        #expect(await controller.send(.seek(seconds: -1)) == .failed)
-        #expect(await controller.send(.seek(seconds: .nan)) == .failed)
+        #expect(controller.send(.seek(seconds: -1)) == .failed)
+        #expect(controller.send(.seek(seconds: .nan)) == .failed)
         #expect(provider.commands.isEmpty)
     }
 
     @Test
-    func commandFailureDoesNotMutateAuthoritativeSnapshot() async {
+    func commandFailureDoesNotMutateAuthoritativeSnapshot() {
         let provider = ControllerFakeMediaProvider()
         provider.nextCommandResult = .failed
         let controller = MediaSessionController(provider: provider)
@@ -248,7 +248,7 @@ struct MediaSessionControllerTests {
         )
         provider.emit(.session(snapshot))
 
-        let result = await controller.send(.next)
+        let result = controller.send(.next)
 
         #expect(result == .failed)
         #expect(controller.state == .playing)
@@ -396,7 +396,7 @@ private final class ControllerFakeMediaProvider: MediaProvider {
         stopCount += 1
     }
 
-    func send(_ command: MediaCommand) async -> MediaCommandResult {
+    func send(_ command: MediaCommand) -> MediaCommandResult {
         commands.append(command)
         return nextCommandResult
     }
