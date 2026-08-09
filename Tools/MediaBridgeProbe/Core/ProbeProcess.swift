@@ -12,6 +12,10 @@ enum ProbeProcessState: Equatable, Sendable {
     case protocolFailure
 }
 
+public enum ProbeProcessControllerError: Error, Equatable {
+    case timedOut
+}
+
 @MainActor
 protocol ProbeProcessHandle: AnyObject {
     var isRunning: Bool { get }
@@ -19,6 +23,7 @@ protocol ProbeProcessHandle: AnyObject {
 
     func terminate()
     func waitUntilExit()
+    func waitUntilExit(timeoutSeconds: TimeInterval) -> Bool
     func clearHandlers()
 }
 
@@ -35,6 +40,7 @@ protocol ProbeProcessLaunching: AnyObject {
 @MainActor
 public final class ProbeProcessController {
     public static let maximumStderrBytes = 64 * 1024
+    public static let oneShotTimeoutSeconds: TimeInterval = 5
 
     private let launcher: any ProbeProcessLaunching
     private var ownedProcess: (any ProbeProcessHandle)?
@@ -142,7 +148,16 @@ public final class ProbeProcessController {
             stderr: { _ in },
             termination: { _ in }
         )
-        process.waitUntilExit()
+
+        guard process.waitUntilExit(timeoutSeconds: Self.oneShotTimeoutSeconds) else {
+            if process.isRunning {
+                process.terminate()
+            }
+            process.waitUntilExit()
+            process.clearHandlers()
+            throw ProbeProcessControllerError.timedOut
+        }
+
         let status = process.terminationStatus
         process.clearHandlers()
         return status
@@ -237,6 +252,7 @@ private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
         let process = Process()
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
+        let terminationSemaphore = DispatchSemaphore(value: 0)
         let callbacks = ProbeProcessCallbacks(
             stdout: stdout,
             stderr: stderr,
@@ -268,6 +284,7 @@ private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
         }
         process.terminationHandler = { process in
             let status = process.terminationStatus
+            terminationSemaphore.signal()
             Task { @MainActor in
                 callbacks.termination(status)
             }
@@ -285,7 +302,8 @@ private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
         return FoundationProbeProcessHandle(
             process: process,
             stdoutPipe: stdoutPipe,
-            stderrPipe: stderrPipe
+            stderrPipe: stderrPipe,
+            terminationSemaphore: terminationSemaphore
         )
     }
 }
@@ -311,11 +329,18 @@ private final class FoundationProbeProcessHandle: ProbeProcessHandle {
     private let process: Process
     private let stdoutPipe: Pipe
     private let stderrPipe: Pipe
+    private let terminationSemaphore: DispatchSemaphore
 
-    init(process: Process, stdoutPipe: Pipe, stderrPipe: Pipe) {
+    init(
+        process: Process,
+        stdoutPipe: Pipe,
+        stderrPipe: Pipe,
+        terminationSemaphore: DispatchSemaphore
+    ) {
         self.process = process
         self.stdoutPipe = stdoutPipe
         self.stderrPipe = stderrPipe
+        self.terminationSemaphore = terminationSemaphore
     }
 
     var isRunning: Bool {
@@ -332,6 +357,16 @@ private final class FoundationProbeProcessHandle: ProbeProcessHandle {
 
     func waitUntilExit() {
         process.waitUntilExit()
+    }
+
+    func waitUntilExit(timeoutSeconds: TimeInterval) -> Bool {
+        if !process.isRunning {
+            return true
+        }
+
+        return terminationSemaphore.wait(
+            timeout: .now() + timeoutSeconds
+        ) == .success
     }
 
     func clearHandlers() {
