@@ -64,7 +64,7 @@ public final class ProductionMediaTransportCandidateRunner {
         controller.changeHandler = nil
         controller.stop()
 
-        return collector.report(cleanTeardown: true)
+        return collector.report(cleanTeardown: processClient.lastTeardownClean)
     }
 
     public func capabilities() async throws -> ProductionMediaTransportCandidateCapabilities {
