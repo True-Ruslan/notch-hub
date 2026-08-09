@@ -10,6 +10,8 @@ public struct ProbeReport: Codable, Equatable, Sendable {
     public let observedSession: Bool
     public let observedArtwork: Bool
     public let observedPlayingState: Bool
+    public let observedSessionDisappearance: Bool
+    public let sourceSwitchCount: Int
     public let eventCount: Int
     public let commandResults: [String: Bool]
     public let cleanTeardown: Bool
@@ -25,6 +27,8 @@ public struct ProbeReport: Codable, Equatable, Sendable {
         observedSession: Bool,
         observedArtwork: Bool,
         observedPlayingState: Bool,
+        observedSessionDisappearance: Bool,
+        sourceSwitchCount: Int,
         eventCount: Int,
         commandResults: [String: Bool],
         cleanTeardown: Bool,
@@ -39,6 +43,8 @@ public struct ProbeReport: Codable, Equatable, Sendable {
         self.observedSession = observedSession
         self.observedArtwork = observedArtwork
         self.observedPlayingState = observedPlayingState
+        self.observedSessionDisappearance = observedSessionDisappearance
+        self.sourceSwitchCount = sourceSwitchCount
         self.eventCount = eventCount
         self.commandResults = commandResults
         self.cleanTeardown = cleanTeardown
