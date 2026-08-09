@@ -67,6 +67,10 @@ public final class ProductionMediaTransportCandidateRunner {
         return collector.report(cleanTeardown: true)
     }
 
+    public func capabilities() async throws -> ProductionMediaTransportCandidateCapabilities {
+        ProductionMediaTransportCandidateCapabilities(try await processClient.capabilities())
+    }
+
     public func send(_ command: ProductionMediaTransportCandidateCommand) async -> Bool {
         let transport = MediaRemoteSystemTransport(processClient: processClient)
         transport.start()
