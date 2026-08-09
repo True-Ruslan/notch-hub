@@ -291,7 +291,7 @@ struct MediaRemoteSystemTransportTests {
                 .togglePlayPause,
                 .previous,
                 .next,
-                .seek(seconds: 42),
+                .seek(seconds: 42)
             ])
     }
 
@@ -374,9 +374,7 @@ private final class FakeProductionMediaProcessClient: MediaRemoteProcessClientPr
 
     private let startError: Error?
     private let commandResult: MediaCommandResult
-    private var capabilityContinuations: [
-        CheckedContinuation<MediaCommandCapabilities, Error>?
-    ] = []
+    private var capabilityContinuations: [CheckedContinuation<MediaCommandCapabilities, Error>?] = []
 
     init(
         startError: Error? = nil,
