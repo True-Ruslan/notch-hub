@@ -12,9 +12,10 @@ Key accepted integrations:
 - public-readiness hardening: `23500e099a0f8b2738f1157c6ae3be71c89df6e1`;
 - M1 interaction/transition slice: `094b494bd597643244e733baf5787a13b61fb4eb`;
 - Universal Media design: `403a557399abb2704f9ae02397b49229ca6cf1f9`;
-- M6.1 Universal Media transport probe: `7d5210eb0363933d120334d29daf40956b53cb50`, final outcome **`ACCEPT_TRANSPORT`**.
+- M6.1 Universal Media transport probe: `7d5210eb0363933d120334d29daf40956b53cb50`, final outcome **`ACCEPT_TRANSPORT`**;
+- M6.2 production media state/controller/bridge boundary: `1ccea500570f9a5ca927739be58d7f7eaadd775a`.
 
-Current product state: **M6.2 production Universal Media state/controller/bridge boundary implemented and deterministically accepted; concrete system transport integration is the next active sub-slice.**
+Current product state: **M6.2 production Universal Media state/controller/bridge boundary accepted and merged; concrete system transport integration is the next active sub-slice.**
 
 Approved Universal Media design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`.
 Accepted M6.1 evidence: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
@@ -112,12 +113,14 @@ Deferred, not failed: Apple Music, Spotify, and one additional independent playe
 
 ## M6.2 — Production media state/controller/bridge boundary
 
-Status: **IMPLEMENTED; DETERMINISTIC CI ACCEPTED; READY FOR INTEGRATION**.
+Status: **ACCEPTED AND MERGED**.
 
-Draft PR: #14 `M6.2 Production media state/controller boundary`.
+PR #14 `M6.2 Production media state/controller boundary` was squash-merged into protected `main` as `1ccea500570f9a5ca927739be58d7f7eaadd775a`.
 Implementation plan: `docs/superpowers/plans/2026-08-09-production-media-boundary.md`.
 Accepted code head before documentation-only synchronization: `52d6d76b564c603cb21f0ec49bff4fa958c3aac7`.
 Exact code CI: **#500 / run `31310130322` — both jobs PASS**.
+Final PR head: `78b9c07d204777c775708de7cfa48e27128241f2`.
+Final exact-head CI: **#505 / run `31310571146` — both jobs PASS**.
 Swift suite: **117/117 PASS**.
 
 ### Implemented production module
@@ -161,15 +164,17 @@ During TDD, linking the dormant controller directly into `NotchHubCore` increase
 
 The accepted architecture therefore keeps `NotchHubMediaCore` as a fully built/tested production target that is not yet a dependency of `NotchHubApp`.
 
-Exact CI #500 proves this restores the shipping payload without weakening budgets:
+Final exact-head CI #505 reconfirmed the unchanged shipping boundary:
 
-- executable `250,320 B` — exactly the accepted pre-M6.2 payload;
-- app `253,317 B` — exactly the accepted pre-M6.2 payload;
-- executable segment `65,536 B` — restored to the pre-M6.2 value;
-- DMG `84,661 B`;
+- executable `250,320 B`;
+- app `253,317 B`;
+- executable segment `65,536 B`;
+- DMG `84,678 B`;
 - 117 Swift tests PASS;
 - release/performance/media-policy/security audit PASS;
-- App Sandbox + Hardened Runtime/signature/package verification PASS.
+- App Sandbox effective entitlements remain exactly `com.apple.security.app-sandbox=true`;
+- Hardened Runtime remains enabled;
+- package/signature/performance-harness checks PASS.
 
 No security/performance policy was weakened or modified to obtain this result.
 

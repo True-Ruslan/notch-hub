@@ -1,6 +1,6 @@
 # Production Universal Media Boundary Implementation Plan
 
-Status: **IMPLEMENTED — FINAL PR VERIFICATION PENDING**
+Status: **COMPLETE — MERGED**
 
 **Goal:** Build the production, player-agnostic media state/controller boundary authorized by the accepted M6.1 `ACCEPT_TRANSPORT` decision, without adding media UI or the concrete private MediaRemote transport yet.
 
@@ -121,7 +121,7 @@ Completed:
 
 ## Task 6 — synchronize architecture and project state
 
-Status: **COMPLETE; EXACT DOCUMENTATION HEAD CI PENDING**.
+Status: **COMPLETE**.
 
 Updated:
 
@@ -142,15 +142,27 @@ Recorded explicitly:
 
 ## Task 7 — final verification and PR gate
 
-Status: **IN PROGRESS**.
+Status: **COMPLETE**.
 
-- [ ] Exact documentation head complete CI success.
-- [ ] Confirm no new entitlement/network/subprocess/dynamic-loading/polling/timer/probe-bundling surface on final head.
-- [ ] Compare final branch to `main` and review every changed file against this plan.
-- [ ] Refresh PR #14 with exact scope, TDD history, CI evidence, size investigation, and deferred concrete transport/UI scope.
-- [ ] Mark ready only after exact-head CI is green and PR is mergeable.
-- [ ] Squash-merge with expected head SHA.
-- [ ] Post-merge verify protected `main` and authoritative docs.
+- [x] Exact final head `78b9c07d204777c775708de7cfa48e27128241f2` passed CI #505 / run `31310571146` with both jobs successful.
+- [x] Final head preserved the security boundary: no new entitlement/network/subprocess/dynamic-loading/polling/timer/probe-bundling surface.
+- [x] Final branch diff against `main` was reviewed and limited to `Package.swift`, four production media files, four media tests, and five documentation files.
+- [x] PR #14 was refreshed with exact scope, TDD history, CI evidence, size investigation, and deferred concrete transport/UI scope.
+- [x] PR #14 was marked ready only after exact-head CI was green, no unresolved review threads remained, and GitHub reported it mergeable.
+- [x] PR #14 was squash-merged with expected head SHA as `1ccea500570f9a5ca927739be58d7f7eaadd775a`.
+- [x] Post-merge verification confirmed protected `main` was identical to merge commit `1ccea500570f9a5ca927739be58d7f7eaadd775a`.
+
+Final exact-head evidence:
+
+- **117/117 Swift tests PASS**;
+- release/performance/media-policy/security gates PASS;
+- App Sandbox effective entitlements exactly `com.apple.security.app-sandbox=true`;
+- Hardened Runtime PASS;
+- executable `250,320 B`;
+- app `253,317 B`;
+- executable segment `65,536 B`;
+- DMG `84,678 B`;
+- unchanged P0 size budget PASS.
 
 ## Final scope review
 
