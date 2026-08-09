@@ -44,7 +44,7 @@ diff --git a/src/adapter/capabilities.m b/src/adapter/capabilities.m
 new file mode 100644
 --- /dev/null
 +++ b/src/adapter/capabilities.m
-@@ -0,0 +1,152 @@
+@@ -0,0 +1,150 @@
 +// NotchHub development-only compatibility probe extension.
 +// This file is applied as a repo-owned patch over the pinned upstream adapter.
 +
@@ -67,8 +67,6 @@ new file mode 100644
 +typedef Boolean (*MRMediaRemoteCommandInfoGetEnabled_t)(id commandInfo);
 +
 +typedef enum {
-+    kMRANextTrack = 4,
-+    kMRAPreviousTrack = 5,
 +    kMRASeekToPlaybackPosition = 24,
 +} MRACapabilityCommand;
 +
