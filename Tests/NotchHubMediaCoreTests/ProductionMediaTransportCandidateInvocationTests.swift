@@ -42,7 +42,7 @@ struct ProductionMediaTransportCandidateInvocationTests {
             ["seek", "-1"],
             ["seek", "nan"],
             ["/tmp/evil"],
-            ["capabilities", "extra"],
+            ["capabilities", "extra"]
         ]
 
         for arguments in rejected {
