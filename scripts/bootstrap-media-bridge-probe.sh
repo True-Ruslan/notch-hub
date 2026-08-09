@@ -8,7 +8,7 @@ readonly VENDOR_DIR="$ROOT_DIR/build/media-bridge-probe/vendor"
 readonly SOURCE_DIR="$VENDOR_DIR/source"
 readonly BUILD_DIR="$SOURCE_DIR/build"
 readonly FRAMEWORK="$BUILD_DIR/MediaRemoteAdapter.framework"
-readonly TEST_CLIENT="$FRAMEWORK/Versions/A/Support/MediaRemoteAdapterTestClient"
+readonly TEST_CLIENT="$BUILD_DIR/MediaRemoteAdapterTestClient"
 readonly ADAPTER_SCRIPT="$SOURCE_DIR/bin/mediaremote-adapter.pl"
 readonly LICENSE_FILE="$SOURCE_DIR/LICENSE"
 
