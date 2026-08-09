@@ -8,6 +8,8 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Added
 
+- Development-only M6.1 Universal Media Bridge compatibility/security probe with a fixed `/usr/bin/perl` process boundary, pinned MediaRemote adapter revision, repo-owned authoritative-capability patch, typed toggle/next/previous/bounded-seek allowlist, event-driven observation, privacy-safe evidence, and strict shipping isolation.
+- `docs/testing/MEDIA_BRIDGE_PROBE.md` and `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md` defining the target-Mac compatibility/security/resource procedure and the final `ACCEPT_TRANSPORT` evidence ledger.
 - Root `PERFORMANCE.md` defining event-driven runtime/resource invariants, target-Mac measurement methodology, stable performance acceptance IDs, accepted runtime baseline values, and evidence-based target-Mac budget rules.
 - Canonical machine-readable `performance/baseline-v0.1.0.json` containing immutable-release provenance, macOS 26.6 runtime measurements, exact release artifact sizes, target-Mac resource ceilings, and deterministic size budgets.
 - Standard-library `scripts/performance_policy.py` plus unit tests for unreviewed polling/timer/sleep/display-link detection, strict process-metric parsing/aggregation, configuration validation, stability evidence, Darwin thread-row parsing, deterministic runtime budget comparison, and fail-closed release-size budget enforcement.
@@ -33,6 +35,8 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Changed
 
+- M6.1 Universal Media transport feasibility is accepted with final outcome **`ACCEPT_TRANSPORT`** after target-Mac security, capability, real-command, source-switch/disappearance, lifecycle, 60-second resource, and corrected 10-minute stability evidence. Production Universal Media state/controller/bridge work is now unblocked under the approved isolated boundary.
+- Apple Music, Spotify, and one additional independent player are explicitly `NOT TESTED / DEFERRED` for the Personal Release acceptance cycle because those sources are not available/used on the target Mac; they are not treated as failures and compatibility is not claimed until physically tested.
 - Downloaded immutable Personal Release `v0.1.0` completed `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6; R0.1 is accepted.
 - Performance Foundation P0 was accepted and squash-merged to `main` as `a056aa74bad5d8e193eb4c76a76e6c910344bd09` after exact-head CI and final review.
 - Accepted target-Mac runtime baselines for idle, hover, and 10-minute stability against immutable `v0.1.0`; idle/stability median CPU is `0.0%`, stability RSS decreased by `3,712 KiB`, and no sustained memory/thread growth was detected.
@@ -71,6 +75,9 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Testing
 
+- M6.1 exact candidate `cda05bb4ff367d2c4a5d9d438c3f555f3788d186` passed CI #443 with **93/93 Swift tests**, sandbox/Hardened Runtime packaging, real no-session capabilities, schema-v2 observation, signature/provenance round-trip, shipping-isolation, release/security/performance gates, and unchanged P0 artifact-size budget.
+- Target-Mac M6.1 acceptance on `Mac16,8` / macOS 26.6 passed sandbox-only + Hardened Runtime, no sensitive permission prompts, authoritative no-session/active capabilities, Yandex Music and Yandex Browser observation, actual toggle/previous/next/seek, source switching/disappearance, clean teardown, and deterministic no-restart-loop failure lifecycle.
+- M6.1 resource acceptance passed: synchronized 60-second parent/adapter measurements sampled `0.0%` CPU with ~25.4 MiB combined steady RSS and 4 threads; corrected 10-minute stability recorded parent RSS drift `-128 KiB`, adapter drift `-32 KiB`, combined drift `-160 KiB`, ending threads unchanged at 4, adapter CPU max `0.1%`, and final `PROBE_TEARDOWN=PASS` / `PERL_TEARDOWN=PASS`.
 - Target-Mac M1 hardware feedback exposed visual regressions despite the original delayed-hover/haptic checks otherwise passing; the earlier candidate was therefore not accepted.
 - RED CI #172 established the hardware-notch visual contract before implementation.
 - CI #177, #181, and #187 rejected successive visual implementations that exceeded the existing P0 size budget; the budget was never widened and the implementation was simplified instead.

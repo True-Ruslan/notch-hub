@@ -116,7 +116,11 @@
         "dmgSizeBytes": 90112,
         "executableSizeBytes": 266240
       },
-      "maxRegressionPercent": 15
+      "maxRegressionPercent": 15,
+      "relativeRegressionMetrics": [
+        "appSizeBytes",
+        "executableSizeBytes"
+      ]
     },
     "summary": {
       "appSizeBytes": 223555,

@@ -1,0 +1,243 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -16,6 +16,7 @@ set(MEDIAREMOTEADAPTER_TEST_CLIENT_NAME "MediaRemoteAdapterTestClient"
+     CACHE STRING "The output name of the adapter test client")
+ 
+ set(ADAPTER_SOURCES
++    src/adapter/capabilities.m
+     src/adapter/env.m
+     src/adapter/get.m
+     src/adapter/globals.m
+diff --git a/bin/mediaremote-adapter.pl b/bin/mediaremote-adapter.pl
+--- a/bin/mediaremote-adapter.pl
++++ b/bin/mediaremote-adapter.pl
+@@ -26,5 +26,6 @@ FUNCTION:
+   stream   Streams now playing information (as diff by default)
+   get      Prints now playing information once with all available metadata
++  capabilities Prints authoritative next/previous/seek capability states
+   send     Sends a command to the now playing application
+   seek     Seeks to a specific timeline position
+   shuffle  Sets the shuffle mode
+@@ -116,5 +117,6 @@ fail "Invalid function name: '$function_name'"
+   unless $function_name eq "stream"
+   || $function_name eq "get"
++  || $function_name eq "capabilities"
+   || $function_name eq "send"
+   || $function_name eq "seek"
+   || $function_name eq "shuffle"
+diff --git a/include/MediaRemoteAdapter.h b/include/MediaRemoteAdapter.h
+--- a/include/MediaRemoteAdapter.h
++++ b/include/MediaRemoteAdapter.h
+@@ -62,6 +62,10 @@ extern NSString *kMRAContentItemIdentifier;
+ extern NSString *kMRARadioStationHash;
+ extern NSString *kMRAMediaType;
+ 
++// Prints only authoritative next/previous/seek capability states to stdout.
++// Values are "supported", "unsupported", or "unknown".
++extern void adapter_capabilities();
++
+ // Prints the current MediaRemote now playing information to stdout.
+ // Data is encoded as a JSON dictionary or "null" when there is no information.
+ extern void adapter_get();
+diff --git a/src/adapter/capabilities.m b/src/adapter/capabilities.m
+new file mode 100644
+--- /dev/null
++++ b/src/adapter/capabilities.m
+@@ -0,0 +1,196 @@
++// NotchHub development-only compatibility probe extension.
++// This file is applied as a repo-owned patch over the pinned upstream adapter.
++
++#import <Foundation/Foundation.h>
++
++#import "MediaRemoteAdapter.h"
++#import "utility/helpers.h"
++
++typedef const void *MROriginRef;
++
++typedef MROriginRef (*MRMediaRemoteGetLocalOrigin_t)(void);
++typedef void (*MRMediaRemoteGetSupportedCommandsForOrigin_t)(
++    MROriginRef origin,
++    dispatch_queue_t queue,
++    void (^completion)(CFArrayRef commands));
++typedef void (*MRMediaRemoteCopySupportedCommands_t)(
++    dispatch_queue_t queue,
++    void (^completion)(NSArray *commands));
++typedef void (*MRMediaRemoteGetNowPlayingApplicationPID_t)(
++    dispatch_queue_t queue,
++    void (^completion)(int PID));
++typedef NSInteger (*MRMediaRemoteCommandInfoGetCommand_t)(id commandInfo);
++typedef Boolean (*MRMediaRemoteCommandInfoGetEnabled_t)(id commandInfo);
++
++typedef enum {
++    kMRASeekToPlaybackPosition = 24,
++} MRACapabilityCommand;
++
++typedef enum {
++    kMRAActiveSessionUnknown,
++    kMRAActiveSessionAbsent,
++    kMRAActiveSessionPresent,
++} MRAActiveSessionState;
++
++static NSString *const kMRAStateSupported = @"supported";
++static NSString *const kMRAStateUnsupported = @"unsupported";
++static NSString *const kMRAStateUnknown = @"unknown";
++
++static const int64_t kMRACapabilityTimeoutNanoseconds = 2 * NSEC_PER_SEC;
++
++static CFBundleRef createMediaRemoteBundle(void) {
++    NSURL *url = [NSURL fileURLWithPath:
++        @"/System/Library/PrivateFrameworks/MediaRemote.framework"];
++    return CFBundleCreate(kCFAllocatorDefault, (__bridge CFURLRef)url);
++}
++
++static void *functionPointer(CFBundleRef bundle, CFStringRef name) {
++    if (bundle == NULL) {
++        return NULL;
++    }
++    return CFBundleGetFunctionPointerForName(bundle, name);
++}
++
++static MRAActiveSessionState activeNowPlayingSessionState(CFBundleRef bundle) {
++    MRMediaRemoteGetNowPlayingApplicationPID_t getNowPlayingApplicationPID =
++        (MRMediaRemoteGetNowPlayingApplicationPID_t)functionPointer(
++            bundle, CFSTR("MRMediaRemoteGetNowPlayingApplicationPID"));
++    if (getNowPlayingApplicationPID == NULL) {
++        return kMRAActiveSessionUnknown;
++    }
++
++    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
++    dispatch_queue_t queue =
++        dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0);
++    __block int activePID = 0;
++    __block bool completed = false;
++
++    getNowPlayingApplicationPID(queue, ^(int PID) {
++        activePID = PID;
++        completed = true;
++        dispatch_semaphore_signal(semaphore);
++    });
++
++    if (dispatch_semaphore_wait(
++            semaphore,
++            dispatch_time(DISPATCH_TIME_NOW, kMRACapabilityTimeoutNanoseconds)) != 0 ||
++        !completed) {
++        return kMRAActiveSessionUnknown;
++    }
++
++    return activePID > 0 ? kMRAActiveSessionPresent : kMRAActiveSessionAbsent;
++}
++
++static NSArray *copySupportedCommands(CFBundleRef bundle) {
++    MRMediaRemoteGetLocalOrigin_t getLocalOrigin =
++        (MRMediaRemoteGetLocalOrigin_t)functionPointer(
++            bundle, CFSTR("MRMediaRemoteGetLocalOrigin"));
++    MRMediaRemoteGetSupportedCommandsForOrigin_t getForOrigin =
++        (MRMediaRemoteGetSupportedCommandsForOrigin_t)functionPointer(
++            bundle, CFSTR("MRMediaRemoteGetSupportedCommandsForOrigin"));
++    MRMediaRemoteCopySupportedCommands_t copyLegacy =
++        (MRMediaRemoteCopySupportedCommands_t)functionPointer(
++            bundle, CFSTR("MRMediaRemoteCopySupportedCommands"));
++
++    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
++    dispatch_queue_t queue = dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0);
++    __block NSArray *commands = nil;
++
++    if (getLocalOrigin != NULL && getForOrigin != NULL) {
++        MROriginRef origin = getLocalOrigin();
++        if (origin == NULL) {
++            return nil;
++        }
++        getForOrigin(origin, queue, ^(CFArrayRef result) {
++            if (result != NULL) {
++                commands = [(__bridge NSArray *)result copy];
++            }
++            dispatch_semaphore_signal(semaphore);
++        });
++    }
++    else if (copyLegacy != NULL) {
++        copyLegacy(queue, ^(NSArray *result) {
++            if (result != nil) {
++                commands = [result copy];
++            }
++            dispatch_semaphore_signal(semaphore);
++        });
++    }
++    else {
++        return nil;
++    }
++
++    if (dispatch_semaphore_wait(
++            semaphore,
++            dispatch_time(DISPATCH_TIME_NOW, kMRACapabilityTimeoutNanoseconds)) != 0) {
++        return nil;
++    }
++    return commands;
++}
++
++static NSMutableDictionary *unknownCapabilities(void) {
++    return [@{
++        @"next": kMRAStateUnknown,
++        @"previous": kMRAStateUnknown,
++        @"seek": kMRAStateUnknown,
++    } mutableCopy];
++}
++
++static void setSupportedIfEnabled(
++    NSMutableDictionary *result,
++    NSInteger command,
++    Boolean enabled) {
++    if (!enabled) {
++        return;
++    }
++
++    if (command == kMRANextTrack) {
++        result[@"next"] = kMRAStateSupported;
++    }
++    else if (command == kMRAPreviousTrack) {
++        result[@"previous"] = kMRAStateSupported;
++    }
++    else if (command == kMRASeekToPlaybackPosition) {
++        result[@"seek"] = kMRAStateSupported;
++    }
++}
++
++void adapter_capabilities(void) {
++    NSMutableDictionary *result = unknownCapabilities();
++    CFBundleRef bundle = createMediaRemoteBundle();
++    if (bundle == NULL) {
++        printOut(serializeJsonDictionarySafe(result, false));
++        return;
++    }
++
++    MRAActiveSessionState sessionState = activeNowPlayingSessionState(bundle);
++    if (sessionState != kMRAActiveSessionPresent) {
++        CFRelease(bundle);
++        printOut(serializeJsonDictionarySafe(result, false));
++        return;
++    }
++
++    MRMediaRemoteCommandInfoGetCommand_t getCommand =
++        (MRMediaRemoteCommandInfoGetCommand_t)functionPointer(
++            bundle, CFSTR("MRMediaRemoteCommandInfoGetCommand"));
++    MRMediaRemoteCommandInfoGetEnabled_t getEnabled =
++        (MRMediaRemoteCommandInfoGetEnabled_t)functionPointer(
++            bundle, CFSTR("MRMediaRemoteCommandInfoGetEnabled"));
++    NSArray *commands = copySupportedCommands(bundle);
++
++    if (getCommand != NULL && getEnabled != NULL && commands != nil) {
++        result[@"next"] = kMRAStateUnsupported;
++        result[@"previous"] = kMRAStateUnsupported;
++        result[@"seek"] = kMRAStateUnsupported;
++
++        for (id commandInfo in commands) {
++            setSupportedIfEnabled(
++                result,
++                getCommand(commandInfo),
++                getEnabled(commandInfo));
++        }
++    }
++
++    CFRelease(bundle);
++    printOut(serializeJsonDictionarySafe(result, false));
++}

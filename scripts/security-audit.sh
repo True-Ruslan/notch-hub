@@ -92,7 +92,7 @@ PY
 # 5. High-risk Hardened Runtime exceptions must never be silently introduced.
 if grep -RInE \
     'com\.apple\.security\.cs\.(disable-library-validation|allow-unsigned-executable-memory|allow-dyld-environment-variables|allow-jit|get-task-allow)' \
-    Resources .github Sources Tests 2>/dev/null; then
+    Resources .github Sources Tools Tests 2>/dev/null; then
     fail "dangerous code-signing/runtime exception found"
 fi
 
@@ -182,6 +182,82 @@ fi
 
 if grep -InE 'perf-baseline|performance_policy|test_performance_policy' scripts/build-app.sh scripts/build-dmg.sh; then
     fail "application packaging must not copy or invoke development performance tooling"
+fi
+
+# 10. Universal Media probe is a development-only compatibility boundary. It may use
+# Process only inside Tools, but its transport, input scope, upstream revision, and
+# shipping isolation are fixed and executable policy. A successful probe does not
+# relax the production Sources/** restrictions above.
+PROBE_DIR="Tools/MediaBridgeProbe"
+BOOTSTRAP="scripts/bootstrap-media-bridge-probe.sh"
+PROBE_BUILD="scripts/build-media-bridge-probe-app.sh"
+PROBE_VERIFY="scripts/verify-media-bridge-probe.sh"
+PROBE_COMMIT="3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
+PROBE_REPO="https://github.com/ungive/mediaremote-adapter.git"
+
+for required in "$PROBE_DIR/Core/ProbeProcess.swift" "$BOOTSTRAP" "$PROBE_BUILD" "$PROBE_VERIFY"; do
+    [[ -e "$required" ]] || fail "missing media bridge probe boundary file: $required"
+done
+
+grep -Fq "readonly ADAPTER_REPO=\"$PROBE_REPO\"" "$BOOTSTRAP" || \
+    fail "media bridge probe upstream repository is not fixed"
+grep -Fq "readonly ADAPTER_COMMIT=\"$PROBE_COMMIT\"" "$BOOTSTRAP" || \
+    fail "media bridge probe upstream revision is not pinned"
+grep -Fq 'URL(fileURLWithPath: "/usr/bin/perl")' "$PROBE_DIR/Core/ProbeProcess.swift" || \
+    fail "media bridge probe process executable is not fixed to /usr/bin/perl"
+for required_arg in '"stream"' '"--no-diff"' '"--micros"'; do
+    grep -Fq "$required_arg" "$PROBE_DIR/Core/ProbeProcess.swift" || \
+        fail "media bridge probe stream contract is missing $required_arg"
+done
+
+probe_forbidden_patterns=(
+    'NSTask'
+    'posix_spawn'
+    'execve[[:space:]]*\('
+    'popen[[:space:]]*\('
+    'dlopen[[:space:]]*\('
+    'dlsym[[:space:]]*\('
+    'URLSession'
+    'NWConnection'
+    'import[[:space:]]+Network'
+    'import[[:space:]]+WebKit'
+    'WKWebView'
+    '@_silgen_name'
+    '/bin/(ba|z|k|c|tc)?sh'
+    '\.keyDown'
+    '\.keyUp'
+    '\.flagsChanged'
+    '\.leftMouseDown'
+    '\.leftMouseUp'
+    '\.rightMouseDown'
+    '\.rightMouseUp'
+    '\.otherMouseDown'
+    '\.otherMouseUp'
+    '\.leftMouseDragged'
+    '\.rightMouseDragged'
+    '\.otherMouseDragged'
+    '\.scrollWheel'
+)
+for pattern in "${probe_forbidden_patterns[@]}"; do
+    if grep -RInE --include='*.swift' "$pattern" "$PROBE_DIR"; then
+        fail "forbidden media probe capability matched pattern: $pattern"
+    fi
+done
+
+if grep -RInE --include='*.swift' '"get"|"get[[:space:]]' "$PROBE_DIR"; then
+    fail "media bridge probe must not use periodic get polling"
+fi
+
+for packaging_script in scripts/build-app.sh scripts/build-dmg.sh; do
+    if grep -Eq 'MediaBridgeProbe|mediaremote-adapter|MediaRemoteAdapter' "$packaging_script"; then
+        fail "shipping packaging references development media probe assets: $packaging_script"
+    fi
+done
+
+if grep -RInE \
+    'com\.apple\.security\.cs\.(disable-library-validation|allow-unsigned-executable-memory|allow-dyld-environment-variables|allow-jit|get-task-allow)' \
+    "$PROBE_DIR" "$PROBE_BUILD" "$PROBE_VERIFY" 2>/dev/null; then
+    fail "media bridge probe attempted to weaken Hardened Runtime"
 fi
 
 echo "Security baseline checks passed."
