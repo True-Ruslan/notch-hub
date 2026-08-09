@@ -8,7 +8,7 @@ enum MediaCommandResult: Sendable, Equatable {
     case failed
 }
 
-enum MediaProviderEvent: Sendable, Equatable {
+enum MediaProviderEvent: Sendable {
     case ready
     case session(MediaSessionSnapshot)
     case noSession(MediaSequence)
