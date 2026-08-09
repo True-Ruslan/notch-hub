@@ -5,6 +5,7 @@ public enum ProbeInvocationError: Error, Equatable {
 public enum ProbeInvocation: Equatable, Sendable {
     case observe(seconds: UInt64)
     case command(ProbeMediaCommand)
+    case capabilities
     case selfTest
 
     public static let maximumObserveSeconds: UInt64 = 3_600
@@ -20,6 +21,12 @@ public enum ProbeInvocation: Equatable, Sendable {
                 throw ProbeInvocationError.invalidArguments
             }
             return .selfTest
+
+        case "capabilities":
+            guard arguments.count == 1 else {
+                throw ProbeInvocationError.invalidArguments
+            }
+            return .capabilities
 
         case "send":
             guard arguments.count == 2 else {
