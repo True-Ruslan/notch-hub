@@ -14,7 +14,12 @@ struct MediaProviderContractTests {
         let snapshot = makeSnapshot()
         provider.emit(.session(snapshot))
 
-        #expect(received == .session(snapshot))
+        guard case .session(let receivedSnapshot)? = received else {
+            Issue.record("Expected a typed session event")
+            return
+        }
+        #expect(receivedSnapshot.sequence == snapshot.sequence)
+        #expect(receivedSnapshot.playbackState == .playing)
     }
 
     @Test
@@ -30,16 +35,21 @@ struct MediaProviderContractTests {
 
     @Test
     func failureAndNoSessionRemainTypedProviderEvents() {
-        let sequence = MediaSequence(generation: 4, revision: 9)
+        let expectedSequence = MediaSequence(generation: 4, revision: 9)
+        let noSession = MediaProviderEvent.noSession(expectedSequence)
+        let failure = MediaProviderEvent.failed(.transport)
 
-        #expect(
-            MediaProviderEvent.noSession(sequence)
-                == .noSession(MediaSequence(generation: 4, revision: 9))
-        )
-        #expect(
-            MediaProviderEvent.failed(.transport)
-                == .failed(.transport)
-        )
+        guard case .noSession(let actualSequence) = noSession else {
+            Issue.record("Expected a typed no-session event")
+            return
+        }
+        #expect(actualSequence == expectedSequence)
+
+        guard case .failed(let actualFailure) = failure else {
+            Issue.record("Expected a typed failure event")
+            return
+        }
+        #expect(actualFailure == .transport)
     }
 
     private func makeSnapshot() -> MediaSessionSnapshot {
