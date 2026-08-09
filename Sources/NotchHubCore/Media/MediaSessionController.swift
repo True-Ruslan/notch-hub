@@ -151,7 +151,17 @@ final class MediaSessionController {
         state newState: MediaSubsystemState,
         snapshot newSnapshot: MediaSessionSnapshot?
     ) {
-        guard state != newState || snapshot != newSnapshot else {
+        let snapshotChanged: Bool
+        switch (snapshot, newSnapshot) {
+        case (nil, nil):
+            snapshotChanged = false
+        case let (current?, next?):
+            snapshotChanged = current.sequence != next.sequence
+        default:
+            snapshotChanged = true
+        }
+
+        guard state != newState || snapshotChanged else {
             return
         }
 
