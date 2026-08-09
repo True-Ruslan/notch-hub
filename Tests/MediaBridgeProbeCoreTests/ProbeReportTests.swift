@@ -6,7 +6,7 @@ struct ProbeReportTests {
     @Test
     func encodesOnlyPrivacySafeEvidenceFields() throws {
         let report = ProbeReport(
-            schemaVersion: 1,
+            schemaVersion: 2,
             sourceCommit: String(repeating: "a", count: 40),
             macOSVersion: "26.6",
             hardwareModel: "Mac16,8",
@@ -15,6 +15,8 @@ struct ProbeReportTests {
             observedSession: true,
             observedArtwork: true,
             observedPlayingState: true,
+            observedSessionDisappearance: true,
+            sourceSwitchCount: 2,
             eventCount: 42,
             commandResults: [
                 "next": true,
@@ -31,6 +33,8 @@ struct ProbeReportTests {
 
         #expect(json.contains("ru.yandex.desktop.music"))
         #expect(json.contains("observedArtwork"))
+        #expect(json.contains("observedSessionDisappearance"))
+        #expect(json.contains("sourceSwitchCount"))
         #expect(!json.contains("Secret Track"))
         #expect(!json.contains("Private Artist"))
         #expect(!json.contains("Confidential Album"))
@@ -40,7 +44,7 @@ struct ProbeReportTests {
     @Test
     func reportRoundTripsWithoutAddingMetadataSurface() throws {
         let report = ProbeReport(
-            schemaVersion: 1,
+            schemaVersion: 2,
             sourceCommit: String(repeating: "c", count: 40),
             macOSVersion: "26.6",
             hardwareModel: "Mac16,8",
@@ -49,6 +53,8 @@ struct ProbeReportTests {
             observedSession: false,
             observedArtwork: false,
             observedPlayingState: false,
+            observedSessionDisappearance: false,
+            sourceSwitchCount: 0,
             eventCount: 0,
             commandResults: [:],
             cleanTeardown: true,
