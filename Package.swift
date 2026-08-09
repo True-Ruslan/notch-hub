@@ -12,6 +12,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "NotchHubCore"),
+        .target(name: "NotchHubMediaCore"),
         .executableTarget(
             name: "NotchHubApp",
             dependencies: ["NotchHubCore"]
@@ -28,6 +29,10 @@ let package = Package(
         .testTarget(
             name: "NotchHubCoreTests",
             dependencies: ["NotchHubCore"]
+        ),
+        .testTarget(
+            name: "NotchHubMediaCoreTests",
+            dependencies: ["NotchHubMediaCore"]
         ),
         .testTarget(
             name: "MediaBridgeProbeCoreTests",

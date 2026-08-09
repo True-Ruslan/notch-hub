@@ -8,6 +8,9 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Added
 
+- M6.2 production `NotchHubMediaCore` target with normalized system-media domain types, player-agnostic `MediaProvider`, deterministic `@MainActor MediaSessionController`, injected `SystemMediaTransport`, and isolated `SystemMediaBridge` boundary.
+- Deterministic M6.2 tests for generation/revision ordering, stale/same-sequence rejection, deduplication, playback-state mapping, capability fail-closed behavior, invalid seek rejection, typed command forwarding, command-failure state preservation, one controlled restart, second-failure lockout, explicit stop, bridge callback ownership, teardown ordering, and stale transport-handler rejection.
+- `docs/superpowers/plans/2026-08-09-production-media-boundary.md` defining the production media state/controller/bridge implementation sequence after M6.1 `ACCEPT_TRANSPORT`.
 - Development-only M6.1 Universal Media Bridge compatibility/security probe with a fixed `/usr/bin/perl` process boundary, pinned MediaRemote adapter revision, repo-owned authoritative-capability patch, typed toggle/next/previous/bounded-seek allowlist, event-driven observation, privacy-safe evidence, and strict shipping isolation.
 - `docs/testing/MEDIA_BRIDGE_PROBE.md` and `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md` defining the target-Mac compatibility/security/resource procedure and the final `ACCEPT_TRANSPORT` evidence ledger.
 - Root `PERFORMANCE.md` defining event-driven runtime/resource invariants, target-Mac measurement methodology, stable performance acceptance IDs, accepted runtime baseline values, and evidence-based target-Mac budget rules.
@@ -35,6 +38,8 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Changed
 
+- M6.2 keeps the production media core in an independent Swift target that is fully built/tested but deliberately not linked into `NotchHubApp` until the concrete system transport/composition slice. This preserves honest feature-cost accounting and keeps dormant media code out of the current Personal Release.
+- Linking the dormant M6.2 controller directly into `NotchHubCore` was rejected by the unchanged P0 size gate; a controlled sync-vs-async command-dispatch experiment changed zero bytes, while target isolation restored the shipping executable/app exactly to `250,320 B / 253,317 B` without widening budgets or weakening policy.
 - M6.1 Universal Media transport feasibility is accepted with final outcome **`ACCEPT_TRANSPORT`** after target-Mac security, capability, real-command, source-switch/disappearance, lifecycle, 60-second resource, and corrected 10-minute stability evidence. Production Universal Media state/controller/bridge work is now unblocked under the approved isolated boundary.
 - Apple Music, Spotify, and one additional independent player are explicitly `NOT TESTED / DEFERRED` for the Personal Release acceptance cycle because those sources are not available/used on the target Mac; they are not treated as failures and compatibility is not claimed until physically tested.
 - Downloaded immutable Personal Release `v0.1.0` completed `NH-PERSONAL-RELEASE-001` on the target MacBook/macOS 26.6; R0.1 is accepted.
@@ -75,6 +80,9 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Testing
 
+- M6.2 strict RED -> GREEN history covers missing domain types, provider contract, controller state machine, and `SystemMediaBridge` boundary before each implementation was added.
+- M6.2 exact code head `52d6d76b564c603cb21f0ec49bff4fa958c3aac7` passed CI #500 with **117/117 Swift tests**, macOS 26 warnings-as-errors builds, probe verification, release/performance/media-policy tests, strict formatting/security audit, Sandbox/Hardened Runtime/package verification, performance harness smoke, and unchanged P0 size gates.
+- CI #500 produced shipping executable/app payloads exactly `250,320 B / 253,317 B`, executable segment `65,536 B`, and DMG `84,661 B`; `NotchHubApp` depends only on `NotchHubCore`, while `NotchHubMediaCore` remains independently built/tested.
 - M6.1 exact candidate `cda05bb4ff367d2c4a5d9d438c3f555f3788d186` passed CI #443 with **93/93 Swift tests**, sandbox/Hardened Runtime packaging, real no-session capabilities, schema-v2 observation, signature/provenance round-trip, shipping-isolation, release/security/performance gates, and unchanged P0 artifact-size budget.
 - Target-Mac M6.1 acceptance on `Mac16,8` / macOS 26.6 passed sandbox-only + Hardened Runtime, no sensitive permission prompts, authoritative no-session/active capabilities, Yandex Music and Yandex Browser observation, actual toggle/previous/next/seek, source switching/disappearance, clean teardown, and deterministic no-restart-loop failure lifecycle.
 - M6.1 resource acceptance passed: synchronized 60-second parent/adapter measurements sampled `0.0%` CPU with ~25.4 MiB combined steady RSS and 4 threads; corrected 10-minute stability recorded parent RSS drift `-128 KiB`, adapter drift `-32 KiB`, combined drift `-160 KiB`, ending threads unchanged at 4, adapter CPU max `0.1%`, and final `PROBE_TEARDOWN=PASS` / `PERL_TEARDOWN=PASS`.

@@ -149,17 +149,18 @@ P1 experiment after functional media integration:
 
 ## Current approved priority order — 2026-08-09
 
-M6.1 transport feasibility is now accepted. The milestone numbers remain stable; implementation proceeds through the approved media architecture before returning to broader shell hardening.
+M6.1 transport feasibility is accepted and M6.2 establishes the deterministic production application-side media boundary. The next security-sensitive step is the concrete system transport and composition, not UI.
 
-1. **Production Universal Media state/controller/bridge boundary** — `MediaProvider`, immutable `MediaSessionSnapshot`, `@MainActor MediaSessionController`, isolated `SystemMediaBridge`, under TDD.
-2. Compact + expanded media-first UI after the state/controller boundary is reliable.
+1. **Concrete production `SystemMediaTransport` + composition** behind the accepted M6.2 boundary, under strict TDD/security review and fresh shipping size/runtime evidence.
+2. Compact + expanded media-first UI only after the concrete production state path is reliable.
 3. Local-window gesture + haptic engine and seek interaction.
 4. Target-Mac media/haptic acceptance on actually available sources; defer unavailable compatibility honestly.
 5. **P1 whole-app performance review**, including production bridge lifecycle cost and the deferred `NSTrackingArea` / window-local pointer experiment.
 6. Evidence-driven optimization if required, then resume remaining M1 display/Space hardening and later product modules.
 
 Approved design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`.
-Accepted probe plan/evidence: `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md` and `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
+Accepted probe evidence: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
+M6.2 plan: `docs/superpowers/plans/2026-08-09-production-media-boundary.md`.
 
 ## M2 — Shelf
 
@@ -193,18 +194,18 @@ Accepted probe plan/evidence: `docs/superpowers/plans/2026-08-09-universal-media
 
 ## M6 — Universal Media / System Now Playing
 
-Status: **ACTIVE PRODUCT SLICE — DESIGN APPROVED; M6.1 TRANSPORT ACCEPTED; PRODUCTION IMPLEMENTATION NEXT**
+Status: **ACTIVE PRODUCT SLICE — M6.1 TRANSPORT ACCEPTED; M6.2 PRODUCTION CORE BOUNDARY IMPLEMENTED; CONCRETE TRANSPORT NEXT**
 
 Product contract:
 
 - follow the media session macOS itself treats as system Now Playing;
 - support players automatically when they publish a system session; Yandex Music and Yandex Browser are physically verified now, while Apple Music/Spotify/other-player compatibility remains deferred until those sources are actually available for testing;
-- do not add per-player adapters in the first milestone merely to manufacture missing capabilities;
+- do not add per-player adapters merely to manufacture missing capabilities;
 - compact media state: artwork left + lightweight playback/status indicator right;
 - expanded active-media state is media-first while preserving access to future NotchHub modules;
 - multiple simultaneous media apps follow macOS source priority rather than NotchHub inventing one;
 - capability-driven controls: unsupported/unknown actions are not faked;
-- horizontal next/previous swipes work in both compact and expanded states, locally over NotchHub only;
+- horizontal next/previous swipes work in compact and expanded states, locally over NotchHub only;
 - compact swipe down expands, expanded swipe up collapses, progress drag seeks only when supported;
 - horizontal command is commit-on-release with cancellation, hysteresis, and one `.levelChange` haptic per armed transition;
 - no gesture-based volume control in the first media milestone;
@@ -213,14 +214,16 @@ Product contract:
 
 Architecture/security:
 
-- player-agnostic `MediaProvider` + immutable `MediaSessionSnapshot` + MainActor `MediaSessionController`;
-- one isolated, optional `SystemMediaBridge` is the only approved private MediaRemote boundary;
-- the sandbox/Hardened Runtime compatibility probe has accepted the transport with final outcome `ACCEPT_TRANSPORT`;
-- bridge failure is media-only and fail-closed; Notch Core remains operational;
+- independent production target `NotchHubMediaCore` owns normalized media domain/controller/bridge code;
+- player-agnostic `MediaProvider` + immutable `MediaSessionSnapshot` + `@MainActor MediaSessionController`;
+- injected `SystemMediaTransport` sits behind isolated `SystemMediaBridge`;
+- M6.2 does not yet contain the concrete MediaRemote/private transport and is not linked into `NotchHubApp`;
+- the M6.1 sandbox/Hardened Runtime compatibility probe accepted the transport with final outcome `ACCEPT_TRANSPORT`;
+- bridge/controller failure is media-only and fail-closed; Notch Core remains operational;
 - no Accessibility/Input Monitoring/synthetic media keys;
 - no listening-history persistence or production metadata logging;
 - private compatibility must never justify disabling Sandbox/Hardened Runtime/library validation;
-- production third-party/runtime dependency decisions require a separate reviewed implementation plan even though the transport mechanism is accepted.
+- concrete transport/runtime dependency decisions remain a separate reviewed implementation slice.
 
 M6.1 accepted target-Mac evidence on `Mac16,8` / macOS 26.6 includes:
 
@@ -233,26 +236,39 @@ M6.1 accepted target-Mac evidence on `Mac16,8` / macOS 26.6 includes:
 - source switching and disappearance;
 - clean teardown/no orphan process;
 - deterministic fail-closed/no-restart-loop failure lifecycle;
-- 60-second parent/adapter CPU `0.0%` sampled median/max with ~25.4 MiB combined steady RSS;
+- 60-second parent/adapter sampled CPU `0.0%` with ~25.4 MiB combined steady RSS;
 - corrected 10-minute stability with combined RSS drift `-160 KiB`, unchanged ending 4 threads, adapter CPU max `0.1%`, and clean final teardown.
+
+M6.2 deterministic acceptance on code head `52d6d76b564c603cb21f0ec49bff4fa958c3aac7`, CI #500:
+
+- **117/117 Swift tests PASS**;
+- normalized domain/provider/controller ordering/dedup/capability/lifecycle tests PASS;
+- isolated `SystemMediaBridge` callback ownership/forwarding/teardown/stale-handler tests PASS;
+- release/security/performance/media-policy checks PASS without policy weakening;
+- App Sandbox + Hardened Runtime/package/signature checks PASS;
+- dormant media core is not linked into `NotchHubApp`;
+- shipping executable/app remain exactly `250,320 B / 253,317 B` under the unchanged P0 budget.
 
 Acceptance sequence:
 
 - [x] product/architecture/gesture/security/performance design approved;
-- [x] design recorded in `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`;
-- [x] first implementation plan recorded in `docs/superpowers/plans/2026-08-09-universal-media-bridge-probe.md`;
+- [x] M6.1 probe plan/evidence recorded;
 - [x] sandbox/Hardened Runtime transport compatibility/security probe;
 - [x] authoritative capability surface proven;
 - [x] target-Mac transport commands/source-switch/disappearance/permission/lifecycle acceptance;
-- [x] target-Mac parent/adapter 60-second + 10-minute resource/stability acceptance;
+- [x] target-Mac parent/adapter resource/stability acceptance;
 - [x] final M6.1 outcome: **`ACCEPT_TRANSPORT`**;
-- [ ] production media state/controller boundary with deterministic fake-provider tests;
-- [ ] isolated production `SystemMediaBridge` implementation under the accepted boundary;
+- [x] production normalized media domain + provider contract;
+- [x] deterministic `MediaSessionController` ordering/dedup/capability/restart behavior;
+- [x] isolated injected `SystemMediaBridge` boundary;
+- [x] dormant production media module separated from current shipping link graph without widening size/security policy;
+- [ ] concrete production `SystemMediaTransport` implementation using accepted M6.1 evidence;
+- [ ] compose the production media module into `NotchHubApp` with fresh package/security/size/runtime evidence;
 - [ ] compact/expanded media UI;
 - [ ] gesture/haptic/seek state machines under TDD;
 - [ ] target-Mac functional media acceptance;
 - [ ] P1 whole-app resource review;
-- [ ] accept/optimize/reject production implementation based on evidence.
+- [ ] accept/optimize production implementation based on evidence.
 
 ## M7 — Product shell
 
