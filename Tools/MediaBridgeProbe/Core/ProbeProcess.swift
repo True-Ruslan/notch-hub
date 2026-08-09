@@ -1,8 +1,25 @@
 import Foundation
 
+enum ProbeStandardOutputMode: Equatable, Sendable {
+    case stream
+    case capture
+    case discard
+}
+
 struct ProbeProcessConfiguration: Equatable, Sendable {
     let executableURL: URL
     let arguments: [String]
+    let standardOutputMode: ProbeStandardOutputMode
+
+    init(
+        executableURL: URL,
+        arguments: [String],
+        standardOutputMode: ProbeStandardOutputMode = .stream
+    ) {
+        self.executableURL = executableURL
+        self.arguments = arguments
+        self.standardOutputMode = standardOutputMode
+    }
 }
 
 enum ProbeProcessState: Equatable, Sendable {
@@ -14,6 +31,12 @@ enum ProbeProcessState: Equatable, Sendable {
 
 public enum ProbeProcessControllerError: Error, Equatable {
     case timedOut
+    case operationFailed(exitCode: Int32)
+}
+
+private enum ProbeProcessHandleError: Error {
+    case standardOutputUnavailable
+    case standardOutputTooLarge
 }
 
 @MainActor
@@ -24,6 +47,7 @@ protocol ProbeProcessHandle: AnyObject {
     func terminate()
     func waitUntilExit()
     func waitUntilExit(timeoutSeconds: TimeInterval) -> Bool
+    func readStdout(maximumBytes: Int) throws -> Data
     func clearHandlers()
 }
 
@@ -82,7 +106,8 @@ public final class ProbeProcessController {
                 "stream",
                 "--no-diff",
                 "--micros"
-            ]
+            ],
+            standardOutputMode: .stream
         )
 
         let process = try launcher.launch(
@@ -112,13 +137,42 @@ public final class ProbeProcessController {
         frameworkURL: URL,
         testClientURL: URL
     ) throws -> Int32 {
-        try runOneShot(
+        let result = try runOneShot(
             arguments: command.adapterArguments(
                 scriptURL: scriptURL,
                 frameworkURL: frameworkURL,
                 testClientURL: testClientURL
-            )
+            ),
+            standardOutputMode: .discard
         )
+        return result.status
+    }
+
+    public func runCapabilities(
+        scriptURL: URL,
+        frameworkURL: URL,
+        testClientURL: URL
+    ) throws -> ProbeMediaCapabilities {
+        let result = try runOneShot(
+            arguments: [
+                scriptURL.path,
+                frameworkURL.path,
+                testClientURL.path,
+                "capabilities"
+            ],
+            standardOutputMode: .capture,
+            maximumStdoutBytes: ProbeMediaCapabilitiesDecoder.maximumLineBytes
+        )
+
+        guard result.status == 0 else {
+            throw ProbeProcessControllerError.operationFailed(exitCode: result.status)
+        }
+
+        var line = result.stdout
+        while line.last == 0x0A || line.last == 0x0D {
+            line.removeLast()
+        }
+        return try ProbeMediaCapabilitiesDecoder.decode(line: line)
     }
 
     public func runSelfTest(
@@ -126,20 +180,27 @@ public final class ProbeProcessController {
         frameworkURL: URL,
         testClientURL: URL
     ) throws -> Int32 {
-        try runOneShot(
+        let result = try runOneShot(
             arguments: [
                 scriptURL.path,
                 frameworkURL.path,
                 testClientURL.path,
                 "test"
-            ]
+            ],
+            standardOutputMode: .discard
         )
+        return result.status
     }
 
-    private func runOneShot(arguments: [String]) throws -> Int32 {
+    private func runOneShot(
+        arguments: [String],
+        standardOutputMode: ProbeStandardOutputMode,
+        maximumStdoutBytes: Int = 0
+    ) throws -> (status: Int32, stdout: Data) {
         let configuration = ProbeProcessConfiguration(
             executableURL: URL(fileURLWithPath: "/usr/bin/perl"),
-            arguments: arguments
+            arguments: arguments,
+            standardOutputMode: standardOutputMode
         )
 
         let process = try launcher.launch(
@@ -159,8 +220,14 @@ public final class ProbeProcessController {
         }
 
         let status = process.terminationStatus
+        let stdout: Data
+        if standardOutputMode == .capture {
+            stdout = try process.readStdout(maximumBytes: maximumStdoutBytes)
+        } else {
+            stdout = Data()
+        }
         process.clearHandlers()
-        return status
+        return (status, stdout)
     }
 
     private func receiveStdout(_ data: Data, generation eventGeneration: UInt64) {
@@ -250,7 +317,7 @@ private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
         termination: @escaping @MainActor @Sendable (Int32) -> Void
     ) throws -> any ProbeProcessHandle {
         let process = Process()
-        let stdoutPipe = Pipe()
+        let stdoutPipe: Pipe?
         let stderrPipe = Pipe()
         let terminationSemaphore = DispatchSemaphore(value: 0)
         let callbacks = ProbeProcessCallbacks(
@@ -261,16 +328,27 @@ private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
 
         process.executableURL = configuration.executableURL
         process.arguments = configuration.arguments
-        process.standardOutput = stdoutPipe
+
+        switch configuration.standardOutputMode {
+        case .stream, .capture:
+            let pipe = Pipe()
+            stdoutPipe = pipe
+            process.standardOutput = pipe
+        case .discard:
+            stdoutPipe = nil
+            process.standardOutput = FileHandle.nullDevice
+        }
         process.standardError = stderrPipe
 
-        stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            guard !data.isEmpty else {
-                return
-            }
-            Task { @MainActor in
-                callbacks.stdout(data)
+        if configuration.standardOutputMode == .stream {
+            stdoutPipe?.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                guard !data.isEmpty else {
+                    return
+                }
+                Task { @MainActor in
+                    callbacks.stdout(data)
+                }
             }
         }
         stderrPipe.fileHandleForReading.readabilityHandler = { handle in
@@ -293,7 +371,7 @@ private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
         do {
             try process.run()
         } catch {
-            stdoutPipe.fileHandleForReading.readabilityHandler = nil
+            stdoutPipe?.fileHandleForReading.readabilityHandler = nil
             stderrPipe.fileHandleForReading.readabilityHandler = nil
             process.terminationHandler = nil
             throw error
@@ -303,7 +381,8 @@ private final class FoundationProbeProcessLauncher: ProbeProcessLaunching {
             process: process,
             stdoutPipe: stdoutPipe,
             stderrPipe: stderrPipe,
-            terminationSemaphore: terminationSemaphore
+            terminationSemaphore: terminationSemaphore,
+            capturesStdout: configuration.standardOutputMode == .capture
         )
     }
 }
@@ -327,20 +406,23 @@ private final class ProbeProcessCallbacks: Sendable {
 @MainActor
 private final class FoundationProbeProcessHandle: ProbeProcessHandle {
     private let process: Process
-    private let stdoutPipe: Pipe
+    private let stdoutPipe: Pipe?
     private let stderrPipe: Pipe
     private let terminationSemaphore: DispatchSemaphore
+    private let capturesStdout: Bool
 
     init(
         process: Process,
-        stdoutPipe: Pipe,
+        stdoutPipe: Pipe?,
         stderrPipe: Pipe,
-        terminationSemaphore: DispatchSemaphore
+        terminationSemaphore: DispatchSemaphore,
+        capturesStdout: Bool
     ) {
         self.process = process
         self.stdoutPipe = stdoutPipe
         self.stderrPipe = stderrPipe
         self.terminationSemaphore = terminationSemaphore
+        self.capturesStdout = capturesStdout
     }
 
     var isRunning: Bool {
@@ -369,8 +451,35 @@ private final class FoundationProbeProcessHandle: ProbeProcessHandle {
         ) == .success
     }
 
+    func readStdout(maximumBytes: Int) throws -> Data {
+        guard capturesStdout, let stdoutPipe else {
+            throw ProbeProcessHandleError.standardOutputUnavailable
+        }
+
+        let handle = stdoutPipe.fileHandleForReading
+        var result = Data()
+
+        while true {
+            let remaining = maximumBytes + 1 - result.count
+            guard remaining > 0 else {
+                throw ProbeProcessHandleError.standardOutputTooLarge
+            }
+
+            let chunk = try handle.read(upToCount: remaining) ?? Data()
+            if chunk.isEmpty {
+                break
+            }
+            result.append(chunk)
+            if result.count > maximumBytes {
+                throw ProbeProcessHandleError.standardOutputTooLarge
+            }
+        }
+
+        return result
+    }
+
     func clearHandlers() {
-        stdoutPipe.fileHandleForReading.readabilityHandler = nil
+        stdoutPipe?.fileHandleForReading.readabilityHandler = nil
         stderrPipe.fileHandleForReading.readabilityHandler = nil
         process.terminationHandler = nil
     }
