@@ -82,6 +82,7 @@ public enum ProductionMediaTransportCandidateFailureCode: String, Codable, Equat
     case invalidArguments
     case invalidObservationDuration
     case processTimedOut
+    case processTeardown
     case processFailed
     case outputUnavailable
     case outputTooLarge
@@ -103,6 +104,8 @@ public enum ProductionMediaTransportCandidateFailureCode: String, Codable, Equat
             switch processError {
             case .timedOut:
                 return .processTimedOut
+            case .teardownFailed:
+                return .processTeardown
             case .operationFailed:
                 return .processFailed
             case .standardOutputUnavailable:
@@ -178,19 +181,22 @@ struct ProductionMediaTransportCandidateCollector {
             return
         }
 
-        if let previousSource = sourceBundleIdentifier,
-            previousSource != snapshot.source.bundleIdentifier
-        {
+        observedSession = true
+        if snapshot.artworkData != nil {
+            observedArtwork = true
+        }
+        if snapshot.playbackState == .playing {
+            observedPlayingState = true
+        }
+
+        let nextSource = snapshot.source.bundleIdentifier
+        if let sourceBundleIdentifier, sourceBundleIdentifier != nextSource {
             sourceSwitchCount += 1
             if lastSnapshotHadArtwork, snapshot.artworkData == nil {
                 observedArtworkClearOnSourceSwitch = true
             }
         }
-
-        observedSession = true
-        observedArtwork = observedArtwork || snapshot.artworkData != nil
-        observedPlayingState = observedPlayingState || state == .playing || snapshot.playbackState == .playing
-        sourceBundleIdentifier = snapshot.source.bundleIdentifier
+        sourceBundleIdentifier = nextSource
         lastSnapshotHadArtwork = snapshot.artworkData != nil
         capabilities = ProductionMediaTransportCandidateCapabilities(snapshot.capabilities)
     }
@@ -222,9 +228,9 @@ extension ProductionMediaTransportCandidateCapabilities {
     }
 }
 
-extension ProductionMediaTransportCandidateCapabilityState {
-    init(_ state: MediaCapabilityState) {
-        switch state {
+private extension ProductionMediaTransportCandidateCapabilityState {
+    init(_ capability: MediaCapabilityState) {
+        switch capability {
         case .supported:
             self = .supported
         case .unsupported:
