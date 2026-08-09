@@ -27,7 +27,7 @@ test "$(git -C "$VENDOR_SOURCE" rev-parse HEAD)" = "$ADAPTER_COMMIT"
 swift build \
   --package-path "$ROOT_DIR" \
   -c release \
-  --target MediaBridgeProbe \
+  --product MediaBridgeProbe \
   -Xswiftc -warnings-as-errors
 
 BIN_DIR="$(swift build --package-path "$ROOT_DIR" -c release --show-bin-path)"
