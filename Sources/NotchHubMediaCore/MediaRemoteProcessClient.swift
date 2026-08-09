@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 enum MediaRemoteProcessOutputMode: Equatable, Sendable {
@@ -17,6 +18,7 @@ enum MediaRemoteProcessState: Equatable, Sendable {
     case running
     case failed(exitCode: Int32)
     case protocolFailure
+    case teardownFailure
 }
 
 enum MediaRemoteProcessFailure: Equatable, Sendable {
@@ -26,6 +28,7 @@ enum MediaRemoteProcessFailure: Equatable, Sendable {
 
 enum MediaRemoteProcessClientError: Error, Equatable {
     case timedOut
+    case teardownFailed
     case operationFailed(exitCode: Int32)
     case standardOutputUnavailable
     case standardOutputTooLarge
@@ -37,9 +40,23 @@ protocol MediaRemoteProcessHandle: AnyObject {
     var terminationStatus: Int32 { get }
 
     func terminate()
+    func forceTerminate()
     func waitUntilExit()
+    func waitUntilExit(timeout: TimeInterval) -> Bool
     func readStdout(maximumBytes: Int) throws -> Data
     func clearHandlers()
+}
+
+@MainActor
+extension MediaRemoteProcessHandle {
+    func forceTerminate() {
+        terminate()
+    }
+
+    func waitUntilExit(timeout _: TimeInterval) -> Bool {
+        waitUntilExit()
+        return true
+    }
 }
 
 @MainActor
@@ -69,6 +86,8 @@ protocol MediaRemoteTimeoutScheduling: AnyObject {
 final class MediaRemoteProcessClient {
     static let maximumStderrBytes = 64 * 1024
     static let oneShotTimeoutSeconds: TimeInterval = 5
+    static let gracefulTerminationTimeoutSeconds: TimeInterval = 1
+    static let forcedTerminationTimeoutSeconds: TimeInterval = 1
     static let maximumSeekSeconds = Double(MediaRemoteWireDecoder.maximumDurationMicros) / 1_000_000
 
     private static let maximumCapabilityBytes = 4 * 1024
@@ -85,6 +104,7 @@ final class MediaRemoteProcessClient {
 
     private(set) var state: MediaRemoteProcessState = .stopped
     private(set) var stderrByteCount = 0
+    private(set) var lastTeardownClean = true
     var onPayload: (@MainActor @Sendable (MediaRemoteWirePayload?) -> Void)?
     var onFailure: (@MainActor @Sendable (MediaRemoteProcessFailure) -> Void)?
 
@@ -118,6 +138,7 @@ final class MediaRemoteProcessClient {
         let currentGeneration = observationGeneration
         stdoutBuffer.removeAll(keepingCapacity: false)
         stderrByteCount = 0
+        lastTeardownClean = true
 
         let configuration = MediaRemoteProcessConfiguration(
             executableURL: Self.perlURL,
@@ -154,17 +175,21 @@ final class MediaRemoteProcessClient {
         guard let process = observationProcess else {
             stdoutBuffer.removeAll(keepingCapacity: false)
             state = .stopped
+            lastTeardownClean = true
             return
         }
 
-        process.clearHandlers()
-        if process.isRunning {
-            process.terminate()
-        }
-        process.waitUntilExit()
-        observationProcess = nil
+        let clean = MediaRemoteProcessTerminationPolicy.stop(process)
+        lastTeardownClean = clean
         stdoutBuffer.removeAll(keepingCapacity: false)
-        state = .stopped
+
+        if clean {
+            observationProcess = nil
+            state = .stopped
+        } else {
+            state = .teardownFailure
+            onFailure?(.transport)
+        }
     }
 
     func send(_ command: MediaCommand) async -> MediaCommandResult {
@@ -326,6 +351,7 @@ final class MediaRemoteProcessClient {
         process.clearHandlers()
         observationProcess = nil
         stdoutBuffer.removeAll(keepingCapacity: false)
+        lastTeardownClean = true
         state = .failed(exitCode: status)
         onFailure?(.transport)
     }
@@ -333,18 +359,40 @@ final class MediaRemoteProcessClient {
     private func failObservation(_ failure: MediaRemoteProcessFailure) {
         observationGeneration &+= 1
 
+        let clean: Bool
         if let process = observationProcess {
-            process.clearHandlers()
-            if process.isRunning {
-                process.terminate()
-            }
-            process.waitUntilExit()
+            clean = MediaRemoteProcessTerminationPolicy.stop(process)
+        } else {
+            clean = true
         }
 
-        observationProcess = nil
+        lastTeardownClean = clean
         stdoutBuffer.removeAll(keepingCapacity: false)
-        state = .protocolFailure
+        if clean {
+            observationProcess = nil
+            state = .protocolFailure
+        } else {
+            state = .teardownFailure
+        }
         onFailure?(failure)
+    }
+}
+
+@MainActor
+private enum MediaRemoteProcessTerminationPolicy {
+    static func stop(_ process: any MediaRemoteProcessHandle) -> Bool {
+        process.clearHandlers()
+        guard process.isRunning else {
+            return true
+        }
+
+        process.terminate()
+        if process.waitUntilExit(timeout: MediaRemoteProcessClient.gracefulTerminationTimeoutSeconds) {
+            return true
+        }
+
+        process.forceTerminate()
+        return process.waitUntilExit(timeout: MediaRemoteProcessClient.forcedTerminationTimeoutSeconds)
     }
 }
 
@@ -403,12 +451,10 @@ private final class MediaRemoteOneShotOperation {
         }
         isCompleted = true
         timeoutToken = nil
-        process.clearHandlers()
-        if process.isRunning {
-            process.terminate()
-        }
-        process.waitUntilExit()
-        continuation.resume(throwing: MediaRemoteProcessClientError.timedOut)
+        let clean = MediaRemoteProcessTerminationPolicy.stop(process)
+        continuation.resume(
+            throwing: clean ? MediaRemoteProcessClientError.timedOut : .teardownFailed
+        )
     }
 }
 
@@ -423,6 +469,7 @@ private final class FoundationMediaRemoteProcessLauncher: MediaRemoteProcessLaun
         let process = Process()
         let stdoutPipe: Pipe?
         let stderrPipe = Pipe()
+        let exitSignal = FoundationMediaRemoteProcessExitSignal()
         let callbacks = MediaRemoteProcessCallbacks(
             stdout: stdout,
             stderr: stderr,
@@ -464,6 +511,7 @@ private final class FoundationMediaRemoteProcessLauncher: MediaRemoteProcessLaun
             }
         }
         process.terminationHandler = { process in
+            exitSignal.signal()
             let status = process.terminationStatus
             Task { @MainActor in
                 callbacks.termination(status)
@@ -476,6 +524,7 @@ private final class FoundationMediaRemoteProcessLauncher: MediaRemoteProcessLaun
             stdoutPipe?.fileHandleForReading.readabilityHandler = nil
             stderrPipe.fileHandleForReading.readabilityHandler = nil
             process.terminationHandler = nil
+            exitSignal.signal()
             throw error
         }
 
@@ -483,7 +532,8 @@ private final class FoundationMediaRemoteProcessLauncher: MediaRemoteProcessLaun
             process: process,
             stdoutPipe: stdoutPipe,
             stderrPipe: stderrPipe,
-            capturesStdout: configuration.standardOutputMode == .capture
+            capturesStdout: configuration.standardOutputMode == .capture,
+            exitSignal: exitSignal
         )
     }
 }
@@ -504,23 +554,51 @@ private final class MediaRemoteProcessCallbacks: Sendable {
     }
 }
 
+private final class FoundationMediaRemoteProcessExitSignal: @unchecked Sendable {
+    private let group = DispatchGroup()
+    private let lock = NSLock()
+    private var isSignaled = false
+
+    init() {
+        group.enter()
+    }
+
+    func signal() {
+        lock.lock()
+        guard !isSignaled else {
+            lock.unlock()
+            return
+        }
+        isSignaled = true
+        lock.unlock()
+        group.leave()
+    }
+
+    func wait(timeout: TimeInterval) -> Bool {
+        group.wait(timeout: .now() + timeout) == .success
+    }
+}
+
 @MainActor
 private final class FoundationMediaRemoteProcessHandle: MediaRemoteProcessHandle {
     private let process: Process
     private let stdoutPipe: Pipe?
     private let stderrPipe: Pipe
     private let capturesStdout: Bool
+    private let exitSignal: FoundationMediaRemoteProcessExitSignal
 
     init(
         process: Process,
         stdoutPipe: Pipe?,
         stderrPipe: Pipe,
-        capturesStdout: Bool
+        capturesStdout: Bool,
+        exitSignal: FoundationMediaRemoteProcessExitSignal
     ) {
         self.process = process
         self.stdoutPipe = stdoutPipe
         self.stderrPipe = stderrPipe
         self.capturesStdout = capturesStdout
+        self.exitSignal = exitSignal
     }
 
     var isRunning: Bool {
@@ -535,8 +613,19 @@ private final class FoundationMediaRemoteProcessHandle: MediaRemoteProcessHandle
         process.terminate()
     }
 
+    func forceTerminate() {
+        guard process.isRunning else {
+            return
+        }
+        _ = Darwin.kill(process.processIdentifier, SIGKILL)
+    }
+
     func waitUntilExit() {
         process.waitUntilExit()
+    }
+
+    func waitUntilExit(timeout: TimeInterval) -> Bool {
+        exitSignal.wait(timeout: timeout)
     }
 
     func readStdout(maximumBytes: Int) throws -> Data {
@@ -569,7 +658,6 @@ private final class FoundationMediaRemoteProcessHandle: MediaRemoteProcessHandle
     func clearHandlers() {
         stdoutPipe?.fileHandleForReading.readabilityHandler = nil
         stderrPipe.fileHandleForReading.readabilityHandler = nil
-        process.terminationHandler = nil
     }
 }
 
