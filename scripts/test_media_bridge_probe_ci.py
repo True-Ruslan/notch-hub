@@ -30,6 +30,19 @@ class MediaBridgeProbeCITests(unittest.TestCase):
             workflow,
         )
 
+    def test_probe_builds_link_the_executable_product(self):
+        workflow = (
+            REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
+        ).read_text(encoding="utf-8")
+        build_script = (
+            REPOSITORY_ROOT / "scripts" / "build-media-bridge-probe-app.sh"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("--product MediaBridgeProbe", workflow)
+        self.assertIn("--product MediaBridgeProbe", build_script)
+        self.assertNotIn("--target MediaBridgeProbe", workflow)
+        self.assertNotIn("--target MediaBridgeProbe", build_script)
+
 
 if __name__ == "__main__":
     unittest.main()
