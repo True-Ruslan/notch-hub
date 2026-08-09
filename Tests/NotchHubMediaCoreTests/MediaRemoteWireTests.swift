@@ -9,7 +9,8 @@ struct MediaRemoteWireTests {
             #"{"type":"data","diff":false,"payload":{"bundleIdentifier":"ru.yandex.desktop.music","playing":true,"title":"Track","artist":"Artist","album":"Album","durationMicros":180000000,"elapsedTimeMicros":42000000,"timestampEpochMicros":1786233600000000,"playbackRate":1.0,"artworkMimeType":"image/jpeg","artworkData":"AQID","contentItemIdentifier":"item-1","uniqueIdentifier":"unique-1"}}"#.utf8
         )
 
-        let payload = try #require(MediaRemoteWireDecoder.decode(line: line))
+        let decoded = try MediaRemoteWireDecoder.decode(line: line)
+        let payload = try #require(decoded)
 
         #expect(payload.bundleIdentifier == "ru.yandex.desktop.music")
         #expect(payload.playing)
@@ -31,7 +32,8 @@ struct MediaRemoteWireTests {
             #"{"type":"data","diff":false,"payload":{"bundleIdentifier":"com.apple.Safari","playing":true,"title":"Video"}}"#.utf8
         )
 
-        let payload = try #require(MediaRemoteWireDecoder.decode(line: line))
+        let decoded = try MediaRemoteWireDecoder.decode(line: line)
+        let payload = try #require(decoded)
         #expect(payload.artworkData == nil)
     }
 
