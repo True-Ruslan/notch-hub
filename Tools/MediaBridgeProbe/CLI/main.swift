@@ -45,6 +45,7 @@ private enum ProbeCLIError: Error {
     case missingBundledResources
     case missingBuildProvenance
     case reportEncodingFailed
+    case capabilitiesUnavailable
 }
 
 @MainActor
@@ -101,6 +102,9 @@ private struct MediaBridgeProbeCLI {
                     testClientURL: assets.testClientURL
                 )
                 exit(status == 0 ? ExitCode.success : ExitCode.software)
+
+            case .capabilities:
+                throw ProbeCLIError.capabilitiesUnavailable
 
             case .command(let command):
                 let status = try controller.runCommand(
@@ -199,7 +203,7 @@ private struct MediaBridgeProbeCLI {
 
     private static func printUsage() {
         fputs(
-            "Usage: MediaBridgeProbe observe --seconds N | "
+            "Usage: MediaBridgeProbe observe --seconds N | capabilities | "
                 + "send toggle|next|previous | seek MICROSECONDS | self-test\n",
             stderr
         )
