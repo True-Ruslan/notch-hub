@@ -2,6 +2,8 @@
 
 Status: **PARTIAL TARGET-MAC EVIDENCE — CURRENT CANDIDATE RERUN PENDING**
 
+Authoritative physical procedure: `docs/testing/MEDIA_BRIDGE_PROBE.md`.
+
 ## Current acceptance candidate
 
 The current exact candidate supersedes the first physical artifact because the probe evidence schema was strengthened after the first Yandex run:
