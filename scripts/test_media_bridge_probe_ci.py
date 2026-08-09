@@ -73,12 +73,18 @@ class MediaBridgeProbeCITests(unittest.TestCase):
             "MRMediaRemoteGetSupportedCommandsForOrigin",
             "MRMediaRemoteCommandInfoGetCommand",
             "MRMediaRemoteCommandInfoGetEnabled",
-            "kMRANextTrack = 4",
-            "kMRAPreviousTrack = 5",
+            "kMRANextTrack",
+            "kMRAPreviousTrack",
             "kMRASeekToPlaybackPosition = 24",
         ):
             with self.subTest(patch_fragment=fragment):
                 self.assertIn(fragment, patch)
+
+        # next/previous are already part of the pinned adapter's public command
+        # enum. The compatibility patch must consume those constants rather than
+        # shadowing them with duplicate declarations.
+        self.assertNotIn("kMRANextTrack = 4,", patch)
+        self.assertNotIn("kMRAPreviousTrack = 5,", patch)
 
         for fragment in (
             "mediaremote-adapter-capabilities.patch",
