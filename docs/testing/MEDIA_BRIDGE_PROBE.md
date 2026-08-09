@@ -22,6 +22,7 @@ The accepted candidate must preserve all of these conditions:
 - observation uses `stream --no-diff --micros`, never repeated `get` polling;
 - only typed toggle/next/previous/seek commands are allowed;
 - capability probing is a one-shot bounded operation that reports only `next`, `previous`, and `seek` as `supported`, `unsupported`, or `unknown`;
+- observation schema v2 adds only privacy-safe session-disappearance and source-switch aggregates;
 - no title, artist, album, artwork bytes, raw payload, or listening history is written into durable probe evidence;
 - probe and adapter assets remain absent from shipping `NotchHub.app`.
 
@@ -31,31 +32,32 @@ A failure is recorded rather than bypassed. Never rerun an acceptance candidate 
 
 The current exact deterministic candidate was produced from PR #13 code head:
 
-- source SHA: `231ada7baf83a3a1e9d2e38e35fc80a3f6d53758`;
-- CI run: **#432**, Actions run ID `31302447286`;
+- source SHA: `cda05bb4ff367d2c4a5d9d438c3f555f3788d186`;
+- CI run: **#443**, Actions run ID `31304052700`;
 - artifact: `MediaBridgeProbe-candidate`;
-- artifact ID: `9034919275`;
-- artifact digest: `sha256:e4d52833982212ff533f034789516811da1177c80f63b07baa572dfc7652b13b`;
+- artifact ID: `9035397233`;
+- artifact digest: `sha256:5cd10a0c6e9b61d8f060ca29ab8a84a7b1a1ba2408f2769b88ea86bf908be5c0`;
 - pinned adapter SHA: `3ac3d4bdf862c7b5399b4fba4df5689f5c38609a`;
-- repo-owned adapter capability patch SHA-256: `f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974`.
+- repo-owned adapter capability patch SHA-256: `f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974`;
+- observation schema: `2`.
 
-CI #432 passed both jobs completely. The macOS 26 job compiled the linked `MediaBridgeProbe` executable product with warnings as errors, ran **91/91 Swift tests**, applied the repo-owned patch to the exact pinned upstream tree, built the patched adapter, packaged the sandboxed/Hardened Runtime probe, verified the bundle, executed the real one-shot `capabilities` path, validated its exact tri-state JSON schema, performed a signature-preserving ZIP round-trip, re-verified signature/entitlements/source/adapter/patch provenance after extraction, and uploaded the candidate. With no active Now Playing source on the hosted runner, the capability probe correctly returned:
+CI #443 passed both jobs completely. The macOS 26 job ran **93/93 Swift tests**, applied the repo-owned capability patch to the exact pinned adapter, built the Objective-C framework, packaged the sandboxed/Hardened Runtime probe, executed and validated the real `capabilities` path, executed a real one-second `observe` path, validated the schema-v2 privacy-safe observation surface, performed a signature-preserving ZIP round-trip, re-verified signature/entitlements/source/adapter/patch provenance after extraction, and uploaded the candidate. The normal NotchHub shipping job simultaneously passed release/performance/media policy tests, security audit, coverage tests, shipping DMG verification, Sandbox/Hardened Runtime checks, artifact-size budget, performance harness smoke, and shipping-bundle probe isolation.
+
+With no active Now Playing source on the hosted runner, CI returned:
 
 ```json
 {"next":"unknown","previous":"unknown","seek":"unknown"}
 ```
 
-The normal NotchHub shipping job simultaneously passed release/performance/media policy tests, security audit, coverage tests, shipping DMG verification, Sandbox/Hardened Runtime checks, artifact-size budget, performance harness smoke, and shipping-bundle probe isolation.
+and a schema-v2 observation with `observedSession=false`, `observedSessionDisappearance=false`, and `sourceSwitchCount=0`.
 
 Prefer this exact CI artifact for physical acceptance rather than rebuilding locally.
-
-Using GitHub CLI from a checkout of the repository:
 
 ```bash
 rm -rf build/ci-media-probe-candidate
 mkdir -p build/ci-media-probe-candidate
 
-gh run download 31302447286 \
+gh run download 31304052700 \
   -n MediaBridgeProbe-candidate \
   -D build/ci-media-probe-candidate
 
@@ -65,7 +67,8 @@ ditto -x -k \
   build/ci-media-probe-candidate/unpacked
 
 APP="build/ci-media-probe-candidate/unpacked/MediaBridgeProbe.app"
-SOURCE_SHA="231ada7baf83a3a1e9d2e38e35fc80a3f6d53758"
+PROBE="$APP/Contents/MacOS/MediaBridgeProbe"
+SOURCE_SHA="cda05bb4ff367d2c4a5d9d438c3f555f3788d186"
 PATCH_SHA256="f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974"
 
 test "$(plutil -extract ProbeSourceCommit raw "$APP/Contents/Info.plist")" = "$SOURCE_SHA"
@@ -75,46 +78,22 @@ test "$(plutil -extract ProbeAdapterPatchSHA256 raw "$APP/Contents/Info.plist")"
   "$PATCH_SHA256"
 codesign --verify --deep --strict "$APP"
 codesign -dv --verbose=4 "$APP" 2>&1 | grep -Eq 'flags=.*runtime'
+codesign --display --entitlements - --xml "$APP" > build/media-probe-entitlements.plist
+python3 - <<'PY'
+import plistlib
+from pathlib import Path
+
+with Path('build/media-probe-entitlements.plist').open('rb') as handle:
+    entitlements = plistlib.load(handle)
+expected = {'com.apple.security.app-sandbox': True}
+if entitlements != expected:
+    raise SystemExit(f'Unexpected probe entitlements: {entitlements!r}')
+PY
 ```
 
-For the commands below, set:
+Do not substitute a newer branch head or locally rebuilt app during the same acceptance cycle. Documentation-only commits after this code SHA do not invalidate the candidate. If probe code, packaging, security policy, pinned adapter revision, or capability patch changes, obtain a new exact-head CI candidate and restart affected physical evidence.
 
-```bash
-PROBE_APP="build/ci-media-probe-candidate/unpacked/MediaBridgeProbe.app"
-PROBE="$PROBE_APP/Contents/MacOS/MediaBridgeProbe"
-```
-
-Do not substitute a newer branch head or locally rebuilt app during the same acceptance cycle. Documentation-only commits after this code SHA do not invalidate the recorded artifact. If probe code, packaging, security policy, pinned adapter revision, or capability patch changes, obtain a new exact-head CI candidate and restart the affected acceptance evidence.
-
-## Local candidate build — fallback only
-
-When CI artifact access is unavailable, a local candidate may be built from the exact code commit being tested:
-
-```bash
-git checkout 231ada7baf83a3a1e9d2e38e35fc80a3f6d53758
-SOURCE_SHA="$(git rev-parse HEAD)"
-
-bash scripts/bootstrap-media-bridge-probe.sh
-SOURCE_COMMIT="$SOURCE_SHA" bash scripts/build-media-bridge-probe-app.sh
-bash scripts/verify-media-bridge-probe.sh
-```
-
-The resulting fallback candidate is:
-
-```text
-build/MediaBridgeProbe.app
-```
-
-For the commands below set:
-
-```bash
-PROBE_APP="build/MediaBridgeProbe.app"
-PROBE="$PROBE_APP/Contents/MacOS/MediaBridgeProbe"
-```
-
-The probe is not a normal NotchHub release artifact.
-
-## Basic transport commands
+## Core transport commands
 
 Adapter self-test:
 
@@ -128,7 +107,7 @@ Authoritative capability snapshot:
 "$PROBE" capabilities
 ```
 
-The output surface is deliberately fixed to:
+The fixed surface is:
 
 ```json
 {"next":"supported|unsupported|unknown","previous":"supported|unsupported|unknown","seek":"supported|unsupported|unknown"}
@@ -137,19 +116,23 @@ The output surface is deliberately fixed to:
 Semantics:
 
 - `supported` — an active system Now Playing source exists and MediaRemote advertises the enabled command;
-- `unsupported` — an active system Now Playing source exists, an authoritative supported-command array was obtained, and that command is not enabled/present;
-- `unknown` — there is no active Now Playing source, or the capability API/result could not be established safely within the bounded probe.
+- `unsupported` — an active source exists, an authoritative supported-command array was obtained, and the command is not enabled/present;
+- `unknown` — there is no active source, or the authoritative capability API/result could not be established safely.
 
-Do not reinterpret `unknown` as `unsupported` and do not infer capability from whether a later command happens to succeed.
+Do not infer capability from command success.
 
-Observe for a bounded interval and write privacy-safe JSON through shell redirection outside the sandboxed process:
+Bounded event-driven observation:
 
 ```bash
-"$PROBE" observe --seconds 60 \
-  > build/media-bridge-observe.json
+"$PROBE" observe --seconds 60 > build/media-bridge-observe.json
 ```
 
-Typed command examples:
+Schema v2 retains only privacy-safe evidence. Two transition fields are especially useful:
+
+- `observedSessionDisappearance=true` proves that a real session was observed and a later no-session event arrived while the stream stayed active;
+- `sourceSwitchCount>0` proves that distinct system Now Playing source bundle identifiers were observed without restarting the probe.
+
+Typed commands:
 
 ```bash
 "$PROBE" send toggle
@@ -157,6 +140,8 @@ Typed command examples:
 "$PROBE" send previous
 "$PROBE" seek 42000000
 ```
+
+Actual media behavior must be observed for the command gates; process exit success alone is insufficient.
 
 ## Stable acceptance matrix
 
@@ -169,105 +154,92 @@ Typed command examples:
 | `NH-MEDIA-BRIDGE-005` | Spotify | System Now Playing source is observed when Spotify is active |
 | `NH-MEDIA-BRIDGE-006` | Browser media | Safari or Chromium YouTube system session is observed |
 | `NH-MEDIA-BRIDGE-007` | Additional player | One additional independent player that publishes Now Playing is observed |
-| `NH-MEDIA-BRIDGE-008` | Active-source switch | macOS source changes are reflected by stream events without restart/polling |
+| `NH-MEDIA-BRIDGE-008` | Active-source switch | `sourceSwitchCount > 0` while one observation process remains active |
 | `NH-MEDIA-BRIDGE-009` | Artwork | Artwork presence is observed for sources that actually publish artwork |
-| `NH-MEDIA-BRIDGE-010` | Toggle play/pause | Typed toggle works when the source accepts it |
-| `NH-MEDIA-BRIDGE-011` | Previous/next | Typed previous/next work when the source accepts them |
-| `NH-MEDIA-BRIDGE-012` | Seek | Typed seek works for a source that supports seek |
-| `NH-MEDIA-BRIDGE-013` | Source disappearance | Closing/stopping the active source yields no-session state without probe failure |
+| `NH-MEDIA-BRIDGE-010` | Toggle play/pause | Typed toggle changes playback state when the source accepts it |
+| `NH-MEDIA-BRIDGE-011` | Previous/next | Typed previous/next actually change tracks when the source accepts them |
+| `NH-MEDIA-BRIDGE-012` | Seek | Typed seek changes timeline position for a source that supports seek |
+| `NH-MEDIA-BRIDGE-013` | Source disappearance | `observedSessionDisappearance=true` after the active source is stopped/closed |
 | `NH-MEDIA-BRIDGE-014` | Clean teardown | Probe termination removes owned perl/helper processes; no orphan remains |
 | `NH-MEDIA-BRIDGE-015` | Failure lifecycle | Adapter crash/nonzero exit fails closed and does not restart-loop |
-| `NH-MEDIA-BRIDGE-016` | Capability surface | No-session/indeterminate state returns `unknown`; active sources expose authoritative `supported`/`unsupported` previous/next/seek states without guessing |
+| `NH-MEDIA-BRIDGE-016` | Capability surface | No-session returns `unknown`; active sources expose authoritative previous/next/seek states without guessing |
 | `NH-MEDIA-BRIDGE-017` | Permission surface | No Accessibility/Input Monitoring/Automation permission prompt appears |
 | `NH-MEDIA-BRIDGE-018` | Shipping isolation | `NotchHub.app` remains probe-free and retains its accepted runtime boundary |
 
-`NOT_SUPPORTED` is legitimate for a source-specific action the source does not expose. `NH-MEDIA-BRIDGE-016` is different: if the target Mac cannot obtain authoritative capability information from active sources, record `NEEDS_REDESIGN` rather than manufacturing a capability heuristic.
+`NOT_SUPPORTED` is legitimate for a source-specific action the source does not expose. If authoritative capability information cannot be established, record `NEEDS_REDESIGN` rather than manufacturing a heuristic.
 
-### Capability-specific physical checks
+## High-signal physical sequence
 
-Before opening a media source:
+### 1. No active source
 
-```bash
-"$PROBE" capabilities
-```
-
-Expected: `unknown` for all three fields when macOS has no active system Now Playing source.
-
-For each active test source, run the same command again while the source is the current macOS Now Playing source:
+Close or stop every app/browser tab that owns macOS Now Playing, then run:
 
 ```bash
 "$PROBE" capabilities
 ```
 
-Record the returned states before sending next/previous/seek. The capability result itself is the evidence used by future UI policy; command success/failure is a separate behavioral check and must not overwrite the recorded capability state.
+Expected when there is truly no active system session:
 
-## Record results
-
-The recorder accepts only known scenario IDs and the fixed status set `PASS|FAIL|NOT_SUPPORTED|NEEDS_REDESIGN`.
-
-For the exact CI #432 candidate:
-
-```bash
-SOURCE_SHA="231ada7baf83a3a1e9d2e38e35fc80a3f6d53758"
-
-python3 scripts/media-bridge-probe-acceptance.py \
-  --source-commit "$SOURCE_SHA" \
-  --macos "26.6" \
-  --hardware-model "Mac16,8" \
-  --result NH-MEDIA-BRIDGE-001=PASS \
-  --result NH-MEDIA-BRIDGE-002=PASS \
-  --result NH-MEDIA-BRIDGE-016=PASS \
-  --output build/media-bridge-probe-acceptance.json
+```json
+{"next":"unknown","previous":"unknown","seek":"unknown"}
 ```
 
-The example statuses above are illustrative only. Do not pre-mark `NH-MEDIA-BRIDGE-016` or any other physical scenario before executing it on the target Mac.
+### 2. Yandex Music command check
 
-The output has no free-form notes or media-content fields.
+Start an ordinary seekable track in Yandex Music:
+
+```bash
+"$PROBE" capabilities
+"$PROBE" send toggle
+"$PROBE" send toggle
+"$PROBE" send next
+"$PROBE" send previous
+"$PROBE" seek 42000000
+"$PROBE" observe --seconds 30 > build/media-bridge-observe-yandex-v2.json
+```
+
+Record whether toggle paused/resumed, next/previous changed tracks, and seek moved playback near 42 seconds. Inspect only the privacy-safe JSON report, not raw adapter payload.
+
+### 3. Session disappearance
+
+Start Yandex Music, then begin:
+
+```bash
+"$PROBE" observe --seconds 60 > build/media-bridge-disappearance.json
+```
+
+During that minute, quit/stop Yandex Music and leave all other media sources inactive. PASS evidence is `observedSession=true` and `observedSessionDisappearance=true`.
+
+### 4. Source switch
+
+Start Yandex Music, then begin:
+
+```bash
+"$PROBE" observe --seconds 90 > build/media-bridge-source-switch.json
+```
+
+While it remains running, move the active macOS Now Playing source from Yandex Music to Apple Music. PASS evidence is `sourceSwitchCount > 0`; the final `sourceBundleIdentifier` should correspond to the final active source.
+
+### 5. Remaining sources
+
+For Apple Music, Spotify, Safari/Chromium YouTube, and one additional independent Now Playing player, capture a capability snapshot and a bounded observation report. Record `NOT_SUPPORTED` only for a source-specific command that the authoritative capability surface says is unsupported.
+
+### 6. Permission surface
+
+Record whether macOS displayed any Accessibility, Input Monitoring, Automation/Apple Events, or Screen Recording permission prompt. Any such prompt is a failure of the intended boundary.
 
 ## Resource measurements
 
-Transport resource evidence is diagnostic M6.1 evidence. It does not change the accepted P0 baseline and does not substitute for the later P1 whole-app performance review.
+Transport resource evidence is diagnostic M6.1 evidence. It does not replace the accepted P0 baseline or the later P1 whole-app performance review.
 
-With a stable active media source, identify both the probe PID and its owned perl PID, then measure them separately using the existing privacy-safe process sampler:
-
-```bash
-PROBE_PID="$(pgrep -x MediaBridgeProbe | head -n 1)"
-PERL_PID="$(pgrep -P "$PROBE_PID" perl | head -n 1)"
-
-python3 scripts/perf-baseline.py \
-  --attach-pid "$PROBE_PID" \
-  --source-commit "$SOURCE_SHA" \
-  --scenario idle \
-  --warmup-seconds 10 \
-  --duration-seconds 60 \
-  --interval-seconds 1 \
-  --output build/perf-media-probe-parent.json
-
-python3 scripts/perf-baseline.py \
-  --attach-pid "$PERL_PID" \
-  --source-commit "$SOURCE_SHA" \
-  --scenario idle \
-  --warmup-seconds 10 \
-  --duration-seconds 60 \
-  --interval-seconds 1 \
-  --output build/perf-media-probe-perl.json
-```
-
-Also run a 10-minute stability measurement for both processes while the stream remains active and interaction is otherwise idle. Review CPU median/max, RSS median/max, thread max, RSS start/end, and thread start/end for runaway work or growth.
-
-After stopping the probe, both processes must be gone:
-
-```bash
-! kill -0 "$PROBE_PID" 2>/dev/null
-! kill -0 "$PERL_PID" 2>/dev/null
-```
+With a stable active media source and a long-running observation process, identify the parent probe and owned perl PID, then use the existing privacy-safe sampler for 60-second and 10-minute runs. Review CPU median/max, RSS median/max, thread max, RSS start/end, and thread start/end for runaway work or growth. After stopping the probe, both processes must be gone.
 
 ## Decision gate
 
-After the full matrix and resource evidence are reviewed, M6.1 ends in exactly one outcome:
+After the physical matrix and resource evidence are reviewed, M6.1 ends in exactly one outcome:
 
 - `ACCEPT_TRANSPORT` — current Sandbox/Hardened Runtime boundary works, lifecycle is bounded, capability information is sufficient, and resource behavior is acceptable;
 - `NEEDS_TRANSPORT_REDESIGN` — the mechanism is promising but capability/lifecycle/security/resource contract is insufficient for production as designed;
 - `REJECT_TRANSPORT` — the mechanism requires disproportionate security weakening or otherwise fails the product boundary.
 
-Only `ACCEPT_TRANSPORT` permits writing a later production `SystemMediaBridge` implementation plan. This probe itself never becomes production code by implication.
+Only `ACCEPT_TRANSPORT` permits a later production `SystemMediaBridge` implementation plan. The probe itself never becomes production code by implication.
