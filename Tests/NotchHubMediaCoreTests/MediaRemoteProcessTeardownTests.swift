@@ -19,9 +19,9 @@ struct MediaRemoteProcessTeardownTests {
         )
 
         try client.startObservation()
-        let clean = client.stop()
+        client.stop()
 
-        #expect(clean)
+        #expect(client.lastTeardownClean)
         #expect(launcher.handle.terminateCount == 1)
         #expect(launcher.handle.forceTerminateCount == 1)
         #expect(
@@ -43,9 +43,9 @@ struct MediaRemoteProcessTeardownTests {
         )
 
         try client.startObservation()
-        let clean = client.stop()
+        client.stop()
 
-        #expect(!clean)
+        #expect(!client.lastTeardownClean)
         #expect(client.state == .teardownFailure)
         #expect(launcher.handle.terminateCount == 1)
         #expect(launcher.handle.forceTerminateCount == 1)
@@ -77,6 +77,7 @@ private final class BoundedTeardownHandle: MediaRemoteProcessHandle {
     var terminationStatus: Int32 = 0
     var terminateCount = 0
     var forceTerminateCount = 0
+    var waitUntilExitCount = 0
     var waitTimeouts: [TimeInterval] = []
     private var waitResults: [Bool]
 
@@ -90,6 +91,10 @@ private final class BoundedTeardownHandle: MediaRemoteProcessHandle {
 
     func forceTerminate() {
         forceTerminateCount += 1
+    }
+
+    func waitUntilExit() {
+        waitUntilExitCount += 1
     }
 
     func waitUntilExit(timeout: TimeInterval) -> Bool {
