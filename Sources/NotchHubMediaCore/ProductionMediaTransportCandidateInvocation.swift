@@ -6,12 +6,16 @@ public enum ProductionMediaTransportCandidateInvocation: Equatable, Sendable {
     case send(ProductionMediaTransportCandidateCommand)
 
     public static func parse(arguments: [String]) throws -> Self {
-        switch arguments {
-        case ["capabilities"]:
+        if arguments == ["capabilities"] {
             return .capabilities
-        case ["observe", "--seconds", let rawSeconds]:
+        }
+
+        if arguments.count == 3,
+            arguments[0] == "observe",
+            arguments[1] == "--seconds"
+        {
             guard
-                let seconds = TimeInterval(rawSeconds),
+                let seconds = TimeInterval(arguments[2]),
                 seconds.isFinite,
                 seconds > 0,
                 seconds <= ProductionMediaTransportCandidateRunner.maximumObservationSeconds
@@ -19,15 +23,21 @@ public enum ProductionMediaTransportCandidateInvocation: Equatable, Sendable {
                 throw ProductionMediaTransportCandidateError.invalidArguments
             }
             return .observe(seconds: seconds)
-        case ["send", "toggle"]:
+        }
+
+        if arguments == ["send", "toggle"] {
             return .send(.toggle)
-        case ["send", "previous"]:
+        }
+        if arguments == ["send", "previous"] {
             return .send(.previous)
-        case ["send", "next"]:
+        }
+        if arguments == ["send", "next"] {
             return .send(.next)
-        case ["seek", let rawSeconds]:
+        }
+
+        if arguments.count == 2, arguments[0] == "seek" {
             guard
-                let seconds = Double(rawSeconds),
+                let seconds = Double(arguments[1]),
                 seconds.isFinite,
                 seconds > 0,
                 seconds <= MediaRemoteProcessClient.maximumSeekSeconds
@@ -35,8 +45,8 @@ public enum ProductionMediaTransportCandidateInvocation: Equatable, Sendable {
                 throw ProductionMediaTransportCandidateError.invalidArguments
             }
             return .send(.seek(seconds: seconds))
-        default:
-            throw ProductionMediaTransportCandidateError.invalidArguments
         }
+
+        throw ProductionMediaTransportCandidateError.invalidArguments
     }
 }
