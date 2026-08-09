@@ -2,42 +2,46 @@
 
 This procedure completes the physical M6.3 acceptance recorded in `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`.
 
-Do not use a newer production candidate for this gate. The exact code candidate is frozen at:
+The previous #558 candidate is superseded after the target-Mac 10-minute run exposed an unbounded production process-teardown defect. Use only the current exact candidate:
 
-- source SHA: `3932426bcf063162ee7de1378ed301c9ce664746`;
-- GitHub Actions run: `31317528628` / CI `#558`;
+- source SHA: `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
+- GitHub Actions run: `31339015100` / CI `#576`;
 - artifact: `ProductionMediaTransportCandidate-candidate`;
-- artifact ID: `9039199985`;
-- Actions artifact digest: `sha256:4e2f40fe124cc9919bbe1b17fc5759308513309c49e7fcc75bf0a9c6dac1b46d`.
+- artifact ID: `9045247126`;
+- artifact size: `199242` bytes;
+- Actions artifact digest: `sha256:a6323c504021f21e7638b40e47bedd0b2c1a9fcfcf861724c139151ee8faa804`.
 
-Later M6.3 commits add documentation, tests and acceptance tooling only. They do not replace the physical code candidate above.
+Later documentation-only acceptance commits do not replace this physical code candidate. Any later production transport/candidate packaging/signing/security-policy/adapter/patch/entitlement change requires a new exact candidate.
 
 ## 1. Prepare the exact candidate
 
-From a local clone of `True-Ruslan/notch-hub`, use the M6.3 branch so the acceptance collector is available:
+From a local clone of `True-Ruslan/notch-hub`:
 
 ```bash
 git fetch origin agent/m6-3-production-system-media-transport
 git switch agent/m6-3-production-system-media-transport
 git pull --ff-only
 
-SOURCE_SHA="3932426bcf063162ee7de1378ed301c9ce664746"
-ARTIFACT_ID="9039199985"
-EXPECTED_DIGEST="sha256:4e2f40fe124cc9919bbe1b17fc5759308513309c49e7fcc75bf0a9c6dac1b46d"
+SOURCE_SHA="c63f39c40b90d647e48271b9dc1d5ffd6e612c0b"
+ARTIFACT_ID="9045247126"
+EXPECTED_DIGEST="sha256:a6323c504021f21e7638b40e47bedd0b2c1a9fcfcf861724c139151ee8faa804"
 
 ACTUAL_DIGEST="$(gh api \
   repos/True-Ruslan/notch-hub/actions/artifacts/$ARTIFACT_ID \
   --jq '.digest')"
 test "$ACTUAL_DIGEST" = "$EXPECTED_DIGEST"
 
-gh run download 31317528628 \
+# Remove only the previous local candidate download. This makes the command
+# idempotent and avoids `gh run download ... file exists`.
+rm -rf build/m6-3-candidate
+mkdir -p build/m6-3-candidate build/m6-3-evidence
+
+gh run download 31339015100 \
   --repo True-Ruslan/notch-hub \
   --name ProductionMediaTransportCandidate-candidate \
   --dir build/m6-3-candidate
 
-rm -rf build/m6-3-candidate/extracted
-mkdir -p build/m6-3-candidate/extracted build/m6-3-evidence
-
+mkdir -p build/m6-3-candidate/extracted
 ditto -x -k \
   build/m6-3-candidate/ProductionMediaTransportCandidate.zip \
   build/m6-3-candidate/extracted
@@ -46,11 +50,11 @@ APP="$PWD/build/m6-3-candidate/extracted/ProductionMediaTransportCandidate.app"
 CANDIDATE="$APP/Contents/MacOS/MediaTransportCandidate"
 ```
 
-The Actions artifact digest is the digest reported by GitHub for artifact ID `9039199985`. It is not the SHA-256 of the nested `ProductionMediaTransportCandidate.zip` unless a separate nested-file digest is explicitly recorded.
+The Actions artifact digest is GitHub's digest for artifact ID `9045247126`; it is not necessarily the SHA-256 of the nested `ProductionMediaTransportCandidate.zip`.
 
-## 2. Automated preflight
+## 2. Automated preflight — start with no media session
 
-Close or stop every media source first so no system Now Playing session is active, then run:
+Stop/close Yandex Music, browser playback and any other active system Now Playing source first. Then run:
 
 ```bash
 python3 scripts/production_media_transport_acceptance.py preflight \
@@ -61,20 +65,18 @@ python3 scripts/production_media_transport_acceptance.py preflight \
 cat build/m6-3-evidence/preflight.json
 ```
 
-The collector fails closed unless all of the following are true:
+Required:
 
-- candidate bundle identifier and source/adapter/patch provenance match the frozen candidate;
-- `codesign --verify --deep --strict` succeeds;
+- source/adapter/patch provenance matches the current exact candidate;
+- strict code-sign verification succeeds;
 - Hardened Runtime is present;
 - effective entitlements are exactly App Sandbox only;
-- the real production candidate can execute the authoritative tri-state capability query;
-- the output contains only privacy-safe evidence.
-
-With no active source, `previous`, `next` and `seek` should normally be `unknown`. Never convert a no-session `unknown` into inferred support.
+- platform is `Mac16,8` / macOS 26.6;
+- with no active source, previous/next/seek should normally be `unknown/unknown/unknown` and must never be inferred as supported.
 
 ## 3. Automated source-cycle evidence
 
-Start with no active Now Playing source. Then run one continuous observation:
+Begin with no active Now Playing source and run:
 
 ```bash
 python3 scripts/production_media_transport_acceptance.py observe \
@@ -84,57 +86,57 @@ python3 scripts/production_media_transport_acceptance.py observe \
   --output build/m6-3-evidence/source-cycle.json
 ```
 
-During those 120 seconds perform this physical sequence without stopping the command:
+During the 120 seconds, without stopping the command:
 
-1. start playback in Yandex Music;
-2. allow the session and artwork to settle;
-3. start YouTube playback in Yandex Browser so macOS changes the authoritative Now Playing source;
-4. allow the browser session to settle;
-5. stop/close the active media source so the system session disappears.
+1. start Yandex Music playback and leave it active for several seconds;
+2. start YouTube playback in Yandex Browser and verify that macOS actually changes the system Now Playing source;
+3. leave the browser source active for several seconds;
+4. stop/close the active media source so the system session disappears.
 
-Then inspect only the privacy-safe report:
+Then:
 
 ```bash
 cat build/m6-3-evidence/source-cycle.json
 ```
 
-Expected evidence for the available target matrix:
+Required evidence:
 
 - `observedSession = true`;
 - `observedPlayingState = true`;
-- Yandex Music and browser are both exercised through the same system transport, with no player-specific controller;
-- `sourceSwitchCount > 0` if macOS authoritatively switched between distinct bundle identifiers during the observation;
-- `observedSessionDisappearance = true` after a real session disappears;
+- `sourceSwitchCount > 0` for the Yandex Music -> browser switch;
+- `observedSessionDisappearance = true`;
 - `cleanTeardown = true`;
-- capabilities remain exact `supported | unsupported | unknown` values;
-- no title, artist, album, artwork bytes, raw payload or listening history is persisted.
+- exact tri-state capabilities only;
+- no private metadata/raw payload retained.
 
-`observedArtworkClearOnSourceSwitch = true` is useful additional physical evidence only if the real source sequence naturally contains an artwork-bearing source followed by a distinct source without artwork. Do not manufacture this condition or install otherwise-unused software solely for the test; the regression is already deterministic-test PASS.
+If `sourceSwitchCount` remains `0`, do not guess that switching worked: repeat only this source-cycle after ensuring macOS really hands Now Playing ownership to Yandex Browser.
+
+`observedArtworkClearOnSourceSwitch = true` is optional physical evidence only when the real source sequence naturally switches from an artwork-bearing source to a distinct source without artwork. Do not manufacture this condition.
 
 ## 4. Actual command behavior
 
-Use an active source that reports the corresponding capability as `supported`. Run one command at a time and confirm the **real media behavior**; process success alone is not acceptance evidence.
+With Yandex Music or another active source reporting the corresponding capability as `supported`, run each command separately and confirm the real player behavior:
 
 ```bash
 "$CANDIDATE" send toggle
-# Confirm: playback actually pauses.
+# playback actually pauses
 
 "$CANDIDATE" send toggle
-# Confirm: playback actually resumes.
+# playback actually resumes
 
 "$CANDIDATE" send next
-# Confirm: the real next item starts, when supported.
+# next item actually starts, when supported
 
 "$CANDIDATE" send previous
-# Confirm: the real previous item starts, when supported.
+# previous item actually starts, when supported
 
 "$CANDIDATE" seek 42
-# Confirm: playback moves to approximately 00:42, when supported.
+# playback actually moves to approximately 00:42, when supported
 ```
 
-Important: the M6.3 production candidate `seek` CLI accepts **seconds**. The older M6.1 probe accepted microseconds; do not reuse the old value `42000000` here.
+The M6.3 candidate seek argument is **seconds**.
 
-Record the result as:
+Record:
 
 ```text
 Yandex Music / active source:
@@ -151,11 +153,11 @@ Automation — NONE/SHOWN
 Screen Recording — NONE/SHOWN
 ```
 
-Unsupported is acceptable only when the authoritative capability state for that active session is `unsupported`. Do not infer unsupported from command failure.
+`UNSUPPORTED` is acceptable only if the authoritative capability state is `unsupported`.
 
 ## 5. 60-second resource evidence
 
-Keep a real source playing steadily and avoid deliberate source switching during this measurement:
+Keep one real source playing steadily:
 
 ```bash
 python3 scripts/production_media_transport_acceptance.py resources \
@@ -167,11 +169,11 @@ python3 scripts/production_media_transport_acceptance.py resources \
 cat build/m6-3-evidence/resources-60s.json
 ```
 
-The collector uses fixed acceptance settings: 10-second warmup, 60 one-second samples, separate parent/owned-adapter CPU/RSS/thread summaries and conservative combined upper bounds. It requires exactly one owned adapter child and fails if that ownership cannot be proved.
+The collector records 60 one-second samples after the fixed warmup, separately measures parent and exactly one owned adapter child, reports conservative combined CPU/RSS/thread upper bounds, and fails closed on ambiguous ownership or teardown.
 
 ## 6. 10-minute stability evidence
 
-Keep the same real source active for the stability run:
+Keep the same source active:
 
 ```bash
 python3 scripts/production_media_transport_acceptance.py resources \
@@ -183,13 +185,21 @@ python3 scripts/production_media_transport_acceptance.py resources \
 cat build/m6-3-evidence/resources-10min.json
 ```
 
-This records approximately ten minutes of parent + owned-adapter evidence, including start/end/first-quartile RSS and thread values, combined drift, CPU/RSS/thread summaries, natural observer teardown and orphan-process detection.
+This is the regression gate for the target-discovered defect. The current candidate uses bounded process teardown: at most 1 second graceful wait, then owned-child `SIGKILL` if needed, then at most 1 second forced wait. The outer collector watchdog remains intentionally larger and should no longer terminate a correctly functioning candidate.
 
-Any sustained CPU work, RSS/thread accumulation, early observer exit or owned Perl process remaining after teardown fails the gate and must be investigated before shipping composition.
+Required:
+
+- approximately 10 minutes of parent + adapter metrics are produced;
+- no sustained CPU work or RSS/thread accumulation;
+- `observerReport.cleanTeardown = true`;
+- `orphanProcessDetected = false`;
+- the command returns normally and creates `resources-10min.json`.
+
+A timeout, missing JSON, unconfirmed teardown or owned adapter process after completion is a FAIL requiring investigation.
 
 ## 7. Evidence to return
 
-The minimum useful evidence set is:
+Return these four current-candidate files:
 
 ```text
 build/m6-3-evidence/preflight.json
@@ -198,12 +208,12 @@ build/m6-3-evidence/resources-60s.json
 build/m6-3-evidence/resources-10min.json
 ```
 
-Plus the short manual command/permission result block from section 4.
+Plus the short command/permission block from section 4.
 
-Do not include title, artist, album, artwork, listening history, screenshots of private media libraries, or raw adapter output. The generated JSON files are intentionally limited to operational/privacy-safe evidence.
+The old #558 JSON files remain useful diagnostic evidence and are recorded in the ledger, but they are not mixed into final acceptance because production process lifecycle code changed after the target defect was found.
+
+Do not include title, artist, album, artwork, listening history, screenshots of private media libraries or raw adapter output.
 
 ## Acceptance boundary
 
-Passing this procedure completes only the M6.3 production transport gate. It does **not** authorize skipping review of the next shipping-composition change.
-
-PR #16 stays Draft until the target evidence is recorded in `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md` and the M6.3 decision is explicit. Only after that may a separate slice add `NotchHubMediaCore` and the pinned adapter assets to `NotchHub.app`. Media UI remains a later slice.
+Passing this procedure completes only M6.3. PR #16 stays Draft until current-candidate target evidence is recorded and the decision is explicit. Shipping composition (`NotchHubMediaCore` + pinned adapter assets inside `NotchHub.app`) remains a separate reviewed slice; Media UI remains later.
