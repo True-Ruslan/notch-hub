@@ -136,6 +136,11 @@ struct ProductionMediaTransportCandidateTests {
         )
         #expect(
             ProductionMediaTransportCandidateFailureCode.classify(
+                MediaRemoteProcessClientError.teardownFailed
+            ) == .processTeardown
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
                 MediaRemoteProcessClientError.operationFailed(exitCode: 17)
             ) == .processFailed
         )
