@@ -43,8 +43,8 @@ jobs:
         env:
           SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          ./scripts/build-media-bridge-probe-app.sh
-          ./scripts/verify-media-bridge-probe.sh
+          bash scripts/build-media-bridge-probe-app.sh
+          bash scripts/verify-media-bridge-probe.sh
           rm -f build/MediaBridgeProbe.zip
           ditto -c -k --sequesterRsrc --keepParent \
             build/MediaBridgeProbe.app \
