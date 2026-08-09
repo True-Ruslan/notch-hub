@@ -3,6 +3,7 @@ import unittest
 from production_media_transport_acceptance import (
     EXPECTED_ADAPTER_COMMIT,
     EXPECTED_REPORT_KEYS,
+    EXPECTED_SOURCE_COMMIT,
     combine_resource_summaries,
     find_owned_adapter_pid,
     validate_candidate_report,
@@ -10,9 +11,13 @@ from production_media_transport_acceptance import (
 
 
 SOURCE_COMMIT = "3932426bcf063162ee7de1378ed301c9ce664746"
+CURRENT_SOURCE_COMMIT = "c63f39c40b90d647e48271b9dc1d5ffd6e612c0b"
 
 
 class ProductionMediaTransportAcceptanceTests(unittest.TestCase):
+    def test_default_source_commit_tracks_current_exact_candidate(self):
+        self.assertEqual(CURRENT_SOURCE_COMMIT, EXPECTED_SOURCE_COMMIT)
+
     def test_report_validation_accepts_exact_privacy_safe_schema(self):
         report = {
             "schemaVersion": 1,
