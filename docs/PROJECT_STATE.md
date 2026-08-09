@@ -73,17 +73,33 @@ Status: **ACCEPTED AND MERGED**.
 
 Merge commit: `094b494bd597643244e733baf5787a13b61fb4eb`.
 Authoritative requirements: `docs/specs/M1_NOTCH_INTERACTION.md`.
+Initial dwell/haptic plan: `docs/superpowers/plans/2026-08-08-m1-pointer-dwell-haptics.md`.
+Transition/animation hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
 
-Accepted behavior includes:
+Accepted behavior and architecture:
 
-- `120 ms` one-shot dwell with cancellation and stale-callback protection;
-- exact compact activation geometry with inclusive 4 pt left/right/bottom and no top inset;
-- exact top-edge physical activation acceptance;
-- one public AppKit `.levelChange` haptic for successful deliberate expansion only;
-- AppKit-owned `0.20 s` frame/corner transition with Reduce Motion support;
-- no polling/repeating timer/display link/custom frame loop;
-- one local and one narrow global `.mouseMoved` monitor with synchronous main-actor delivery;
-- App Sandbox + Hardened Runtime boundary unchanged.
+- `NotchInteractionCoordinator` owns pointer-intent timing/cancellation, not geometry, rendering, animation, or haptic output;
+- one cancellable one-shot compact -> expanded dwell, accepted at `120 ms`;
+- compact activation uses **4 pt inward depth on left, right and bottom only**, with **no top inset**;
+- exact boundaries are inclusive, including the physical top/maxY edge, using explicit directional comparisons rather than `CGRect.contains`;
+- quick transit cancels before dwell and produces no haptic; re-entry requires a fresh full dwell;
+- duplicate pointer events keep one pending activation and one semantic intent;
+- setup/current-pointer synchronization is non-activating;
+- generation validation makes cancelled/stale callbacks harmless;
+- `NotchPanelTransitionCoordinator` is the single authority for compact/expanding/expanded/collapsing presentation state;
+- expanded content is retained until matching collapse completion;
+- animation reversal cannot be won by stale completion;
+- public AppKit `.levelChange` haptic fires exactly once for successful deliberate user expansion and never for programmatic/cancelled/stale/collapse paths;
+- window animation uses `NSAnimationContext` + `panel.animator().setFrame(...)` and `CABasicAnimation` for corner radius;
+- accepted standard transition duration is `0.20 s`, with Reduce Motion resolving to immediate endpoint application;
+- cancellation freezes presentation-layer corner radius before removing animation to prevent jumps;
+- no display link, frame timer, polling loop, custom interpolation loop, or private animation API;
+- black hardware-notch compact surface and continuous `12 pt` compact / `22 pt` expanded radii remain accepted;
+- one local and one narrow global `.mouseMoved` monitor are explicitly owned/idempotently removed;
+- event-monitor callbacks use synchronous main-actor delivery rather than allocating a Task per mouse event;
+- App Sandbox + Hardened Runtime boundary remains unchanged.
+
+Broad M1 target-hardware acceptance used CI #319 source `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4`; all interaction/visual/animation/reversal/haptic/startup/Reduce Motion scenarios passed except a requested exact-top-edge refinement. The corrective exact-boundary TDD culminated in source `6d4c13739216503ec97fe3e71eada0fc9b32f298`, CI #332 / run `31260116337`, artifact ID `9022551570`, which passed the exact top-edge and cross-display transit checks. Final pre-merge head `7e04acd46414f39cf3d910b8c310deb22f9b9b9e` passed CI #338 and PR #10 was squash-merged.
 
 The narrow global `.mouseMoved` fallback remains accepted. Its `NSTrackingArea` / window-local experiment is deferred to P1 after the functional media slice so resource value is measured against the real application.
 
