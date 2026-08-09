@@ -51,6 +51,8 @@ With no active Now Playing source on the hosted runner, CI returned:
 
 and a schema-v2 observation with `observedSession=false`, `observedSessionDisappearance=false`, and `sourceSwitchCount=0`.
 
+The first physical Yandex run used the earlier source `231ada7b...`. It remains valuable historical transport evidence, but because the probe report implementation changed to schema v2, **final acceptance must rerun the affected checks on this current exact candidate**.
+
 Prefer this exact CI artifact for physical acceptance rather than rebuilding locally.
 
 ```bash
