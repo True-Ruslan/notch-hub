@@ -109,6 +109,22 @@ class ProductionMediaTransportCandidateCITests(unittest.TestCase):
 
         self.assertIn("${{ github.event.pull_request.head.sha || github.sha }}", workflow)
 
+    def test_ci_smokes_target_acceptance_collector_against_real_candidate(self):
+        workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+        required_fragments = (
+            "Smoke production media transport acceptance collector",
+            "scripts/production_media_transport_acceptance.py preflight",
+            "scripts/production_media_transport_acceptance.py observe",
+            "--seconds 1",
+            "production-media-transport-preflight-smoke.json",
+            "production-media-transport-observe-smoke.json",
+        )
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
