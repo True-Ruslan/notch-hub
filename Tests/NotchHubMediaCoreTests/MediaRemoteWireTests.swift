@@ -5,9 +5,28 @@ import Testing
 struct MediaRemoteWireTests {
     @Test
     func fullNoDiffPayloadDecodesNormalizedValues() throws {
-        let line = Data(
-            #"{"type":"data","diff":false,"payload":{"bundleIdentifier":"ru.yandex.desktop.music","playing":true,"title":"Track","artist":"Artist","album":"Album","durationMicros":180000000,"elapsedTimeMicros":42000000,"timestampEpochMicros":1786233600000000,"playbackRate":1.0,"artworkMimeType":"image/jpeg","artworkData":"AQID","contentItemIdentifier":"item-1","uniqueIdentifier":"unique-1"}}"#.utf8
-        )
+        let json = #"""
+            {
+              "type": "data",
+              "diff": false,
+              "payload": {
+                "bundleIdentifier": "ru.yandex.desktop.music",
+                "playing": true,
+                "title": "Track",
+                "artist": "Artist",
+                "album": "Album",
+                "durationMicros": 180000000,
+                "elapsedTimeMicros": 42000000,
+                "timestampEpochMicros": 1786233600000000,
+                "playbackRate": 1.0,
+                "artworkMimeType": "image/jpeg",
+                "artworkData": "AQID",
+                "contentItemIdentifier": "item-1",
+                "uniqueIdentifier": "unique-1"
+              }
+            }
+            """#
+        let line = Data(json.utf8)
 
         let decoded = try MediaRemoteWireDecoder.decode(line: line)
         let payload = try #require(decoded)
@@ -98,9 +117,11 @@ struct MediaRemoteWireTests {
         )
         let artwork = Data(repeating: 0x41, count: MediaRemoteWireDecoder.maximumArtworkBytes + 1)
             .base64EncodedString()
-        let oversized = Data(
-            "{\"type\":\"data\",\"diff\":false,\"payload\":{\"bundleIdentifier\":\"player\",\"playing\":true,\"artworkData\":\"\(artwork)\"}}".utf8
-        )
+        let oversizedJSON =
+            "{\"type\":\"data\",\"diff\":false,\"payload\":{"
+            + "\"bundleIdentifier\":\"player\",\"playing\":true,"
+            + "\"artworkData\":\"\(artwork)\"}}"
+        let oversized = Data(oversizedJSON.utf8)
 
         #expect(throws: MediaRemoteWireDecoderError.invalidArtwork) {
             try MediaRemoteWireDecoder.decode(line: invalid)
@@ -116,9 +137,11 @@ struct MediaRemoteWireTests {
             #"{"type":"data","diff":false,"payload":{"bundleIdentifier":"player","playing":true,"durationMicros":-1}}"#.utf8
         )
         let tooLong = MediaRemoteWireDecoder.maximumDurationMicros + 1
-        let oversizedDuration = Data(
-            "{\"type\":\"data\",\"diff\":false,\"payload\":{\"bundleIdentifier\":\"player\",\"playing\":true,\"durationMicros\":\(tooLong)}}".utf8
-        )
+        let oversizedDurationJSON =
+            "{\"type\":\"data\",\"diff\":false,\"payload\":{"
+            + "\"bundleIdentifier\":\"player\",\"playing\":true,"
+            + "\"durationMicros\":\(tooLong)}}"
+        let oversizedDuration = Data(oversizedDurationJSON.utf8)
         let excessiveRate = Data(
             #"{"type":"data","diff":false,"payload":{"bundleIdentifier":"player","playing":true,"playbackRate":17}}"#.utf8
         )
