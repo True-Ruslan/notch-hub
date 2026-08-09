@@ -43,6 +43,57 @@ class MediaBridgeProbeCITests(unittest.TestCase):
         self.assertNotIn("--target MediaBridgeProbe", workflow)
         self.assertNotIn("--target MediaBridgeProbe", build_script)
 
+    def test_capability_patch_is_repo_owned_reproducible_and_provenanced(self):
+        patch_path = (
+            REPOSITORY_ROOT
+            / "Tools"
+            / "MediaBridgeProbe"
+            / "patches"
+            / "mediaremote-adapter-capabilities.patch"
+        )
+        self.assertTrue(patch_path.is_file(), "missing repo-owned capability patch")
+
+        patch = patch_path.read_text(encoding="utf-8")
+        bootstrap = (
+            REPOSITORY_ROOT / "scripts" / "bootstrap-media-bridge-probe.sh"
+        ).read_text(encoding="utf-8")
+        build_script = (
+            REPOSITORY_ROOT / "scripts" / "build-media-bridge-probe-app.sh"
+        ).read_text(encoding="utf-8")
+        verify_script = (
+            REPOSITORY_ROOT / "scripts" / "verify-media-bridge-probe.sh"
+        ).read_text(encoding="utf-8")
+        workflow = (
+            REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
+        ).read_text(encoding="utf-8")
+
+        for fragment in (
+            "src/adapter/capabilities.m",
+            "adapter_capabilities",
+            "MRMediaRemoteGetSupportedCommandsForOrigin",
+            "MRMediaRemoteCommandInfoGetCommand",
+            "MRMediaRemoteCommandInfoGetEnabled",
+            "kMRANextTrack = 4",
+            "kMRAPreviousTrack = 5",
+            "kMRASeekToPlaybackPosition = 24",
+        ):
+            with self.subTest(patch_fragment=fragment):
+                self.assertIn(fragment, patch)
+
+        for fragment in (
+            "mediaremote-adapter-capabilities.patch",
+            "git -C \"$SOURCE_DIR\" apply --check",
+            "git -C \"$SOURCE_DIR\" apply \"$PATCH_FILE\"",
+            "shasum -a 256",
+        ):
+            with self.subTest(bootstrap_fragment=fragment):
+                self.assertIn(fragment, bootstrap)
+
+        self.assertIn("ProbeAdapterPatchSHA256", build_script)
+        self.assertIn("ProbeAdapterPatchSHA256", verify_script)
+        self.assertIn("MediaBridgeProbe capabilities", workflow)
+        self.assertIn("media-bridge-capabilities.json", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
