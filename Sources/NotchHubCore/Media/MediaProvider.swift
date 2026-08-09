@@ -22,5 +22,5 @@ protocol MediaProvider: AnyObject {
 
     func start()
     func stop()
-    func send(_ command: MediaCommand) async -> MediaCommandResult
+    func send(_ command: MediaCommand) -> MediaCommandResult
 }
