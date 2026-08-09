@@ -137,6 +137,29 @@ struct ProbeProcessTests {
     }
 
     @Test
+    func oneShotCommandTimeoutTerminatesAndFailsClosed() throws {
+        let launcher = FakeProbeProcessLauncher()
+        launcher.nextTerminationStatus = 0
+        launcher.nextWaitCompletes = false
+        let controller = ProbeProcessController(launcher: launcher)
+
+        #expect(throws: ProbeProcessControllerError.timedOut) {
+            try controller.runCommand(
+                .next,
+                scriptURL: scriptURL,
+                frameworkURL: frameworkURL,
+                testClientURL: testClientURL
+            )
+        }
+
+        let process = try #require(launcher.lastProcess)
+        #expect(process.lastTimeoutSeconds == ProbeProcessController.oneShotTimeoutSeconds)
+        #expect(process.terminateCount == 1)
+        #expect(process.unboundedWaitCount == 1)
+        #expect(process.clearHandlerCount == 1)
+    }
+
+    @Test
     func selfTestUsesOnlyFixedAdapterTestCommand() throws {
         let launcher = FakeProbeProcessLauncher()
         launcher.nextTerminationStatus = 0
@@ -167,6 +190,7 @@ private final class FakeProbeProcessLauncher: ProbeProcessLaunching {
     var launches: [ProbeProcessConfiguration] = []
     var lastProcess: FakeProbeProcess?
     var nextTerminationStatus: Int32 = 0
+    var nextWaitCompletes = true
 
     private var stdoutHandler: (@MainActor @Sendable (Data) -> Void)?
     private var stderrHandler: (@MainActor @Sendable (Data) -> Void)?
@@ -183,7 +207,10 @@ private final class FakeProbeProcessLauncher: ProbeProcessLaunching {
         stderrHandler = stderr
         terminationHandler = termination
 
-        let process = FakeProbeProcess(terminationStatus: nextTerminationStatus)
+        let process = FakeProbeProcess(
+            terminationStatus: nextTerminationStatus,
+            waitCompletes: nextWaitCompletes
+        )
         lastProcess = process
         return process
     }
@@ -209,10 +236,14 @@ private final class FakeProbeProcess: ProbeProcessHandle {
     var terminationStatus: Int32
     var terminateCount = 0
     var waitCount = 0
+    var unboundedWaitCount = 0
     var clearHandlerCount = 0
+    var lastTimeoutSeconds: TimeInterval?
+    private let waitCompletes: Bool
 
-    init(terminationStatus: Int32) {
+    init(terminationStatus: Int32, waitCompletes: Bool) {
         self.terminationStatus = terminationStatus
+        self.waitCompletes = waitCompletes
     }
 
     func terminate() {
@@ -222,7 +253,17 @@ private final class FakeProbeProcess: ProbeProcessHandle {
 
     func waitUntilExit() {
         waitCount += 1
+        unboundedWaitCount += 1
         isRunning = false
+    }
+
+    func waitUntilExit(timeoutSeconds: TimeInterval) -> Bool {
+        waitCount += 1
+        lastTimeoutSeconds = timeoutSeconds
+        if waitCompletes {
+            isRunning = false
+        }
+        return waitCompletes
     }
 
     func clearHandlers() {
