@@ -547,7 +547,7 @@ private final class FoundationMediaRemoteProcessHandle: MediaRemoteProcessHandle
         let handle = stdoutPipe.fileHandleForReading
         var result = Data()
 
-        while true {
+        for _ in 0...maximumBytes {
             let remaining = maximumBytes + 1 - result.count
             guard remaining > 0 else {
                 throw MediaRemoteProcessClientError.standardOutputTooLarge
@@ -555,7 +555,7 @@ private final class FoundationMediaRemoteProcessHandle: MediaRemoteProcessHandle
 
             let chunk = try handle.read(upToCount: remaining) ?? Data()
             if chunk.isEmpty {
-                break
+                return result
             }
             result.append(chunk)
             if result.count > maximumBytes {
@@ -563,7 +563,7 @@ private final class FoundationMediaRemoteProcessHandle: MediaRemoteProcessHandle
             }
         }
 
-        return result
+        throw MediaRemoteProcessClientError.standardOutputTooLarge
     }
 
     func clearHandlers() {
