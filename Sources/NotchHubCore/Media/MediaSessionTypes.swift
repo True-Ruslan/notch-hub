@@ -54,7 +54,7 @@ struct MediaSourceIdentity: Sendable, Equatable {
     }
 }
 
-struct MediaSessionSnapshot: Sendable, Equatable {
+struct MediaSessionSnapshot: Sendable {
     let sequence: MediaSequence
     let source: MediaSourceIdentity
     let title: String?
