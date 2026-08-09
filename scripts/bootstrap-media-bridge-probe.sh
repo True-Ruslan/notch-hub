@@ -37,6 +37,10 @@ fi
 test "$(git -C "$SOURCE_DIR" rev-parse HEAD)" = "$ADAPTER_COMMIT"
 
 if ! has_required_assets; then
+  if ! command -v cmake >/dev/null 2>&1; then
+    echo "Media bridge probe bootstrap requires CMake to build the pinned adapter." >&2
+    exit 1
+  fi
   cmake -S "$SOURCE_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
   cmake --build "$BUILD_DIR" --config Release
 fi
