@@ -102,6 +102,21 @@ class MediaBridgeProbeCITests(unittest.TestCase):
         self.assertIn("MediaBridgeProbe capabilities", workflow)
         self.assertIn("media-bridge-capabilities.json", workflow)
 
+    def test_ci_executes_and_validates_privacy_safe_observation_schema(self):
+        workflow = (
+            REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
+        ).read_text(encoding="utf-8")
+
+        for fragment in (
+            "MediaBridgeProbe observe --seconds 1",
+            "media-bridge-observation.json",
+            "schemaVersion",
+            "observedSessionDisappearance",
+            "sourceSwitchCount",
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
