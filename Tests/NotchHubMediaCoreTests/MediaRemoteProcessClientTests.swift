@@ -41,12 +41,12 @@ struct MediaRemoteProcessClientTests {
         }
 
         try client.startObservation()
-        launcher.emitStdout(
-            Data(
-                #"{"type":"data","diff":false,"payload":{"bundleIdentifier":"player","playing":true,"title":"Track"}}
-"#.utf8
-            ))
-        launcher.emitStderr(Data(repeating: 0x61, count: MediaRemoteProcessClient.maximumStderrBytes * 2))
+        let observationJSON =
+            #"{"type":"data","diff":false,"payload":{"bundleIdentifier":"player","playing":true,"title":"Track"}}"#
+        launcher.emitStdout(Data((observationJSON + "\n").utf8))
+        launcher.emitStderr(
+            Data(repeating: 0x61, count: MediaRemoteProcessClient.maximumStderrBytes * 2)
+        )
 
         #expect(receivedBundleIdentifier == "player")
         #expect(client.stderrByteCount == MediaRemoteProcessClient.maximumStderrBytes)
@@ -137,12 +137,12 @@ struct MediaRemoteProcessClientTests {
 
     @Test
     func capabilitiesUseExactInvocationAndStrictDecoder() async throws {
+        let capabilitiesJSON =
+            #"{"next":"supported","previous":"unsupported","seek":"unknown"}"#
         let launcher = FakeMediaRemoteProcessLauncher(
             automaticTerminationStatus: 0,
-            capturedStdout: Data(
-                #"{"next":"supported","previous":"unsupported","seek":"unknown"}
-"#.utf8
-            ))
+            capturedStdout: Data((capabilitiesJSON + "\n").utf8)
+        )
         let scheduler = FakeMediaRemoteTimeoutScheduler()
         let client = makeClient(launcher: launcher, scheduler: scheduler)
 
