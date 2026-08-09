@@ -6,7 +6,7 @@ readonly BUILD_ROOT="$ROOT_DIR/build/media-bridge-probe"
 readonly VENDOR_SOURCE="$BUILD_ROOT/vendor/source"
 readonly ADAPTER_COMMIT="3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
 readonly FRAMEWORK_SOURCE="$VENDOR_SOURCE/build/MediaRemoteAdapter.framework"
-readonly TEST_CLIENT_SOURCE="$FRAMEWORK_SOURCE/Versions/A/Support/MediaRemoteAdapterTestClient"
+readonly TEST_CLIENT_SOURCE="$VENDOR_SOURCE/build/MediaRemoteAdapterTestClient"
 readonly SCRIPT_SOURCE="$VENDOR_SOURCE/bin/mediaremote-adapter.pl"
 readonly LICENSE_SOURCE="$VENDOR_SOURCE/LICENSE"
 readonly APP="$ROOT_DIR/build/MediaBridgeProbe.app"
@@ -73,10 +73,6 @@ PLIST
 
 plutil -lint "$CONTENTS/Info.plist" >/dev/null
 
-INTERNAL_TEST_CLIENT="$RESOURCES_DIR/MediaRemoteAdapter.framework/Versions/A/Support/MediaRemoteAdapterTestClient"
-if test -f "$INTERNAL_TEST_CLIENT"; then
-  codesign --force --sign - "$INTERNAL_TEST_CLIENT"
-fi
 codesign --force --sign - "$RESOURCES_DIR/MediaRemoteAdapter.framework"
 codesign --force --sign - "$RESOURCES_DIR/MediaRemoteAdapterTestClient"
 codesign --force --options runtime \
