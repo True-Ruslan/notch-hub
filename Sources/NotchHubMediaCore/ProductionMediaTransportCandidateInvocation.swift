@@ -1,5 +1,10 @@
 import Foundation
 
+enum ProductionMediaTransportCandidateLimits {
+    static let maximumObservationSeconds: TimeInterval = 1_200
+    static let maximumSeekSeconds = Double(MediaRemoteWireDecoder.maximumDurationMicros) / 1_000_000
+}
+
 public enum ProductionMediaTransportCandidateInvocation: Equatable, Sendable {
     case capabilities
     case observe(seconds: TimeInterval)
@@ -18,7 +23,7 @@ public enum ProductionMediaTransportCandidateInvocation: Equatable, Sendable {
                 let seconds = TimeInterval(arguments[2]),
                 seconds.isFinite,
                 seconds > 0,
-                seconds <= ProductionMediaTransportCandidateRunner.maximumObservationSeconds
+                seconds <= ProductionMediaTransportCandidateLimits.maximumObservationSeconds
             else {
                 throw ProductionMediaTransportCandidateError.invalidArguments
             }
@@ -40,7 +45,7 @@ public enum ProductionMediaTransportCandidateInvocation: Equatable, Sendable {
                 let seconds = Double(arguments[1]),
                 seconds.isFinite,
                 seconds > 0,
-                seconds <= MediaRemoteProcessClient.maximumSeekSeconds
+                seconds <= ProductionMediaTransportCandidateLimits.maximumSeekSeconds
             else {
                 throw ProductionMediaTransportCandidateError.invalidArguments
             }
