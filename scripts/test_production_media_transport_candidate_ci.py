@@ -7,7 +7,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
 class ProductionMediaTransportCandidateCITests(unittest.TestCase):
-    def test_candidate_is_separate_product_and_shipping_app_remains_isolated(self):
+    def test_candidate_remains_separate_from_shipping_runtime_assets(self):
         package = (REPOSITORY_ROOT / "Package.swift").read_text(encoding="utf-8")
 
         self.assertIn(
@@ -18,21 +18,38 @@ class ProductionMediaTransportCandidateCITests(unittest.TestCase):
         self.assertIn('dependencies: ["NotchHubMediaCore"]', package)
         self.assertIn('path: "Tools/ProductionMediaTransportCandidate/CLI"', package)
         self.assertIn(
-            '.executableTarget(\n            name: "NotchHubApp",\n            dependencies: ["NotchHubCore"]',
+            '.executableTarget(\n            name: "NotchHubApp",\n            dependencies: ["NotchHubCore", "NotchHubMediaCore"]',
             package,
         )
 
-        forbidden = (
-            "MediaTransportCandidate",
-            "ProductionMediaTransportCandidate.app",
+        build_app = (REPOSITORY_ROOT / "scripts" / "build-app.sh").read_text(encoding="utf-8")
+        for required in (
             "mediaremote-adapter.pl",
             "MediaRemoteAdapter.framework",
-        )
-        for relative_path in ("scripts/build-app.sh", "scripts/build-dmg.sh"):
-            text = (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8")
-            for fragment in forbidden:
-                with self.subTest(path=relative_path, fragment=fragment):
-                    self.assertNotIn(fragment, text)
+            "MediaRemoteAdapter-LICENSE.txt",
+            "media-transport-provenance.json",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, build_app)
+
+        for forbidden in (
+            "MediaTransportCandidate",
+            "ProductionMediaTransportCandidate.app",
+            "MediaRemoteAdapterTestClient",
+            "MediaBridgeProbe.app",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, build_app)
+
+        build_dmg = (REPOSITORY_ROOT / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
+        for forbidden in (
+            "MediaTransportCandidate",
+            "ProductionMediaTransportCandidate.app",
+            "MediaRemoteAdapterTestClient",
+            "MediaBridgeProbe.app",
+        ):
+            with self.subTest(path="scripts/build-dmg.sh", forbidden=forbidden):
+                self.assertNotIn(forbidden, build_dmg)
 
     def test_candidate_has_exact_sandbox_only_entitlement(self):
         path = REPOSITORY_ROOT / "Resources" / "ProductionMediaTransportCandidate.entitlements"
