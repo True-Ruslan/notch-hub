@@ -80,7 +80,11 @@ struct MediaRemoteSystemTransportTests {
         client.emitPayload(makePayload(source: "player", playing: true, title: "A", contentIdentifier: "a"))
         await waitForCapabilityRequests(client, count: 1)
         client.completeCapabilityRequest(at: 0, with: supportedCapabilities)
-        await Task.yield()
+        await waitForCapabilitySnapshot(
+            events: { events },
+            sequence: MediaSequence(generation: 1, revision: 2),
+            capabilities: supportedCapabilities
+        )
         events.removeAll()
 
         client.emitPayload(makePayload(source: "player", playing: false, title: "A", contentIdentifier: "a"))
@@ -105,7 +109,11 @@ struct MediaRemoteSystemTransportTests {
         client.emitPayload(makePayload(source: "player", playing: true, title: "A", contentIdentifier: "a"))
         await waitForCapabilityRequests(client, count: 1)
         client.completeCapabilityRequest(at: 0, with: supportedCapabilities)
-        await Task.yield()
+        await waitForCapabilitySnapshot(
+            events: { events },
+            sequence: MediaSequence(generation: 1, revision: 2),
+            capabilities: supportedCapabilities
+        )
 
         let snapshots = sessionSnapshots(events)
         #expect(snapshots.count == 2)
@@ -181,7 +189,11 @@ struct MediaRemoteSystemTransportTests {
             seek: .unknown
         )
         client.completeCapabilityRequest(at: 1, with: bCapabilities)
-        await Task.yield()
+        await waitForCapabilitySnapshot(
+            events: { events },
+            sequence: MediaSequence(generation: 2, revision: 2),
+            capabilities: bCapabilities
+        )
 
         let snapshots = sessionSnapshots(events)
         #expect(snapshots.count == 1)
@@ -358,6 +370,22 @@ struct MediaRemoteSystemTransportTests {
             await Task.yield()
         }
         Issue.record("Timed out waiting for capability request count \(count)")
+    }
+
+    private func waitForCapabilitySnapshot(
+        events: @MainActor () -> [SystemMediaTransportEvent],
+        sequence: MediaSequence,
+        capabilities: MediaCommandCapabilities
+    ) async {
+        for _ in 0..<100 {
+            if sessionSnapshots(events()).contains(where: {
+                $0.sequence == sequence && $0.capabilities == capabilities
+            }) {
+                return
+            }
+            await Task.yield()
+        }
+        Issue.record("Timed out waiting for capability snapshot \(sequence)")
     }
 }
 
