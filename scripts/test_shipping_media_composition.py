@@ -28,10 +28,12 @@ class ShippingMediaCompositionPolicyTests(unittest.TestCase):
             "NotchPanelController",
             "ShippingMediaRuntime",
             "mediaRuntime.start()",
-            "mediaRuntime.stop()",
+            "mediaRuntime?.stop()",
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, source)
+
+        self.assertLess(source.index("mediaRuntime?.stop()"), source.index("mediaRuntime = nil"))
 
     def test_info_plist_reserves_exact_shipping_provenance_keys(self):
         path = REPOSITORY_ROOT / "Resources" / "Info.plist"
