@@ -15,6 +15,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from performance_policy import (
+    ProcessSample,
     count_ps_thread_rows,
     parse_ps_sample,
     summarize_samples,
@@ -353,23 +354,40 @@ def _ps_table() -> str:
     return _run_text(["/bin/ps", "-axo", "pid=,ppid=,command="])
 
 
-def _sample_process(pid: int) -> dict[str, Any]:
-    result = subprocess.run(
-        ["/bin/ps", "-p", str(pid), "-o", "%cpu=,rss=,command="],
-        check=True,
+def _sample_process(pid: int) -> ProcessSample:
+    metrics = subprocess.run(
+        ["/bin/ps", "-p", str(pid), "-o", "%cpu=", "-o", "rss="],
+        check=False,
         capture_output=True,
         text=True,
     )
-    cpu, rss = parse_ps_sample(result.stdout)
-    threads = count_ps_thread_rows(
-        _run_text(["/bin/ps", "-M", "-p", str(pid), "-o", "pid="])
+    if metrics.returncode != 0:
+        message = metrics.stderr.strip() or metrics.stdout.strip() or f"ps exited {metrics.returncode}"
+        raise RuntimeError(f"process CPU/RSS sampling failed for pid {pid}: {message}")
+
+    metric_line = metrics.stdout.strip()
+    metric_fields = metric_line.split()
+    if len(metric_fields) != 2:
+        raise RuntimeError(
+            f"process CPU/RSS sampling returned unexpected output for pid {pid}: {metric_line!r}"
+        )
+
+    threads = subprocess.run(
+        ["/bin/ps", "-M", str(pid)],
+        check=False,
+        capture_output=True,
+        text=True,
     )
-    return {
-        "elapsedSeconds": 0.0,
-        "cpuPercent": cpu,
-        "rssKiB": rss,
-        "threads": threads,
-    }
+    if threads.returncode != 0:
+        message = threads.stderr.strip() or threads.stdout.strip() or f"ps -M exited {threads.returncode}"
+        raise RuntimeError(f"process thread sampling failed for pid {pid}: {message}")
+
+    try:
+        thread_count = count_ps_thread_rows(threads.stdout)
+    except ValueError as error:
+        raise RuntimeError(f"process thread sampling returned invalid output for pid {pid}: {error}") from error
+
+    return parse_ps_sample(f"{metric_fields[0]} {metric_fields[1]} {thread_count}")
 
 
 def _sleep_until(target: float) -> None:
@@ -418,8 +436,8 @@ def collect_resources(app: pathlib.Path, source_commit: str, mode: str) -> dict[
         text=True,
     )
     started_at = _utc_now()
-    parent_samples: list[dict[str, Any]] = []
-    adapter_samples: list[dict[str, Any]] = []
+    parent_samples: list[ProcessSample] = []
+    adapter_samples: list[ProcessSample] = []
     adapter_pid: int | None = None
     try:
         adapter_pid = _discover_owned_adapter(observer.pid)
@@ -428,13 +446,8 @@ def collect_resources(app: pathlib.Path, source_commit: str, mode: str) -> dict[
         sample_count = int(round(duration_seconds / interval_seconds))
         for index in range(sample_count):
             _ensure_process_alive(observer, "candidate observer")
-            parent = _sample_process(observer.pid)
-            adapter = _sample_process(adapter_pid)
-            elapsed = time.monotonic() - sample_start
-            parent["elapsedSeconds"] = round(elapsed, 6)
-            adapter["elapsedSeconds"] = round(elapsed, 6)
-            parent_samples.append(parent)
-            adapter_samples.append(adapter)
+            parent_samples.append(_sample_process(observer.pid))
+            adapter_samples.append(_sample_process(adapter_pid))
             if index + 1 < sample_count:
                 _sleep_until(sample_start + ((index + 1) * interval_seconds))
 
