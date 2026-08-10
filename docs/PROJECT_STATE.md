@@ -8,7 +8,7 @@ Protected branch target: `main`
 
 ## Current product state
 
-**M6.3 concrete production system media transport is ACCEPTED on the target Mac. PR #16 is ready for final exact-head CI/review and merge. Shipping composition remains a separate next slice: the accepted transport is not yet linked into `NotchHubApp`, and the pinned adapter assets are not yet packaged into the shipping app.**
+**M6.3 concrete production system media transport is ACCEPTED on the target Mac. The next engineering slice is shipping composition: intentionally link the accepted media core/transport and pinned adapter resources into `NotchHub.app`, then collect fresh shipping security, artifact-size, and target-Mac runtime evidence before Media UI work.**
 
 Accepted foundations/integrations:
 
@@ -106,7 +106,7 @@ The media core is still intentionally outside the shipping `NotchHubApp` link gr
 
 ### M6.3 — concrete production system transport
 
-Status: **ACCEPTED — PR #16 FINALIZATION/MERGE PENDING**.
+Status: **ACCEPTED**.
 
 Accepted exact candidate:
 
@@ -166,10 +166,9 @@ M6.3 authorizes one narrowly reviewed production-code process boundary inside is
 
 ## Next optimal step
 
-1. Finalize PR #16: exact-head CI, final change review, Ready state and squash merge through protected `main`.
-2. Start a **separate shipping-composition slice** that links `NotchHubMediaCore` and the pinned adapter/framework resources into `NotchHub.app`.
-3. In that slice, preserve the accepted security boundary and collect fresh package/signature/entitlement/artifact-size evidence; do not silently widen P0 budgets.
-4. Run target-Mac whole-app runtime evidence for the composed transport lifecycle before considering the path reliable.
-5. After composition is accepted, implement compact + expanded media-first UI.
-6. Then implement local-window gesture/haptic/seek state machines under TDD and run physical media/haptic acceptance.
-7. After the complete functional media slice, perform P1 whole-app resource review and the deferred `NSTrackingArea` / window-local pointer experiment.
+1. Start a **separate shipping-composition slice** that links `NotchHubMediaCore` and the pinned adapter/framework resources into `NotchHub.app`.
+2. Preserve the accepted security boundary and collect fresh package/signature/entitlement/artifact-size evidence; do not silently widen P0 budgets.
+3. Run target-Mac whole-app runtime evidence for the composed transport lifecycle before considering the path reliable.
+4. After composition is accepted, implement compact + expanded media-first UI.
+5. Then implement local-window gesture/haptic/seek state machines under TDD and run physical media/haptic acceptance.
+6. After the complete functional media slice, perform P1 whole-app resource review and the deferred `NSTrackingArea` / window-local pointer experiment.
