@@ -1,14 +1,14 @@
-enum MediaProviderFailure: Sendable, Equatable {
+package enum MediaProviderFailure: Sendable, Equatable {
     case transport
     case protocolViolation
 }
 
-enum MediaCommandResult: Sendable, Equatable {
+package enum MediaCommandResult: Sendable, Equatable {
     case sent
     case failed
 }
 
-enum MediaProviderEvent: Sendable {
+package enum MediaProviderEvent: Sendable {
     case ready
     case session(MediaSessionSnapshot)
     case noSession(MediaSequence)
@@ -17,7 +17,7 @@ enum MediaProviderEvent: Sendable {
 }
 
 @MainActor
-protocol MediaProvider: AnyObject {
+package protocol MediaProvider: AnyObject {
     var eventHandler: (@MainActor @Sendable (MediaProviderEvent) -> Void)? { get set }
 
     func start()
