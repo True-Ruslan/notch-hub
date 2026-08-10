@@ -286,6 +286,7 @@ jobs:
       - name: Build release DMG
         env:
           BUILD_NUMBER: ${{ github.run_number }}
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: ./scripts/build-dmg.sh
 
       - name: Verify bundle, hardened runtime, sandbox and DMG
@@ -293,6 +294,10 @@ jobs:
           VERSION="$(tr -d '[:space:]' < VERSION)"
           APP="build/NotchHub.app"
           EXECUTABLE="$APP/Contents/MacOS/NotchHub"
+          PATCH_FILE="Tools/MediaBridgeProbe/patches/mediaremote-adapter-capabilities.patch"
+          PATCH_SHA256="$(shasum -a 256 "$PATCH_FILE" | awk '{print $1}')"
+          SOURCE_COMMIT="${{ github.event.pull_request.head.sha || github.sha }}"
+          ADAPTER_COMMIT="3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
 
           test -x "$EXECUTABLE"
           test -f "$APP/Contents/Info.plist"
@@ -300,8 +305,17 @@ jobs:
           test "$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")" = "$VERSION"
           test "$(plutil -extract CFBundleVersion raw "$APP/Contents/Info.plist")" = "${{ github.run_number }}"
           test "$(plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist")" = "ru.trueruslan.notchhub"
+          test "$(plutil -extract NHSourceCommit raw "$APP/Contents/Info.plist")" = "$SOURCE_COMMIT"
+          test "$(plutil -extract NHAdapterCommit raw "$APP/Contents/Info.plist")" = "$ADAPTER_COMMIT"
+          test "$(plutil -extract NHAdapterPatchSHA256 raw "$APP/Contents/Info.plist")" = "$PATCH_SHA256"
+
+          test -f "$APP/Contents/Resources/mediaremote-adapter.pl"
+          test -d "$APP/Contents/Resources/MediaRemoteAdapter.framework"
+          test -f "$APP/Contents/Resources/MediaRemoteAdapter-LICENSE.txt"
+          test -f "$APP/Contents/Resources/media-transport-provenance.json"
 
           codesign --verify --deep --strict "$APP"
+          codesign --verify --strict "$APP/Contents/Resources/MediaRemoteAdapter.framework"
           codesign -dv --verbose=4 "$APP" 2> build/codesign-details.txt
           cat build/codesign-details.txt
           grep -Eq 'flags=.*runtime' build/codesign-details.txt
@@ -321,6 +335,27 @@ jobs:
               raise SystemExit(f'Unexpected effective entitlements: {entitlements!r}')
           PY
 
+          python3 - "$APP/Contents/Resources/media-transport-provenance.json" "$SOURCE_COMMIT" "$ADAPTER_COMMIT" "$PATCH_SHA256" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          expected = {
+              'schemaVersion': 1,
+              'sourceCommit': sys.argv[2],
+              'adapterCommit': sys.argv[3],
+              'adapterPatchSHA256': sys.argv[4],
+          }
+          if data != expected:
+              raise SystemExit(f'Unexpected shipping provenance: {data!r}')
+          PY
+
+          grep -q 'capabilities' "$APP/Contents/Resources/mediaremote-adapter.pl"
+          nm -gU \
+            "$APP/Contents/Resources/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter" \
+            | grep -q '_adapter_capabilities$'
+
           otool -L "$EXECUTABLE" | tail -n +2 | awk '{print $1}' | while read -r library; do
             case "$library" in
               /System/*|/usr/lib/*) ;;
@@ -335,17 +370,14 @@ jobs:
             exit 1
           fi
 
-          if find "$APP" -type f \( \
+          if find "$APP" \( \
             -name 'MediaBridgeProbe' -o \
+            -name 'MediaBridgeProbe.app' -o \
             -name 'MediaTransportCandidate' -o \
-            -name 'mediaremote-adapter.pl' -o \
+            -name 'ProductionMediaTransportCandidate.app' -o \
             -name 'MediaRemoteAdapterTestClient' \
           \) -print -quit | grep -q .; then
             echo "Development media tooling was bundled into NotchHub.app" >&2
-            exit 1
-          fi
-          if find "$APP" -type d -name 'MediaRemoteAdapter.framework' -print -quit | grep -q .; then
-            echo "Development MediaRemoteAdapter.framework was bundled into NotchHub.app" >&2
             exit 1
           fi
 
@@ -371,6 +403,15 @@ jobs:
           )
           PY
           cat build/perf-size.json
+
+      - name: Upload shipping media candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NotchHub-shipping-media-candidate
+          path: |
+            build/NotchHub.dmg
+            build/perf-size.json
+          if-no-files-found: error
 
       - name: Enforce release size budget
         run: |
