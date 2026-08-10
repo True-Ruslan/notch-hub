@@ -384,6 +384,15 @@ jobs:
             exit 1
           fi
 
+      - name: Verify shipping media preflight collector
+        run: |
+          SOURCE_COMMIT="${{ github.event.pull_request.head.sha || github.sha }}"
+          python3 scripts/shipping_media_acceptance.py preflight \
+            --app build/NotchHub.app \
+            --source-commit "$SOURCE_COMMIT" \
+            --output build/shipping-media-preflight.json
+          cat build/shipping-media-preflight.json
+
       - name: Record deterministic artifact sizes
         run: |
           SOURCE_COMMIT="${{ github.event.pull_request.head.sha || github.sha }}"
@@ -401,6 +410,7 @@ jobs:
           path: |
             build/NotchHub.dmg
             build/perf-size.json
+            build/shipping-media-preflight.json
           if-no-files-found: error
 
       - name: Enforce release size budget
@@ -452,6 +462,7 @@ jobs:
           path: |
             build/perf-size.json
             build/perf-smoke.json
+            build/shipping-media-preflight.json
           if-no-files-found: error
 
       - name: Upload DMG
