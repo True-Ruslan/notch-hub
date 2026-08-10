@@ -48,6 +48,8 @@ class ShippingMediaCompositionPolicyTests(unittest.TestCase):
         build = (REPOSITORY_ROOT / "scripts" / "build-app.sh").read_text(encoding="utf-8")
 
         required = (
+            "--product NotchHub",
+            "-Xlinker -dead_strip",
             "bootstrap-media-bridge-probe.sh",
             "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a",
             "mediaremote-adapter-capabilities.patch",
