@@ -1,15 +1,15 @@
-import Foundation
+import NotchHubMediaCore
 import Testing
-@testable import NotchHubMediaCore
+@testable import NotchHubMediaCandidateCore
 
 @MainActor
 struct ProductionMediaTransportCandidateTeardownTests {
     @Test
     func observationReportsUncleanTeardownWhenOwnedProcessCannotBeConfirmedStopped() async throws {
-        let processClient = UncleanCandidateProcessClient()
+        let runtime = UncleanCandidateRuntime()
         let runner = ProductionMediaTransportCandidateRunner(
             sourceCommit: String(repeating: "a", count: 40),
-            processClient: processClient,
+            runtime: runtime,
             wait: { _ in }
         )
 
@@ -20,20 +20,21 @@ struct ProductionMediaTransportCandidateTeardownTests {
 }
 
 @MainActor
-private final class UncleanCandidateProcessClient: MediaRemoteProcessClientProtocol {
-    var onPayload: (@MainActor @Sendable (MediaRemoteWirePayload?) -> Void)?
-    var onFailure: (@MainActor @Sendable (MediaRemoteProcessFailure) -> Void)?
+private final class UncleanCandidateRuntime: MediaCandidateRuntimeProtocol {
+    var state: MediaCandidateSubsystemState = .idle
+    var snapshot: MediaCandidateSnapshot?
+    var changeHandler: (@MainActor @Sendable () -> Void)?
     var lastTeardownClean = false
 
-    func startObservation() throws {}
+    func startObservation() {}
 
-    func stop() {}
+    func stopObservation() {}
 
-    func send(_: MediaCommand) async -> MediaCommandResult {
-        .failed
+    func capabilities() async throws -> MediaCandidateCapabilities {
+        MediaCandidateCapabilities(previous: .unknown, next: .unknown, seek: .unknown)
     }
 
-    func capabilities() async throws -> MediaCommandCapabilities {
-        MediaCommandCapabilities(previous: .unknown, next: .unknown, seek: .unknown)
+    func send(_: MediaCandidateCommand) async -> Bool {
+        false
     }
 }
