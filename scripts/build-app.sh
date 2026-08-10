@@ -57,7 +57,9 @@ if [[ ! "$MEDIA_PATCH_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
 fi
 
 cd "$ROOT_DIR"
-swift build -c "$CONFIGURATION"
+# Build only the shipping product. Explicit dead stripping prevents dev-only symbols from
+# executable products sharing package targets from inflating NotchHub.app.
+swift build -c "$CONFIGURATION" --product NotchHub -Xlinker -dead_strip
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 
 bash "$ROOT_DIR/scripts/bootstrap-media-bridge-probe.sh"
