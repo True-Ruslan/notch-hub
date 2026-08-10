@@ -136,6 +136,101 @@ jobs:
           path: build/MediaBridgeProbe.zip
           if-no-files-found: error
 
+      - name: Build production media transport candidate
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          bash scripts/build-production-media-transport-candidate.sh
+          bash scripts/verify-production-media-transport-candidate.sh
+
+          build/ProductionMediaTransportCandidate.app/Contents/MacOS/MediaTransportCandidate capabilities \
+            > build/production-media-transport-capabilities.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('build/production-media-transport-capabilities.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          expected_keys = {'next', 'previous', 'seek'}
+          allowed_values = {'supported', 'unsupported', 'unknown'}
+          if set(data) != expected_keys:
+              raise SystemExit(f'Unexpected production capability keys: {sorted(data)}')
+          invalid = {key: value for key, value in data.items() if value not in allowed_values}
+          if invalid:
+              raise SystemExit(f'Unexpected production capability values: {invalid!r}')
+          PY
+          cat build/production-media-transport-capabilities.json
+
+          build/ProductionMediaTransportCandidate.app/Contents/MacOS/MediaTransportCandidate observe --seconds 1 \
+            > build/production-media-transport-observation.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('build/production-media-transport-observation.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          required = {
+              'schemaVersion', 'sourceCommit', 'adapterCommit', 'eventCount',
+              'observedSession', 'observedArtwork', 'observedPlayingState',
+              'observedSessionDisappearance', 'observedArtworkClearOnSourceSwitch',
+              'sourceSwitchCount', 'sourceBundleIdentifier', 'capabilities', 'cleanTeardown'
+          }
+          if set(data) != required:
+              raise SystemExit(f'Unexpected production observation keys: {sorted(data)}')
+          if data['schemaVersion'] != 1:
+              raise SystemExit(f'Unexpected production observation schema: {data!r}')
+          for key in (
+              'observedSession', 'observedArtwork', 'observedPlayingState',
+              'observedSessionDisappearance', 'observedArtworkClearOnSourceSwitch', 'cleanTeardown'
+          ):
+              if not isinstance(data.get(key), bool):
+                  raise SystemExit(f'Missing boolean {key}')
+          for key in ('eventCount', 'sourceSwitchCount'):
+              if not isinstance(data.get(key), int) or data[key] < 0:
+                  raise SystemExit(f'Invalid {key}: {data.get(key)!r}')
+          if data['sourceCommit'] != '${{ github.event.pull_request.head.sha || github.sha }}':
+              raise SystemExit('Production observation source provenance mismatch')
+          if data['adapterCommit'] != '3ac3d4bdf862c7b5399b4fba4df5689f5c38609a':
+              raise SystemExit('Production observation adapter provenance mismatch')
+          capabilities = data.get('capabilities')
+          allowed_values = {'supported', 'unsupported', 'unknown'}
+          if not isinstance(capabilities, dict) or set(capabilities) != {'previous', 'next', 'seek'}:
+              raise SystemExit(f'Invalid production capabilities: {capabilities!r}')
+          if any(value not in allowed_values for value in capabilities.values()):
+              raise SystemExit(f'Invalid production capability state: {capabilities!r}')
+          forbidden_keys = {
+              'title', 'artist', 'album', 'artworkData', 'rawPayload',
+              'contentIdentifier', 'uniqueIdentifier', 'positionSeconds', 'durationSeconds'
+          }
+          leaked = forbidden_keys.intersection(data)
+          if leaked:
+              raise SystemExit(f'Unexpected private keys in production observation: {sorted(leaked)}')
+          PY
+          cat build/production-media-transport-observation.json
+
+          rm -f build/ProductionMediaTransportCandidate.zip
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/ProductionMediaTransportCandidate.app \
+            build/ProductionMediaTransportCandidate.zip
+
+      - name: Verify archived production media transport candidate
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          readonly ROUNDTRIP_ROOT="build/production-media-transport-archive-roundtrip"
+          rm -rf "$ROUNDTRIP_ROOT"
+          mkdir -p "$ROUNDTRIP_ROOT"
+          ditto -x -k build/ProductionMediaTransportCandidate.zip "$ROUNDTRIP_ROOT"
+          APP="$ROUNDTRIP_ROOT/ProductionMediaTransportCandidate.app" \
+            bash scripts/verify-production-media-transport-candidate.sh
+
+      - name: Upload production media transport candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ProductionMediaTransportCandidate-candidate
+          path: build/ProductionMediaTransportCandidate.zip
+          if-no-files-found: error
+
   build-test-package:
     name: Build, test and package
     needs: macos-26-compatibility
@@ -175,7 +270,7 @@ jobs:
       - name: Validate sources, scripts and security baseline
         run: |
           swift format lint --recursive --strict --configuration .swift-format Sources Tools Tests Package.swift
-          plutil -lint Resources/Info.plist Resources/NotchHub.entitlements
+          plutil -lint Resources/Info.plist Resources/NotchHub.entitlements Resources/ProductionMediaTransportCandidate.entitlements
           bash -n scripts/*.sh
           ./scripts/security-audit.sh
 
@@ -242,10 +337,11 @@ jobs:
 
           if find "$APP" -type f \( \
             -name 'MediaBridgeProbe' -o \
+            -name 'MediaTransportCandidate' -o \
             -name 'mediaremote-adapter.pl' -o \
             -name 'MediaRemoteAdapterTestClient' \
           \) -print -quit | grep -q .; then
-            echo "Development media probe tooling was bundled into NotchHub.app" >&2
+            echo "Development media tooling was bundled into NotchHub.app" >&2
             exit 1
           fi
           if find "$APP" -type d -name 'MediaRemoteAdapter.framework' -print -quit | grep -q .; then

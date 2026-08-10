@@ -28,16 +28,19 @@ if dependencies:
 PY
 
 # 2. Reject source-level capabilities that materially expand the attack surface.
-# If one becomes necessary later, it must be introduced with a reviewed policy update,
-# dedicated tests, and a narrow replacement for this blanket prohibition.
+# The only production Process exception is checked separately below and remains fixed
+# to the reviewed Universal Media process boundary.
 forbidden_source_patterns=(
-    'Process[[:space:]]*\('
     'NSTask'
     'posix_spawn'
     'execve[[:space:]]*\('
     'popen[[:space:]]*\('
     'dlopen[[:space:]]*\('
     'dlsym[[:space:]]*\('
+    'CFBundleGetFunctionPointerForName'
+    'MRMediaRemote'
+    'MediaRemote\.framework'
+    '/bin/(ba|z|k|c|tc)?sh'
     'URLSession'
     'NWConnection'
     'import[[:space:]]+Network'
@@ -65,6 +68,35 @@ for pattern in "${forbidden_source_patterns[@]}"; do
         fail "forbidden source capability matched pattern: $pattern"
     fi
 done
+
+# 2a. M6.1 accepted one external compatibility-process architecture. Production
+# Process use is therefore allowed in exactly one reviewed file and nowhere else.
+# This is an allowlist for one fixed /usr/bin/perl adapter boundary, not a general
+# subprocess permission for Sources/**.
+PRODUCTION_MEDIA_PROCESS_SOURCE="Sources/NotchHubMediaCore/MediaRemoteProcessClient.swift"
+[[ -f "$PRODUCTION_MEDIA_PROCESS_SOURCE" ]] || \
+    fail "missing reviewed production media process boundary"
+
+PROCESS_MATCHES="$(grep -RIlE --include='*.swift' 'Process[[:space:]]*\(' Sources || true)"
+if [[ "$PROCESS_MATCHES" != "$PRODUCTION_MEDIA_PROCESS_SOURCE" ]]; then
+    printf '%s\n' "$PROCESS_MATCHES" >&2
+    fail "Process() is permitted only in $PRODUCTION_MEDIA_PROCESS_SOURCE"
+fi
+
+PROCESS_COUNT="$(grep -Ec 'Process[[:space:]]*\(' "$PRODUCTION_MEDIA_PROCESS_SOURCE" || true)"
+[[ "$PROCESS_COUNT" == "1" ]] || \
+    fail "reviewed production media boundary must contain exactly one Process() construction"
+
+grep -Fq 'URL(fileURLWithPath: "/usr/bin/perl")' "$PRODUCTION_MEDIA_PROCESS_SOURCE" || \
+    fail "production media process executable is not fixed to /usr/bin/perl"
+for required_token in '"stream"' '"--no-diff"' '"--micros"' '"capabilities"' '"send"' '"seek"' '"2"' '"4"' '"5"'; do
+    grep -Fq "$required_token" "$PRODUCTION_MEDIA_PROCESS_SOURCE" || \
+        fail "production media process allowlist is missing $required_token"
+done
+
+if grep -Eq '"get"|"get[[:space:]]' "$PRODUCTION_MEDIA_PROCESS_SOURCE"; then
+    fail "production media process boundary must not use periodic get polling"
+fi
 
 # 3. No embedded private keys or common long-lived token formats in tracked files.
 if git grep -nEI -- \
@@ -187,7 +219,7 @@ fi
 # 10. Universal Media probe is a development-only compatibility boundary. It may use
 # Process only inside Tools, but its transport, input scope, upstream revision, and
 # shipping isolation are fixed and executable policy. A successful probe does not
-# relax the production Sources/** restrictions above.
+# broaden the single production exception checked in section 2a.
 PROBE_DIR="Tools/MediaBridgeProbe"
 BOOTSTRAP="scripts/bootstrap-media-bridge-probe.sh"
 PROBE_BUILD="scripts/build-media-bridge-probe-app.sh"
