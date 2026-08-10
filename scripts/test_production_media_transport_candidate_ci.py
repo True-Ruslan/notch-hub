@@ -14,8 +14,13 @@ class ProductionMediaTransportCandidateCITests(unittest.TestCase):
             '.executable(name: "MediaTransportCandidate", targets: ["MediaTransportCandidate"])',
             package,
         )
-        self.assertIn('name: "MediaTransportCandidate"', package)
+        self.assertIn('name: "NotchHubMediaCandidateCore"', package)
         self.assertIn('dependencies: ["NotchHubMediaCore"]', package)
+        self.assertIn('path: "Tools/ProductionMediaTransportCandidate/Core"', package)
+        self.assertIn(
+            'name: "MediaTransportCandidate",\n            dependencies: ["NotchHubMediaCandidateCore"]',
+            package,
+        )
         self.assertIn('path: "Tools/ProductionMediaTransportCandidate/CLI"', package)
         self.assertIn(
             '.executableTarget(\n            name: "NotchHubApp",\n            dependencies: ["NotchHubCore", "NotchHubMediaCore"]',
