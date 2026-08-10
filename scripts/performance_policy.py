@@ -218,6 +218,34 @@ def _require_exact_size_metrics(mapping: dict[str, object], label: str) -> None:
         _metric_integer(mapping, key, label)
 
 
+def _size_metrics_view(mapping: dict[str, object], label: str) -> dict[str, object]:
+    metric_keys = set(_SIZE_METRICS)
+    keys = set(mapping)
+    if keys == metric_keys:
+        _require_exact_size_metrics(mapping, label)
+        return mapping
+
+    artifact_keys = metric_keys | {"schemaVersion", "sourceCommit"}
+    if keys != artifact_keys:
+        raise ValueError(
+            f"{label} must contain either exact size metrics or the exact artifact size envelope"
+        )
+
+    schema_version = mapping.get("schemaVersion")
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int):
+        raise ValueError(f"{label} schemaVersion must be an integer")
+    if schema_version != 1:
+        raise ValueError(f"{label} schemaVersion must be 1")
+
+    source_commit = mapping.get("sourceCommit")
+    if not isinstance(source_commit, str) or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None:
+        raise ValueError(f"{label} sourceCommit must be a 40-character lowercase SHA")
+
+    metrics = {key: mapping[key] for key in _SIZE_METRICS}
+    _require_exact_size_metrics(metrics, label)
+    return metrics
+
+
 def compare_summary_to_budget(summary: dict[str, object], budget: dict[str, object]) -> list[str]:
     if not budget:
         raise ValueError("budget must contain at least one metric")
@@ -348,7 +376,7 @@ def compare_size_summary_to_feature_budget(
     )
     _require_exact_size_metrics(baseline_summary, "baseline size summary")
     _require_exact_size_metrics(ceilings, "baseline size absolute ceilings")
-    _require_exact_size_metrics(summary, "size summary")
+    summary_metrics = _size_metrics_view(summary, "size summary")
 
     for key in _SIZE_METRICS:
         baseline_bytes = _metric_integer(baseline_summary, key, "baseline size summary")
@@ -396,7 +424,7 @@ def compare_size_summary_to_feature_budget(
 
     violations: list[str] = []
     for key in _SIZE_METRICS:
-        actual = _metric_integer(summary, key, "size summary")
+        actual = _metric_integer(summary_metrics, key, "size summary")
         adjusted_ceiling = _metric_integer(
             ceilings,
             key,
