@@ -53,6 +53,7 @@ _STABILITY_WARMUP_SECONDS = 0.0
 _STABILITY_DURATION_SECONDS = 600.0
 _STABILITY_INTERVAL_SECONDS = 5.0
 _OBSERVER_MARGIN_SECONDS = 10.0
+_RESOURCE_OBSERVER_COMPLETION_GRACE_SECONDS = 60.0
 _ADAPTER_DISCOVERY_TIMEOUT_SECONDS = 5.0
 
 
@@ -396,6 +397,23 @@ def _sleep_until(target: float) -> None:
         time.sleep(delay)
 
 
+def _resource_observer_completion_timeout(
+    *,
+    observer_started_monotonic: float,
+    observer_seconds: float,
+    now_monotonic: float,
+) -> float:
+    deadline = (
+        observer_started_monotonic
+        + observer_seconds
+        + _RESOURCE_OBSERVER_COMPLETION_GRACE_SECONDS
+    )
+    remaining = deadline - now_monotonic
+    if not math.isfinite(remaining) or remaining <= 0:
+        raise TimeoutError("candidate observer exceeded bounded completion deadline")
+    return remaining
+
+
 def _discover_owned_adapter(parent_pid: int) -> int:
     deadline = time.monotonic() + _ADAPTER_DISCOVERY_TIMEOUT_SECONDS
     while True:
@@ -429,6 +447,7 @@ def collect_resources(app: pathlib.Path, source_commit: str, mode: str) -> dict[
         raise ValueError("mode must be steady or stability")
 
     observer_seconds = warmup_seconds + duration_seconds + _OBSERVER_MARGIN_SECONDS
+    observer_started_monotonic = time.monotonic()
     observer = subprocess.Popen(
         [str(executable), "observe", "--seconds", str(observer_seconds)],
         stdout=subprocess.PIPE,
@@ -452,7 +471,12 @@ def collect_resources(app: pathlib.Path, source_commit: str, mode: str) -> dict[
                 _sleep_until(sample_start + ((index + 1) * interval_seconds))
 
         _ensure_process_alive(observer, "candidate observer")
-        stdout, stderr = observer.communicate(timeout=_OBSERVER_MARGIN_SECONDS + 10)
+        completion_timeout = _resource_observer_completion_timeout(
+            observer_started_monotonic=observer_started_monotonic,
+            observer_seconds=observer_seconds,
+            now_monotonic=time.monotonic(),
+        )
+        stdout, stderr = observer.communicate(timeout=completion_timeout)
         if observer.returncode != 0:
             raise RuntimeError(f"candidate observer exited {observer.returncode}")
         if stderr.strip():
