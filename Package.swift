@@ -16,7 +16,7 @@ let package = Package(
         .target(name: "NotchHubMediaCore"),
         .executableTarget(
             name: "NotchHubApp",
-            dependencies: ["NotchHubCore"]
+            dependencies: ["NotchHubCore", "NotchHubMediaCore"]
         ),
         .executableTarget(
             name: "MediaTransportCandidate",
