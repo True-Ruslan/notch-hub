@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import NotchHubMediaCore
+@testable import NotchHubMediaCandidateCore
 
 struct ProductionMediaTransportCandidateBundlePathsTests {
     @Test
@@ -54,7 +54,9 @@ struct ProductionMediaTransportCandidateBundlePathsTests {
             )
         }
 
-        for sourceCommit in [nil, "", "abc", String(repeating: "A", count: 40), String(repeating: "a", count: 39)] {
+        for sourceCommit in [
+            nil, "", "abc", String(repeating: "A", count: 40), String(repeating: "a", count: 39)
+        ] {
             #expect(throws: ProductionMediaTransportCandidateError.invalidArguments) {
                 try ProductionMediaTransportCandidateBundlePaths.resolve(
                     bundleURL: bundleURL,
