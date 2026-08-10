@@ -1,46 +1,18 @@
 import Foundation
 
-package struct MediaRemoteWirePayload: Sendable {
-    package let bundleIdentifier: String
-    package let playing: Bool
-    package let title: String?
-    package let artist: String?
-    package let album: String?
-    package let durationSeconds: Double?
-    package let positionSeconds: Double?
-    package let referenceDate: Date?
-    package let playbackRate: Double?
-    package let artworkData: Data?
-    package let contentIdentifier: String?
-    package let uniqueIdentifier: String?
-
-    package init(
-        bundleIdentifier: String,
-        playing: Bool,
-        title: String?,
-        artist: String?,
-        album: String?,
-        durationSeconds: Double?,
-        positionSeconds: Double?,
-        referenceDate: Date?,
-        playbackRate: Double?,
-        artworkData: Data?,
-        contentIdentifier: String?,
-        uniqueIdentifier: String?
-    ) {
-        self.bundleIdentifier = bundleIdentifier
-        self.playing = playing
-        self.title = title
-        self.artist = artist
-        self.album = album
-        self.durationSeconds = durationSeconds
-        self.positionSeconds = positionSeconds
-        self.referenceDate = referenceDate
-        self.playbackRate = playbackRate
-        self.artworkData = artworkData
-        self.contentIdentifier = contentIdentifier
-        self.uniqueIdentifier = uniqueIdentifier
-    }
+struct MediaRemoteWirePayload: Sendable {
+    let bundleIdentifier: String
+    let playing: Bool
+    let title: String?
+    let artist: String?
+    let album: String?
+    let durationSeconds: Double?
+    let positionSeconds: Double?
+    let referenceDate: Date?
+    let playbackRate: Double?
+    let artworkData: Data?
+    let contentIdentifier: String?
+    let uniqueIdentifier: String?
 }
 
 enum MediaRemoteWireDecoderError: Error, Equatable {
@@ -186,7 +158,7 @@ enum MediaRemoteWireDecoder {
     }
 }
 
-package enum MediaRemoteCapabilityDecoderError: Error, Equatable {
+enum MediaRemoteCapabilityDecoderError: Error, Equatable {
     case invalidSchema
     case invalidState
 }
