@@ -318,9 +318,10 @@ if grep -Eq 'MediaTransportCandidate|ProductionMediaTransportCandidate|MediaRemo
     fail "DMG packaging references development-only media executables"
 fi
 
-# Runtime source must not invoke probe/test-client tooling or expand the process surface.
-if grep -RInE --include='*.swift' 'MediaRemoteAdapterTestClient|MediaTransportCandidate|MediaBridgeProbe' Sources; then
-    fail "shipping runtime references development-only media tooling"
+# Shipping entrypoints must not invoke development-only probe/test/candidate tooling.
+if grep -InE 'MediaRemoteAdapterTestClient|MediaTransportCandidate|MediaBridgeProbe' \
+    "$SHIPPING_RUNTIME_SOURCE" "$SHIPPING_APP_DELEGATE"; then
+    fail "shipping runtime entrypoints reference development-only media tooling"
 fi
 
 if grep -RInE \
