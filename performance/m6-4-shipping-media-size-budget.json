@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 360448,
+    "dmgSizeBytes": 327680,
+    "executableSizeBytes": 65536
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9068350685,
+    "sourceCommit": "21318c94cfcda45f147d3967ddcd7194034e9812",
+    "summary": {
+      "appSizeBytes": 615022,
+      "dmgSizeBytes": 406615,
+      "executableSizeBytes": 312816
+    },
+    "workflowRunId": 31402487785
+  },
+  "featureId": "m6.4-shipping-media-composition",
+  "schemaVersion": 1
+}
