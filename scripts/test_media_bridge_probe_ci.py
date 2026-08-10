@@ -3,6 +3,7 @@ from pathlib import Path
 
 from test_production_media_transport_acceptance import ProductionMediaTransportAcceptanceTests
 from test_production_media_transport_candidate_ci import ProductionMediaTransportCandidateCITests
+from test_shipping_media_composition import ShippingMediaCompositionPolicyTests
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
