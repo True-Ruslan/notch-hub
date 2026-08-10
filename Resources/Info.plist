@@ -22,6 +22,12 @@
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NHAdapterCommit</key>
+    <string></string>
+    <key>NHAdapterPatchSHA256</key>
+    <string></string>
+    <key>NHSourceCommit</key>
+    <string></string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>
