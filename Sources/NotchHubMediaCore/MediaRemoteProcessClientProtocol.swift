@@ -1,5 +1,5 @@
 @MainActor
-package protocol MediaRemoteProcessClientProtocol: AnyObject {
+protocol MediaRemoteProcessClientProtocol: AnyObject {
     var onPayload: (@MainActor @Sendable (MediaRemoteWirePayload?) -> Void)? { get set }
     var onFailure: (@MainActor @Sendable (MediaRemoteProcessFailure) -> Void)? { get set }
     var lastTeardownClean: Bool { get }
@@ -10,7 +10,7 @@ package protocol MediaRemoteProcessClientProtocol: AnyObject {
     func capabilities() async throws -> MediaCommandCapabilities
 }
 
-package extension MediaRemoteProcessClientProtocol {
+extension MediaRemoteProcessClientProtocol {
     var lastTeardownClean: Bool { true }
 }
 
