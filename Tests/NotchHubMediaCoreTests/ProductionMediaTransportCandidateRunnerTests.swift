@@ -1,23 +1,24 @@
-import Foundation
+import NotchHubMediaCore
 import Testing
-@testable import NotchHubMediaCore
+@testable import NotchHubMediaCandidateCore
 
 @MainActor
 struct ProductionMediaTransportCandidateRunnerTests {
     @Test
     func observeUsesProductionStateStackAndStopsCleanly() async throws {
-        let client = CandidateRunnerFakeProcessClient(
-            initialPayload: makePayload(source: "source.a", artwork: Data([1, 2, 3])),
+        let runtime = CandidateRunnerFakeRuntime(
+            initialSnapshot: MediaCandidateSnapshot(
+                sourceBundleIdentifier: "source.a",
+                hasArtwork: true,
+                isPlaying: true,
+                capabilities: supportedCapabilities
+            ),
             capabilities: supportedCapabilities
         )
         let runner = ProductionMediaTransportCandidateRunner(
             sourceCommit: String(repeating: "c", count: 40),
-            processClient: client,
-            wait: { _ in
-                await Task.yield()
-                await Task.yield()
-                await Task.yield()
-            }
+            runtime: runtime,
+            wait: { _ in }
         )
 
         let report = try await runner.observe(seconds: 1)
@@ -29,17 +30,17 @@ struct ProductionMediaTransportCandidateRunnerTests {
         #expect(report.capabilities.next == .supported)
         #expect(report.capabilities.seek == .supported)
         #expect(report.cleanTeardown)
-        #expect(client.startCount == 1)
-        #expect(client.stopCount == 1)
-        #expect(client.handlersWereNilWhenStopped)
+        #expect(runtime.startCount == 1)
+        #expect(runtime.stopCount == 1)
+        #expect(runtime.handlerWasNilWhenStopped)
     }
 
     @Test
     func invalidObservationDurationFailsBeforeStartingTransport() async {
-        let client = CandidateRunnerFakeProcessClient()
+        let runtime = CandidateRunnerFakeRuntime()
         let runner = ProductionMediaTransportCandidateRunner(
             sourceCommit: String(repeating: "d", count: 40),
-            processClient: client,
+            runtime: runtime,
             wait: { _ in }
         )
 
@@ -49,13 +50,13 @@ struct ProductionMediaTransportCandidateRunnerTests {
         await #expect(throws: ProductionMediaTransportCandidateError.invalidObservationDuration) {
             try await runner.observe(seconds: 1_201)
         }
-        #expect(client.startCount == 0)
+        #expect(runtime.startCount == 0)
     }
 
     @Test
-    func capabilitiesUseProductionProcessClientAndNormalizeTriState() async throws {
-        let client = CandidateRunnerFakeProcessClient(
-            capabilities: MediaCommandCapabilities(
+    func capabilitiesUseProductionRuntimeAndNormalizeTriState() async throws {
+        let runtime = CandidateRunnerFakeRuntime(
+            capabilities: MediaCandidateCapabilities(
                 previous: .unsupported,
                 next: .supported,
                 seek: .unknown
@@ -63,7 +64,7 @@ struct ProductionMediaTransportCandidateRunnerTests {
         )
         let runner = ProductionMediaTransportCandidateRunner(
             sourceCommit: String(repeating: "f", count: 40),
-            processClient: client,
+            runtime: runtime,
             wait: { _ in }
         )
 
@@ -72,99 +73,87 @@ struct ProductionMediaTransportCandidateRunnerTests {
         #expect(capabilities.previous == .unsupported)
         #expect(capabilities.next == .supported)
         #expect(capabilities.seek == .unknown)
-        #expect(client.capabilitiesCount == 1)
-        #expect(client.startCount == 0)
-        #expect(client.stopCount == 0)
+        #expect(runtime.capabilitiesCount == 1)
+        #expect(runtime.startCount == 0)
+        #expect(runtime.stopCount == 0)
     }
 
     @Test
     func sendUsesTypedProductionTransportAndAlwaysStops() async {
-        let client = CandidateRunnerFakeProcessClient(commandResult: .sent)
+        let runtime = CandidateRunnerFakeRuntime(commandResult: true)
         let runner = ProductionMediaTransportCandidateRunner(
             sourceCommit: String(repeating: "e", count: 40),
-            processClient: client,
+            runtime: runtime,
             wait: { _ in }
         )
 
         let sent = await runner.send(.seek(seconds: 42))
 
         #expect(sent)
-        #expect(client.sentCommands == [.seek(seconds: 42)])
-        #expect(client.startCount == 1)
-        #expect(client.stopCount == 1)
-        #expect(client.handlersWereNilWhenStopped)
+        #expect(runtime.sentCommands == [.seek(seconds: 42)])
     }
 
-    private var supportedCapabilities: MediaCommandCapabilities {
-        MediaCommandCapabilities(previous: .supported, next: .supported, seek: .supported)
-    }
-
-    private func makePayload(source: String, artwork: Data? = nil) -> MediaRemoteWirePayload {
-        MediaRemoteWirePayload(
-            bundleIdentifier: source,
-            playing: true,
-            title: "Private Track",
-            artist: "Private Artist",
-            album: "Private Album",
-            durationSeconds: 180,
-            positionSeconds: 42,
-            referenceDate: Date(timeIntervalSince1970: 1_786_233_600),
-            playbackRate: 1,
-            artworkData: artwork,
-            contentIdentifier: "track-a",
-            uniqueIdentifier: nil
-        )
+    private var supportedCapabilities: MediaCandidateCapabilities {
+        MediaCandidateCapabilities(previous: .supported, next: .supported, seek: .supported)
     }
 }
 
 @MainActor
-private final class CandidateRunnerFakeProcessClient: MediaRemoteProcessClientProtocol {
-    var onPayload: (@MainActor @Sendable (MediaRemoteWirePayload?) -> Void)?
-    var onFailure: (@MainActor @Sendable (MediaRemoteProcessFailure) -> Void)?
+private final class CandidateRunnerFakeRuntime: MediaCandidateRuntimeProtocol {
+    var state: MediaCandidateSubsystemState = .idle
+    var snapshot: MediaCandidateSnapshot?
+    var changeHandler: (@MainActor @Sendable () -> Void)?
+    var lastTeardownClean = true
 
-    private let initialPayload: MediaRemoteWirePayload?
-    private let capabilityResult: MediaCommandCapabilities
-    private let commandResult: MediaCommandResult
+    private let initialSnapshot: MediaCandidateSnapshot?
+    private let capabilityResult: MediaCandidateCapabilities
+    private let commandResult: Bool
 
     private(set) var startCount = 0
     private(set) var stopCount = 0
     private(set) var capabilitiesCount = 0
-    private(set) var sentCommands: [MediaCommand] = []
-    private(set) var handlersWereNilWhenStopped = false
+    private(set) var sentCommands: [MediaCandidateCommand] = []
+    private(set) var handlerWasNilWhenStopped = false
 
     init(
-        initialPayload: MediaRemoteWirePayload? = nil,
-        capabilities: MediaCommandCapabilities = MediaCommandCapabilities(
+        initialSnapshot: MediaCandidateSnapshot? = nil,
+        capabilities: MediaCandidateCapabilities = MediaCandidateCapabilities(
             previous: .unknown,
             next: .unknown,
             seek: .unknown
         ),
-        commandResult: MediaCommandResult = .failed
+        commandResult: Bool = false
     ) {
-        self.initialPayload = initialPayload
+        self.initialSnapshot = initialSnapshot
         capabilityResult = capabilities
         self.commandResult = commandResult
     }
 
-    func startObservation() throws {
+    func startObservation() {
         startCount += 1
-        if let initialPayload {
-            onPayload?(initialPayload)
+        snapshot = initialSnapshot
+        if let snapshot {
+            state = snapshot.isPlaying ? .playing : .paused
+        } else {
+            state = .idle
         }
+        changeHandler?()
     }
 
-    func stop() {
+    func stopObservation() {
         stopCount += 1
-        handlersWereNilWhenStopped = onPayload == nil && onFailure == nil
+        handlerWasNilWhenStopped = changeHandler == nil
+        state = .unavailable
+        snapshot = nil
     }
 
-    func send(_ command: MediaCommand) async -> MediaCommandResult {
-        sentCommands.append(command)
-        return commandResult
-    }
-
-    func capabilities() async throws -> MediaCommandCapabilities {
+    func capabilities() async throws -> MediaCandidateCapabilities {
         capabilitiesCount += 1
         return capabilityResult
+    }
+
+    func send(_ command: MediaCandidateCommand) async -> Bool {
+        sentCommands.append(command)
+        return commandResult
     }
 }
