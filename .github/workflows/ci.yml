@@ -256,7 +256,10 @@ jobs:
         run: (cd scripts && python3 -m unittest -v test_release_policy.py)
 
       - name: Performance policy tests
-        run: (cd scripts && python3 -m unittest -v test_performance_policy.py)
+        run: >-
+          (cd scripts && python3 -m unittest -v
+          test_performance_policy.py
+          test_feature_size_budget.py)
 
       - name: Media bridge probe policy tests
         run: >-
@@ -402,9 +405,10 @@ jobs:
 
       - name: Enforce release size budget
         run: |
-          python3 scripts/performance_policy.py check-size-budget \
+          python3 scripts/performance_policy.py check-size-feature-budget \
             --summary build/perf-size.json \
-            --baseline performance/baseline-v0.1.0.json
+            --baseline performance/baseline-v0.1.0.json \
+            --feature-budget performance/m6-4-shipping-media-size-budget.json
 
       - name: Performance harness compatibility smoke
         run: |
