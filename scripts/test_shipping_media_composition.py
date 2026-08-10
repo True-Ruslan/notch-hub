@@ -62,6 +62,8 @@ class ShippingMediaCompositionPolicyTests(unittest.TestCase):
             "NHAdapterPatchSHA256",
             "SOURCE_COMMIT",
             "MEDIA_FRAMEWORK_DEST",
+            'strip -x "$MACOS_DIR/NotchHub"',
+            'strip -x "$MEDIA_FRAMEWORK_DEST/Versions/A/MediaRemoteAdapter"',
         )
         for fragment in required:
             with self.subTest(fragment=fragment):
@@ -71,9 +73,16 @@ class ShippingMediaCompositionPolicyTests(unittest.TestCase):
         self.assertNotIn("MediaBridgeProbe.app", build)
         self.assertNotIn("MediaRemoteAdapterTestClient", build)
 
+        executable_strip = build.find('strip -x "$MACOS_DIR/NotchHub"')
+        framework_strip = build.find(
+            'strip -x "$MEDIA_FRAMEWORK_DEST/Versions/A/MediaRemoteAdapter"'
+        )
         nested_sign = build.find('codesign "${nested_sign_args[@]}" "$MEDIA_FRAMEWORK_DEST"')
         app_sign = build.find('codesign "${sign_args[@]}" "$APP_DIR"')
-        self.assertGreaterEqual(nested_sign, 0, "nested framework must be signed explicitly")
+        self.assertGreaterEqual(executable_strip, 0)
+        self.assertGreaterEqual(framework_strip, 0)
+        self.assertGreater(nested_sign, framework_strip, "framework must be stripped before signing")
+        self.assertGreater(app_sign, executable_strip, "app executable must be stripped before signing")
         self.assertGreater(app_sign, nested_sign, "nested code must be signed before the app")
 
     def test_ci_verifies_shipping_media_bundle_and_keeps_dev_tools_out(self):
