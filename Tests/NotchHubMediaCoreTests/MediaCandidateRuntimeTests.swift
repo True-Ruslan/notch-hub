@@ -23,9 +23,9 @@ struct MediaCandidateRuntimeTests {
             )
         )
         let runtime = MediaCandidateRuntime(processClient: client)
-        var changeCount = 0
+        let changes = CandidateRuntimeChangeCounter()
         runtime.changeHandler = {
-            changeCount += 1
+            changes.value += 1
         }
 
         runtime.startObservation()
@@ -44,7 +44,7 @@ struct MediaCandidateRuntimeTests {
                     )
                 )
         )
-        #expect(changeCount >= 1)
+        #expect(changes.value >= 1)
 
         runtime.stopObservation()
         #expect(runtime.state == .unavailable)
@@ -105,6 +105,11 @@ struct MediaCandidateRuntimeTests {
 
         #expect(!runtime.lastTeardownClean)
     }
+}
+
+@MainActor
+private final class CandidateRuntimeChangeCounter {
+    var value = 0
 }
 
 @MainActor
