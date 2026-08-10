@@ -147,20 +147,24 @@ P1 experiment after functional media integration:
 - [ ] click/pin interaction policy;
 - [ ] reconcile future gesture surfaces with the accepted Universal Media gesture engine rather than adding competing gesture ownership.
 
-## Current approved priority order — 2026-08-09
+## Current approved priority order — 2026-08-10
 
-M6.1 transport feasibility is accepted and M6.2 establishes the deterministic production application-side media boundary. The next security-sensitive step is the concrete system transport and composition, not UI.
+M6.1 transport feasibility and M6.2 application-side boundary are accepted. M6.3 concrete production transport is implemented and CI-qualified in Draft PR #16, but its current frozen candidate still has a partial target-Mac acceptance ledger. Shipping composition is therefore **not** the current step yet.
 
-1. **Concrete production `SystemMediaTransport` + composition** behind the accepted M6.2 boundary, under strict TDD/security review and fresh shipping size/runtime evidence.
-2. Compact + expanded media-first UI only after the concrete production state path is reliable.
-3. Local-window gesture + haptic engine and seek interaction.
-4. Target-Mac media/haptic acceptance on actually available sources; defer unavailable compatibility honestly.
-5. **P1 whole-app performance review**, including production bridge lifecycle cost and the deferred `NSTrackingArea` / window-local pointer experiment.
-6. Evidence-driven optimization if required, then resume remaining M1 display/Space hardening and later product modules.
+1. **Complete M6.3 production-transport target acceptance** on frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`: no-session fail-closed state, Yandex Browser/source switching, real supported commands, no sensitive permission prompts, and corrected 10-minute stability/teardown evidence.
+2. If M6.3 passes, record the explicit acceptance decision, synchronize documentation/PR state, run fresh exact-head CI/review and squash-merge PR #16.
+3. Start a **separate shipping-composition slice**: link `NotchHubMediaCore` and pinned adapter assets into `NotchHub.app`, then measure the real security/package/artifact-size/runtime cost. The current P0 budgets may not be silently widened.
+4. Compact + expanded media-first UI only after the composed production state path is reliable.
+5. Local-window gesture + haptic engine and seek interaction.
+6. Target-Mac media/haptic acceptance on actually available sources; defer unavailable compatibility honestly.
+7. **P1 whole-app performance review**, including production bridge lifecycle cost and the deferred `NSTrackingArea` / window-local pointer experiment.
+8. Evidence-driven optimization if required, then resume remaining M1 display/Space hardening and later product modules.
 
 Approved design: `docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`.
 Accepted probe evidence: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
 M6.2 plan: `docs/superpowers/plans/2026-08-09-production-media-boundary.md`.
+M6.3 plan: `docs/superpowers/plans/2026-08-09-production-system-media-transport.md`.
+M6.3 acceptance: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`.
 
 ## M2 — Shelf
 
@@ -194,12 +198,12 @@ M6.2 plan: `docs/superpowers/plans/2026-08-09-production-media-boundary.md`.
 
 ## M6 — Universal Media / System Now Playing
 
-Status: **ACTIVE PRODUCT SLICE — M6.1 TRANSPORT ACCEPTED; M6.2 PRODUCTION CORE BOUNDARY IMPLEMENTED; CONCRETE TRANSPORT NEXT**
+Status: **ACTIVE PRODUCT SLICE — M6.1 ACCEPTED; M6.2 ACCEPTED; M6.3 IMPLEMENTED/CI-QUALIFIED WITH TARGET ACCEPTANCE PARTIAL**
 
 Product contract:
 
 - follow the media session macOS itself treats as system Now Playing;
-- support players automatically when they publish a system session; Yandex Music and Yandex Browser are physically verified now, while Apple Music/Spotify/other-player compatibility remains deferred until those sources are actually available for testing;
+- support players automatically when they publish a system session; Yandex Music and Yandex Browser are physically verified in M6.1, while M6.3 production transport currently has Yandex Music physical evidence and still requires Yandex Browser/source-switch acceptance;
 - do not add per-player adapters merely to manufacture missing capabilities;
 - compact media state: artwork left + lightweight playback/status indicator right;
 - expanded active-media state is media-first while preserving access to future NotchHub modules;
@@ -214,16 +218,18 @@ Product contract:
 
 Architecture/security:
 
-- independent production target `NotchHubMediaCore` owns normalized media domain/controller/bridge code;
+- independent production target `NotchHubMediaCore` owns normalized media domain/controller/bridge/transport code;
 - player-agnostic `MediaProvider` + immutable `MediaSessionSnapshot` + `@MainActor MediaSessionController`;
-- injected `SystemMediaTransport` sits behind isolated `SystemMediaBridge`;
-- M6.2 does not yet contain the concrete MediaRemote/private transport and is not linked into `NotchHubApp`;
-- the M6.1 sandbox/Hardened Runtime compatibility probe accepted the transport with final outcome `ACCEPT_TRANSPORT`;
+- concrete `MediaRemoteSystemTransport` sits behind isolated `SystemMediaBridge`;
+- M6.3 uses one narrowly reviewed fixed `/usr/bin/perl` process boundary with pinned adapter assets, closed arguments/typed commands, bounded untrusted data and bounded process teardown;
+- the production transport remains outside the current shipping `NotchHubApp` dependency graph until M6.3 physical acceptance passes;
+- M6.1 sandbox/Hardened Runtime compatibility probe remains accepted with final outcome `ACCEPT_TRANSPORT`;
 - bridge/controller failure is media-only and fail-closed; Notch Core remains operational;
 - no Accessibility/Input Monitoring/synthetic media keys;
 - no listening-history persistence or production metadata logging;
+- no network/player-specific automation fallback;
 - private compatibility must never justify disabling Sandbox/Hardened Runtime/library validation;
-- concrete transport/runtime dependency decisions remain a separate reviewed implementation slice.
+- shipping composition/runtime cost remains a separate reviewed slice after M6.3 acceptance.
 
 M6.1 accepted target-Mac evidence on `Mac16,8` / macOS 26.6 includes:
 
@@ -249,24 +255,41 @@ M6.2 deterministic acceptance on code head `52d6d76b564c603cb21f0ec49bff4fa958c3
 - dormant media core is not linked into `NotchHubApp`;
 - shipping executable/app remain exactly `250,320 B / 253,317 B` under the unchanged P0 budget.
 
+M6.3 current frozen production candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`, CI #576:
+
+- concrete bounded production wire decoder/process client/system transport PASS deterministic CI;
+- target-discovered unbounded `waitUntilExit()` teardown defect fixed with bounded graceful/forced process-exit policy and deterministic RED -> GREEN coverage;
+- fixed `/usr/bin/perl` / pinned adapter / typed allowlist / authoritative capabilities / stale-artwork and source-switch isolation retained;
+- exact shipping isolation retained: `NotchHub.app` still excludes media transport/adapter assets;
+- target Sandbox + Hardened Runtime PASS;
+- Yandex Music production session/artwork/playing-state PASS;
+- active-source authoritative capabilities PASS;
+- session disappearance and short-run clean teardown PASS;
+- 60-second target resource gate PASS: parent CPU max `0.0%`, adapter CPU max `0.1%`, combined RSS max upper bound `32,192 KiB`, combined threads max upper bound `9`, no orphan;
+- no-session preflight, Yandex Browser/source switching, actual commands, permission prompts and corrected 10-minute stability remain pending;
+- collector-only sampling/watchdog defects discovered during physical acceptance are fixed without changing the frozen production candidate.
+
 Acceptance sequence:
 
 - [x] product/architecture/gesture/security/performance design approved;
 - [x] M6.1 probe plan/evidence recorded;
 - [x] sandbox/Hardened Runtime transport compatibility/security probe;
-- [x] authoritative capability surface proven;
-- [x] target-Mac transport commands/source-switch/disappearance/permission/lifecycle acceptance;
-- [x] target-Mac parent/adapter resource/stability acceptance;
+- [x] authoritative capability surface proven in M6.1;
+- [x] M6.1 target-Mac transport commands/source-switch/disappearance/permission/lifecycle acceptance;
+- [x] M6.1 target-Mac parent/adapter resource/stability acceptance;
 - [x] final M6.1 outcome: **`ACCEPT_TRANSPORT`**;
 - [x] production normalized media domain + provider contract;
 - [x] deterministic `MediaSessionController` ordering/dedup/capability/restart behavior;
 - [x] isolated injected `SystemMediaBridge` boundary;
 - [x] dormant production media module separated from current shipping link graph without widening size/security policy;
-- [ ] concrete production `SystemMediaTransport` implementation using accepted M6.1 evidence;
-- [ ] compose the production media module into `NotchHubApp` with fresh package/security/size/runtime evidence;
+- [x] concrete production `SystemMediaTransport` implementation using accepted M6.1 evidence;
+- [x] bounded production process lifecycle and current candidate CI qualification;
+- [x] M6.3 target Sandbox/Hardened Runtime, Yandex Music observation, disappearance and 60-second resources;
+- [ ] complete remaining M6.3 target-Mac acceptance and record final decision;
+- [ ] compose the production media module + pinned adapter assets into `NotchHubApp` in a separate reviewed slice with fresh package/security/size/runtime evidence;
 - [ ] compact/expanded media UI;
 - [ ] gesture/haptic/seek state machines under TDD;
-- [ ] target-Mac functional media acceptance;
+- [ ] target-Mac functional media acceptance for the shipping media UI;
 - [ ] P1 whole-app resource review;
 - [ ] accept/optimize production implementation based on evidence.
 
