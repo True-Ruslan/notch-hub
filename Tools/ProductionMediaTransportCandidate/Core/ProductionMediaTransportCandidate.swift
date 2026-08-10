@@ -101,28 +101,25 @@ public enum ProductionMediaTransportCandidateFailureCode: String, Codable, Equat
             }
         }
 
-        if let processError = error as? MediaRemoteProcessClientError {
-            switch processError {
+        if let runtimeError = error as? MediaCandidateRuntimeError {
+            switch runtimeError {
             case .timedOut:
                 return .processTimedOut
             case .teardownFailed:
                 return .processTeardown
-            case .operationFailed:
+            case .processFailed:
                 return .processFailed
-            case .standardOutputUnavailable:
+            case .outputUnavailable:
                 return .outputUnavailable
-            case .standardOutputTooLarge:
+            case .outputTooLarge:
                 return .outputTooLarge
+            case .capabilityProtocol:
+                return .capabilityProtocol
+            case .processLaunch:
+                return .processLaunch
+            case .unexpected:
+                return .unexpectedRuntimeFailure
             }
-        }
-
-        if error is MediaRemoteCapabilityDecoderError {
-            return .capabilityProtocol
-        }
-
-        let nsError = error as NSError
-        if nsError.domain == NSCocoaErrorDomain {
-            return .processLaunch
         }
 
         return .unexpectedRuntimeFailure
@@ -135,10 +132,10 @@ public enum ProductionMediaTransportCandidateCommand: Equatable, Sendable {
     case next
     case seek(seconds: Double)
 
-    var mediaCommand: MediaCommand {
+    var runtimeCommand: MediaCandidateCommand {
         switch self {
         case .toggle:
-            return .togglePlayPause
+            return .toggle
         case .previous:
             return .previous
         case .next:
@@ -172,7 +169,7 @@ struct ProductionMediaTransportCandidateCollector {
         self.sourceCommit = sourceCommit
     }
 
-    mutating func record(state: MediaSubsystemState, snapshot: MediaSessionSnapshot?) {
+    mutating func record(state: MediaCandidateSubsystemState, snapshot: MediaCandidateSnapshot?) {
         eventCount += 1
 
         guard let snapshot else {
@@ -183,22 +180,22 @@ struct ProductionMediaTransportCandidateCollector {
         }
 
         observedSession = true
-        if snapshot.artworkData != nil {
+        if snapshot.hasArtwork {
             observedArtwork = true
         }
-        if snapshot.playbackState == .playing {
+        if snapshot.isPlaying {
             observedPlayingState = true
         }
 
-        let nextSource = snapshot.source.bundleIdentifier
+        let nextSource = snapshot.sourceBundleIdentifier
         if let sourceBundleIdentifier, sourceBundleIdentifier != nextSource {
             sourceSwitchCount += 1
-            if lastSnapshotHadArtwork, snapshot.artworkData == nil {
+            if lastSnapshotHadArtwork, !snapshot.hasArtwork {
                 observedArtworkClearOnSourceSwitch = true
             }
         }
         sourceBundleIdentifier = nextSource
-        lastSnapshotHadArtwork = snapshot.artworkData != nil
+        lastSnapshotHadArtwork = snapshot.hasArtwork
         capabilities = ProductionMediaTransportCandidateCapabilities(snapshot.capabilities)
     }
 
@@ -222,7 +219,7 @@ struct ProductionMediaTransportCandidateCollector {
 }
 
 extension ProductionMediaTransportCandidateCapabilities {
-    init(_ capabilities: MediaCommandCapabilities) {
+    init(_ capabilities: MediaCandidateCapabilities) {
         previous = ProductionMediaTransportCandidateCapabilityState(capabilities.previous)
         next = ProductionMediaTransportCandidateCapabilityState(capabilities.next)
         seek = ProductionMediaTransportCandidateCapabilityState(capabilities.seek)
@@ -230,7 +227,7 @@ extension ProductionMediaTransportCandidateCapabilities {
 }
 
 private extension ProductionMediaTransportCandidateCapabilityState {
-    init(_ capability: MediaCapabilityState) {
+    init(_ capability: MediaCandidateCapabilityState) {
         switch capability {
         case .supported:
             self = .supported
