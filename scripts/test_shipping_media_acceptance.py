@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 from performance_policy import ProcessSample
 from shipping_media_acceptance import (
@@ -12,6 +13,9 @@ from shipping_media_acceptance import (
     build_teardown_report,
     validate_shipping_info,
 )
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
 class ShippingMediaAcceptanceTests(unittest.TestCase):
@@ -148,6 +152,21 @@ class ShippingMediaAcceptanceTests(unittest.TestCase):
             adapter_exited=False,
         )
         self.assertTrue(orphan["orphanProcessDetected"])
+
+    def test_ci_runs_shipping_preflight_collector_on_built_app(self):
+        workflow = (
+            REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
+        ).read_text(encoding="utf-8")
+
+        required = (
+            "shipping_media_acceptance.py preflight",
+            "--app build/NotchHub.app",
+            "--source-commit \"$SOURCE_COMMIT\"",
+            "build/shipping-media-preflight.json",
+        )
+        for fragment in required:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, workflow)
 
 
 if __name__ == "__main__":
