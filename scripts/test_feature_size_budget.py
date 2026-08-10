@@ -89,6 +89,39 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("appSizeBytes", violations[0])
         self.assertIn("feature-adjusted ceiling 320", violations[0])
 
+    def test_feature_budget_accepts_exact_artifact_size_envelope_only(self):
+        summary = {
+            "schemaVersion": 1,
+            "sourceCommit": "b" * 40,
+            "executableSizeBytes": 160,
+            "appSizeBytes": 320,
+            "dmgSizeBytes": 110,
+        }
+        self.assertEqual(
+            [],
+            compare_size_summary_to_feature_budget(
+                summary,
+                self.baseline(),
+                self.feature_budget(),
+            ),
+        )
+
+        for mutate in ("extra", "bad-schema", "bad-sha"):
+            invalid = dict(summary)
+            if mutate == "extra":
+                invalid["unexpected"] = True
+            elif mutate == "bad-schema":
+                invalid["schemaVersion"] = 2
+            else:
+                invalid["sourceCommit"] = "not-a-sha"
+            with self.subTest(mutate=mutate):
+                with self.assertRaises(ValueError):
+                    compare_size_summary_to_feature_budget(
+                        invalid,
+                        self.baseline(),
+                        self.feature_budget(),
+                    )
+
     def test_feature_budget_requires_matching_immutable_baseline_id(self):
         budget = self.feature_budget()
         budget["baselineId"] = "other"
