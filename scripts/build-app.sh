@@ -57,8 +57,7 @@ if [[ ! "$MEDIA_PATCH_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
 fi
 
 cd "$ROOT_DIR"
-# Build only the shipping product. Explicit dead stripping prevents dev-only symbols from
-# executable products sharing package targets from inflating NotchHub.app.
+# Build only the shipping product. Explicit dead stripping keeps the executable graph minimal.
 swift build -c "$CONFIGURATION" --product NotchHub -Xlinker -dead_strip
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 
@@ -103,6 +102,15 @@ PY
 plutil -lint "$CONTENTS_DIR/Info.plist" >/dev/null
 plutil -lint "$ENTITLEMENTS_FILE" >/dev/null
 grep -q 'capabilities' "$RESOURCES_DIR/mediaremote-adapter.pl"
+nm -gU \
+    "$MEDIA_FRAMEWORK_DEST/Versions/A/MediaRemoteAdapter" \
+    | grep -q '_adapter_capabilities$'
+
+# Release artifacts do not need local symbol tables. Strip before any code signature is applied.
+strip -x "$MACOS_DIR/NotchHub"
+strip -x "$MEDIA_FRAMEWORK_DEST/Versions/A/MediaRemoteAdapter"
+
+# The required capability export must survive stripping.
 nm -gU \
     "$MEDIA_FRAMEWORK_DEST/Versions/A/MediaRemoteAdapter" \
     | grep -q '_adapter_capabilities$'
