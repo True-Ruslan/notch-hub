@@ -8,6 +8,12 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Added
 
+- M6.4 shipping composition linking the accepted `NotchHubMediaCore` into `NotchHubApp`, with application-owned `ShippingMediaRuntime` start/stop and exact pinned adapter/framework/license/provenance resources inside the real shipping bundle.
+- Development-only `NotchHubMediaCandidateCore` target separating production-transport candidate helpers from the shipping media graph; this reduced the composed shipping executable from `354,880 B` to `312,816 B` without changing the accepted transport semantics.
+- Explicit M6.4 additive feature-size policy over the unchanged immutable P0 baseline, with strict schema/provenance validation and exact real `perf-size.json` envelope handling.
+- Privacy-safe `scripts/shipping_media_acceptance.py` for shipping preflight, parent+owned-adapter 60-second/10-minute resource sampling, and bounded normal-termination/no-orphan evidence.
+- Exact-candidate `scripts/run-shipping-media-target-acceptance.sh` pinning the frozen M6.4 DMG SHA-256, mounting it read-only, running preflight/resources, requesting normal termination through public `NSRunningApplication.terminate()`, and producing only privacy-safe acceptance JSON.
+- `docs/testing/SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md` and `docs/testing/SHIPPING_MEDIA_COMPOSITION_TARGET_MAC.md` defining stable `NH-MEDIA-SHIP-001...010` gates and the physical target procedure.
 - M6.3 concrete production `MediaRemoteSystemTransport` with strict bounded `stream --no-diff --micros` decoding, full-snapshot replacement, authoritative tri-state capabilities, monotonic source/session ordering, stale-capability rejection, and typed toggle/previous/next/seek forwarding.
 - One narrowly reviewed production Foundation `Process()` boundary fixed to `/usr/bin/perl`, with pinned MediaRemote adapter provenance, closed arguments, bounded I/O, bounded graceful/forced teardown, and executable security-audit enforcement preventing `Process()` from spreading elsewhere in `Sources/**`.
 - Development-only `ProductionMediaTransportCandidate` plus target-Mac preflight/source-cycle/resource collector and acceptance ledger for exact Sandbox/Hardened Runtime, source switching, command behavior, permission, teardown, and 60-second/10-minute resource evidence.
@@ -41,6 +47,9 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Changed
 
+- **M6.4 shipping composition is CI-qualified but not yet accepted**: the frozen physical candidate is source `c19ce13c5321fce72464ddf0a5d9b1467f770db0`, CI #675 / run `31408757149`, artifact ID `9070996306`, Actions digest `sha256:c3b279153b8abf75ab77fa2f478888ae1fe9bad6bfdbf64665567bf713b8035d`, and contained DMG SHA-256 `ccf8a503515d382c206c6211606ca6401ba33114863a30721e134c1a45af04b9`. Target lifecycle/resource/permission gates remain pending.
+- The real shipping app now intentionally owns the accepted production media lifecycle and pinned resources while retaining App Sandbox-only entitlements, Hardened Runtime, system-only executable dylibs, the fixed `/usr/bin/perl` process boundary, typed commands, bounded teardown, and no sensitive permission/network/player-specific fallback expansion.
+- M6.4 exact frozen artifact sizes are executable `312,816 B`, physical app payload `615,022 B`, and DMG `406,618 B`. The original P0 baseline is not rewritten; the feature cost is enforced through a separate reviewed additive allowance of `65,536 B / 360,448 B / 327,680 B` for executable/app/DMG.
 - **M6.3 concrete production system transport is accepted** on frozen source `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b` after the complete target-Mac gate on `Mac16,8` / macOS 26.6. Yandex Music and Yandex Browser are verified through the same production transport; no-session capability state, authoritative source switching/disappearance, actual toggle/previous/next/seek behavior, no-sensitive-permission posture, clean teardown, and steady/stability resource behavior all pass.
 - M6.3 acceptance does not silently compose media into the shipping app. `NotchHubApp` still does not link `NotchHubMediaCore`, and pinned adapter/framework resources are not yet shipped; composition is the next separate reviewed slice with fresh security/package/size/runtime evidence.
 - M6.2 keeps the production media core in an independent Swift target that is fully built/tested but deliberately not linked into `NotchHubApp` until the concrete system transport/composition slice. This preserves honest feature-cost accounting and keeps dormant media code out of the current Personal Release.
@@ -72,6 +81,8 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Fixed
 
+- M6.4 feature-size policy now accepts only the exact real artifact-size envelope (`schemaVersion`, `sourceCommit`, and the three size metrics) while remaining fail-closed for unknown fields; an earlier checker incorrectly rejected valid CI metadata keys.
+- M6.4 production candidate helpers no longer inflate the shipping link graph; candidate-only reporting/invocation code is isolated into a development-only target.
 - M6.3 production teardown no longer blocks indefinitely in `Process.waitUntilExit()`: graceful termination gets a bounded exit-event window, then the owned adapter is force-terminated if necessary and must confirm exit within a second bounded window.
 - M6.3 target resource collection now uses the proven numeric CPU/RSS/thread sampling boundary instead of mixing command text into process metrics.
 - M6.3 long-run acceptance now uses an absolute observer deadline plus bounded completion grace instead of the superseded fixed 20-second post-sampling watchdog.
@@ -88,6 +99,9 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Testing
 
+- M6.4 frozen deterministic shipping candidate `c19ce13c5321fce72464ddf0a5d9b1467f770db0` passed complete CI #675 / run `31408757149`, including warnings-as-errors, full Swift suite/coverage, release/performance/media/security policy, nested/top-level signing, Sandbox/Hardened Runtime, shipping preflight, additive size gate, hosted performance smoke, and artifact publication.
+- CI #675 published `NotchHub-shipping-media-candidate` artifact ID `9070996306`, Actions digest `sha256:c3b279153b8abf75ab77fa2f478888ae1fe9bad6bfdbf64665567bf713b8035d`; contained DMG SHA-256 `ccf8a503515d382c206c6211606ca6401ba33114863a30721e134c1a45af04b9`.
+- M6.4 target-runner TDD RED CI #676 failed only because the exact target runner did not yet exist. Subsequent runner implementation uses the frozen DMG hash, read-only mount, existing privacy-safe collector, public AppKit normal termination, and rejects AppleScript/System Events/`kill -9`/`pkill` acceptance paths.
 - M6.3 frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b` passed CI #576 / run `31339015100`; artifact ID `9045247126`, digest `sha256:a6323c504021f21e7638b40e47bedd0b2c1a9fcfcf861724c139151ee8faa804`.
 - Target-Mac M6.3 acceptance on `Mac16,8` / macOS 26.6 passed all `NH-MEDIA-PROD-001...013` gates: sandbox-only + Hardened Runtime; no-session `unknown/unknown/unknown`; Yandex Music; Yandex Browser; source switch count `1` and disappearance; actual toggle pause/resume, next, previous, seek 42s; no Accessibility/Input Monitoring/Automation/Screen Recording prompts; clean teardown/no orphan.
 - M6.3 60-second steady evidence passed with parent CPU median/max `0.0/0.0%`, adapter `0.0/0.1%`, combined RSS median/max upper bounds `26,416/32,192 KiB`, combined thread median/max upper bounds `4/9`, clean teardown and no orphan.
