@@ -8,6 +8,9 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Added
 
+- M6.3 concrete production `MediaRemoteSystemTransport` with strict bounded `stream --no-diff --micros` decoding, full-snapshot replacement, authoritative tri-state capabilities, monotonic source/session ordering, stale-capability rejection, and typed toggle/previous/next/seek forwarding.
+- One narrowly reviewed production Foundation `Process()` boundary fixed to `/usr/bin/perl`, with pinned MediaRemote adapter provenance, closed arguments, bounded I/O, bounded graceful/forced teardown, and executable security-audit enforcement preventing `Process()` from spreading elsewhere in `Sources/**`.
+- Development-only `ProductionMediaTransportCandidate` plus target-Mac preflight/source-cycle/resource collector and acceptance ledger for exact Sandbox/Hardened Runtime, source switching, command behavior, permission, teardown, and 60-second/10-minute resource evidence.
 - M6.2 production `NotchHubMediaCore` target with normalized system-media domain types, player-agnostic `MediaProvider`, deterministic `@MainActor MediaSessionController`, injected `SystemMediaTransport`, and isolated `SystemMediaBridge` boundary.
 - Deterministic M6.2 tests for generation/revision ordering, stale/same-sequence rejection, deduplication, playback-state mapping, capability fail-closed behavior, invalid seek rejection, typed command forwarding, command-failure state preservation, one controlled restart, second-failure lockout, explicit stop, bridge callback ownership, teardown ordering, and stale transport-handler rejection.
 - `docs/superpowers/plans/2026-08-09-production-media-boundary.md` defining the production media state/controller/bridge implementation sequence after M6.1 `ACCEPT_TRANSPORT`.
@@ -38,6 +41,8 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Changed
 
+- **M6.3 concrete production system transport is accepted** on frozen source `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b` after the complete target-Mac gate on `Mac16,8` / macOS 26.6. Yandex Music and Yandex Browser are verified through the same production transport; no-session capability state, authoritative source switching/disappearance, actual toggle/previous/next/seek behavior, no-sensitive-permission posture, clean teardown, and steady/stability resource behavior all pass.
+- M6.3 acceptance does not silently compose media into the shipping app. `NotchHubApp` still does not link `NotchHubMediaCore`, and pinned adapter/framework resources are not yet shipped; composition is the next separate reviewed slice with fresh security/package/size/runtime evidence.
 - M6.2 keeps the production media core in an independent Swift target that is fully built/tested but deliberately not linked into `NotchHubApp` until the concrete system transport/composition slice. This preserves honest feature-cost accounting and keeps dormant media code out of the current Personal Release.
 - Linking the dormant M6.2 controller directly into `NotchHubCore` was rejected by the unchanged P0 size gate; a controlled sync-vs-async command-dispatch experiment changed zero bytes, while target isolation restored the shipping executable/app exactly to `250,320 B / 253,317 B` without widening budgets or weakening policy.
 - M6.1 Universal Media transport feasibility is accepted with final outcome **`ACCEPT_TRANSPORT`** after target-Mac security, capability, real-command, source-switch/disappearance, lifecycle, 60-second resource, and corrected 10-minute stability evidence. Production Universal Media state/controller/bridge work is now unblocked under the approved isolated boundary.
@@ -67,6 +72,9 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Fixed
 
+- M6.3 production teardown no longer blocks indefinitely in `Process.waitUntilExit()`: graceful termination gets a bounded exit-event window, then the owned adapter is force-terminated if necessary and must confirm exit within a second bounded window.
+- M6.3 target resource collection now uses the proven numeric CPU/RSS/thread sampling boundary instead of mixing command text into process metrics.
+- M6.3 long-run acceptance now uses an absolute observer deadline plus bounded completion grace instead of the superseded fixed 20-second post-sampling watchdog.
 - Restored the intended visible black compact panel on hardware-notch displays after a transparency workaround left only the white compact indicator floating over wallpaper.
 - Expanded primary controls receive an explicit hardware-notch safe top inset and no longer depend on presentation state disappearing before the backing window reaches its endpoint.
 - Repeated compact/expanded resizing no longer relies on SwiftUI `clipShape` for the actual outer panel chrome; AppKit owns the backing-view mask.
@@ -80,6 +88,11 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Testing
 
+- M6.3 frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b` passed CI #576 / run `31339015100`; artifact ID `9045247126`, digest `sha256:a6323c504021f21e7638b40e47bedd0b2c1a9fcfcf861724c139151ee8faa804`.
+- Target-Mac M6.3 acceptance on `Mac16,8` / macOS 26.6 passed all `NH-MEDIA-PROD-001...013` gates: sandbox-only + Hardened Runtime; no-session `unknown/unknown/unknown`; Yandex Music; Yandex Browser; source switch count `1` and disappearance; actual toggle pause/resume, next, previous, seek 42s; no Accessibility/Input Monitoring/Automation/Screen Recording prompts; clean teardown/no orphan.
+- M6.3 60-second steady evidence passed with parent CPU median/max `0.0/0.0%`, adapter `0.0/0.1%`, combined RSS median/max upper bounds `26,416/32,192 KiB`, combined thread median/max upper bounds `4/9`, clean teardown and no orphan.
+- M6.3 corrected 10-minute evidence passed with 120 samples: combined CPU median/max upper bounds `0.0/7.5%`, RSS `35,168 -> 26,160 KiB` (`-9,008 KiB`), threads `11 -> 4`, `cleanTeardown = true`, `orphanProcessDetected = false`.
+- M6.3 lifecycle and acceptance-tool defects were developed under explicit RED -> GREEN evidence; collector-only fixes did not modify the frozen production candidate.
 - M6.2 strict RED -> GREEN history covers missing domain types, provider contract, controller state machine, and `SystemMediaBridge` boundary before each implementation was added.
 - M6.2 exact code head `52d6d76b564c603cb21f0ec49bff4fa958c3aac7` passed CI #500 with **117/117 Swift tests**, macOS 26 warnings-as-errors builds, probe verification, release/performance/media-policy tests, strict formatting/security audit, Sandbox/Hardened Runtime/package verification, performance harness smoke, and unchanged P0 size gates.
 - CI #500 produced shipping executable/app payloads exactly `250,320 B / 253,317 B`, executable segment `65,536 B`, and DMG `84,661 B`; `NotchHubApp` depends only on `NotchHubCore`, while `NotchHubMediaCore` remains independently built/tested.
