@@ -168,6 +168,32 @@ class ShippingMediaAcceptanceTests(unittest.TestCase):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, workflow)
 
+    def test_target_runner_uses_exact_candidate_and_normal_app_termination(self):
+        runner_path = REPOSITORY_ROOT / "scripts" / "run-shipping-media-target-acceptance.sh"
+        self.assertTrue(runner_path.is_file(), "missing M6.4 target-Mac acceptance runner")
+        runner = runner_path.read_text(encoding="utf-8") if runner_path.is_file() else ""
+
+        required = (
+            "set -euo pipefail",
+            "hdiutil attach",
+            "-readonly",
+            "shipping_media_acceptance.py preflight",
+            "shipping_media_acceptance.py resources",
+            "--mode steady",
+            "--mode stability",
+            "shipping_media_acceptance.py teardown",
+            "NSRunningApplication(processIdentifier:",
+            ".terminate()",
+            "orphanProcessDetected",
+        )
+        for fragment in required:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, runner)
+
+        for forbidden in ("osascript", "System Events", "kill -9", "pkill"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, runner)
+
 
 if __name__ == "__main__":
     unittest.main()
