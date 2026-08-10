@@ -98,7 +98,7 @@ public final class NotchPanelController: NSObject {
         )
     }
 
-    func invalidate() {
+    public func invalidate() {
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
         transitionCoordinator.invalidate()
