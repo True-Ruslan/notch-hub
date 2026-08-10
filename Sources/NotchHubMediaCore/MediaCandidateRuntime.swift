@@ -1,5 +1,10 @@
 import Foundation
 
+package enum MediaCandidateLimits {
+    package static let maximumSeekSeconds =
+        Double(MediaRemoteWireDecoder.maximumDurationMicros) / 1_000_000
+}
+
 package enum MediaCandidateCapabilityState: Sendable, Equatable {
     case supported
     case unsupported
@@ -81,8 +86,6 @@ package protocol MediaCandidateRuntimeProtocol: AnyObject {
 
 @MainActor
 package final class MediaCandidateRuntime: MediaCandidateRuntimeProtocol {
-    package static let maximumSeekSeconds = MediaRemoteProcessClient.maximumSeekSeconds
-
     private let processClient: MediaRemoteProcessClient
     private let controller: MediaSessionController
 
@@ -100,31 +103,31 @@ package final class MediaCandidateRuntime: MediaCandidateRuntimeProtocol {
         controller = MediaSessionController(provider: bridge)
     }
 
-    package var state: MediaCandidateSubsystemState {
+    var state: MediaCandidateSubsystemState {
         MediaCandidateSubsystemState(controller.state)
     }
 
-    package var snapshot: MediaCandidateSnapshot? {
+    var snapshot: MediaCandidateSnapshot? {
         controller.snapshot.map(MediaCandidateSnapshot.init)
     }
 
-    package var lastTeardownClean: Bool {
+    var lastTeardownClean: Bool {
         processClient.lastTeardownClean
     }
 
-    package func startObservation() {
+    func startObservation() {
         controller.changeHandler = { [weak self] in
             self?.changeHandler?()
         }
         controller.start()
     }
 
-    package func stopObservation() {
+    func stopObservation() {
         controller.changeHandler = nil
         controller.stop()
     }
 
-    package func capabilities() async throws -> MediaCandidateCapabilities {
+    func capabilities() async throws -> MediaCandidateCapabilities {
         do {
             return MediaCandidateCapabilities(try await processClient.capabilities())
         } catch {
@@ -132,7 +135,7 @@ package final class MediaCandidateRuntime: MediaCandidateRuntimeProtocol {
         }
     }
 
-    package func send(_ command: MediaCandidateCommand) async -> Bool {
+    func send(_ command: MediaCandidateCommand) async -> Bool {
         let transport = MediaRemoteSystemTransport(processClient: processClient)
         transport.start()
         defer {
