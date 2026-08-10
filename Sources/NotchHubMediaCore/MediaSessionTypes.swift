@@ -1,15 +1,15 @@
 import Foundation
 
-struct MediaSequence: Sendable, Equatable, Comparable {
-    let generation: UInt64
-    let revision: UInt64
+package struct MediaSequence: Sendable, Equatable, Comparable {
+    package let generation: UInt64
+    package let revision: UInt64
 
-    init(generation: UInt64, revision: UInt64) {
+    package init(generation: UInt64, revision: UInt64) {
         self.generation = generation
         self.revision = revision
     }
 
-    static func < (lhs: MediaSequence, rhs: MediaSequence) -> Bool {
+    package static func < (lhs: MediaSequence, rhs: MediaSequence) -> Bool {
         if lhs.generation != rhs.generation {
             return lhs.generation < rhs.generation
         }
@@ -17,18 +17,18 @@ struct MediaSequence: Sendable, Equatable, Comparable {
     }
 }
 
-enum MediaCapabilityState: Sendable, Equatable {
+package enum MediaCapabilityState: Sendable, Equatable {
     case supported
     case unsupported
     case unknown
 }
 
-struct MediaCommandCapabilities: Sendable, Equatable {
-    let previous: MediaCapabilityState
-    let next: MediaCapabilityState
-    let seek: MediaCapabilityState
+package struct MediaCommandCapabilities: Sendable, Equatable {
+    package let previous: MediaCapabilityState
+    package let next: MediaCapabilityState
+    package let seek: MediaCapabilityState
 
-    init(
+    package init(
         previous: MediaCapabilityState,
         next: MediaCapabilityState,
         seek: MediaCapabilityState
@@ -39,36 +39,36 @@ struct MediaCommandCapabilities: Sendable, Equatable {
     }
 }
 
-enum MediaPlaybackState: Sendable, Equatable {
+package enum MediaPlaybackState: Sendable, Equatable {
     case paused
     case playing
 }
 
-struct MediaSourceIdentity: Sendable, Equatable {
-    let bundleIdentifier: String
-    let displayName: String?
+package struct MediaSourceIdentity: Sendable, Equatable {
+    package let bundleIdentifier: String
+    package let displayName: String?
 
-    init(bundleIdentifier: String, displayName: String?) {
+    package init(bundleIdentifier: String, displayName: String?) {
         self.bundleIdentifier = bundleIdentifier
         self.displayName = displayName
     }
 }
 
-struct MediaSessionSnapshot: Sendable {
-    let sequence: MediaSequence
-    let source: MediaSourceIdentity
-    let title: String?
-    let artist: String?
-    let album: String?
-    let artworkData: Data?
-    let playbackState: MediaPlaybackState
-    let durationSeconds: Double?
-    let positionSeconds: Double?
-    let referenceDate: Date?
-    let playbackRate: Double?
-    let capabilities: MediaCommandCapabilities
+package struct MediaSessionSnapshot: Sendable {
+    package let sequence: MediaSequence
+    package let source: MediaSourceIdentity
+    package let title: String?
+    package let artist: String?
+    package let album: String?
+    package let artworkData: Data?
+    package let playbackState: MediaPlaybackState
+    package let durationSeconds: Double?
+    package let positionSeconds: Double?
+    package let referenceDate: Date?
+    package let playbackRate: Double?
+    package let capabilities: MediaCommandCapabilities
 
-    init(
+    package init(
         sequence: MediaSequence,
         source: MediaSourceIdentity,
         title: String?,
@@ -97,14 +97,14 @@ struct MediaSessionSnapshot: Sendable {
     }
 }
 
-enum MediaCommand: Sendable, Equatable {
+package enum MediaCommand: Sendable, Equatable {
     case togglePlayPause
     case previous
     case next
     case seek(seconds: Double)
 }
 
-enum MediaSubsystemState: Sendable, Equatable {
+package enum MediaSubsystemState: Sendable, Equatable {
     case unavailable
     case idle
     case paused
