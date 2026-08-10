@@ -3,6 +3,7 @@ from pathlib import Path
 
 from test_production_media_transport_acceptance import ProductionMediaTransportAcceptanceTests
 from test_production_media_transport_candidate_ci import ProductionMediaTransportCandidateCITests
+from test_shipping_media_acceptance import ShippingMediaAcceptanceTests
 from test_shipping_media_composition import ShippingMediaCompositionPolicyTests
 
 
@@ -86,9 +87,6 @@ class MediaBridgeProbeCITests(unittest.TestCase):
             with self.subTest(patch_fragment=fragment):
                 self.assertIn(fragment, patch)
 
-        # next/previous are already part of the pinned adapter's public command
-        # enum. The compatibility patch must consume those constants rather than
-        # shadowing them with duplicate declarations.
         self.assertNotIn("kMRANextTrack = 4,", patch)
         self.assertNotIn("kMRAPreviousTrack = 5,", patch)
 
