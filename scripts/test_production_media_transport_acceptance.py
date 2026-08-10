@@ -1,9 +1,12 @@
+import subprocess
 import unittest
+from unittest.mock import patch
 
 from production_media_transport_acceptance import (
     EXPECTED_ADAPTER_COMMIT,
     EXPECTED_REPORT_KEYS,
     EXPECTED_SOURCE_COMMIT,
+    _sample_process,
     combine_resource_summaries,
     find_owned_adapter_pid,
     validate_candidate_report,
@@ -17,6 +20,32 @@ CURRENT_SOURCE_COMMIT = "c63f39c40b90d647e48271b9dc1d5ffd6e612c0b"
 class ProductionMediaTransportAcceptanceTests(unittest.TestCase):
     def test_default_source_commit_tracks_current_exact_candidate(self):
         self.assertEqual(CURRENT_SOURCE_COMMIT, EXPECTED_SOURCE_COMMIT)
+
+    def test_resource_sampler_uses_numeric_cpu_rss_and_darwin_thread_rows(self):
+        metric_result = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="  0.0  5680\n", stderr=""
+        )
+        thread_result = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="USER PID TT %CPU STAT PRI STIME UTIME COMMAND\nuser 123 ?? 0.0 S 31 0:00.01 0:00.00 candidate\nuser 123 ?? 0.0 S 31 0:00.01 0:00.00 candidate\n",
+            stderr="",
+        )
+
+        with patch(
+            "production_media_transport_acceptance.subprocess.run",
+            side_effect=[metric_result, thread_result],
+        ) as run:
+            sample = _sample_process(123)
+
+        self.assertEqual(0.0, sample.cpu_percent)
+        self.assertEqual(5680, sample.rss_kib)
+        self.assertEqual(2, sample.thread_count)
+        self.assertEqual(
+            ["/bin/ps", "-p", "123", "-o", "%cpu=", "-o", "rss="],
+            run.call_args_list[0].args[0],
+        )
+        self.assertEqual(["/bin/ps", "-M", "123"], run.call_args_list[1].args[0])
 
     def test_report_validation_accepts_exact_privacy_safe_schema(self):
         report = {
