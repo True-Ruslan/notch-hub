@@ -6,6 +6,7 @@ from production_media_transport_acceptance import (
     EXPECTED_ADAPTER_COMMIT,
     EXPECTED_REPORT_KEYS,
     EXPECTED_SOURCE_COMMIT,
+    _resource_observer_completion_timeout,
     _sample_process,
     combine_resource_summaries,
     find_owned_adapter_pid,
@@ -20,6 +21,22 @@ CURRENT_SOURCE_COMMIT = "c63f39c40b90d647e48271b9dc1d5ffd6e612c0b"
 class ProductionMediaTransportAcceptanceTests(unittest.TestCase):
     def test_default_source_commit_tracks_current_exact_candidate(self):
         self.assertEqual(CURRENT_SOURCE_COMMIT, EXPECTED_SOURCE_COMMIT)
+
+    def test_resource_observer_completion_timeout_uses_absolute_deadline_and_bounded_grace(self):
+        timeout = _resource_observer_completion_timeout(
+            observer_started_monotonic=100.0,
+            observer_seconds=610.0,
+            now_monotonic=695.0,
+        )
+
+        self.assertEqual(75.0, timeout)
+
+        with self.assertRaises(TimeoutError):
+            _resource_observer_completion_timeout(
+                observer_started_monotonic=100.0,
+                observer_seconds=610.0,
+                now_monotonic=771.0,
+            )
 
     def test_resource_sampler_uses_numeric_cpu_rss_and_darwin_thread_rows(self):
         metric_result = subprocess.CompletedProcess(
