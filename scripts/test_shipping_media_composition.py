@@ -14,6 +14,31 @@ class ShippingMediaCompositionPolicyTests(unittest.TestCase):
             package,
         )
 
+    def test_candidate_helpers_are_isolated_from_shipping_media_core(self):
+        package = (REPOSITORY_ROOT / "Package.swift").read_text(encoding="utf-8")
+        self.assertIn('name: "NotchHubMediaCandidateCore"', package)
+        self.assertIn('path: "Tools/ProductionMediaTransportCandidate/Core"', package)
+        self.assertIn('dependencies: ["NotchHubMediaCore"]', package)
+        self.assertIn(
+            'name: "MediaTransportCandidate",\n            dependencies: ["NotchHubMediaCandidateCore"]',
+            package,
+        )
+
+        production_dir = REPOSITORY_ROOT / "Sources" / "NotchHubMediaCore"
+        candidate_dir = (
+            REPOSITORY_ROOT / "Tools" / "ProductionMediaTransportCandidate" / "Core"
+        )
+        helper_names = (
+            "ProductionMediaTransportCandidate.swift",
+            "ProductionMediaTransportCandidateBundlePaths.swift",
+            "ProductionMediaTransportCandidateInvocation.swift",
+            "ProductionMediaTransportCandidateRunner.swift",
+        )
+        for name in helper_names:
+            with self.subTest(name=name):
+                self.assertFalse((production_dir / name).exists())
+                self.assertTrue((candidate_dir / name).is_file())
+
     def test_application_composition_root_owns_shell_and_media_lifecycle(self):
         app_delegate = REPOSITORY_ROOT / "Sources" / "NotchHubApp" / "AppDelegate.swift"
         legacy_delegate = REPOSITORY_ROOT / "Sources" / "NotchHubCore" / "App" / "AppDelegate.swift"
