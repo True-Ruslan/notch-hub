@@ -1,10 +1,10 @@
 @MainActor
-package final class MediaSessionController {
+final class MediaSessionController {
     private let provider: any MediaProvider
 
-    package private(set) var state: MediaSubsystemState = .unavailable
-    package private(set) var snapshot: MediaSessionSnapshot?
-    package var changeHandler: (@MainActor @Sendable () -> Void)?
+    private(set) var state: MediaSubsystemState = .unavailable
+    private(set) var snapshot: MediaSessionSnapshot?
+    var changeHandler: (@MainActor @Sendable () -> Void)?
 
     private var latestSequence: MediaSequence?
     private var isStarted = false
@@ -12,11 +12,11 @@ package final class MediaSessionController {
     private var restartUsed = false
     private var handlerGeneration: UInt64 = 0
 
-    package init(provider: any MediaProvider) {
+    init(provider: any MediaProvider) {
         self.provider = provider
     }
 
-    package func start() {
+    func start() {
         guard !isStarted, !isTerminal else {
             return
         }
@@ -25,7 +25,7 @@ package final class MediaSessionController {
         installHandlerAndStartProvider()
     }
 
-    package func stop() {
+    func stop() {
         guard !isTerminal else {
             return
         }
@@ -41,7 +41,7 @@ package final class MediaSessionController {
         publish(state: .unavailable, snapshot: nil)
     }
 
-    package func send(_ command: MediaCommand) async -> MediaCommandResult {
+    func send(_ command: MediaCommand) async -> MediaCommandResult {
         guard isStarted, !isTerminal, let snapshot else {
             return .failed
         }
