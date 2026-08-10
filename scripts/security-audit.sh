@@ -9,8 +9,7 @@ fail() {
     exit 1
 }
 
-# 1. Runtime dependencies are intentionally zero at M0. New third-party code must be
-# reviewed explicitly before this invariant is changed.
+# 1. Runtime dependencies remain intentionally free of third-party Swift packages.
 DEPS_JSON="$(mktemp)"
 trap 'rm -f "$DEPS_JSON"' EXIT
 swift package show-dependencies --format json > "$DEPS_JSON"
@@ -69,10 +68,9 @@ for pattern in "${forbidden_source_patterns[@]}"; do
     fi
 done
 
-# 2a. M6.1 accepted one external compatibility-process architecture. Production
-# Process use is therefore allowed in exactly one reviewed file and nowhere else.
-# This is an allowlist for one fixed /usr/bin/perl adapter boundary, not a general
-# subprocess permission for Sources/**.
+# 2a. M6.1/M6.3 accepted one external compatibility-process architecture. Production
+# Process use is allowed in exactly one reviewed file and nowhere else. Shipping M6.4
+# composes this boundary but does not add another subprocess capability.
 PRODUCTION_MEDIA_PROCESS_SOURCE="Sources/NotchHubMediaCore/MediaRemoteProcessClient.swift"
 [[ -f "$PRODUCTION_MEDIA_PROCESS_SOURCE" ]] || \
     fail "missing reviewed production media process boundary"
@@ -105,7 +103,7 @@ if git grep -nEI -- \
     fail "possible credential or private key material found in tracked files"
 fi
 
-# 4. M0 sandbox/entitlement contract is intentionally minimal.
+# 4. Sandbox/entitlement contract is intentionally minimal.
 ENTITLEMENTS_JSON="$(mktemp)"
 trap 'rm -f "$DEPS_JSON" "$ENTITLEMENTS_JSON"' EXIT
 plutil -convert json -o "$ENTITLEMENTS_JSON" Resources/NotchHub.entitlements
@@ -128,16 +126,14 @@ if grep -RInE \
     fail "dangerous code-signing/runtime exception found"
 fi
 
-# 6. No persistence helpers or privileged install surfaces at M0.
+# 6. No persistence helpers or privileged install surfaces.
 for forbidden_path in LaunchAgents LaunchDaemons PrivilegedHelperTools; do
     if find . -path "*/$forbidden_path/*" -print -quit | grep -q .; then
         fail "unexpected persistence/privileged path found: $forbidden_path"
     fi
 done
 
-# 7. Workflow supply-chain and public-fork policy. External actions must be immutable
-# full SHAs, privileged PR/workflow_run bridges are prohibited repository-wide, and
-# ordinary PR CI must stay read-only without repository secrets or self-hosted runners.
+# 7. Workflow supply-chain and public-fork policy.
 python3 <<'PY'
 from pathlib import Path
 import re
@@ -172,9 +168,7 @@ CI_WORKFLOW=".github/workflows/ci.yml"
 python3 scripts/release_policy.py validate-public-ci --workflow "$CI_WORKFLOW" || \
     fail "ordinary pull-request CI violated the public-repository trust boundary"
 
-# 8. Release-tier security policy. Personal distribution intentionally has no Apple
-# credentials/notarization authority and must never be silently upgraded, weakened,
-# or made mutable. The future trusted tier is separate and cannot overwrite versions.
+# 8. Release-tier security policy.
 PERSONAL_WORKFLOW=".github/workflows/personal-release.yml"
 TRUSTED_WORKFLOW=".github/workflows/trusted-release.yml"
 [[ -f "$PERSONAL_WORKFLOW" ]] || fail "missing Personal Release workflow"
@@ -203,8 +197,7 @@ if ! grep -q 'Developer ID Application' "$TRUSTED_WORKFLOW"; then
     fail "Trusted Release must retain Developer ID verification"
 fi
 
-# 9. Performance tooling is development/release-only. The runtime remains event-driven,
-# and the sampler/policy scripts must never become an in-app telemetry or subprocess surface.
+# 9. Performance tooling is development/release-only.
 python3 scripts/performance_policy.py audit Sources || \
     fail "runtime performance policy violated"
 
@@ -216,19 +209,28 @@ if grep -InE 'perf-baseline|performance_policy|test_performance_policy' scripts/
     fail "application packaging must not copy or invoke development performance tooling"
 fi
 
-# 10. Universal Media probe is a development-only compatibility boundary. It may use
-# Process only inside Tools, but its transport, input scope, upstream revision, and
-# shipping isolation are fixed and executable policy. A successful probe does not
-# broaden the single production exception checked in section 2a.
+# 10. Universal Media probe remains development-only. The accepted production
+# transport may now ship, but only through the exact M6.4 allowlisted composition.
 PROBE_DIR="Tools/MediaBridgeProbe"
 BOOTSTRAP="scripts/bootstrap-media-bridge-probe.sh"
 PROBE_BUILD="scripts/build-media-bridge-probe-app.sh"
 PROBE_VERIFY="scripts/verify-media-bridge-probe.sh"
 PROBE_COMMIT="3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
 PROBE_REPO="https://github.com/ungive/mediaremote-adapter.git"
+SHIPPING_MEDIA_BUILD="scripts/build-app.sh"
+SHIPPING_ADAPTER_COMMIT="3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
+SHIPPING_RUNTIME_SOURCE="Sources/NotchHubMediaCore/ShippingMediaRuntime.swift"
+SHIPPING_APP_DELEGATE="Sources/NotchHubApp/AppDelegate.swift"
 
-for required in "$PROBE_DIR/Core/ProbeProcess.swift" "$BOOTSTRAP" "$PROBE_BUILD" "$PROBE_VERIFY"; do
-    [[ -e "$required" ]] || fail "missing media bridge probe boundary file: $required"
+for required in \
+    "$PROBE_DIR/Core/ProbeProcess.swift" \
+    "$BOOTSTRAP" \
+    "$PROBE_BUILD" \
+    "$PROBE_VERIFY" \
+    "$SHIPPING_MEDIA_BUILD" \
+    "$SHIPPING_RUNTIME_SOURCE" \
+    "$SHIPPING_APP_DELEGATE"; do
+    [[ -e "$required" ]] || fail "missing reviewed media boundary file: $required"
 done
 
 grep -Fq "readonly ADAPTER_REPO=\"$PROBE_REPO\"" "$BOOTSTRAP" || \
@@ -280,16 +282,51 @@ if grep -RInE --include='*.swift' '"get"|"get[[:space:]]' "$PROBE_DIR"; then
     fail "media bridge probe must not use periodic get polling"
 fi
 
-for packaging_script in scripts/build-app.sh scripts/build-dmg.sh; do
-    if grep -Eq 'MediaBridgeProbe|mediaremote-adapter|MediaRemoteAdapter' "$packaging_script"; then
-        fail "shipping packaging references development media probe assets: $packaging_script"
-    fi
+# 10a. Shipping may invoke the same reviewed bootstrap at build time and package only
+# the pinned production script/framework/license/provenance. Development executables
+# remain forbidden from the shipping composition.
+grep -Fq "MEDIA_ADAPTER_COMMIT=\"$SHIPPING_ADAPTER_COMMIT\"" "$SHIPPING_MEDIA_BUILD" || \
+    fail "shipping adapter revision is not pinned"
+grep -Fq 'bootstrap-media-bridge-probe.sh' "$SHIPPING_MEDIA_BUILD" || \
+    fail "shipping media build does not reuse reviewed pinned bootstrap"
+grep -Fq 'mediaremote-adapter-capabilities.patch' "$SHIPPING_MEDIA_BUILD" || \
+    fail "shipping media build does not bind the reviewed capability patch"
+for required_asset in \
+    'mediaremote-adapter.pl' \
+    'MediaRemoteAdapter.framework' \
+    'MediaRemoteAdapter-LICENSE.txt' \
+    'media-transport-provenance.json'; do
+    grep -Fq "$required_asset" "$SHIPPING_MEDIA_BUILD" || \
+        fail "shipping media build is missing allowlisted asset: $required_asset"
 done
+for required_provenance in 'NHSourceCommit' 'NHAdapterCommit' 'NHAdapterPatchSHA256'; do
+    grep -Fq "$required_provenance" "$SHIPPING_MEDIA_BUILD" || \
+        fail "shipping media build is missing provenance key: $required_provenance"
+done
+
+grep -Fq 'ShippingMediaRuntime' "$SHIPPING_APP_DELEGATE" || \
+    fail "shipping app does not own the media runtime lifecycle"
+grep -Fq 'MediaRemoteAdapter.framework' "$SHIPPING_RUNTIME_SOURCE" || \
+    fail "shipping runtime does not resolve the allowlisted framework"
+grep -Fq 'mediaremote-adapter.pl' "$SHIPPING_RUNTIME_SOURCE" || \
+    fail "shipping runtime does not resolve the allowlisted script"
+
+if grep -Eq 'MediaTransportCandidate|ProductionMediaTransportCandidate|MediaRemoteAdapterTestClient|MediaBridgeProbe\.app' "$SHIPPING_MEDIA_BUILD"; then
+    fail "shipping packaging references development-only media executables"
+fi
+if grep -Eq 'MediaTransportCandidate|ProductionMediaTransportCandidate|MediaRemoteAdapterTestClient|MediaBridgeProbe\.app' scripts/build-dmg.sh; then
+    fail "DMG packaging references development-only media executables"
+fi
+
+# Runtime source must not invoke probe/test-client tooling or expand the process surface.
+if grep -RInE --include='*.swift' 'MediaRemoteAdapterTestClient|MediaTransportCandidate|MediaBridgeProbe' Sources; then
+    fail "shipping runtime references development-only media tooling"
+fi
 
 if grep -RInE \
     'com\.apple\.security\.cs\.(disable-library-validation|allow-unsigned-executable-memory|allow-dyld-environment-variables|allow-jit|get-task-allow)' \
-    "$PROBE_DIR" "$PROBE_BUILD" "$PROBE_VERIFY" 2>/dev/null; then
-    fail "media bridge probe attempted to weaken Hardened Runtime"
+    "$PROBE_DIR" "$PROBE_BUILD" "$PROBE_VERIFY" "$SHIPPING_MEDIA_BUILD" 2>/dev/null; then
+    fail "media composition attempted to weaken Hardened Runtime"
 fi
 
 echo "Security baseline checks passed."
