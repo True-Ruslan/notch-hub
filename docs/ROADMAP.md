@@ -139,7 +139,7 @@ Completed:
 
 ### M6.3 — concrete production system transport
 
-Status: **ACCEPTED — PR #16 FINALIZATION/MERGE PENDING**
+Status: **ACCEPTED**
 
 Accepted frozen candidate:
 
@@ -177,19 +177,18 @@ A superseded candidate exposed an unbounded `waitUntilExit()` defect; the accept
 
 ## Current approved priority order — 2026-08-10
 
-1. **Finalize and squash-merge PR #16** after fresh exact-head CI and final review.
-2. Start a **separate M6 shipping-composition slice**:
+1. Start a **separate M6 shipping-composition slice**:
    - add `NotchHubMediaCore` to the shipping app dependency graph;
    - package only the pinned adapter/framework assets required by the accepted transport;
    - keep the fixed `/usr/bin/perl`/typed-command/security boundary;
    - collect fresh package/signature/entitlement/artifact-size evidence;
    - do not silently widen P0 budgets;
    - collect fresh target-Mac whole-app runtime evidence for idle/active/teardown lifecycle.
-3. Implement compact + expanded media-first UI after composed state transport is reliable.
-4. Implement local-window gesture/haptic/seek state machines under TDD.
-5. Run target-Mac media/haptic acceptance on actually available sources.
-6. Run **P1 whole-app performance review**, including production bridge lifecycle cost and the deferred local tracking experiment.
-7. Optimize only from evidence, then resume remaining M1 display/Space hardening and later modules.
+2. Implement compact + expanded media-first UI only after composed state transport is reliable.
+3. Implement local-window gesture/haptic/seek state machines under TDD.
+4. Run target-Mac media/haptic acceptance on actually available sources.
+5. Run **P1 whole-app performance review**, including production bridge lifecycle cost and the deferred local tracking experiment.
+6. Optimize only from evidence, then resume remaining M1 display/Space hardening and later modules.
 
 ## M2 — Shelf
 
