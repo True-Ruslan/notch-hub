@@ -3,7 +3,7 @@ import NotchHubMediaCore
 
 enum ProductionMediaTransportCandidateLimits {
     static let maximumObservationSeconds: TimeInterval = 1_200
-    static let maximumSeekSeconds = MediaCandidateRuntime.maximumSeekSeconds
+    static let maximumSeekSeconds = MediaCandidateLimits.maximumSeekSeconds
 }
 
 public enum ProductionMediaTransportCandidateInvocation: Equatable, Sendable {
