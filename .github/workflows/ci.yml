@@ -383,25 +383,12 @@ jobs:
 
       - name: Record deterministic artifact sizes
         run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          app = Path('build/NotchHub.app')
-          executable = app / 'Contents/MacOS/NotchHub'
-          dmg = Path('build/NotchHub.dmg')
-          data = {
-              'schemaVersion': 1,
-              'sourceCommit': '${{ github.event.pull_request.head.sha || github.sha }}',
-              'executableSizeBytes': executable.stat().st_size,
-              'appSizeBytes': sum(path.stat().st_size for path in app.rglob('*') if path.is_file()),
-              'dmgSizeBytes': dmg.stat().st_size,
-          }
-          Path('build/perf-size.json').write_text(
-              json.dumps(data, sort_keys=True, indent=2) + '\n',
-              encoding='utf-8',
-          )
-          PY
+          SOURCE_COMMIT="${{ github.event.pull_request.head.sha || github.sha }}"
+          python3 scripts/artifact_size.py \
+            --app build/NotchHub.app \
+            --dmg build/NotchHub.dmg \
+            --source-commit "$SOURCE_COMMIT" \
+            --output build/perf-size.json
           cat build/perf-size.json
 
       - name: Upload shipping media candidate
