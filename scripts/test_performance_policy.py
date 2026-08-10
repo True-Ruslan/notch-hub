@@ -20,6 +20,7 @@ from performance_policy import (
     summarize_stability_samples,
     validate_config,
 )
+from test_artifact_size import ArtifactSizeTests
 
 
 class RuntimePerformancePolicyTests(unittest.TestCase):
