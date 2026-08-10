@@ -22,14 +22,7 @@ Completed:
 
 Status: **ACCEPTED**
 
-Completed:
-
-- immutable `v0.1.0` Personal Release;
-- ad-hoc signing, Sandbox, Hardened Runtime, checksum/provenance verification;
-- downloaded-release target-Mac acceptance;
-- separate dormant Trusted Release tier.
-
-Paid Apple Developer Program membership remains optional and deferred.
+Immutable `v0.1.0` is accepted for personal use with ad-hoc signing, Sandbox, Hardened Runtime and checksum/provenance verification. Paid Apple Developer Program membership remains optional/deferred.
 
 ## P0 — Performance Foundation
 
@@ -49,7 +42,7 @@ Accepted immutable artifact baseline:
 - app `223,555 B`;
 - DMG `73,955 B`.
 
-Shared CI enforces deterministic artifact-size budgets; CPU/RSS/thread magnitude remains target-Mac evidence.
+The baseline remains immutable. Feature-specific size growth must be explicit and separately reviewed.
 
 ## P0.1 — Public repository readiness
 
@@ -69,7 +62,6 @@ Accepted:
 - `NotchPanelTransitionCoordinator` as sole transition authority;
 - `0.20 s` AppKit/Core Animation transition;
 - Reduce Motion zero-duration endpoint behavior;
-- reversal/stale-completion generation safety;
 - explicit pointer/accessibility observer ownership;
 - one local + one narrow global `.mouseMoved` fallback;
 - no per-mouse-event Swift concurrency task allocation;
@@ -90,15 +82,15 @@ Remaining later M1 work:
 
 ## M6 — Universal Media / System Now Playing
 
-Status: **ACTIVE PRODUCT SLICE — M6.1 ACCEPTED; M6.2 ACCEPTED; M6.3 ACCEPTED; SHIPPING COMPOSITION NEXT**
+Status: **ACTIVE — M6.1/M6.2/M6.3 ACCEPTED; M6.4 CI-QUALIFIED, TARGET GATE PENDING**
 
 Product contract:
 
 - follow the system Now Playing source selected by macOS;
-- player-agnostic behavior, without per-player fallbacks used to manufacture capabilities;
-- capability-driven controls with explicit `supported / unsupported / unknown`;
-- compact artwork/status and expanded media-first presentation;
-- local NotchHub gestures only; no global scroll-wheel monitor;
+- player-agnostic behavior without per-player capability fabrication;
+- explicit `supported / unsupported / unknown` capabilities;
+- compact artwork/status and expanded media-first presentation later;
+- local NotchHub gestures only;
 - no frequent media polling or always-running one-second timer;
 - no listening-history persistence or production metadata logging;
 - no Accessibility/Input Monitoring/synthetic media-key requirement.
@@ -109,16 +101,7 @@ Status: **ACCEPTED — `ACCEPT_TRANSPORT`**
 
 Merge: `7d5210eb0363933d120334d29daf40956b53cb50`.
 
-Physically accepted:
-
-- App Sandbox + Hardened Runtime;
-- no sensitive permission prompts;
-- authoritative no-session/active capabilities;
-- Yandex Music and Yandex Browser observation;
-- actual toggle/previous/next/seek behavior;
-- source switching/disappearance;
-- clean teardown/no orphan;
-- stable 60-second and 10-minute resource behavior.
+Physically accepted Sandbox/Hardened Runtime, no sensitive permissions, authoritative capabilities, Yandex Music/Yandex Browser observation and commands, source switching/disappearance, clean teardown/no orphan, and stable target resources.
 
 ### M6.2 — production media state/controller/bridge boundary
 
@@ -126,69 +109,68 @@ Status: **ACCEPTED AND MERGED**
 
 Merge: `1ccea500570f9a5ca927739be58d7f7eaadd775a`.
 
-Completed:
-
-- normalized media domain and immutable snapshots;
-- generation/revision freshness ordering;
-- player-agnostic provider contract;
-- `@MainActor MediaSessionController` dedup/capability/restart behavior;
-- injected `SystemMediaTransport`;
-- isolated `SystemMediaBridge` callback/teardown/typed-command boundary;
-- deterministic coverage for stale callbacks, unsupported commands and one-restart/no-loop behavior;
-- shipping isolation because linking dormant media code exceeded the unchanged P0 artifact-size gate.
+Completed normalized media state, generation/revision freshness, player-agnostic provider, deterministic controller, injected transport, isolated bridge, typed command forwarding, stale callback rejection and one-restart/no-loop behavior.
 
 ### M6.3 — concrete production system transport
 
 Status: **ACCEPTED**
 
-Accepted frozen candidate:
+Frozen candidate:
 
 - source `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
 - CI #576 / run `31339015100`;
 - artifact ID `9045247126`;
-- digest `sha256:a6323c504021f21e7638b40e47bedd0b2c1a9fcfcf861724c139151ee8faa804`;
-- adapter `3ac3d4bdf862c7b5399b4fba4df5689f5c38609a`;
-- patch SHA-256 `f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974`.
+- digest `sha256:a6323c504021f21e7638b40e47bedd0b2c1a9fcfcf861724c139151ee8faa804`.
 
-Completed and accepted:
+All `NH-MEDIA-PROD-001...013` target gates pass, including Yandex Music/Yandex Browser, real toggle/next/previous/seek, no sensitive permission prompts, bounded teardown, 60-second resources and corrected 10-minute stability.
 
-- [x] bounded production `stream --no-diff --micros` wire decoder;
-- [x] one fixed `/usr/bin/perl` process boundary with closed arguments;
-- [x] typed toggle/previous/next/seek only;
-- [x] authoritative tri-state capabilities;
-- [x] source/session monotonic sequencing and stale capability rejection;
-- [x] full-snapshot replacement and stale-artwork protection;
-- [x] bounded graceful/forced owned-process teardown without polling;
-- [x] target Sandbox + Hardened Runtime;
-- [x] no-session `unknown/unknown/unknown` capability state;
-- [x] Yandex Music production observation;
-- [x] Yandex Browser production observation;
-- [x] Yandex Music -> Yandex Browser source switch (`sourceSwitchCount = 1`) and disappearance;
-- [x] actual toggle pause/resume, next, previous and seek 42s;
-- [x] no Accessibility/Input Monitoring/Automation/Screen Recording prompts;
-- [x] 60-second steady resource acceptance;
-- [x] corrected 10-minute stability/teardown acceptance;
-- [x] clean teardown and no orphan process;
-- [x] final M6.3 decision: **ACCEPTED**.
+### M6.4 — shipping media composition
 
-Target 10-minute evidence: combined CPU median/max upper bounds `0.0/7.5%`, RSS `35,168 -> 26,160 KiB` (`-9,008 KiB`), threads `11 -> 4`, clean teardown, no orphan.
+Status: **CI-QUALIFIED — TARGET-MAC GATE PENDING**
 
-A superseded candidate exposed an unbounded `waitUntilExit()` defect; the accepted candidate fixes it with bounded exit-event waits and owned-child SIGKILL escalation. Collector sampling/watchdog defects found during target testing were corrected under deterministic tests without changing the frozen production candidate.
+Frozen shipping candidate:
 
-## Current approved priority order — 2026-08-10
+- source `c19ce13c5321fce72464ddf0a5d9b1467f770db0`;
+- CI #675 / run `31408757149` — PASS;
+- artifact `NotchHub-shipping-media-candidate` / ID `9070996306`;
+- Actions digest `sha256:c3b279153b8abf75ab77fa2f478888ae1fe9bad6bfdbf64665567bf713b8035d`;
+- contained DMG SHA-256 `ccf8a503515d382c206c6211606ca6401ba33114863a30721e134c1a45af04b9`.
 
-1. Start a **separate M6 shipping-composition slice**:
-   - add `NotchHubMediaCore` to the shipping app dependency graph;
-   - package only the pinned adapter/framework assets required by the accepted transport;
-   - keep the fixed `/usr/bin/perl`/typed-command/security boundary;
-   - collect fresh package/signature/entitlement/artifact-size evidence;
-   - do not silently widen P0 budgets;
-   - collect fresh target-Mac whole-app runtime evidence for idle/active/teardown lifecycle.
-2. Implement compact + expanded media-first UI only after composed state transport is reliable.
-3. Implement local-window gesture/haptic/seek state machines under TDD.
-4. Run target-Mac media/haptic acceptance on actually available sources.
-5. Run **P1 whole-app performance review**, including production bridge lifecycle cost and the deferred local tracking experiment.
-6. Optimize only from evidence, then resume remaining M1 display/Space hardening and later modules.
+Completed:
+
+- [x] link `NotchHubMediaCore` into `NotchHubApp`;
+- [x] app-owned `ShippingMediaRuntime` lifecycle;
+- [x] package exact pinned adapter/framework/license/provenance;
+- [x] explicitly sign nested framework before top-level app;
+- [x] retain Hardened Runtime and exact sandbox-only entitlement;
+- [x] retain system-only executable dylib boundary;
+- [x] keep probe/candidate/development tools out of shipping payload;
+- [x] split candidate-only helpers into development-only `NotchHubMediaCandidateCore`;
+- [x] reduce shipping executable from `354,880 B` to `312,816 B` through target isolation;
+- [x] measure exact candidate sizes: executable `312,816 B`, app `615,022 B`, DMG `406,618 B`;
+- [x] preserve immutable P0 baseline and add explicit reviewed M6.4 feature-size allowance;
+- [x] pass additive size gate in CI #675;
+- [x] add privacy-safe shipping preflight/resource/teardown collector;
+- [x] add exact-DMG target-Mac runner with read-only mount and normal AppKit termination;
+- [x] qualify deterministic gates `NH-MEDIA-SHIP-001...005` and `010`;
+- [ ] `NH-MEDIA-SHIP-006` — target app owns exactly one expected adapter and terminates it cleanly;
+- [ ] `NH-MEDIA-SHIP-007` — no Accessibility/Input Monitoring/Automation/Screen Recording prompts;
+- [ ] `NH-MEDIA-SHIP-008` — 60-second target app+adapter resource evidence;
+- [ ] `NH-MEDIA-SHIP-009` — approximately 10-minute target stability/no sustained growth/no orphan;
+- [ ] final decision: `M6.4 ACCEPTED`.
+
+Until the four target gates pass, PR #17 remains Draft and Media UI is not the next implementation step.
+
+## Current approved priority order — 2026-08-11
+
+1. Run the exact M6.4 frozen CI #675 shipping candidate through `docs/testing/SHIPPING_MEDIA_COMPOSITION_TARGET_MAC.md` on Mac16,8/macOS 26.6.
+2. Record `NH-MEDIA-SHIP-006...009`; investigate any failure without silently widening permissions or performance budgets.
+3. If the target gate passes, finalize M6.4 docs, exact-head CI/change review and merge PR #17.
+4. Implement compact + expanded media-first UI as a separate slice.
+5. Implement local-window gesture/haptic/seek state machines under TDD.
+6. Run physical media/haptic acceptance on available sources.
+7. Run P1 whole-app performance review, including the production media lifecycle cost and deferred local tracking experiment.
+8. Optimize only from evidence, then resume remaining M1 display/Space hardening and later modules.
 
 ## M2 — Shelf
 
