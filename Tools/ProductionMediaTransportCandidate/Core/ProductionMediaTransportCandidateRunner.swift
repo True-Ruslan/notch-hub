@@ -11,7 +11,7 @@ public final class ProductionMediaTransportCandidateRunner {
     public static let maximumObservationSeconds: TimeInterval = 1_200
 
     private let sourceCommit: String
-    private let processClient: any MediaRemoteProcessClientProtocol
+    private let runtime: any MediaCandidateRuntimeProtocol
     private let wait: @MainActor @Sendable (TimeInterval) async -> Void
 
     public convenience init(
@@ -21,7 +21,7 @@ public final class ProductionMediaTransportCandidateRunner {
     ) {
         self.init(
             sourceCommit: sourceCommit,
-            processClient: MediaRemoteProcessClient(
+            runtime: MediaCandidateRuntime(
                 scriptURL: scriptURL,
                 frameworkURL: frameworkURL
             ),
@@ -31,11 +31,11 @@ public final class ProductionMediaTransportCandidateRunner {
 
     init(
         sourceCommit: String,
-        processClient: any MediaRemoteProcessClientProtocol,
+        runtime: any MediaCandidateRuntimeProtocol,
         wait: @escaping @MainActor @Sendable (TimeInterval) async -> Void
     ) {
         self.sourceCommit = sourceCommit
-        self.processClient = processClient
+        self.runtime = runtime
         self.wait = wait
     }
 
@@ -48,38 +48,29 @@ public final class ProductionMediaTransportCandidateRunner {
             throw ProductionMediaTransportCandidateError.invalidObservationDuration
         }
 
-        let transport = MediaRemoteSystemTransport(processClient: processClient)
-        let bridge = SystemMediaBridge(transport: transport)
-        let controller = MediaSessionController(provider: bridge)
         let collector = ProductionMediaTransportCandidateCollectorBox(sourceCommit: sourceCommit)
 
-        controller.changeHandler = { [weak controller, weak collector] in
-            guard let controller, let collector else {
+        runtime.changeHandler = { [weak runtime, weak collector] in
+            guard let runtime, let collector else {
                 return
             }
-            collector.record(state: controller.state, snapshot: controller.snapshot)
+            collector.record(state: runtime.state, snapshot: runtime.snapshot)
         }
 
-        controller.start()
+        runtime.startObservation()
         await wait(seconds)
-        controller.changeHandler = nil
-        controller.stop()
+        runtime.changeHandler = nil
+        runtime.stopObservation()
 
-        return collector.report(cleanTeardown: processClient.lastTeardownClean)
+        return collector.report(cleanTeardown: runtime.lastTeardownClean)
     }
 
     public func capabilities() async throws -> ProductionMediaTransportCandidateCapabilities {
-        ProductionMediaTransportCandidateCapabilities(try await processClient.capabilities())
+        ProductionMediaTransportCandidateCapabilities(try await runtime.capabilities())
     }
 
     public func send(_ command: ProductionMediaTransportCandidateCommand) async -> Bool {
-        let transport = MediaRemoteSystemTransport(processClient: processClient)
-        transport.start()
-        defer {
-            transport.stop()
-        }
-
-        return await transport.send(command.mediaCommand) == .sent
+        await runtime.send(command.runtimeCommand)
     }
 
     private static func waitOnce(seconds: TimeInterval) async {
@@ -102,7 +93,7 @@ private final class ProductionMediaTransportCandidateCollectorBox {
         collector = ProductionMediaTransportCandidateCollector(sourceCommit: sourceCommit)
     }
 
-    func record(state: MediaSubsystemState, snapshot: MediaSessionSnapshot?) {
+    func record(state: MediaCandidateSubsystemState, snapshot: MediaCandidateSnapshot?) {
         collector.record(state: state, snapshot: snapshot)
     }
 
