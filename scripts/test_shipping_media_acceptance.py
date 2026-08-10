@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -175,13 +176,12 @@ class ShippingMediaAcceptanceTests(unittest.TestCase):
 
         required = (
             "set -euo pipefail",
+            "c19ce13c5321fce72464ddf0a5d9b1467f770db0",
+            "ccf8a503515d382c206c6211606ca6401ba33114863a30721e134c1a45af04b9",
             "hdiutil attach",
             "-readonly",
-            "shipping_media_acceptance.py preflight",
-            "shipping_media_acceptance.py resources",
             "--mode steady",
             "--mode stability",
-            "shipping_media_acceptance.py teardown",
             "NSRunningApplication(processIdentifier:",
             ".terminate()",
             "orphanProcessDetected",
@@ -189,6 +189,13 @@ class ShippingMediaAcceptanceTests(unittest.TestCase):
         for fragment in required:
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, runner)
+
+        for command in ("preflight", "resources", "teardown"):
+            with self.subTest(command=command):
+                self.assertRegex(
+                    runner,
+                    rf"shipping_media_acceptance\.py[\"']?\s+{re.escape(command)}",
+                )
 
         for forbidden in ("osascript", "System Events", "kill -9", "pkill"):
             with self.subTest(forbidden=forbidden):
