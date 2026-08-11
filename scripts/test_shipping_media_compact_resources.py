@@ -1,7 +1,7 @@
 import unittest
 
 from performance_policy import ProcessSample
-from shipping_media_acceptance import build_compact_resource_report
+from shipping_media_compact_acceptance import build_compact_resource_report
 
 
 class ShippingMediaCompactResourceTests(unittest.TestCase):
