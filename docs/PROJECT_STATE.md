@@ -8,7 +8,7 @@ Protected branch target: `main`
 
 ## Current product state
 
-**M6.4 shipping media composition is physically accepted on the target Mac. All `NH-MEDIA-SHIP-001...010` gates pass for frozen source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`. The target investigation removed an unnecessary always-on media adapter from compact state, disproved M6.4 and M1 as sources of the remaining historical absolute-RSS discrepancy, and corrected the runtime-memory methodology from evidence without rewriting the immutable P0 baseline or silently widening a numeric budget. PR #17 is now pending only final exact-head CI/change review and squash merge.**
+**M6.4 shipping media composition is accepted and merged into `main` as squash commit `4ba603e1c3564d6cdf58169a7936f1954dee2ffd` via PR #17. All `NH-MEDIA-SHIP-001...010` gates pass for frozen source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`, final PR-head CI #732 passed, and post-merge `main` CI #733 passed. The target investigation removed an unnecessary always-on media adapter from compact state, disproved M6.4 and M1 as sources of the historical absolute-RSS discrepancy, and corrected runtime-memory methodology without rewriting the immutable P0 baseline or silently widening a numeric budget. The next active Universal Media slice is compact + expanded media-first UI.**
 
 Accepted foundations/integrations:
 
@@ -20,8 +20,8 @@ Accepted foundations/integrations:
 - Universal Media design — `403a557399abb2704f9ae02397b49229ca6cf1f9`;
 - M6.1 transport probe — accepted/merged as `7d5210eb0363933d120334d29daf40956b53cb50`, final outcome `ACCEPT_TRANSPORT`;
 - M6.2 production media state/controller/bridge boundary — accepted/merged as `1ccea500570f9a5ca927739be58d7f7eaadd775a`;
-- M6.3 concrete production transport — accepted on frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
-- M6.4 shipping media composition — **ACCEPTED; all target/security/performance/size gates pass**.
+- M6.3 concrete production transport — accepted/merged before M6.4, frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
+- M6.4 shipping media composition — **ACCEPTED AND MERGED as `4ba603e1c3564d6cdf58169a7936f1954dee2ffd`; all target/security/performance/size gates pass**.
 
 Authoritative evidence:
 
@@ -97,7 +97,7 @@ Independent `NotchHubMediaCore` provides normalized media domain types, immutabl
 
 ### M6.3 — concrete production system transport
 
-Status: **ACCEPTED**.
+Status: **ACCEPTED AND MERGED**.
 
 Accepted exact candidate:
 
@@ -112,7 +112,13 @@ All `NH-MEDIA-PROD-001...013` gates pass on Mac16,8/macOS 26.6, including actual
 
 ### M6.4 — shipping media composition
 
-Status: **ACCEPTED — ALL `NH-MEDIA-SHIP-001...010` PASS**.
+Status: **ACCEPTED AND MERGED — ALL `NH-MEDIA-SHIP-001...010` PASS**.
+
+Merge:
+
+- PR #17 squash commit `4ba603e1c3564d6cdf58169a7936f1954dee2ffd`;
+- final PR-head CI #732 / run `31524951736` — PASS;
+- post-merge `main` CI #733 / run `31525413454` — PASS.
 
 Accepted frozen shipping candidate:
 
@@ -181,8 +187,8 @@ App Sandbox remains the only application entitlement and Hardened Runtime remain
 
 ## Next optimal step
 
-1. Complete final exact-head CI and independent change review for PR #17 after the acceptance/documentation commits.
-2. If the review is clear and required checks are green, mark PR #17 ready and squash-merge M6.4 into `main`.
-3. Verify the merge and `main` CI.
-4. Start the next Universal Media slice: compact + expanded media-first UI, keeping media lifecycle presentation-scoped and the accepted security/performance boundary intact.
-5. Implement local-window gesture/haptic/seek state machines as a later separate TDD slice, followed by physical acceptance and P1 whole-app performance review.
+1. Start the next Universal Media slice: compact + expanded media-first UI, preserving the accepted presentation-scoped media lifecycle, exact transport boundary, Sandbox/Hardened Runtime and privacy posture.
+2. Define the Media UI acceptance IDs and implementation plan before production changes; use TDD for view-model/state mapping and lifecycle-safe presentation behavior.
+3. Keep gesture/haptic/seek state machines as a separate later slice after basic media UI is accepted.
+4. Run physical media UI acceptance before P1 whole-app performance review.
+5. During P1, evaluate a more portable memory-footprint metric and repeated-run variance before introducing another absolute cross-session memory ceiling.
