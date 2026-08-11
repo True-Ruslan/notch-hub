@@ -12,14 +12,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let panelController = NotchPanelController()
         self.panelController = panelController
+        panelController.settledPresentationHandler = { [weak self] presentation in
+            self?.updateMediaRuntime(for: presentation)
+        }
         panelController.show()
-
-        let mediaRuntime = ShippingMediaRuntime()
-        self.mediaRuntime = mediaRuntime
-        mediaRuntime.start()
     }
 
     func applicationWillTerminate(_: Notification) {
+        panelController?.settledPresentationHandler = nil
+
         mediaRuntime?.stop()
         mediaRuntime = nil
 
@@ -29,5 +30,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         false
+    }
+
+    private func updateMediaRuntime(for presentation: NotchPresentation) {
+        switch presentation {
+        case .expanded:
+            guard mediaRuntime == nil else {
+                return
+            }
+
+            let mediaRuntime = ShippingMediaRuntime()
+            self.mediaRuntime = mediaRuntime
+            mediaRuntime.start()
+
+        case .compact:
+            mediaRuntime?.stop()
+            mediaRuntime = nil
+        }
     }
 }
