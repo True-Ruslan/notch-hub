@@ -63,6 +63,17 @@ struct NotchPanelOwnershipTests {
         #expect(factorySource.contains("cornerRadius = 12"))
     }
 
+    @Test
+    func panelControllerAcceptsInjectedContentWithoutMediaDependency() throws {
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(controllerSource.contains("NotchPanelContentFactory"))
+        #expect(controllerSource.contains("contentFactory(model, resolvedLayout)"))
+        #expect(!controllerSource.contains("import NotchHubMediaCore"))
+    }
+
     private func sourceText(relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot =
