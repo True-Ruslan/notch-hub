@@ -6,13 +6,20 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ## [Unreleased]
 
+The current published release remains `v0.1.0`; everything below is source work that has not yet been published as a new version.
+
 ### Added
 
-- M6.4 shipping composition linking the accepted `NotchHubMediaCore` into `NotchHubApp`, packaging exact pinned adapter/framework/license/provenance resources, and retaining the reviewed signing/security boundary.
-- Presentation-scoped media lifecycle: compact launch owns no media runtime; settled expansion starts media; settled compact stops/releases it.
-- Development-only candidate isolation, privacy-safe shipping acceptance collectors, exact-DMG target runners, compact parent-only sampling, and active parent+adapter evidence.
-- Explicit M6.4 additive artifact-size policy over the unchanged immutable P0 baseline.
-- Historical performance diagnostics for exact M6.3 shell-only comparison, exact same-session `v0.1.0` versus M1 #319 RSS comparison, and direct immutable `v0.1.0` versus frozen M6.4 RSS comparison.
+- **M6.5 Media-first UI**: compact retained media context and expanded Media-first presentation driven by authoritative macOS Now Playing state.
+- App-owned `ShippingMediaPresentationModel` that projects normalized media state into UI-only data without leaking transport/private-command details into SwiftUI.
+- Expanded artwork/title/artist/album/source presentation with capability-driven previous/play-pause/next controls and trustworthy static progress.
+- Retained compact media wings: symmetric 36 pt visible extensions around the unchanged physical notch, artwork left and playback status right.
+- Generic Notch content-composition seam that keeps `NotchHubCore` independent from `NotchHubMediaCore` while leaving panel transition/geometry ownership in Core/AppKit.
+- Explicit M6.5 cumulative feature-size policy in `performance/m6-5-media-first-ui-size-budget.json` over the unchanged immutable P0 baseline.
+- M6.5 deterministic acceptance IDs `NH-MEDIA-UI-001...011` and target-Mac acceptance ledger.
+- M6.4 shipping composition linking the accepted `NotchHubMediaCore` into `NotchHubApp`, packaging pinned adapter/framework/license/provenance resources and retaining the reviewed signing/security boundary.
+- Presentation-scoped media lifecycle: compact owns no media runtime; settled expansion starts media; settled compact stops/releases it.
+- Development-only media candidate/probe isolation and privacy-safe shipping acceptance tooling.
 - M6.3 concrete production system-media transport and target-Mac acceptance tooling.
 - M6.2 normalized production media state/controller/bridge boundary.
 - M6.1 Universal Media compatibility/security probe and acceptance ledger.
@@ -22,38 +29,48 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Changed
 
-- **M6.4 shipping media composition is accepted on `Mac16,8` / macOS 26.6.** All `NH-MEDIA-SHIP-001...010` gates pass for frozen source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`.
-- Current accepted M6.4 compact evidence: steady CPU median/max `0.0/2.4%`, RSS median/max `59,792/66,160 KiB`, threads max `4`; 10-minute stability CPU median/max `0.0/3.3%`, RSS median/max `59,024/60,320 KiB`, RSS `56,304 -> 58,976 KiB`, threads `3 -> 3`, adapter absent throughout.
-- The first M6.4 always-on media candidate was rejected after target testing showed roughly `80–86 MiB` combined compact RSS. The runtime budget was not widened; media runtime ownership was moved to settled expanded presentation under RED→GREEN coverage.
-- A no-Now-Playing A/B on the superseded candidate was essentially unchanged, ruling out active track/artwork retention as the cause of the first extra resource cost.
-- **M6.4 static media linkage is disproven as the source of the historical compact RSS discrepancy.** Final M6.3 shell-only app `30de94c0cb6ea17dc21bd366404937db2bc73783`, where `NotchHubApp` links only `NotchHubCore` and contains no M6.4 shipping media assets, reproduced steady RSS `58,656/62,624 KiB` and stability RSS `56,384/60,400 KiB`.
-- **A persistent P0→M1 RSS regression is also disproven.** Same-session target A/B measured exact immutable `v0.1.0` at RSS median/max `60,144/63,376 KiB` and accepted M1 #319 at `59,552/69,680 KiB`; M1 median delta is `-592 KiB`.
-- Direct same-session immutable `v0.1.0` versus frozen M6.4 A/B measured baseline RSS median/max `61,504/67,104 KiB` and M6.4 `62,256/65,232 KiB`; candidate delta is `+752 KiB` median and `-1,872 KiB` max, CPU candidate `0.0/0.0%` vs baseline `0.0/6.7%`, threads identical `3/4`.
-- The exact baseline's own repeated same-day steady median changed by `1,360 KiB`, larger than the M6.4 median delta. Combined with the passing 10-minute growth/thread evidence, there is no material M6.4 steady compact-memory regression.
-- `PERFORMANCE.md` now preserves the original P0 numbers as immutable historical calibration while classifying cross-session absolute `ps rss` and isolated CPU maxima as non-portable standalone gates. Steady compact memory uses same-session immutable-baseline comparison; 10-minute RSS/thread growth remains a direct gate. No baseline JSON or production numeric budget was rewritten to obtain acceptance.
+- **M6.5 is accepted on `Mac16,8` / macOS 26.6.** All `NH-MEDIA-UI-001...011` gates pass on frozen physical source `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`.
+- Cold/no-media compact remains exact-notch and zero-adapter. After a real expanded media session, normal collapse retains the last authoritative visual context in 36 pt side wings while the media runtime is stopped/released.
+- Media disappearance while expanded now returns to the existing Home surface without collapsing the panel.
+- Fresh expanded runtime events replace retained compact context without comparing raw media sequence numbers across runtime lifetimes; ordering remains `MediaSessionController` responsibility.
+- Previous/next availability is strictly capability-driven; missing metadata/capability state is not fabricated.
+- Progress remains event-driven/static in M6.5; draggable seek, gesture handling, media haptics and live compact observation remain separate later work.
+- The first complete M6.5 UI candidate measured `412,992 / 715,198 / 465,177 B` executable/app/DMG. Reusing the existing Home/Foundation view instead of duplicating it reduced the accepted implementation to `397,408 / 699,614 / 461,740 B` on the frozen physical candidate.
+- The immutable P0 artifact baseline and historical M6.4 budget remain unchanged. M6.5 growth is represented by a separate provenance-backed feature envelope; no runtime CPU/RSS/thread budget was widened.
+- **M6.4 shipping media composition remains accepted.** All `NH-MEDIA-SHIP-001...010` gates passed on frozen source `fdbe987d8f22768b2a75406c8f1e721fa1da2845` and PR #17 was merged as `4ba603e1c3564d6cdf58169a7936f1954dee2ffd`.
+- M6.4 direct same-session immutable `v0.1.0` comparison found no material steady compact-memory regression; the independent 10-minute RSS/thread growth gate also passed.
+- `PERFORMANCE.md` preserves original P0 measurements as immutable historical calibration while classifying cross-session absolute `ps rss` and isolated CPU maxima as non-portable standalone gates.
 - M6.3 remains accepted with Yandex Music/Yandex Browser observation and actual toggle/previous/next/seek behavior.
-- Apple Music, Spotify and additional-player compatibility remain explicitly unverified/deferred for the Personal Release cycle.
+- Apple Music, Spotify and additional-player compatibility remain explicitly unverified/deferred rather than assumed.
 
 ### Fixed
 
-- M6.4 app launch no longer creates or starts `ShippingMediaRuntime`; compact idle owns zero media adapter processes.
+- Media UI no longer attempts to place compact artwork/status inside the physically occluded camera-housing width; retained media uses side wings while ordinary compact remains exact-notch.
+- M6.5 no longer duplicates the existing Home/Foundation SwiftUI hierarchy inside the media root, reducing the shipping payload without changing behavior.
+- Media presentation teardown detaches the UI callback before controller stop so ordinary compact teardown preserves retained visual context without keeping the adapter alive.
+- Invalid/missing shipping media resources clear expanded presentation and fail closed rather than exposing a partial UI state.
+- M6.4 app launch does not create/start `ShippingMediaRuntime`; compact idle owns zero media adapter processes.
 - Stale or reversed panel-transition completions cannot start media runtime.
-- Candidate-only media helpers no longer inflate the shipping link graph.
-- M6.4 feature-size checking accepts the exact real artifact-size envelope while remaining fail-closed for unexpected fields.
-- M6.3 process teardown is bounded rather than relying on unbounded `Process.waitUntilExit()`.
-- M1 hardware-notch rendering, transition ownership, stale-completion handling, collapse staging, animation reversal, Reduce Motion retargeting, pointer hot-path allocation and exact top-edge activation were corrected under RED→GREEN coverage.
+- Candidate-only media helpers remain outside the shipping link graph.
+- M6.3 process teardown is bounded rather than relying on unbounded waiting.
+- M1 hardware-notch rendering, transition ownership, stale-completion handling, collapse staging, animation reversal, Reduce Motion retargeting, pointer hot-path allocation and exact top-edge activation were corrected under RED -> GREEN coverage.
 
 ### Testing
 
-- Accepted M6.4 frozen candidate `fdbe987d8f22768b2a75406c8f1e721fa1da2845` passed CI #693 / run `31472420797`; artifact ID `9093958828`, Actions digest `sha256:f055bc87d1f2c8cafe0d3b57d9cf6cdf82d7a712bf85acf3317232679a9689b9`, contained DMG SHA-256 `6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd`.
-- Physical current-candidate testing proved zero adapter throughout compact steady/stability, one owned adapter after settled expansion, clean normal teardown/no orphan, and no Accessibility/Input Monitoring/Automation/Screen Recording prompts.
-- Final M6.3 shell-only comparator source `30de94c0cb6ea17dc21bd366404937db2bc73783`, CI #594 / run `31389611697`, artifact ID `9063213178`, DMG SHA-256 `b1da6681ce49da3c34b3720c39caa32c3fc4508e0abf7d209b63b46f78713fb7` reproduced the elevated compact shell RSS without M6.4 linkage.
-- Shell-only comparator tooling was developed RED #705 -> GREEN #709.
-- Same-session P0→M1 comparator tooling was developed RED #712 -> GREEN policy #714; exact-head CI #718 passed.
-- Physical P0→M1 A/B result: immutable baseline CPU median/max `0.0/0.0%`, RSS median/max `60,144/63,376 KiB`, threads `3/5`; M1 CPU median/max `0.0/3.4%`, RSS median/max `59,552/69,680 KiB`, threads `3/4`; RSS median delta `-592 KiB`.
-- Direct `v0.1.0 ↔ frozen M6.4` comparator tooling was developed RED #720 -> GREEN #721; it exact-pins baseline asset ID `505235050` and M6.4 artifact ID `9093958828`, uses one literal shared collector path and normal AppKit termination.
-- Physical direct P0→M6.4 A/B result: baseline CPU median/max `0.0/6.7%`, RSS median/max `61,504/67,104 KiB`, threads `3/4`; candidate CPU median/max `0.0/0.0%`, RSS median/max `62,256/65,232 KiB`, threads `3/4`.
-- The P0 harness at measurement-tool commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0` and the current compact collector both sample Darwin `ps rss` in KiB, so the correction is metric portability/classification rather than a parser-definition change.
+- M6.5 TDD cycles: Core content seam RED #736 -> GREEN #738; media presentation RED #740 -> GREEN #741; runtime presentation/typed commands RED #742 -> GREEN #743; App/UI composition RED #745 -> GREEN; feature-size policy RED #760 -> GREEN #762.
+- Frozen M6.5 physical candidate `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`: CI #763 / run `31539442148`, 194 Swift tests PASS, shipping artifact ID `9120231721`, Actions digest `sha256:0d18a0c9ce5305b90808f0937531211094b85947ce96b2afd0a2c4020e4e7007`, contained DMG SHA-256 `3993330bf57ac86ead949215ba5370a0a33ec6b8f6a17f1d65baa30c41f5f6ad`.
+- The first #763 attempt failed only while cloning the pinned external adapter because the GitHub-hosted runner reported a self-signed-certificate TLS error; warnings-as-errors build and all Swift tests had already passed. Retrying failed/dependent jobs on the exact same source passed the complete pipeline without weakening TLS/security policy.
+- Physical M6.5 acceptance confirmed Yandex Music and Yandex Browser Media-first UI, real click controls, media disappearance -> expanded Home, retained compact wings, fresh re-expansion, zero adapter while compact, no sensitive permission prompts and clean Quit/no orphan.
+- Accepted M6.4 frozen candidate `fdbe987d8f22768b2a75406c8f1e721fa1da2845`: CI #693 / run `31472420797`, artifact ID `9093958828`, Actions digest `sha256:f055bc87d1f2c8cafe0d3b57d9cf6cdf82d7a712bf85acf3317232679a9689b9`, contained DMG SHA-256 `6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd`.
+- M6.4 physical evidence proved zero adapter throughout compact steady/stability, one owned adapter after settled expansion, clean teardown/no orphan and no Accessibility/Input Monitoring/Automation/Screen Recording prompts.
+- Same-session P0 -> M1 and direct `v0.1.0` -> M6.4 comparison tooling/evidence remains recorded in `PERFORMANCE.md` and the M6.4 acceptance ledger.
+
+### Security
+
+- M6.5 adds UI/presentation behavior only and does not widen runtime authority.
+- App Sandbox remains the only application entitlement and Hardened Runtime remains mandatory.
+- The sole production process exception remains the fixed `/usr/bin/perl` Universal Media boundary with pinned resources and a closed typed command surface.
+- No Accessibility, Input Monitoring, Automation/Apple Events, Screen Recording, networking, telemetry, arbitrary shell/executable surface, direct private-framework loading in the NotchHub process, or listening-history persistence was added.
 
 ## [0.1.0] - 2026-08-07
 
@@ -79,6 +96,6 @@ The project follows [Semantic Versioning](https://semver.org/). The active versi
 
 ### Security
 
-- App Sandbox and Hardened Runtime remain mandatory for the Personal Release.
-- No telemetry, runtime networking, subprocess execution, dynamic code loading, sensitive global input monitoring or bundled credentials.
+- App Sandbox and Hardened Runtime are mandatory for the Personal Release.
+- No telemetry, runtime networking, sensitive input monitoring or bundled credentials.
 - Personal Release is ad-hoc signed and intentionally not notarized; standard macOS first-launch trust flows are documented without weakening Gatekeeper.
