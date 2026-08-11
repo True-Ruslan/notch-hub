@@ -1,8 +1,16 @@
 import unittest
 from pathlib import Path
 
+from test_m6_4_rss_ab import M64RSSABTests
 from test_production_media_transport_acceptance import ProductionMediaTransportAcceptanceTests
 from test_production_media_transport_candidate_ci import ProductionMediaTransportCandidateCITests
+from test_shell_only_target_diagnostic import ShellOnlyTargetDiagnosticTests
+from test_shell_rss_bisect import ShellRSSBisectTests
+from test_shipping_media_acceptance import ShippingMediaAcceptanceTests
+from test_shipping_media_compact_resources import ShippingMediaCompactResourceTests
+from test_shipping_media_composition import ShippingMediaCompositionPolicyTests
+from test_shipping_media_diagnostic_mode import ShippingMediaDiagnosticModeTests
+from test_shipping_media_idle_lifecycle import ShippingMediaIdleLifecycleTests
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
@@ -85,9 +93,6 @@ class MediaBridgeProbeCITests(unittest.TestCase):
             with self.subTest(patch_fragment=fragment):
                 self.assertIn(fragment, patch)
 
-        # next/previous are already part of the pinned adapter's public command
-        # enum. The compatibility patch must consume those constants rather than
-        # shadowing them with duplicate declarations.
         self.assertNotIn("kMRANextTrack = 4,", patch)
         self.assertNotIn("kMRAPreviousTrack = 5,", patch)
 

@@ -199,16 +199,35 @@ class ReleasePolicyTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate_personal_release_workflow(mutation)
 
-    def test_media_bridge_probe_isolated_from_shipping_bundle_configuration(self):
-        forbidden = (
-            "MediaBridgeProbe",
+    def test_shipping_media_composition_keeps_development_tools_out(self):
+        build_app = (REPOSITORY_ROOT / "scripts" / "build-app.sh").read_text(encoding="utf-8")
+        build_dmg = (REPOSITORY_ROOT / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
+
+        required_shipping_assets = (
+            "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a",
             "mediaremote-adapter.pl",
             "MediaRemoteAdapter.framework",
+            "MediaRemoteAdapter-LICENSE.txt",
+            "media-transport-provenance.json",
+            "NHSourceCommit",
+            "NHAdapterCommit",
+            "NHAdapterPatchSHA256",
+        )
+        for fragment in required_shipping_assets:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, build_app)
+
+        forbidden_development_assets = (
+            "MediaBridgeProbe.app",
+            "MediaTransportCandidate",
+            "ProductionMediaTransportCandidate.app",
             "MediaRemoteAdapterTestClient",
         )
-        for relative_path in ("scripts/build-app.sh", "scripts/build-dmg.sh"):
-            text = (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8")
-            for fragment in forbidden:
+        for relative_path, text in (
+            ("scripts/build-app.sh", build_app),
+            ("scripts/build-dmg.sh", build_dmg),
+        ):
+            for fragment in forbidden_development_assets:
                 with self.subTest(path=relative_path, fragment=fragment):
                     self.assertNotIn(fragment, text)
 
@@ -216,6 +235,10 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertNotIn(".package(", package)
         self.assertIn('name: "MediaBridgeProbe"', package)
         self.assertNotIn('.executable(name: "MediaBridgeProbe"', package)
+        self.assertIn(
+            'name: "NotchHubApp",\n            dependencies: ["NotchHubCore", "NotchHubMediaCore"]',
+            package,
+        )
 
     def test_trusted_release_workflow_is_separate_fail_closed_tier(self):
         workflows = REPOSITORY_ROOT / ".github" / "workflows"

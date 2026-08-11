@@ -1,8 +1,9 @@
 import Foundation
+import NotchHubMediaCore
 
 enum ProductionMediaTransportCandidateLimits {
     static let maximumObservationSeconds: TimeInterval = 1_200
-    static let maximumSeekSeconds = Double(MediaRemoteWireDecoder.maximumDurationMicros) / 1_000_000
+    static let maximumSeekSeconds = MediaCandidateLimits.maximumSeekSeconds
 }
 
 public enum ProductionMediaTransportCandidateInvocation: Equatable, Sendable {

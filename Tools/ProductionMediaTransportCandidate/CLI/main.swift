@@ -1,5 +1,5 @@
 import Foundation
-import NotchHubMediaCore
+import NotchHubMediaCandidateCore
 
 private struct CandidateCommandResult: Codable {
     let sent: Bool

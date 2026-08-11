@@ -29,6 +29,20 @@ _RUNTIME_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
 _ALLOWED_SCENARIOS = {"idle", "hover", "stability"}
 _SIZE_METRICS = ("appSizeBytes", "dmgSizeBytes", "executableSizeBytes")
 _BASELINE_SCHEMA_VERSION = 1
+_FEATURE_SIZE_BUDGET_SCHEMA_VERSION = 1
+_FEATURE_SIZE_BUDGET_KEYS = {
+    "schemaVersion",
+    "featureId",
+    "baselineId",
+    "evidence",
+    "allowanceBytes",
+}
+_FEATURE_SIZE_EVIDENCE_KEYS = {
+    "sourceCommit",
+    "workflowRunId",
+    "artifactId",
+    "summary",
+}
 
 
 @dataclass(frozen=True)
@@ -197,6 +211,41 @@ def _mapping_value(mapping: dict[str, object], key: str, label: str) -> dict[str
     return mapping[key]  # type: ignore[return-value]
 
 
+def _require_exact_size_metrics(mapping: dict[str, object], label: str) -> None:
+    if set(mapping) != set(_SIZE_METRICS):
+        raise ValueError(f"{label} must contain exactly the required size metrics")
+    for key in _SIZE_METRICS:
+        _metric_integer(mapping, key, label)
+
+
+def _size_metrics_view(mapping: dict[str, object], label: str) -> dict[str, object]:
+    metric_keys = set(_SIZE_METRICS)
+    keys = set(mapping)
+    if keys == metric_keys:
+        _require_exact_size_metrics(mapping, label)
+        return mapping
+
+    artifact_keys = metric_keys | {"schemaVersion", "sourceCommit"}
+    if keys != artifact_keys:
+        raise ValueError(
+            f"{label} must contain either exact size metrics or the exact artifact size envelope"
+        )
+
+    schema_version = mapping.get("schemaVersion")
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int):
+        raise ValueError(f"{label} schemaVersion must be an integer")
+    if schema_version != 1:
+        raise ValueError(f"{label} schemaVersion must be 1")
+
+    source_commit = mapping.get("sourceCommit")
+    if not isinstance(source_commit, str) or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None:
+        raise ValueError(f"{label} sourceCommit must be a 40-character lowercase SHA")
+
+    metrics = {key: mapping[key] for key in _SIZE_METRICS}
+    _require_exact_size_metrics(metrics, label)
+    return metrics
+
+
 def compare_summary_to_budget(summary: dict[str, object], budget: dict[str, object]) -> list[str]:
     if not budget:
         raise ValueError("budget must contain at least one metric")
@@ -281,6 +330,114 @@ def compare_size_summary_to_baseline(
     return violations
 
 
+def compare_size_summary_to_feature_budget(
+    summary: dict[str, object],
+    baseline: dict[str, object],
+    feature_budget: dict[str, object],
+) -> list[str]:
+    if set(feature_budget) != _FEATURE_SIZE_BUDGET_KEYS:
+        raise ValueError("feature size budget must contain exactly the required top-level keys")
+
+    schema_version = feature_budget.get("schemaVersion")
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int):
+        raise ValueError("feature size budget schemaVersion must be an integer")
+    if schema_version != _FEATURE_SIZE_BUDGET_SCHEMA_VERSION:
+        raise ValueError(
+            "unsupported feature size budget schemaVersion "
+            f"{schema_version}; expected {_FEATURE_SIZE_BUDGET_SCHEMA_VERSION}"
+        )
+
+    feature_id = feature_budget.get("featureId")
+    if not isinstance(feature_id, str) or not feature_id.strip():
+        raise ValueError("feature size budget featureId must be a non-empty string")
+
+    baseline_id = baseline.get("baselineId")
+    if not isinstance(baseline_id, str) or not baseline_id:
+        raise ValueError("baseline baselineId must be a non-empty string")
+    feature_baseline_id = feature_budget.get("baselineId")
+    if not isinstance(feature_baseline_id, str) or feature_baseline_id != baseline_id:
+        raise ValueError("feature size budget baselineId must match the immutable baseline")
+
+    baseline_schema = baseline.get("schemaVersion")
+    if isinstance(baseline_schema, bool) or not isinstance(baseline_schema, int):
+        raise ValueError("baseline schemaVersion must be an integer")
+    if baseline_schema != _BASELINE_SCHEMA_VERSION:
+        raise ValueError(
+            f"unsupported baseline schemaVersion {baseline_schema}; expected {_BASELINE_SCHEMA_VERSION}"
+        )
+
+    size = _mapping_value(baseline, "size", "baseline")
+    baseline_summary = _mapping_value(size, "summary", "baseline size")
+    baseline_policy = _mapping_value(size, "budget", "baseline size")
+    ceilings = _mapping_value(
+        baseline_policy,
+        "absoluteCeilingBytes",
+        "baseline size budget",
+    )
+    _require_exact_size_metrics(baseline_summary, "baseline size summary")
+    _require_exact_size_metrics(ceilings, "baseline size absolute ceilings")
+    summary_metrics = _size_metrics_view(summary, "size summary")
+
+    for key in _SIZE_METRICS:
+        baseline_bytes = _metric_integer(baseline_summary, key, "baseline size summary")
+        absolute_ceiling = _metric_integer(ceilings, key, "baseline size absolute ceilings")
+        if baseline_bytes <= 0:
+            raise ValueError(f"baseline size summary metric {key} must be positive")
+        if absolute_ceiling < baseline_bytes:
+            raise ValueError(f"baseline size absolute ceiling for {key} cannot be below baseline")
+
+    allowance = _mapping_value(feature_budget, "allowanceBytes", "feature size budget")
+    _require_exact_size_metrics(allowance, "feature size allowance")
+
+    evidence = _mapping_value(feature_budget, "evidence", "feature size budget")
+    if set(evidence) != _FEATURE_SIZE_EVIDENCE_KEYS:
+        raise ValueError("feature size evidence must contain exactly the required keys")
+
+    source_commit = evidence.get("sourceCommit")
+    if not isinstance(source_commit, str) or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None:
+        raise ValueError("feature size evidence sourceCommit must be a 40-character lowercase SHA")
+
+    for key in ("workflowRunId", "artifactId"):
+        value = evidence.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(f"feature size evidence {key} must be a positive integer")
+
+    evidence_summary = _mapping_value(evidence, "summary", "feature size evidence")
+    _require_exact_size_metrics(evidence_summary, "feature size evidence summary")
+
+    for key in _SIZE_METRICS:
+        adjusted_ceiling = _metric_integer(
+            ceilings,
+            key,
+            "baseline size absolute ceilings",
+        ) + _metric_integer(allowance, key, "feature size allowance")
+        evidence_actual = _metric_integer(
+            evidence_summary,
+            key,
+            "feature size evidence summary",
+        )
+        if evidence_actual > adjusted_ceiling:
+            raise ValueError(
+                f"feature size evidence {key} {evidence_actual} exceeds "
+                f"feature-adjusted ceiling {adjusted_ceiling}"
+            )
+
+    violations: list[str] = []
+    for key in _SIZE_METRICS:
+        actual = _metric_integer(summary_metrics, key, "size summary")
+        adjusted_ceiling = _metric_integer(
+            ceilings,
+            key,
+            "baseline size absolute ceilings",
+        ) + _metric_integer(allowance, key, "feature size allowance")
+        if actual > adjusted_ceiling:
+            violations.append(
+                f"{key}: actual {actual} exceeds feature-adjusted ceiling {adjusted_ceiling}"
+            )
+
+    return violations
+
+
 def _audit_command(root: pathlib.Path) -> int:
     try:
         violations = find_runtime_policy_violations(root)
@@ -360,6 +517,35 @@ def _check_size_budget_command(summary_path: pathlib.Path, baseline_path: pathli
     return 0
 
 
+def _check_size_feature_budget_command(
+    summary_path: pathlib.Path,
+    baseline_path: pathlib.Path,
+    feature_budget_path: pathlib.Path,
+) -> int:
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+        feature_budget = json.loads(feature_budget_path.read_text(encoding="utf-8"))
+        if (
+            not isinstance(summary, dict)
+            or not isinstance(baseline, dict)
+            or not isinstance(feature_budget, dict)
+        ):
+            raise ValueError("size summary, baseline, and feature budget must be JSON objects")
+        violations = compare_size_summary_to_feature_budget(summary, baseline, feature_budget)
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
+        print(f"Feature size budget check failed: {error}", file=sys.stderr)
+        return 1
+
+    if violations:
+        for violation in violations:
+            print(violation, file=sys.stderr)
+        return 1
+
+    print("Feature size budget checks passed.")
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="NotchHub deterministic performance policy")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -384,6 +570,18 @@ def _build_parser() -> argparse.ArgumentParser:
     size_budget_parser.add_argument("--summary", required=True, type=pathlib.Path)
     size_budget_parser.add_argument("--baseline", required=True, type=pathlib.Path)
 
+    feature_size_budget_parser = subparsers.add_parser(
+        "check-size-feature-budget",
+        help="compare release artifact sizes to an additive reviewed feature budget",
+    )
+    feature_size_budget_parser.add_argument("--summary", required=True, type=pathlib.Path)
+    feature_size_budget_parser.add_argument("--baseline", required=True, type=pathlib.Path)
+    feature_size_budget_parser.add_argument(
+        "--feature-budget",
+        required=True,
+        type=pathlib.Path,
+    )
+
     return parser
 
 
@@ -397,6 +595,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _check_budget_command(args.summary, args.budget)
     if args.command == "check-size-budget":
         return _check_size_budget_command(args.summary, args.baseline)
+    if args.command == "check-size-feature-budget":
+        return _check_size_feature_budget_command(
+            args.summary,
+            args.baseline,
+            args.feature_budget,
+        )
     raise AssertionError(f"Unhandled command: {args.command}")
 
 

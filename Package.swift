@@ -14,13 +14,18 @@ let package = Package(
     targets: [
         .target(name: "NotchHubCore"),
         .target(name: "NotchHubMediaCore"),
+        .target(
+            name: "NotchHubMediaCandidateCore",
+            dependencies: ["NotchHubMediaCore"],
+            path: "Tools/ProductionMediaTransportCandidate/Core"
+        ),
         .executableTarget(
             name: "NotchHubApp",
-            dependencies: ["NotchHubCore"]
+            dependencies: ["NotchHubCore", "NotchHubMediaCore"]
         ),
         .executableTarget(
             name: "MediaTransportCandidate",
-            dependencies: ["NotchHubMediaCore"],
+            dependencies: ["NotchHubMediaCandidateCore"],
             path: "Tools/ProductionMediaTransportCandidate/CLI"
         ),
         .target(
@@ -38,7 +43,7 @@ let package = Package(
         ),
         .testTarget(
             name: "NotchHubMediaCoreTests",
-            dependencies: ["NotchHubMediaCore"]
+            dependencies: ["NotchHubMediaCore", "NotchHubMediaCandidateCore"]
         ),
         .testTarget(
             name: "MediaBridgeProbeCoreTests",

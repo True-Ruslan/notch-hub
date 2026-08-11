@@ -1,6 +1,6 @@
 # Project state
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 Current version: `0.1.0` (Personal Release published and accepted)
 Repository visibility: **Public**
 Primary physical target: macOS `26.6` / `Mac16,8`
@@ -8,27 +8,33 @@ Protected branch target: `main`
 
 ## Current product state
 
-**M6.3 concrete production system media transport is ACCEPTED on the target Mac. The next engineering slice is shipping composition: intentionally link the accepted media core/transport and pinned adapter resources into `NotchHub.app`, then collect fresh shipping security, artifact-size, and target-Mac runtime evidence before Media UI work.**
+**M6.4 shipping media composition is physically accepted on the target Mac. All `NH-MEDIA-SHIP-001...010` gates pass for frozen source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`. The target investigation removed an unnecessary always-on media adapter from compact state, disproved M6.4 and M1 as sources of the remaining historical absolute-RSS discrepancy, and corrected the runtime-memory methodology from evidence without rewriting the immutable P0 baseline or silently widening a numeric budget. PR #17 is now pending only final exact-head CI/change review and squash merge.**
 
 Accepted foundations/integrations:
 
 - M0 Engineering Foundation — accepted;
 - R0.1 Personal Release `v0.1.0` — accepted;
-- P0 Performance Foundation — accepted and merged as `a056aa74bad5d8e193eb4c76a76e6c910344bd09`;
+- P0 Performance Foundation — accepted and merged as `a056aa74bad5d8e193eb4c76a76e6c910344bd09`; original runtime values remain immutable historical evidence, with cross-session `ps rss` classification corrected in `PERFORMANCE.md`;
 - P0.1 Public Repository Readiness — accepted;
-- M1 interaction/transition slice — accepted and merged as `094b494bd597643244e733baf5787a13b61fb4eb`;
+- M1 interaction/transition slice — accepted and merged as `094b494bd597643244e733baf5787a13b61fb4eb`; same-session immutable-baseline A/B disproves a persistent P0→M1 RSS regression;
 - Universal Media design — `403a557399abb2704f9ae02397b49229ca6cf1f9`;
 - M6.1 transport probe — accepted/merged as `7d5210eb0363933d120334d29daf40956b53cb50`, final outcome `ACCEPT_TRANSPORT`;
 - M6.2 production media state/controller/bridge boundary — accepted/merged as `1ccea500570f9a5ca927739be58d7f7eaadd775a`;
-- M6.3 concrete production transport — **accepted on frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`**.
+- M6.3 concrete production transport — accepted on frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
+- M6.4 shipping media composition — **ACCEPTED; all target/security/performance/size gates pass**.
 
-Authoritative M6.3 evidence: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`.
+Authoritative evidence:
+
+- performance methodology: `PERFORMANCE.md`;
+- M6.3: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`;
+- M6.4: `docs/testing/SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md`;
+- M6.4 target procedure: `docs/testing/SHIPPING_MEDIA_COMPOSITION_TARGET_MAC.md`.
 
 ## Product
 
 NotchHub is a personal native local-first macOS productivity hub built around the MacBook notch. Planned modules include Shelf, Snippets, Calendar, Translator, Universal Media, and later shell/settings capabilities.
 
-Universal Media follows the system Now Playing source selected by macOS rather than targeting one player. Yandex Music and Yandex Browser are physically verified through the accepted production transport. Apple Music, Spotify, and additional independent-player compatibility remain explicitly unverified until physically tested.
+Universal Media follows the system Now Playing source selected by macOS rather than targeting one player. Yandex Music and Yandex Browser are physically verified through the accepted M6.3 production transport. Apple Music, Spotify, and additional independent-player compatibility remain explicitly unverified until physically tested.
 
 NotchNook and Boring Notch are independent product/engineering references only. NotchHub remains an independent MIT implementation; GPL-covered implementation code is not copied.
 
@@ -49,6 +55,8 @@ Accepted behavior includes:
 - no per-event `Task` allocation in the live pointer hot path;
 - no display link, polling loop, repeating timer, synthetic input, Accessibility or Input Monitoring requirement for notch interaction.
 
+Same-session target A/B between immutable `v0.1.0` and accepted M1 candidate #319 shows RSS medians `60,144 KiB` vs `59,552 KiB`. A persistent P0→M1 memory regression is therefore disproven.
+
 Remaining M1 display/Space hardening stays deferred behind the functional media slice and P1 performance review.
 
 ### R0.1 Personal Release
@@ -57,7 +65,7 @@ Immutable `v0.1.0` is accepted for personal use. It is ad-hoc signed, sandboxed,
 
 ### P0 Performance Foundation
 
-Accepted target-Mac baseline:
+Accepted historical target-Mac observation:
 
 - idle CPU median/max `0.0% / 0.7%`, RSS max `33,808 KiB`, threads max `4`;
 - hover CPU median/max `5.95% / 22.3%`, RSS max `38,816 KiB`, threads max `7`;
@@ -69,7 +77,9 @@ Immutable `v0.1.0` artifact baseline:
 - app aggregate `223,555 B`;
 - DMG `73,955 B`.
 
-Shared CI keeps deterministic relative/absolute artifact-size gates. CPU/RSS/thread magnitude acceptance remains target-Mac evidence rather than hosted-runner thresholds.
+The P0 baseline remains immutable. Feature-specific shipping growth must be explicit, separately reviewed, and provenance-backed.
+
+Repeated target evidence now shows that the original single-run absolute `ps rss` values are not portable across launch/session contexts: the exact immutable `v0.1.0` release itself remeasured around `60–67 MiB` on the same Mac16,8/macOS 26.6. `PERFORMANCE.md` therefore preserves the old numbers as historical calibration while using exact same-session immutable-baseline comparison for steady compact RSS and retaining the 10-minute `+8,192 KiB` RSS-growth and thread-growth gates. No baseline file is rewritten.
 
 ## Universal Media
 
@@ -77,32 +87,13 @@ Shared CI keeps deterministic relative/absolute artifact-size gates. CPU/RSS/thr
 
 Status: **ACCEPTED — `ACCEPT_TRANSPORT`**.
 
-The compatibility probe physically established on macOS 26.6:
-
-- App Sandbox + Hardened Runtime compatibility;
-- no Accessibility/Input Monitoring/Automation/Screen Recording prompts;
-- authoritative no-session and active capabilities;
-- Yandex Music and Yandex Browser system Now Playing observation;
-- real toggle/previous/next/seek behavior;
-- source switching/disappearance;
-- clean teardown/no orphan;
-- bounded fail-closed failure lifecycle;
-- low steady resource use and stable 10-minute behavior.
+The compatibility probe physically established App Sandbox + Hardened Runtime compatibility, no sensitive permission prompts, authoritative capabilities, Yandex Music/Yandex Browser observation and commands, source switching/disappearance, clean teardown/no orphan, and stable target resource behavior.
 
 ### M6.2 — production state/controller/bridge boundary
 
 Status: **ACCEPTED AND MERGED**.
 
-Independent `NotchHubMediaCore` provides:
-
-- normalized media domain types and immutable `MediaSessionSnapshot`;
-- `MediaSequence` generation/revision ordering;
-- player-agnostic `MediaProvider`;
-- `@MainActor MediaSessionController` freshness, dedup, capability gating and one-restart/no-loop behavior;
-- injected `SystemMediaTransport`;
-- `SystemMediaBridge` callback ownership, teardown and typed command forwarding.
-
-The media core is still intentionally outside the shipping `NotchHubApp` link graph. Linking dormant media core during M6.2 exceeded the unchanged P0 size gate, so real shipping feature cost must be measured only when composition is intentionally introduced.
+Independent `NotchHubMediaCore` provides normalized media domain types, immutable snapshots, monotonic generation/revision ordering, a player-agnostic provider, deterministic `@MainActor MediaSessionController`, injected `SystemMediaTransport`, and `SystemMediaBridge` callback/teardown/typed-command ownership.
 
 ### M6.3 — concrete production system transport
 
@@ -110,65 +101,88 @@ Status: **ACCEPTED**.
 
 Accepted exact candidate:
 
-- source: `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
+- source `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
 - CI #576 / run `31339015100` — PASS;
 - artifact ID `9045247126`;
 - digest `sha256:a6323c504021f21e7638b40e47bedd0b2c1a9fcfcf861724c139151ee8faa804`;
-- pinned adapter `3ac3d4bdf862c7b5399b4fba4df5689f5c38609a`;
-- capability patch SHA-256 `f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974`.
+- adapter `3ac3d4bdf862c7b5399b4fba4df5689f5c38609a`;
+- patch SHA-256 `f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974`.
 
-Accepted implementation properties:
+All `NH-MEDIA-PROD-001...013` gates pass on Mac16,8/macOS 26.6, including actual toggle/next/previous/seek behavior, no sensitive permission prompts, clean teardown/no orphan, 60-second steady evidence, and corrected 10-minute stability evidence.
 
-- strict bounded event-stream wire decoding and full-snapshot semantics;
-- authoritative tri-state capabilities;
-- `MediaRemoteSystemTransport` source/session freshness and stale-capability rejection;
-- one reviewed Foundation `Process()` boundary fixed to `/usr/bin/perl`;
-- closed typed toggle/previous/next/seek command surface;
-- bounded graceful/forced owned-process teardown with no polling/repeating timer;
-- privacy-safe evidence and no listening-history persistence;
-- no player-specific fallback, networking or sensitive permission expansion;
-- shipping isolation retained.
+### M6.4 — shipping media composition
 
-Target-Mac acceptance on `Mac16,8` / macOS 26.6 passes all stable IDs `NH-MEDIA-PROD-001` through `NH-MEDIA-PROD-013`:
+Status: **ACCEPTED — ALL `NH-MEDIA-SHIP-001...010` PASS**.
 
-- no-session capabilities `unknown/unknown/unknown`;
-- Yandex Music production observation and `supported/supported/supported` active capabilities;
-- Yandex Browser production observation;
-- authoritative Yandex Music -> Yandex Browser source switch with `sourceSwitchCount = 1` and later disappearance;
-- real toggle pause/resume, next, previous and seek 42s — all PASS;
-- Accessibility, Input Monitoring, Automation and Screen Recording prompts — NONE;
-- clean teardown and no orphan process;
-- 60-second steady combined CPU median/max upper bound `0.0/0.1%`, RSS median/max upper bounds `26,416/32,192 KiB`, thread median/max upper bounds `4/9`;
-- corrected 10-minute run: 120 samples, combined CPU median/max upper bounds `0.0/7.5%`, RSS `35,168 -> 26,160 KiB` (`-9,008 KiB`), threads `11 -> 4`, clean teardown, no orphan.
+Accepted frozen shipping candidate:
 
-A superseded candidate exposed an unbounded `waitUntilExit()` teardown defect. M6.3 fixed it with bounded process-exit-event waits and SIGKILL escalation for the owned adapter. Physical 10-minute regression evidence confirms the fix.
+- source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`;
+- CI #693 / run `31472420797` — both jobs PASS;
+- artifact `NotchHub-shipping-media-candidate`;
+- artifact ID `9093958828`;
+- Actions digest `sha256:f055bc87d1f2c8cafe0d3b57d9cf6cdf82d7a712bf85acf3317232679a9689b9`;
+- contained DMG SHA-256 `6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd`;
+- exact sizes: executable `313,648 B`, physical app payload `615,854 B`, DMG `408,480 B`.
 
-Acceptance collector sampling/watchdog defects found during target testing were also corrected under tests without changing the frozen production candidate.
+Implemented and accepted:
+
+- `NotchHubApp` links `NotchHubMediaCore` and ships exact pinned production adapter resources;
+- nested framework/top-level signatures, Hardened Runtime, sandbox-only entitlement and system-library dependency boundary remain intact;
+- candidate-only helpers remain development-only;
+- immutable P0 artifact baseline remains unchanged and explicit M6.4 additive size gate passes;
+- media runtime starts only after a matching transition successfully settles `.expanded` and stops/releases after matching `.compact` settlement;
+- stale/reversed transition completions cannot trigger media lifecycle changes;
+- compact state owns zero adapter processes;
+- expanded state owns exactly one expected adapter;
+- normal termination exits parent/adapter with no orphan;
+- no Accessibility/Input Monitoring/Automation/Screen Recording prompt appears.
+
+Target evidence on `Mac16,8` / macOS 26.6:
+
+- compact steady CPU median/max `0.0/2.4%`, RSS median/max `59,792/66,160 KiB`, threads max `4`, adapter absent;
+- compact 10-minute stability CPU median/max `0.0/3.3%`, RSS median/max `59,024/60,320 KiB`, RSS `56,304 -> 58,976 KiB` (`+2,672 KiB`), threads `3 -> 3`, adapter absent;
+- expanded active combined CPU median/max `0.0/0.8%`, RSS median/max `96,624/104,832 KiB`, threads median/max `5/10`, clean teardown.
+
+Performance investigation/acceptance evidence:
+
+- final M6.3 shell-only app without M6.4 media linkage reproduced steady RSS `58,656/62,624 KiB` and stability RSS `56,384/60,400 KiB`, disproving M6.4 static linkage as the source of the historical absolute-RSS discrepancy;
+- exact same-session immutable `v0.1.0` vs M1 #319 A/B gave RSS median `60,144 KiB` vs `59,552 KiB`, disproving a persistent P0→M1 memory regression;
+- direct same-session immutable `v0.1.0` vs frozen M6.4 A/B gave baseline RSS median/max `61,504/67,104 KiB` vs candidate `62,256/65,232 KiB`;
+- candidate delta is `+752 KiB` median and `-1,872 KiB` max; CPU candidate `0.0/0.0%` vs baseline `0.0/6.7%`; threads identical `3/4`;
+- the exact baseline's own two same-day steady medians differed by `1,360 KiB`, larger than the M6.4 median delta.
+
+Therefore there is no material steady compact-memory regression. The independent 10-minute growth gate also passes. `PERFORMANCE.md` records the evidence-driven metric classification; no numeric production budget was raised to obtain acceptance.
+
+M6.4 ledger:
+
+- `NH-MEDIA-SHIP-001...010` — **PASS**.
+
+Comparator/tooling verification:
+
+- shell-only comparator: RED #705 -> GREEN #709;
+- P0 vs M1 comparator: RED #712 -> GREEN policy #714, exact-head #718 PASS;
+- direct P0 vs M6.4 comparator: RED #720 -> GREEN #721 PASS.
 
 ## Security baseline
 
 `SECURITY.md` remains authoritative.
 
-Current shipping `NotchHub.app` still adds no telemetry, analytics, networking, runtime subprocess, dynamic loading, privileged helper, sensitive input permission, or synthetic input surface beyond the previously accepted narrow pointer fallback.
+The shipping app intentionally contains accepted M6.3 media transport through the narrow M6.4 composition boundary. Production subprocess executable remains exactly `/usr/bin/perl`; adapter provenance is pinned; command surface remains typed and closed; I/O and teardown remain bounded; no shell/player-specific fallback/networking/telemetry/sensitive-permission expansion was added.
 
-M6.3 authorizes one narrowly reviewed production-code process boundary inside isolated `NotchHubMediaCore`; it is not shipping yet. Any shipping composition must retain App Sandbox, Hardened Runtime/library validation, the fixed `/usr/bin/perl` executable, pinned adapter provenance, closed typed commands, bounded I/O, explicit teardown and no sensitive permission prompts.
+App Sandbox remains the only application entitlement and Hardened Runtime remains mandatory. Lazy presentation-scoped media lifecycle changes when the accepted subprocess exists, not what authority it has.
 
 ## Known limitations / technical debt
 
-- `NotchHubMediaCore` is not yet linked into `NotchHubApp`;
-- adapter/framework assets are not yet packaged into the shipping app;
-- the real post-composition shipping size/security/runtime cost is not yet accepted;
 - no compact/expanded media UI, progress rendering or gesture/haptic/seek interaction ships yet;
 - Apple Music, Spotify and additional-player compatibility are not physically verified;
-- the global `.mouseMoved` fallback remains pending the P1 `NSTrackingArea` / window-local comparison;
-- active-display migration, fullscreen/Spaces, screen-configuration handling, notchless mode and click/pin policy remain later work;
-- target-Mac whole-app runtime ceilings still derive from the accepted canonical baseline and will be revisited after functional media integration.
+- global `.mouseMoved` fallback remains pending P1 `NSTrackingArea` / window-local comparison;
+- a more portable absolute memory-footprint metric should be evaluated and repeated-run variance characterized before introducing another cross-session absolute memory gate;
+- active-display migration, fullscreen/Spaces, screen-configuration handling, notchless mode and click/pin policy remain later work.
 
 ## Next optimal step
 
-1. Start a **separate shipping-composition slice** that links `NotchHubMediaCore` and the pinned adapter/framework resources into `NotchHub.app`.
-2. Preserve the accepted security boundary and collect fresh package/signature/entitlement/artifact-size evidence; do not silently widen P0 budgets.
-3. Run target-Mac whole-app runtime evidence for the composed transport lifecycle before considering the path reliable.
-4. After composition is accepted, implement compact + expanded media-first UI.
-5. Then implement local-window gesture/haptic/seek state machines under TDD and run physical media/haptic acceptance.
-6. After the complete functional media slice, perform P1 whole-app resource review and the deferred `NSTrackingArea` / window-local pointer experiment.
+1. Complete final exact-head CI and independent change review for PR #17 after the acceptance/documentation commits.
+2. If the review is clear and required checks are green, mark PR #17 ready and squash-merge M6.4 into `main`.
+3. Verify the merge and `main` CI.
+4. Start the next Universal Media slice: compact + expanded media-first UI, keeping media lifecycle presentation-scoped and the accepted security/performance boundary intact.
+5. Implement local-window gesture/haptic/seek state machines as a later separate TDD slice, followed by physical acceptance and P1 whole-app performance review.

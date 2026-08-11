@@ -1,33 +1,30 @@
 import Foundation
+import NotchHubMediaCore
 import Testing
-@testable import NotchHubMediaCore
+@testable import NotchHubMediaCandidateCore
 
 struct ProductionMediaTransportCandidateTests {
     @Test
     func collectorRecordsOnlyPrivacySafeTransitionEvidence() throws {
-        var collector = ProductionMediaTransportCandidateCollector(sourceCommit: String(repeating: "a", count: 40))
+        var collector = ProductionMediaTransportCandidateCollector(
+            sourceCommit: String(repeating: "a", count: 40)
+        )
 
         collector.record(state: .idle, snapshot: nil)
         collector.record(
             state: .playing,
             snapshot: makeSnapshot(
-                generation: 1,
-                revision: 1,
                 source: "source.a",
-                title: "Secret Track A",
-                artist: "Secret Artist A",
-                artwork: Data([1, 2, 3]),
+                hasArtwork: true,
+                isPlaying: true,
                 capabilities: supportedCapabilities
             ))
         collector.record(
             state: .paused,
             snapshot: makeSnapshot(
-                generation: 2,
-                revision: 1,
                 source: "source.b",
-                title: "Secret Track B",
-                artist: "Secret Artist B",
-                artwork: nil,
+                hasArtwork: false,
+                isPlaying: false,
                 capabilities: partialCapabilities
             ))
         collector.record(state: .idle, snapshot: nil)
@@ -54,34 +51,27 @@ struct ProductionMediaTransportCandidateTests {
             "title", "artist", "album", "artworkData", "rawPayload", "listeningHistory"
         ]
         #expect(forbidden.allSatisfy { object[$0] == nil })
-        let serialized = String(decoding: encoded, as: UTF8.self)
-        #expect(!serialized.contains("Secret Track"))
-        #expect(!serialized.contains("Secret Artist"))
     }
 
     @Test
     func stableSourceDoesNotFabricateSwitchDisappearanceOrArtworkClear() {
-        var collector = ProductionMediaTransportCandidateCollector(sourceCommit: String(repeating: "b", count: 40))
+        var collector = ProductionMediaTransportCandidateCollector(
+            sourceCommit: String(repeating: "b", count: 40)
+        )
         collector.record(
             state: .playing,
             snapshot: makeSnapshot(
-                generation: 1,
-                revision: 1,
                 source: "source.a",
-                title: "A",
-                artist: nil,
-                artwork: Data([9]),
+                hasArtwork: true,
+                isPlaying: true,
                 capabilities: supportedCapabilities
             ))
         collector.record(
             state: .paused,
             snapshot: makeSnapshot(
-                generation: 1,
-                revision: 2,
                 source: "source.a",
-                title: "A",
-                artist: nil,
-                artwork: nil,
+                hasArtwork: false,
+                isPlaying: false,
                 capabilities: supportedCapabilities
             ))
 
@@ -93,10 +83,13 @@ struct ProductionMediaTransportCandidateTests {
 
     @Test
     func candidateCommandMapsOnlyToTypedProductionCommands() {
-        #expect(ProductionMediaTransportCandidateCommand.toggle.mediaCommand == .togglePlayPause)
-        #expect(ProductionMediaTransportCandidateCommand.previous.mediaCommand == .previous)
-        #expect(ProductionMediaTransportCandidateCommand.next.mediaCommand == .next)
-        #expect(ProductionMediaTransportCandidateCommand.seek(seconds: 42).mediaCommand == .seek(seconds: 42))
+        #expect(ProductionMediaTransportCandidateCommand.toggle.runtimeCommand == .toggle)
+        #expect(ProductionMediaTransportCandidateCommand.previous.runtimeCommand == .previous)
+        #expect(ProductionMediaTransportCandidateCommand.next.runtimeCommand == .next)
+        #expect(
+            ProductionMediaTransportCandidateCommand.seek(seconds: 42).runtimeCommand
+                == .seek(seconds: 42)
+        )
     }
 
     @Test
@@ -131,38 +124,43 @@ struct ProductionMediaTransportCandidateTests {
         )
         #expect(
             ProductionMediaTransportCandidateFailureCode.classify(
-                MediaRemoteProcessClientError.timedOut
+                MediaCandidateRuntimeError.timedOut
             ) == .processTimedOut
         )
         #expect(
             ProductionMediaTransportCandidateFailureCode.classify(
-                MediaRemoteProcessClientError.teardownFailed
+                MediaCandidateRuntimeError.teardownFailed
             ) == .processTeardown
         )
         #expect(
             ProductionMediaTransportCandidateFailureCode.classify(
-                MediaRemoteProcessClientError.operationFailed(exitCode: 17)
+                MediaCandidateRuntimeError.processFailed
             ) == .processFailed
         )
         #expect(
             ProductionMediaTransportCandidateFailureCode.classify(
-                MediaRemoteProcessClientError.standardOutputUnavailable
+                MediaCandidateRuntimeError.outputUnavailable
             ) == .outputUnavailable
         )
         #expect(
             ProductionMediaTransportCandidateFailureCode.classify(
-                MediaRemoteProcessClientError.standardOutputTooLarge
+                MediaCandidateRuntimeError.outputTooLarge
             ) == .outputTooLarge
         )
         #expect(
             ProductionMediaTransportCandidateFailureCode.classify(
-                MediaRemoteCapabilityDecoderError.invalidSchema
+                MediaCandidateRuntimeError.capabilityProtocol
             ) == .capabilityProtocol
         )
         #expect(
             ProductionMediaTransportCandidateFailureCode.classify(
-                NSError(domain: NSCocoaErrorDomain, code: NSFileNoSuchFileError)
+                MediaCandidateRuntimeError.processLaunch
             ) == .processLaunch
+        )
+        #expect(
+            ProductionMediaTransportCandidateFailureCode.classify(
+                MediaCandidateRuntimeError.unexpected
+            ) == .unexpectedRuntimeFailure
         )
 
         let encoded = try? JSONEncoder().encode(
@@ -171,35 +169,24 @@ struct ProductionMediaTransportCandidateTests {
         #expect(encoded == Data("\"processLaunch\"".utf8))
     }
 
-    private var supportedCapabilities: MediaCommandCapabilities {
-        MediaCommandCapabilities(previous: .supported, next: .supported, seek: .supported)
+    private var supportedCapabilities: MediaCandidateCapabilities {
+        MediaCandidateCapabilities(previous: .supported, next: .supported, seek: .supported)
     }
 
-    private var partialCapabilities: MediaCommandCapabilities {
-        MediaCommandCapabilities(previous: .unsupported, next: .supported, seek: .unknown)
+    private var partialCapabilities: MediaCandidateCapabilities {
+        MediaCandidateCapabilities(previous: .unsupported, next: .supported, seek: .unknown)
     }
 
     private func makeSnapshot(
-        generation: UInt64,
-        revision: UInt64,
         source: String,
-        title: String?,
-        artist: String?,
-        artwork: Data?,
-        capabilities: MediaCommandCapabilities
-    ) -> MediaSessionSnapshot {
-        MediaSessionSnapshot(
-            sequence: MediaSequence(generation: generation, revision: revision),
-            source: MediaSourceIdentity(bundleIdentifier: source, displayName: nil),
-            title: title,
-            artist: artist,
-            album: "Secret Album",
-            artworkData: artwork,
-            playbackState: .playing,
-            durationSeconds: 180,
-            positionSeconds: 42,
-            referenceDate: Date(timeIntervalSince1970: 1_786_233_600),
-            playbackRate: 1,
+        hasArtwork: Bool,
+        isPlaying: Bool,
+        capabilities: MediaCandidateCapabilities
+    ) -> MediaCandidateSnapshot {
+        MediaCandidateSnapshot(
+            sourceBundleIdentifier: source,
+            hasArtwork: hasArtwork,
+            isPlaying: isPlaying,
             capabilities: capabilities
         )
     }

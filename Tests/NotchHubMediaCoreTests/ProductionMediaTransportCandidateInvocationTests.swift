@@ -1,5 +1,5 @@
 import Testing
-@testable import NotchHubMediaCore
+@testable import NotchHubMediaCandidateCore
 
 struct ProductionMediaTransportCandidateInvocationTests {
     @Test

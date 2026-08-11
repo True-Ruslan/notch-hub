@@ -115,21 +115,6 @@ python3 "$ACCEPTANCE_TOOL" observe \
   --seconds 1 \
   --output "$OBSERVE_SMOKE"
 
-bash "$ROOT_DIR/scripts/build-app.sh" release
-if find "$ROOT_DIR/build/NotchHub.app" -type f \( \
-  -name 'MediaTransportCandidate' -o \
-  -name 'mediaremote-adapter.pl' -o \
-  -name 'MediaRemoteAdapterTestClient' \
-\) -print -quit | grep -q .; then
-  echo "Shipping NotchHub.app contains production media transport candidate files" >&2
-  exit 1
-fi
-if find "$ROOT_DIR/build/NotchHub.app" -type d \
-  -name 'MediaRemoteAdapter.framework' -print -quit | grep -q .; then
-  echo "Shipping NotchHub.app contains MediaRemoteAdapter.framework" >&2
-  exit 1
-fi
-
 printf 'Production media transport candidate verification passed.\n'
 printf 'Source commit: %s\n' "$ACTUAL_SOURCE_COMMIT"
 printf 'Adapter commit: %s\n' "$ADAPTER_COMMIT"

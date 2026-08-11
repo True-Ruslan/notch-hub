@@ -52,6 +52,8 @@ It deliberately does **not** record usernames, home paths, file names/content, c
 
 Raw local measurement outputs under `build/` are development artifacts and are not committed. Only reviewed aggregate baseline values enter `performance/`.
 
+`ps rss` remains useful for within-run growth analysis and same-session candidate-vs-baseline comparison, but repeated target evidence on 2026-08-11 demonstrated that its absolute value is not portable enough across separate launch/session contexts to act as a standalone release gate. The immutable historical measurements remain preserved; acceptance classification is corrected below rather than rewriting the baseline.
+
 ## Stable performance scenarios
 
 ### `NH-PERF-IDLE-001`
@@ -135,36 +137,63 @@ The 10-minute run therefore shows no sustained RSS accumulation. The working set
 
 The release was built on the publication runner recorded as macOS 26.5.2; this is release-build provenance and is distinct from the runtime acceptance target macOS 26.6.
 
-## Initial target-Mac budgets
+## Initial target-Mac budgets — immutable historical calibration
 
-These are **target-Mac acceptance ceilings**, not shared-runner CI CPU/RSS/thread gates. They are deliberately simple and conservative because the first baseline contains strong within-run sampling but only one canonical run per scenario; future accepted measurements may tighten them after run-to-run noise is characterized.
+These values were the initial target-Mac acceptance ceilings derived from one canonical P0 run. They remain immutable historical calibration and are not rewritten from later measurements.
 
-| Scenario | Metric | Baseline evidence | Initial ceiling | Gate |
+| Scenario | Metric | Baseline evidence | Initial ceiling | Current classification |
 | --- | --- | ---: | ---: | --- |
-| Idle | CPU median | `0.0%` | `0.5%` | target Mac |
-| Idle | CPU max | `0.7%` | `2.0%` | target Mac |
-| Idle | RSS max | `33,808 KiB` | `43,008 KiB` (`42 MiB`) | target Mac |
-| Idle | Threads max | `4` | `6` | target Mac |
-| Hover | CPU median | `5.95%` | `8.0%` | target Mac |
-| Hover | CPU max | `22.3%` | `30.0%` | target Mac |
-| Hover | RSS max | `38,816 KiB` | `49,152 KiB` (`48 MiB`) | target Mac |
-| Hover | Threads max | `7` | `9` | target Mac |
-| Stability | CPU median | `0.0%` | `0.5%` | target Mac |
-| Stability | CPU max | `6.8%` | `10.0%` | target Mac |
-| Stability | RSS max | `34,384 KiB` | `45,056 KiB` (`44 MiB`) | target Mac |
-| Stability | RSS end-minus-start | `-3,712 KiB` | `+8,192 KiB` max growth | target Mac |
-| Stability | Threads max | `7` | `9` | target Mac |
-| Stability | Thread end-minus-start | `+1` | `+2` max growth | target Mac |
+| Idle | CPU median | `0.0%` | `0.5%` | target evidence |
+| Idle | CPU max | `0.7%` | `2.0%` | historical spike calibration; compare same-session |
+| Idle | RSS max | `33,808 KiB` | `43,008 KiB` (`42 MiB`) | historical absolute calibration; compare same-session |
+| Idle | Threads max | `4` | `6` | target gate |
+| Hover | CPU median | `5.95%` | `8.0%` | target evidence |
+| Hover | CPU max | `22.3%` | `30.0%` | historical spike calibration; compare same-session when material |
+| Hover | RSS max | `38,816 KiB` | `49,152 KiB` (`48 MiB`) | historical absolute calibration; compare same-session |
+| Hover | Threads max | `7` | `9` | target gate |
+| Stability | CPU median | `0.0%` | `0.5%` | target evidence |
+| Stability | CPU max | `6.8%` | `10.0%` | diagnostic spike evidence |
+| Stability | RSS max | `34,384 KiB` | `45,056 KiB` (`44 MiB`) | historical absolute calibration; growth is the gate |
+| Stability | RSS end-minus-start | `-3,712 KiB` | `+8,192 KiB` max growth | target gate |
+| Stability | Threads max | `7` | `9` | target gate |
+| Stability | Thread end-minus-start | `+1` | `+2` max growth | target gate |
 
-Budget derivation intentionally rounds upward from observed values instead of fitting tightly to a single run:
+The original derivation rounded upward from observed values rather than fitting tightly to one run. That remains useful historical context, but repeated evidence now distinguishes portable and non-portable metrics.
 
-- RSS ceilings provide roughly 25–31% headroom above the observed maxima;
-- hover CPU ceilings provide roughly 34% headroom above measured median/max values;
-- idle/stability CPU ceilings include larger absolute headroom because isolated one-second CPU spikes are noisier than sustained medians;
-- thread ceilings allow two additional transient threads above observed maxima;
-- stability allows up to 8 MiB positive RSS drift over ten minutes even though the accepted baseline drift is negative, preventing a one-run baseline from becoming an unrealistically tight leak detector.
+### 2026-08-11 runtime-metric comparability finding
 
-Crossing a target-Mac ceiling blocks acceptance until investigated. A material regression should still be investigated even below a ceiling, especially if M1/P1 changes pointer observation. Shared GitHub runners continue to validate only deterministic policy/schema/package behavior.
+The exact immutable `v0.1.0` release was remeasured on the same `Mac16,8` / macOS 26.6 with the current parent-only collector. The current collector and P0 harness both use Darwin `/bin/ps -p PID -o %cpu= -o rss=` and `ps -M`; the metric definition did not change.
+
+Two same-day exact-baseline measurements produced:
+
+- A/B against M1 #319: RSS median/max `60,144 / 63,376 KiB`, CPU max `0.0%`, threads median/max `3 / 5`;
+- direct A/B against frozen M6.4: RSS median/max `61,504 / 67,104 KiB`, CPU max `6.7%`, threads median/max `3 / 4`.
+
+The same immutable binary therefore moved from the historical idle RSS median/max `33,648 / 33,808 KiB` to roughly `60–67 MiB` under current launch/session conditions. Even within the current day its repeated baseline RSS changed by `+1,360 KiB` at the median and `+3,728 KiB` at the maximum. Its one-second CPU maximum also changed from the historical `0.7%` to `6.7%` in one direct A/B while median CPU stayed `0.0%`.
+
+Code-level regression hypotheses were tested rather than assumed:
+
+- P0 `v0.1.0` vs accepted M1 #319 same-session RSS median delta: `-592 KiB` (M1 lower);
+- final M6.3 shell-only, which has no M6.4 media shipping linkage, reproduced the same current `~56–62 MiB` compact RSS class;
+- direct `v0.1.0` vs frozen M6.4 same-session RSS delta: median `+752 KiB`, max `-1,872 KiB`;
+- frozen M6.4 direct A/B CPU median/max `0.0 / 0.0%` vs baseline `0.0 / 6.7%`;
+- threads were identical at median/max `3 / 4` in that direct A/B.
+
+The M6.4 median difference (`+752 KiB`) is smaller than the exact baseline's own observed same-day repeated median variation (`1,360 KiB`), while M6.4 maximum RSS is lower by `1,872 KiB`. This is evidence of no material steady compact-memory regression for M6.4, not a widened budget.
+
+### Current target-runtime acceptance classification
+
+For target-Mac runtime acceptance:
+
+1. **Steady compact memory:** absolute `ps rss` from a separate historical session is not a standalone gate. Compare exact immutable baseline and candidate back-to-back on the same target, using the same collector, launch path, warmup, duration, interval, and interaction state. Review median and maximum together. If the candidate shows a material directionally consistent increase beyond observed baseline repeat variation, block and investigate. If evidence is mixed or ambiguous, block rather than repeatedly rerun for a favorable value.
+2. **Long-run memory stability:** `RSS end-minus-start <= +8,192 KiB` remains a direct 10-minute within-run gate. Sustained positive growth, monotonic accumulation, or a growing collection/process/thread count blocks acceptance even if steady A/B is favorable.
+3. **CPU:** median CPU remains the primary steady signal. One-second CPU maximum is retained as diagnostic spike evidence and should be compared in the same session when a candidate appears worse; an isolated historical maximum is not independently portable enough to fail a later release after the immutable baseline itself exceeds it.
+4. **Threads:** existing max-thread and end-minus-start ceilings remain direct target gates. Any unexplained persistent thread increase blocks acceptance.
+5. **Artifact size:** deterministic executable/app/DMG policies are unchanged.
+
+The project should evaluate a more portable memory-footprint metric and characterize repeated-run variance before introducing a new absolute cross-session memory ceiling. Until then, the policy intentionally requires stronger same-session comparative evidence plus independent long-run growth checks rather than weakening memory review.
+
+Shared GitHub runners continue to validate only deterministic policy/schema/package behavior.
 
 ## Artifact-size budget
 
@@ -235,22 +264,22 @@ python3 scripts/perf-baseline.py \
 
 If more than one process matches, identify the PID of the accepted installed release explicitly rather than measuring an arbitrary process.
 
-For a future release candidate, run the same stable scenario and compare its `summary` with the corresponding flat `budget` object in `performance/baseline-v0.1.0.json` using `scripts/performance_policy.py check-budget`. Stability drift is also reviewed from `stabilitySummary` because start/end growth is not a plain sample maximum.
+For a future release candidate, keep the historical `check-budget` output as diagnostic evidence, but do not fail a release solely because an absolute RSS or isolated CPU-max value from the single historical P0 session is exceeded. For compact steady memory, run the exact immutable baseline and candidate back-to-back under the current classification above. Stability drift is still reviewed from `stabilitySummary` because start/end growth is an independent within-run gate.
 
 ## Baseline and budgets
 
 Canonical baseline file: `performance/baseline-v0.1.0.json`.
 
-It is complete and records:
+It remains complete and immutable, recording:
 
 1. accepted release/source/build provenance;
-2. target Mac/runtime measurement provenance and configuration;
-3. idle/hover/stability summaries and stability growth evidence;
+2. original target-Mac/runtime measurement provenance and configuration;
+3. original idle/hover/stability summaries and stability growth evidence;
 4. exact immutable-release executable/app/DMG byte sizes;
-5. target-Mac runtime acceptance ceilings;
+5. historical initial target-Mac runtime ceilings;
 6. reproducible executable/app relative-size gates plus absolute executable/app/DMG ceilings.
 
-CPU/RSS/thread ceilings remain target-Mac acceptance gates. Reproducible application-payload size limits and absolute package-size ceilings are shared-CI gates.
+The baseline file is **not** rewritten to erase the original measurements. Runtime acceptance interprets those historical values using the evidence-driven classification above: same-session comparative steady RSS, long-run RSS/thread growth, CPU median plus same-session spike review, and direct thread gates. Reproducible application-payload size limits and absolute package-size ceilings remain shared-CI gates.
 
 If future repeated measurements show that a runtime or packaging threshold is unstable, methodology or the metric classification is corrected from evidence rather than repeatedly rerunning or weakening production behavior merely to obtain green status. Intentional feature growth that needs more executable/app relative budget or any absolute artifact ceiling requires an explicit reviewed baseline/budget update; CI must never silently widen it.
 
@@ -261,7 +290,9 @@ After the first baseline is accepted:
 - reproducible executable/app relative-size limits are CI gates;
 - executable/app/DMG absolute size limits are CI gates;
 - deterministic scanner/state/lifecycle invariants remain mandatory CI gates;
-- CPU/RSS/thread comparisons remain target-Mac evidence unless a future measurement method proves sufficiently stable for automation;
-- material regression requires investigation before acceptance, even when an absolute ceiling is not crossed.
+- steady compact RSS uses exact same-session immutable-baseline comparison until a more portable absolute memory metric is validated;
+- long-run RSS/thread growth remains a direct target gate;
+- CPU median and thread behavior remain target evidence/gates, while isolated CPU max is interpreted with same-session context;
+- material regression requires investigation before acceptance even when a historical absolute ceiling is not crossed.
 
 A performance optimization is accepted only when existing notch/hover/security behavior remains correct and measured resource use is equal or better. In particular, P1 may replace the current global `.mouseMoved` observer with local AppKit tracking only after correctness and resource measurements support the change.

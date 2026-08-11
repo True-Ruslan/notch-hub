@@ -64,22 +64,5 @@ nm -gU \
   "$APP/Contents/Resources/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter" \
   | grep -q '_adapter_capabilities$'
 
-bash "$ROOT_DIR/scripts/build-app.sh" release
-
-if find "$ROOT_DIR/build/NotchHub.app" -type f \( \
-  -name 'MediaBridgeProbe' -o \
-  -name 'mediaremote-adapter.pl' -o \
-  -name 'MediaRemoteAdapterTestClient' \
-\) -print -quit | grep -q .; then
-  echo "Shipping NotchHub.app contains media probe files" >&2
-  exit 1
-fi
-
-if find "$ROOT_DIR/build/NotchHub.app" -type d \
-  -name 'MediaRemoteAdapter.framework' -print -quit | grep -q .; then
-  echo "Shipping NotchHub.app contains MediaRemoteAdapter.framework" >&2
-  exit 1
-fi
-
 printf 'Media bridge probe verification passed.\n'
 printf 'Adapter capability patch SHA-256: %s\n' "$PATCH_SHA256"
