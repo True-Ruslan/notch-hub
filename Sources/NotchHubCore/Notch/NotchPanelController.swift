@@ -11,6 +11,12 @@ public final class NotchPanelController: NSObject {
     private let layout: NotchLayout
     private var reduceMotionEnabled: Bool
 
+    public var settledPresentationHandler: (@MainActor @Sendable (NotchPresentation) -> Void)? {
+        didSet {
+            transitionCoordinator.settledPresentationHandler = settledPresentationHandler
+        }
+    }
+
     public override init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let resolvedLayout = NotchGeometry.layout(
@@ -99,6 +105,7 @@ public final class NotchPanelController: NSObject {
     }
 
     public func invalidate() {
+        settledPresentationHandler = nil
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
         transitionCoordinator.invalidate()
