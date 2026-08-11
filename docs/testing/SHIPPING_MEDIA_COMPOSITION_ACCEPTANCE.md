@@ -1,6 +1,6 @@
 # Shipping Media Composition — Acceptance Evidence
 
-Status: **CI-QUALIFIED — TARGET-MAC GATE PENDING**
+Status: **TARGET-MAC PERF INVESTIGATION — LIFECYCLE/STABILITY PASS**
 
 Authoritative implementation plan: `docs/superpowers/plans/2026-08-10-shipping-media-composition.md`.
 Accepted transport dependency: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`.
@@ -54,6 +54,53 @@ CI #675 runs the real `scripts/shipping_media_acceptance.py preflight` against t
 
 Hosted runner resource magnitudes are not target-Mac acceptance and are not used as CPU/RSS/thread ceilings.
 
+## First target-Mac shipping run — 2026-08-11
+
+The frozen candidate was run on the primary target `Mac16,8` / macOS `26.6` through the exact-DMG target runner.
+
+Preflight passed source/adapter/patch provenance, resources, strict signatures, nested signature, Hardened Runtime, exact sandbox-only entitlement, system-only executable libraries, development-tool exclusion, and adapter capability symbol verification.
+
+Steady evidence:
+
+- warmup `10s`;
+- `60` samples at `1s` intervals;
+- parent CPU median/max: `0.0/3.2%`;
+- adapter CPU median/max: `0.0/1.0%`;
+- combined CPU median/max upper bounds: `0.0/4.2%`;
+- parent RSS median/max: `59592/62592 KiB`;
+- adapter RSS median/max: `21016/23728 KiB`;
+- combined RSS median/max upper bounds: `80608/86320 KiB`;
+- combined thread median/max upper bounds: `5/11`.
+
+Stability evidence:
+
+- warmup `10s`;
+- `120` samples at `5s` intervals over `600s`;
+- parent CPU median/max: `0.0/3.1%`;
+- adapter CPU median/max: `0.0/0.0%`;
+- combined CPU median/max upper bounds: `0.0/3.1%`;
+- parent RSS median/max: `58192/60528 KiB`;
+- adapter RSS median/max: `20224/23712 KiB`;
+- combined RSS median/max upper bounds: `78416/84240 KiB`;
+- parent RSS start/end: `59024 -> 52192 KiB` (`-6832 KiB`);
+- adapter RSS start/end: `20320 -> 20064 KiB` (`-256 KiB`);
+- combined RSS start/end: `79344 -> 72256 KiB` (`-7088 KiB`);
+- parent thread start/end: `3 -> 3`;
+- adapter thread start/end: `2 -> 2`;
+- combined thread start/end: `5 -> 5`;
+- combined transient thread max upper bound: `13`.
+
+Normal termination evidence reports `parentExited = true`, `adapterExited = true`, and `orphanProcessDetected = false`.
+
+Human permission observation for the complete physical run:
+
+- Accessibility — NONE;
+- Input Monitoring — NONE;
+- Automation — NONE;
+- Screen Recording — NONE.
+
+The run therefore shows excellent CPU behavior, clean lifecycle, and no sustained RSS/thread accumulation. It also reveals a material absolute steady-state footprint increase relative to the accepted P0 whole-app ceilings. That increase is treated as a performance finding to investigate, not as justification to silently widen runtime budgets.
+
 ## Accepted composition contract
 
 The CI-qualified implementation provides:
@@ -84,13 +131,13 @@ The exact pinned adapter script/framework/license/provenance are packaged. `Medi
 
 ### `NH-MEDIA-SHIP-003` — signatures, Hardened Runtime, sandbox-only entitlement
 
-Status: **PASS — HOSTED PREFLIGHT**
+Status: **PASS — HOSTED + TARGET PREFLIGHT**
 
 Nested framework and top-level app signatures verify. Hardened Runtime is present and effective app entitlements remain exactly App Sandbox only.
 
 ### `NH-MEDIA-SHIP-004` — executable dependency boundary
 
-Status: **PASS — HOSTED PREFLIGHT**
+Status: **PASS — HOSTED + TARGET PREFLIGHT**
 
 `NotchHub` has no unexpected non-system dynamic-library dependency.
 
@@ -102,20 +149,15 @@ Shipping bundle path/provenance validation is exact and fails closed when resour
 
 ### `NH-MEDIA-SHIP-006` — target owned-adapter lifecycle
 
-Status: **PENDING TARGET-MAC**
+Status: **PASS — TARGET-MAC**
 
-Required physical evidence:
-
-- exact frozen DMG launches on `Mac16,8` / macOS 26.6;
-- running shipping app owns exactly one expected adapter child;
-- normal AppKit termination exits the app and the owned adapter;
-- `orphanProcessDetected = false`.
+The exact frozen DMG launches on `Mac16,8` / macOS 26.6, the shipping app owns the expected adapter child, normal AppKit termination exits both parent and adapter, and `orphanProcessDetected = false`.
 
 ### `NH-MEDIA-SHIP-007` — no sensitive permission prompts
 
-Status: **PENDING HUMAN OBSERVATION**
+Status: **PASS — TARGET-MAC HUMAN OBSERVATION**
 
-During the complete physical run confirm:
+During the complete physical run:
 
 - Accessibility — NONE;
 - Input Monitoring — NONE;
@@ -124,15 +166,23 @@ During the complete physical run confirm:
 
 ### `NH-MEDIA-SHIP-008` — 60-second target resource evidence
 
-Status: **PENDING TARGET-MAC**
+Status: **BLOCKED — PERFORMANCE INVESTIGATION**
 
-The target runner must produce exactly 60 steady parent+adapter samples after warmup. Acceptance is evidence-based against the existing whole-app baseline and the observed composition cost; hosted-runner magnitudes are not substituted.
+The exact 60-s evidence is valid and CPU behavior is excellent, but the absolute footprint materially exceeds the existing P0 whole-app target ceilings:
+
+- combined RSS max: `86320 KiB` versus P0 idle/stability whole-app ceilings `43008/45056 KiB`;
+- parent RSS max alone: `62592 KiB`;
+- combined transient threads max: `11` versus P0 idle/stability ceilings `6/9`.
+
+These P0 ceilings predate the accepted external media transport and are not automatically transferable as an additive transport budget. Crossing them nevertheless requires investigation before M6.4 acceptance. No runtime budget is widened from this single run.
+
+Next diagnostic question: distinguish the steady cost of the always-on observer/process infrastructure from the incremental cost of an active media-session payload/artwork path using the same frozen candidate and a short no-session target measurement.
 
 ### `NH-MEDIA-SHIP-009` — approximately 10-minute target stability
 
-Status: **PENDING TARGET-MAC**
+Status: **PASS — STABILITY BEHAVIOR / M6.4 STILL BLOCKED BY `NH-MEDIA-SHIP-008`**
 
-The target runner must produce exactly 120 five-second stability samples after warmup, with no sustained CPU signal, RSS accumulation, thread accumulation, premature exit, or orphan adapter.
+The target runner produced exactly 120 five-second stability samples after warmup. CPU median remained `0.0%`; combined RSS decreased by `7088 KiB`; combined thread start/end remained `5 -> 5`; normal app/adapter termination passed and no orphan was detected. There is no sustained CPU signal, RSS accumulation, or thread accumulation in this measured run.
 
 ### `NH-MEDIA-SHIP-010` — explicit artifact-size impact
 
@@ -144,6 +194,6 @@ Shipping size impact is explicitly measured and enforced by a separate M6.4 addi
 
 **DO NOT MERGE M6.4 YET.**
 
-M6.4 is deterministically qualified and has an immutable exact shipping candidate, but physical acceptance remains incomplete until `NH-MEDIA-SHIP-006...009` pass on the primary target. PR #17 must remain Draft until those target results are recorded here and the final decision is explicit.
+Physical lifecycle, permissions, and long-run stability pass. The only remaining acceptance blocker is the absolute target-Mac resource footprint exposed by `NH-MEDIA-SHIP-008`. Investigate and optimize before accepting a new runtime budget. If production code changes, freeze a new shipping candidate and repeat the relevant target gates.
 
 Media UI, progress rendering, gestures/haptics/seek interaction, and new player compatibility claims remain outside M6.4.
