@@ -65,14 +65,21 @@ Empty/whitespace-only metadata is treated as absent. No title/artist/album place
 
 `MediaSessionController` remains the **sole sequence/freshness authority**. The presentation model intentionally does not compare `MediaSequence` across runtime lifetimes: a later expanded runtime is a new controller/transport lifecycle and may restart its local generation numbering. Stale callbacks from an old runtime are prevented by the accepted controller/bridge handler-generation invalidation and by detaching the runtime presentation callback before teardown. A fresh authoritative snapshot from a later expansion must therefore be allowed to replace retained compact context regardless of its raw sequence value relative to the previous runtime.
 
-## Compact UI
+## Compact geometry and UI
 
-With no retained media context, preserve the accepted ordinary compact indicator.
+The accepted ordinary compact state remains the exact physical-notch frame. That invariant is retained for cold launch and any compact state without retained media context.
+
+A hardware constraint discovered before M6.5 production UI implementation changes the retained-media compact geometry: content placed inside the exact physical-notch width would be clipped by the hosting view and physically occluded by the camera housing. M6.5 therefore adds **36 pt symmetric media wings** around the unchanged physical notch only while retained media context exists.
+
+For a hardware notch of width `W`, retained-media compact width is `W + 72 pt`, centered on the same notch center and with the same compact height/top edge. `hardwareNotchWidth` remains the actual detected hardware width. The expanded frame is unchanged.
+
+The geometry remains owned by `NotchPanelTransitionCoordinator`: App/media code may only set a generic compact horizontal-extension input on `NotchPanelController`. It may not call `NSPanel.setFrame` or become a second transition authority. The extension is updated from event-driven presentation-model changes while expanded so the next collapse targets either exact-notch compact (`0 pt` extension) or retained-media compact (`36 pt` per side). The pointer/activation layout uses the same current compact frame, making the visible wings valid hover targets.
 
 With retained media context:
 
-- artwork (or a lightweight SF Symbol placeholder) appears on the left side of the compact surface;
-- a small playing/paused status symbol appears on the right;
+- a 24–28 pt artwork image (or lightweight SF Symbol placeholder) fits in the left 36 pt wing;
+- a small playing/paused status symbol fits in the right 36 pt wing;
+- the physical notch center remains visually empty/black;
 - no persistent title/artist text or transport controls are shown;
 - no continuously animated progress is shown;
 - compact remains non-activating and does not start the adapter.
@@ -93,7 +100,7 @@ Show:
 - static event-driven progress only when trustworthy position/duration exist;
 - no draggable seek control in this slice.
 
-If media disappears while the panel is expanded, replace Media with the ordinary Home/foundation content without requesting panel collapse.
+If media disappears while the panel is expanded, replace Media with the ordinary Home/foundation content without requesting panel collapse. The compact extension is simultaneously reset to zero so a later collapse returns to exact-notch ordinary compact.
 
 Buttons send only the existing typed semantic commands. No AppleScript, media-key synthesis, Accessibility, Input Monitoring, player-specific fallback, arbitrary process arguments, or new entitlement is introduced.
 
@@ -101,21 +108,21 @@ Buttons send only the existing typed semantic commands. No AppleScript, media-ke
 
 M6.5 introduces no repeating `Timer`, timer publisher, `DispatchSourceTimer`, sleep loop, display link, polling loop, global scroll monitor, or metadata persistence/logging.
 
-SwiftUI updates occur only from panel presentation changes and media controller callbacks. Artwork decoding is view-local and bounded by the already bounded transport payload; invalid artwork falls back to the system placeholder.
+SwiftUI and compact-geometry updates occur only from panel presentation changes and media controller callbacks. Artwork decoding is view-local and bounded by the already bounded transport payload; invalid artwork falls back to the system placeholder.
 
 ## Acceptance IDs
 
-- `NH-MEDIA-UI-001` — cold compact launch with no retained media context keeps ordinary compact content and zero adapter process.
+- `NH-MEDIA-UI-001` — cold compact launch with no retained media context keeps exact-notch ordinary compact content and zero adapter process.
 - `NH-MEDIA-UI-002` — expanded active session renders Media-first content from authoritative state.
 - `NH-MEDIA-UI-003` — playing/paused updates change the status and play/pause symbol without fabricated state.
 - `NH-MEDIA-UI-004` — partial/empty metadata omits missing rows; invalid artwork uses the lightweight placeholder.
 - `NH-MEDIA-UI-005` — previous/next controls are actionable only when capability is `supported`; unsupported/unknown never fabricate support.
 - `NH-MEDIA-UI-006` — progress is shown only for trustworthy position+duration and is event-driven/static in this slice; no periodic progress worker exists.
-- `NH-MEDIA-UI-007` — session disappearance/unavailable while expanded switches to Home content and does not collapse the panel.
-- `NH-MEDIA-UI-008` — normal expanded->compact settlement stops/releases runtime while retaining the last authoritative compact context and keeping the adapter absent.
+- `NH-MEDIA-UI-007` — session disappearance/unavailable while expanded switches to Home content, resets future compact geometry to exact-notch and does not collapse the panel.
+- `NH-MEDIA-UI-008` — normal expanded->compact settlement stops/releases runtime while retaining the last authoritative context, targets exactly 36 pt visible wings per side and keeps the adapter absent.
 - `NH-MEDIA-UI-009` — later expansion rebases retained context from its fresh controller lifecycle; old-runtime callbacks cannot surface after teardown and raw sequence values are never compared across runtime lifetimes.
-- `NH-MEDIA-UI-010` — media button commands remain inside the existing typed transport boundary; no new sensitive permission, entitlement, networking, arbitrary subprocess or global input surface.
-- `NH-MEDIA-UI-011` — target-Mac visual/functional acceptance passes with Yandex Music and Yandex Browser, including metadata/artwork as available, play/pause, capability-driven previous/next, media disappearance -> expanded Home, compact retained context, and zero compact adapter.
+- `NH-MEDIA-UI-010` — media button commands and media compact geometry remain inside existing typed/transition boundaries; no new sensitive permission, entitlement, networking, arbitrary subprocess, global input or direct panel-frame surface is introduced.
+- `NH-MEDIA-UI-011` — target-Mac visual/functional acceptance passes with Yandex Music and Yandex Browser, including visible left/right media wings around the physical notch, metadata/artwork as available, play/pause, capability-driven previous/next, media disappearance -> expanded Home, compact retained context, exact-notch fallback and zero compact adapter.
 
 ## Explicitly deferred
 
@@ -131,4 +138,4 @@ SwiftUI updates occur only from panel presentation changes and media controller 
 
 ## Exit gate
 
-M6.5 may be marked accepted only when deterministic CI is green and `NH-MEDIA-UI-001...011` are recorded. CI can prove mapping, dependency/security/event-driven policy and package integrity; `NH-MEDIA-UI-011` requires physical target-Mac acceptance. Until that physical gate passes, the PR remains implemented/tested but not accepted/merged/released.
+M6.5 may be marked accepted only when deterministic CI is green and `NH-MEDIA-UI-001...011` are recorded. CI can prove mapping, dependency/security/event-driven/geometry policy and package integrity; `NH-MEDIA-UI-011` requires physical target-Mac acceptance. Until that physical gate passes, the PR remains implemented/tested but not accepted/merged/released.
