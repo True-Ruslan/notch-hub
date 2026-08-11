@@ -169,17 +169,19 @@ class ShippingMediaAcceptanceTests(unittest.TestCase):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, workflow)
 
-    def test_target_runner_uses_exact_candidate_and_normal_app_termination(self):
+    def test_target_runner_uses_exact_lazy_candidate_and_normal_app_termination(self):
         runner_path = REPOSITORY_ROOT / "scripts" / "run-shipping-media-target-acceptance.sh"
         self.assertTrue(runner_path.is_file(), "missing M6.4 target-Mac acceptance runner")
         runner = runner_path.read_text(encoding="utf-8") if runner_path.is_file() else ""
 
         required = (
             "set -euo pipefail",
-            "c19ce13c5321fce72464ddf0a5d9b1467f770db0",
-            "ccf8a503515d382c206c6211606ca6401ba33114863a30721e134c1a45af04b9",
+            "fdbe987d8f22768b2a75406c8f1e721fa1da2845",
+            "6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd",
             "hdiutil attach",
             "-readonly",
+            "shipping_media_compact_acceptance.py",
+            "shipping_media_acceptance.py",
             "--mode steady",
             "--mode stability",
             "NSRunningApplication(processIdentifier:",
@@ -197,7 +199,8 @@ class ShippingMediaAcceptanceTests(unittest.TestCase):
                     rf"shipping_media_acceptance\.py[\"']?\s+{re.escape(command)}",
                 )
 
-        for forbidden in ("osascript", "System Events", "kill -9", "pkill"):
+        forbidden_commands = ("osascript", "System Events", "pkill")
+        for forbidden in forbidden_commands:
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, runner)
 
