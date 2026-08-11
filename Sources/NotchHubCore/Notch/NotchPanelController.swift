@@ -2,6 +2,8 @@ import AppKit
 import Dispatch
 import SwiftUI
 
+public typealias NotchPanelContentFactory = @MainActor (NotchPanelModel, NotchLayout) -> NSView
+
 @MainActor
 public final class NotchPanelController: NSObject {
     private let panel: NSPanel
@@ -17,7 +19,13 @@ public final class NotchPanelController: NSObject {
         }
     }
 
-    public override init() {
+    public override convenience init() {
+        self.init { model, layout in
+            NotchHostingViewFactory.make(model: model, layout: layout)
+        }
+    }
+
+    public init(contentFactory: @escaping NotchPanelContentFactory) {
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let resolvedLayout = NotchGeometry.layout(
             for: ScreenGeometryInput(screen: screen)
@@ -29,10 +37,7 @@ public final class NotchPanelController: NSObject {
             backing: .buffered,
             defer: false
         )
-        let hostingView = NotchHostingViewFactory.make(
-            model: model,
-            layout: resolvedLayout
-        )
+        let hostingView = contentFactory(model, resolvedLayout)
         panel.contentView = hostingView
 
         let workspace = NSWorkspace.shared
