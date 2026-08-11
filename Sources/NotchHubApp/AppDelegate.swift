@@ -13,11 +13,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
+        let mediaPresentationModel = mediaPresentationModel
         let panelController = NotchPanelController(contentFactory: { [weak self] model, layout in
             NotchHostingViewFactory.make(
                 rootView: MediaNotchRootView(
                     panelModel: model,
-                    mediaModel: self?.mediaPresentationModel ?? ShippingMediaPresentationModel(),
+                    mediaModel: mediaPresentationModel,
                     hardwareNotchWidth: layout.hardwareNotchWidth,
                     compactBackgroundOpacity: layout.compactBackgroundOpacity,
                     expandedContentTopInset: layout.expandedContentTopInset,
@@ -35,11 +36,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         })
         self.panelController = panelController
 
-        mediaPresentationModel.presentationDidChange = { [weak self] presentation in
-            guard let self else {
-                return
-            }
-            panelController.setCompactHorizontalExtension(
+        mediaPresentationModel.presentationDidChange = { [weak panelController] presentation in
+            panelController?.setCompactHorizontalExtension(
                 presentation == nil ? 0 : Self.mediaCompactWingWidth
             )
         }
