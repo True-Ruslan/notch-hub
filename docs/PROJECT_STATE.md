@@ -8,20 +8,20 @@ Protected branch target: `main`
 
 ## Current product state
 
-**M6.4 shipping media composition is implemented and CI-qualified, and its lazy settled-expanded lifecycle is physically validated. M6.4 itself is no longer the leading explanation for the compact RSS blocker: the final M6.3 shell-only shipping app, which does not link `NotchHubMediaCore`, reproduces essentially the same elevated compact RSS. Root-cause work has therefore moved backward to the P0→M1 shell evolution / measurement-environment boundary. PR #17 remains Draft until that performance discrepancy is explained and resolved without silently widening budgets.**
+**M6.4 shipping media composition is implemented and CI-qualified, and its lazy settled-expanded lifecycle is physically validated. The remaining compact RSS discrepancy is now proven not to be caused by M6.4 static media linkage or by a persistent P0→M1 memory regression: the exact immutable `v0.1.0` binary itself currently measures in the same ~60 MiB RSS class as M1/M6.3/M6.4 under the current target-Mac runtime context. One final direct same-session `v0.1.0 ↔ frozen M6.4` comparator remains before correcting the RSS gate methodology and deciding `NH-MEDIA-SHIP-008/009`. PR #17 remains Draft until that final evidence is evaluated.**
 
 Accepted foundations/integrations:
 
 - M0 Engineering Foundation — accepted;
 - R0.1 Personal Release `v0.1.0` — accepted;
-- P0 Performance Foundation — accepted and merged as `a056aa74bad5d8e193eb4c76a76e6c910344bd09`;
+- P0 Performance Foundation — accepted and merged as `a056aa74bad5d8e193eb4c76a76e6c910344bd09`; its original absolute-RSS observations remain immutable historical evidence, while cross-session RSS portability is under correction;
 - P0.1 Public Repository Readiness — accepted;
-- M1 interaction/transition slice — accepted and merged as `094b494bd597643244e733baf5787a13b61fb4eb`;
+- M1 interaction/transition slice — accepted and merged as `094b494bd597643244e733baf5787a13b61fb4eb`; same-session immutable-baseline A/B disproves a persistent P0→M1 RSS regression;
 - Universal Media design — `403a557399abb2704f9ae02397b49229ca6cf1f9`;
 - M6.1 transport probe — accepted/merged as `7d5210eb0363933d120334d29daf40956b53cb50`, final outcome `ACCEPT_TRANSPORT`;
 - M6.2 production media state/controller/bridge boundary — accepted/merged as `1ccea500570f9a5ca927739be58d7f7eaadd775a`;
 - M6.3 concrete production transport — accepted on frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
-- M6.4 shipping media composition — **lifecycle/security physically PASS; compact absolute RSS root-cause investigation continues outside the media-runtime boundary**.
+- M6.4 shipping media composition — **lifecycle/security physically PASS; final same-session immutable-baseline RSS comparator pending**.
 
 Authoritative evidence:
 
@@ -54,6 +54,8 @@ Accepted behavior includes:
 - no per-event `Task` allocation in the live pointer hot path;
 - no display link, polling loop, repeating timer, synthetic input, Accessibility or Input Monitoring requirement for notch interaction.
 
+Same-session current-target A/B between immutable `v0.1.0` and accepted M1 candidate #319 shows RSS medians `60,144 KiB` vs `59,552 KiB` respectively. A persistent P0→M1 memory regression is therefore disproven.
+
 Remaining M1 display/Space hardening stays deferred behind the functional media slice and P1 performance review.
 
 ### R0.1 Personal Release
@@ -62,7 +64,7 @@ Immutable `v0.1.0` is accepted for personal use. It is ad-hoc signed, sandboxed,
 
 ### P0 Performance Foundation
 
-Accepted target-Mac baseline:
+Accepted historical target-Mac observation:
 
 - idle CPU median/max `0.0% / 0.7%`, RSS max `33,808 KiB`, threads max `4`;
 - hover CPU median/max `5.95% / 22.3%`, RSS max `38,816 KiB`, threads max `7`;
@@ -75,6 +77,8 @@ Immutable `v0.1.0` artifact baseline:
 - DMG `73,955 B`.
 
 The P0 baseline remains immutable. Feature-specific shipping growth must be explicit, separately reviewed, and provenance-backed.
+
+Current evidence shows the original single-run absolute `ps rss` values are not portable across target sessions: the exact immutable `v0.1.0` release now measures steady RSS median/max `60,144/63,376 KiB` on the same Mac16,8/macOS 26.6, using the same `ps rss` KiB metric class. This does not rewrite the historical baseline; it requires correcting how RSS is used as a future release gate. Stability growth and same-session immutable-baseline comparison remain valid evidence.
 
 ## Universal Media
 
@@ -107,7 +111,7 @@ All `NH-MEDIA-PROD-001...013` gates pass on Mac16,8/macOS 26.6, including actual
 
 ### M6.4 — shipping media composition
 
-Status: **TARGET LIFECYCLE/SECURITY PASS — COMPACT ABSOLUTE RSS BLOCKED; ROOT CAUSE PREDATES M6.4**.
+Status: **TARGET LIFECYCLE/SECURITY PASS — FINAL SAME-SESSION RSS COMPARATOR PENDING**.
 
 Current frozen shipping candidate:
 
@@ -140,26 +144,20 @@ Current-candidate physical evidence on `Mac16,8` / macOS 26.6:
 - compact stability CPU median/max `0.0/3.3%`, RSS median/max `59,024/60,320 KiB`, RSS `56,304 -> 58,976 KiB`, threads `3 -> 3`;
 - expanded active combined CPU median/max `0.0/0.8%`, RSS median/max `96,624/104,832 KiB`, threads median/max `5/10`, clean teardown.
 
-The compact RSS is above P0 absolute ceilings, so `NH-MEDIA-SHIP-008/009` remain blocked. However a historical comparator disproves M6.4 as the primary cause:
+Historical root-cause evidence:
 
-Final M6.3 shell-only shipping app:
-
-- source `30de94c0cb6ea17dc21bd366404937db2bc73783`;
-- CI #594 / run `31389611697`;
-- artifact `NotchHub-dmg` / ID `9063213178`;
-- does **not** link `NotchHubMediaCore` and contains no M6.4 media shipping resources;
-- steady CPU median/max `0.0/3.2%`, RSS median/max `58,656/62,624 KiB`, threads max `5`;
-- 10-minute stability CPU median/max `0.0/1.6%`, RSS median/max `56,384/60,400 KiB`, RSS `58,736 -> 54,640 KiB`, threads `3 -> 3`;
-- adapter absent and parent normal termination PASS.
-
-Therefore the ~56–62 MiB shell footprint predates M6.4. No M6.4 runtime or size budget is widened.
+- final M6.3 shell-only app without M6.4 media linkage reproduces steady RSS `58,656/62,624 KiB` and stability RSS `56,384/60,400 KiB`, disproving M6.4 static linkage as the primary cause;
+- exact same-session immutable `v0.1.0` vs M1 #319 A/B gives RSS median `60,144 KiB` vs `59,552 KiB` (`-592 KiB` M1 delta), disproving a persistent P0→M1 memory regression;
+- exact immutable `v0.1.0` therefore itself reproduces the current ~60 MiB RSS class, so the old single-run absolute RSS ceiling is not a portable cross-session gate.
 
 Current M6.4 ledger:
 
 - `NH-MEDIA-SHIP-001...007` — PASS;
-- `NH-MEDIA-SHIP-008` — BLOCKED on compact absolute RSS / small idle CPU-max miss, with root cause now known to predate M6.4;
-- `NH-MEDIA-SHIP-009` — BLOCKED on compact absolute RSS; drift/thread behavior passes and root cause predates M6.4;
+- `NH-MEDIA-SHIP-008` — pending exact same-session `v0.1.0 ↔ frozen M6.4` comparator;
+- `NH-MEDIA-SHIP-009` — stability growth behavior PASS; final RSS classification pending the same direct comparator;
 - `NH-MEDIA-SHIP-010` — PASS.
+
+Development-only `scripts/run-m6-4-rss-ab.sh` exact-pins both DMGs and uses one literal shared 10-second warmup + 60-second parent-only collector. CI #721 / run `31522174412` passes the complete pipeline with this comparator contract.
 
 ## Security baseline
 
@@ -171,7 +169,7 @@ App Sandbox remains the only application entitlement and Hardened Runtime remain
 
 ## Known limitations / technical debt
 
-- absolute compact RSS is above the P0 ceilings on both M6.4 and the earlier M6.3 shell-only app; root cause is under historical/performance investigation;
+- the original P0 single-run absolute RSS ceilings are not reproducible cross-session even with the exact immutable baseline binary; final M6.4 direct A/B and RSS methodology correction remain pending;
 - no compact/expanded media UI, progress rendering or gesture/haptic/seek interaction ships yet;
 - Apple Music, Spotify and additional-player compatibility are not physically verified;
 - global `.mouseMoved` fallback remains pending P1 `NSTrackingArea` / window-local comparison;
@@ -179,9 +177,8 @@ App Sandbox remains the only application entitlement and Hardened Runtime remain
 
 ## Next optimal step
 
-1. Re-run immutable `v0.1.0` (source `8e913dc...`) today on the same Mac16,8/macOS 26.6 using the current parent-only collector and compare it in the same session with accepted M1 candidate `f6de06f...` from CI #319.
-2. Use `scripts/run-shell-rss-bisect.sh` so both candidates get identical 10-second warmup + 60-second steady sampling and normal termination.
-3. If current `v0.1.0` also measures ~56–62 MiB, treat the discrepancy as environment/baseline-context drift and investigate what changed in runtime conditions before changing production code or budgets.
-4. If `v0.1.0` remains near its original ~34 MiB while M1 is high, the regression is code-level inside M1; physically bisect M1 artifacts around transition/Reduce-Motion lifecycle changes and prove the exact mechanism before fixing.
-5. Keep PR #17 Draft and do not widen runtime budgets until that fork is resolved.
-6. Only after the performance discrepancy is resolved may M6.4 be marked `ACCEPTED` and Media UI proceed.
+1. Run `scripts/run-m6-4-rss-ab.sh` with exact immutable `v0.1.0` and the frozen M6.4 DMG in the same target-Mac session.
+2. If frozen M6.4 is materially worse than the immutable baseline in same-session steady behavior, keep PR #17 Draft and continue root-cause work without widening budgets.
+3. If frozen M6.4 is equal-or-better in median/steady behavior, combine that with the already-good 10-minute RSS/thread drift evidence and correct `PERFORMANCE.md` so historical absolute `ps rss` values remain evidence but are no longer treated as a portable cross-session release gate.
+4. Under that evidence-backed methodology, resolve `NH-MEDIA-SHIP-008/009`, update acceptance/state/roadmap/changelog, run exact-head CI/change review, and only then mark PR #17 ready and squash-merge.
+5. Media UI is the next product slice only after M6.4 is accepted and merged.
