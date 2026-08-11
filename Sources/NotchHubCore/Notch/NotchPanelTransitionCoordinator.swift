@@ -21,6 +21,7 @@ final class NotchPanelTransitionCoordinator {
 
     private(set) var phase: NotchPanelTransitionPhase
     private(set) var desiredPresentation: NotchPresentation
+    var settledPresentationHandler: (@MainActor @Sendable (NotchPresentation) -> Void)?
 
     private var generation: UInt64 = 0
     private var hasActiveAnimation = false
@@ -106,6 +107,7 @@ final class NotchPanelTransitionCoordinator {
         isInvalidated = true
         generation &+= 1
         cancelActiveAnimationIfNeeded()
+        settledPresentationHandler = nil
     }
 
     private func beginTransition(
@@ -185,5 +187,7 @@ final class NotchPanelTransitionCoordinator {
         case .expanded:
             phase = .expanded
         }
+
+        settledPresentationHandler?(expectedPresentation)
     }
 }
