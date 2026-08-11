@@ -9,20 +9,24 @@ REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
 class ShippingMediaDiagnosticModeTests(unittest.TestCase):
-    def test_target_runner_supports_short_steady_mode_without_changing_default_full_run(self):
+    def test_target_runner_separates_compact_background_from_expanded_feature_cost(self):
         runner = (
             REPOSITORY_ROOT / "scripts" / "run-shipping-media-target-acceptance.sh"
         ).read_text(encoding="utf-8")
 
         required = (
-            'RUN_MODE="full"',
+            'RUN_MODE="compact-full"',
             "--run-mode",
-            "full|steady",
-            'if [[ "$RUN_MODE" == "full" ]]',
+            "compact-full|expanded-steady",
+            'if [[ "$RUN_MODE" == "compact-full" ]]',
+            "shipping_media_compact_acceptance.py",
+            '"resourceScope": "compact-parent-only"',
             '"runMode": run_mode',
+            '"adapterAbsent": True',
+            "expanded-steady",
+            "Waiting for settled expanded media runtime",
+            "shipping_media_acceptance.py\" resources",
             '"steadySampleCount": reports["steady"]["sampleCount"]',
-            'reports["stability"]',
-            "stabilitySampleCount",
         )
         for fragment in required:
             with self.subTest(fragment=fragment):
