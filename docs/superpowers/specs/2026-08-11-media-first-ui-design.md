@@ -63,6 +63,8 @@ Empty/whitespace-only metadata is treated as absent. No title/artist/album place
 
 `ShippingMediaPresentationModel` is App-owned and survives individual runtime instances. Runtime change callbacks update it while expanded. Runtime teardown detaches its callback before stopping the controller so a normal collapse does not erase the last authoritative presentation. Unexpected/no-session state while still expanded does clear it.
 
+`MediaSessionController` remains the **sole sequence/freshness authority**. The presentation model intentionally does not compare `MediaSequence` across runtime lifetimes: a later expanded runtime is a new controller/transport lifecycle and may restart its local generation numbering. Stale callbacks from an old runtime are prevented by the accepted controller/bridge handler-generation invalidation and by detaching the runtime presentation callback before teardown. A fresh authoritative snapshot from a later expansion must therefore be allowed to replace retained compact context regardless of its raw sequence value relative to the previous runtime.
+
 ## Compact UI
 
 With no retained media context, preserve the accepted ordinary compact indicator.
@@ -111,7 +113,7 @@ SwiftUI updates occur only from panel presentation changes and media controller 
 - `NH-MEDIA-UI-006` — progress is shown only for trustworthy position+duration and is event-driven/static in this slice; no periodic progress worker exists.
 - `NH-MEDIA-UI-007` — session disappearance/unavailable while expanded switches to Home content and does not collapse the panel.
 - `NH-MEDIA-UI-008` — normal expanded->compact settlement stops/releases runtime while retaining the last authoritative compact context and keeping the adapter absent.
-- `NH-MEDIA-UI-009` — later expansion rebases retained context from fresh authoritative transport events; no stale presentation overrides a newer snapshot.
+- `NH-MEDIA-UI-009` — later expansion rebases retained context from its fresh controller lifecycle; old-runtime callbacks cannot surface after teardown and raw sequence values are never compared across runtime lifetimes.
 - `NH-MEDIA-UI-010` — media button commands remain inside the existing typed transport boundary; no new sensitive permission, entitlement, networking, arbitrary subprocess or global input surface.
 - `NH-MEDIA-UI-011` — target-Mac visual/functional acceptance passes with Yandex Music and Yandex Browser, including metadata/artwork as available, play/pause, capability-driven previous/next, media disappearance -> expanded Home, compact retained context, and zero compact adapter.
 
