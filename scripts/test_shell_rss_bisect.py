@@ -32,12 +32,16 @@ class ShellRSSBisectTests(unittest.TestCase):
             '"diagnostic": "shell-rss-bisect"',
             '"baseline":',
             '"m1":',
+            'run_candidate \\\n  "baseline-v0-1-0"',
+            'run_candidate \\\n  "m1-319"',
         )
         for fragment in required:
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, runner)
 
-        self.assertEqual(runner.count("--mode steady"), 2)
+        # One shared implementation path is intentional: both candidates must use
+        # literally the same collector invocation rather than duplicated shell code.
+        self.assertEqual(runner.count("--mode steady"), 1)
         self.assertNotIn("--mode stability", runner)
         for forbidden in ("osascript", "System Events", "kill -9", "pkill"):
             with self.subTest(forbidden=forbidden):
