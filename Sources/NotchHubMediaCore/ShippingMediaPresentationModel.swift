@@ -49,12 +49,13 @@ public struct ShippingMediaPresentation: Sendable, Equatable {
 @MainActor
 public final class ShippingMediaPresentationModel: ObservableObject {
     @Published public private(set) var presentation: ShippingMediaPresentation?
+    public var presentationDidChange: (@MainActor (ShippingMediaPresentation?) -> Void)?
 
     public init() {}
 
     func apply(state: MediaSubsystemState, snapshot: MediaSessionSnapshot?) {
         guard let snapshot else {
-            presentation = nil
+            setPresentation(nil)
             return
         }
 
@@ -65,7 +66,7 @@ public final class ShippingMediaPresentationModel: ObservableObject {
         case .paused:
             playbackState = .paused
         case .unavailable, .idle:
-            presentation = nil
+            setPresentation(nil)
             return
         }
 
@@ -74,24 +75,35 @@ public final class ShippingMediaPresentationModel: ObservableObject {
             durationSeconds: snapshot.durationSeconds
         )
 
-        presentation = ShippingMediaPresentation(
-            playbackState: playbackState,
-            title: Self.normalizedText(snapshot.title),
-            artist: Self.normalizedText(snapshot.artist),
-            album: Self.normalizedText(snapshot.album),
-            artworkData: snapshot.artworkData,
-            sourceDisplayName: Self.normalizedText(snapshot.source.displayName)
-                ?? snapshot.source.bundleIdentifier,
-            canGoPrevious: snapshot.capabilities.previous == .supported,
-            canGoNext: snapshot.capabilities.next == .supported,
-            canSeek: snapshot.capabilities.seek == .supported,
-            positionSeconds: progress.position,
-            durationSeconds: progress.duration
+        setPresentation(
+            ShippingMediaPresentation(
+                playbackState: playbackState,
+                title: Self.normalizedText(snapshot.title),
+                artist: Self.normalizedText(snapshot.artist),
+                album: Self.normalizedText(snapshot.album),
+                artworkData: snapshot.artworkData,
+                sourceDisplayName: Self.normalizedText(snapshot.source.displayName)
+                    ?? snapshot.source.bundleIdentifier,
+                canGoPrevious: snapshot.capabilities.previous == .supported,
+                canGoNext: snapshot.capabilities.next == .supported,
+                canSeek: snapshot.capabilities.seek == .supported,
+                positionSeconds: progress.position,
+                durationSeconds: progress.duration
+            )
         )
     }
 
     func clear() {
-        presentation = nil
+        setPresentation(nil)
+    }
+
+    private func setPresentation(_ newPresentation: ShippingMediaPresentation?) {
+        guard presentation != newPresentation else {
+            return
+        }
+
+        presentation = newPresentation
+        presentationDidChange?(newPresentation)
     }
 
     private static func normalizedText(_ value: String?) -> String? {
