@@ -19,11 +19,11 @@ Current development state:
 - M6.2 production media state/controller/bridge boundary — accepted;
 - M6.3 concrete system-media transport — accepted;
 - M6.4 shipping media composition — accepted and merged;
-- **M6.5 compact + expanded Media-first UI — accepted on `Mac16,8` / macOS 26.6 in PR #19.**
+- **M6.5 compact + expanded Media-first UI — accepted and merged via PR #19 as `5305dbb87d7a2d0d1c7e4bc1eba156cfcafd4e86`; post-merge `main` CI #772 PASS.**
 
 The published `v0.1.0` release predates the M1/P0.1/M6 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
 
-The next product slice is the separately scoped local media gesture/haptic/draggable-seek work. P1 whole-app performance and the deferred local pointer-tracking experiment follow after that functional slice.
+The next product slice is M6.6: first harden the bounded collapse-layout edge tracked in issue #20, then add local media gestures, haptics and draggable seek. P1 whole-app performance and the deferred local pointer-tracking experiment follow after that functional slice.
 
 ## Universal Media
 
