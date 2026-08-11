@@ -4,13 +4,26 @@ import SwiftUI
 
 public typealias NotchPanelContentFactory = @MainActor (NotchPanelModel, NotchLayout) -> NSView
 
+private final class NotchPanelLayoutState {
+    let baseLayout: NotchLayout
+    var compactHorizontalExtension: CGFloat = 0
+
+    init(baseLayout: NotchLayout) {
+        self.baseLayout = baseLayout
+    }
+
+    var currentLayout: NotchLayout {
+        baseLayout.withCompactHorizontalExtension(compactHorizontalExtension)
+    }
+}
+
 @MainActor
 public final class NotchPanelController: NSObject {
     private let panel: NSPanel
     private let interactionCoordinator: NotchInteractionCoordinator
     private let transitionCoordinator: NotchPanelTransitionCoordinator
     private let pointerMonitor: NotchPointerMonitor
-    private let layout: NotchLayout
+    private let layoutState: NotchPanelLayoutState
     private var reduceMotionEnabled: Bool
 
     public var settledPresentationHandler: (@MainActor @Sendable (NotchPresentation) -> Void)? {
@@ -30,6 +43,7 @@ public final class NotchPanelController: NSObject {
         let resolvedLayout = NotchGeometry.layout(
             for: ScreenGeometryInput(screen: screen)
         )
+        let layoutState = NotchPanelLayoutState(baseLayout: resolvedLayout)
         let model = NotchPanelModel()
         let panel = NSPanel(
             contentRect: resolvedLayout.compactFrame,
@@ -81,7 +95,7 @@ public final class NotchPanelController: NSObject {
                 return { workItem.cancel() }
             },
             emitIntent: { intent in
-                transitionCoordinator.accept(intent, layout: resolvedLayout)
+                transitionCoordinator.accept(intent, layout: layoutState.currentLayout)
             }
         )
 
@@ -89,7 +103,7 @@ public final class NotchPanelController: NSObject {
         self.interactionCoordinator = interactionCoordinator
         self.transitionCoordinator = transitionCoordinator
         self.pointerMonitor = NotchPointerMonitor()
-        self.layout = resolvedLayout
+        self.layoutState = layoutState
         self.reduceMotionEnabled = initialReduceMotion
 
         super.init()
@@ -103,10 +117,14 @@ public final class NotchPanelController: NSObject {
         panel.orderFrontRegardless()
         interactionCoordinator.pointerMoved(
             to: NSEvent.mouseLocation,
-            layout: layout,
+            layout: layoutState.currentLayout,
             currentPresentation: transitionCoordinator.desiredPresentation,
             allowActivation: false
         )
+    }
+
+    public func setCompactHorizontalExtension(_ extensionWidth: CGFloat) {
+        layoutState.compactHorizontalExtension = max(0, extensionWidth)
     }
 
     public func invalidate() {
@@ -134,7 +152,7 @@ public final class NotchPanelController: NSObject {
         }
 
         reduceMotionEnabled = reduceMotion
-        transitionCoordinator.animationPolicyDidChange(layout: layout)
+        transitionCoordinator.animationPolicyDidChange(layout: layoutState.currentLayout)
     }
 
     private func removeAccessibilityObserver() {
@@ -168,7 +186,7 @@ public final class NotchPanelController: NSObject {
     private func updateInteraction(for pointer: CGPoint) {
         interactionCoordinator.pointerMoved(
             to: pointer,
-            layout: layout,
+            layout: layoutState.currentLayout,
             currentPresentation: transitionCoordinator.desiredPresentation
         )
     }
