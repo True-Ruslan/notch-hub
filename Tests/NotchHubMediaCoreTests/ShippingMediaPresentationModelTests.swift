@@ -162,6 +162,25 @@ struct ShippingMediaPresentationModelTests {
         #expect(model.presentation?.title == "Fresh new runtime")
     }
 
+    @Test
+    func presentationDidChangeReportsMappedAndClearedState() {
+        let model = ShippingMediaPresentationModel()
+        var observed: [ShippingMediaPresentation?] = []
+        model.presentationDidChange = { presentation in
+            observed.append(presentation)
+        }
+
+        model.apply(
+            state: .playing,
+            snapshot: snapshot(title: "Visible", playbackState: .playing)
+        )
+        model.apply(state: .idle, snapshot: nil)
+
+        #expect(observed.count == 2)
+        #expect(observed[0]?.title == "Visible")
+        #expect(observed[1] == nil)
+    }
+
     private func snapshot(
         generation: UInt64 = 1,
         revision: UInt64 = 1,
