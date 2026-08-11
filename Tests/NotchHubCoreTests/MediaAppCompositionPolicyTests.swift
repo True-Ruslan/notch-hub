@@ -8,7 +8,10 @@ struct MediaAppCompositionPolicyTests {
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
 
+        #expect(appDelegate.contains("private static let mediaCompactWingWidth: CGFloat = 36"))
         #expect(appDelegate.contains("private let mediaPresentationModel = ShippingMediaPresentationModel()"))
+        #expect(appDelegate.contains("mediaPresentationModel.presentationDidChange ="))
+        #expect(appDelegate.contains("setCompactHorizontalExtension("))
         #expect(appDelegate.contains("NotchPanelController(contentFactory:"))
         #expect(appDelegate.contains("MediaNotchRootView("))
         #expect(
@@ -19,7 +22,7 @@ struct MediaAppCompositionPolicyTests {
     }
 
     @Test
-    func mediaRootIsEventDrivenAndCapabilityDriven() throws {
+    func mediaRootIsEventDrivenCapabilityDrivenAndKeepsNotchCenterClear() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
         )
@@ -29,6 +32,7 @@ struct MediaAppCompositionPolicyTests {
         #expect(source.contains("ProgressView("))
         #expect(source.contains(".disabled(!presentation.canGoPrevious)"))
         #expect(source.contains(".disabled(!presentation.canGoNext)"))
+        #expect(source.contains("Color.clear.frame(width: hardwareNotchWidth)"))
         #expect(!source.contains("Timer("))
         #expect(!source.contains("Timer.publish"))
         #expect(!source.contains("DispatchSourceTimer"))
