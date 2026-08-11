@@ -1,6 +1,6 @@
 # Shipping Media Composition — Acceptance Evidence
 
-Status: **CI-QUALIFIED — NEW TARGET-MAC GATE PENDING**
+Status: **TARGET-MAC LIFECYCLE/PERMISSIONS PASS — COMPACT RSS BLOCKED — SHELL-ONLY COMPARATOR PENDING**
 
 Authoritative implementation plan: `docs/superpowers/plans/2026-08-10-shipping-media-composition.md`.
 Accepted transport dependency: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`.
@@ -8,115 +8,174 @@ Target procedure: `docs/testing/SHIPPING_MEDIA_COMPOSITION_TARGET_MAC.md`.
 
 ## Current frozen shipping candidate
 
-The first physical shipping candidate exposed a real compact-idle resource regression. Production code was therefore changed and the physical acceptance candidate was re-frozen.
-
-Current candidate:
+The current physical candidate is:
 
 - source SHA: `fdbe987d8f22768b2a75406c8f1e721fa1da2845`;
 - GitHub Actions: CI `#693` / run `31472420797` — both jobs PASS;
 - artifact: `NotchHub-shipping-media-candidate`;
 - artifact ID: `9093958828`;
-- Actions artifact size: `395069` bytes;
 - Actions artifact digest: `sha256:f055bc87d1f2c8cafe0d3b57d9cf6cdf82d7a712bf85acf3317232679a9689b9`;
 - contained DMG SHA-256: `6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd`;
 - pinned adapter SHA: `3ac3d4bdf862c7b5399b4fba4df5689f5c38609a`;
-- capability patch SHA-256: `f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974`.
-
-Exact candidate sizes:
-
+- capability patch SHA-256: `f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974`;
 - executable: `313648 B`;
 - physical app payload: `615854 B`;
 - DMG: `408480 B`.
 
-The immutable P0 baseline remains unchanged. The existing explicit M6.4 additive feature-size budget still passes; no runtime or size budget was widened because of target findings.
+The immutable P0 runtime and artifact baselines remain unchanged. No runtime budget has been widened from target findings.
 
-Later tests/collectors/runner/documentation commits do not replace this physical candidate. Any later shipping production/package/signing/entitlement/adapter/resource change requires another frozen candidate and fresh target evidence.
+Later acceptance tooling/tests/documentation commits do not replace this physical candidate. Any later production/package/signing/entitlement/adapter/resource change requires a new frozen candidate and fresh target evidence.
 
-## Superseded first physical candidate and target finding
+## Superseded always-on candidate finding
 
-Superseded source `c19ce13c5321fce72464ddf0a5d9b1467f770db0` / CI #675 was structurally correct but started the media runtime unconditionally at application launch.
+The first candidate `c19ce13c5321fce72464ddf0a5d9b1467f770db0` started `ShippingMediaRuntime` unconditionally at application launch and kept the media adapter alive while compact.
 
-Its target run on `Mac16,8` / macOS 26.6 proved:
+Target evidence showed approximately `80–86 MiB` combined RSS whether Now Playing was active or absent. The no-session A/B result therefore ruled out active track/artwork retention and identified the always-on media lifecycle as a real background cost.
 
-- preflight/signatures/Hardened Runtime/sandbox-only/system-library boundary — PASS;
-- normal parent + adapter termination and no orphan — PASS;
-- Accessibility / Input Monitoring / Automation / Screen Recording prompts — NONE;
-- 10-minute CPU/RSS/thread accumulation — no accumulation;
-- but compact/background combined RSS was approximately `80–86 MiB`, materially above the P0 whole-app idle/stability ceilings.
+The production fix moved media ownership to settled presentation state:
 
-A second no-Now-Playing A/B measurement produced essentially the same footprint:
+- compact launch creates no `ShippingMediaRuntime`;
+- matching settled `.expanded` starts one runtime;
+- matching settled `.compact` stops/releases it;
+- stale/reversed transition completions cannot start media;
+- app termination still stops any active runtime before panel teardown.
 
-- active source combined RSS median/max: `80608/86320 KiB`;
-- no-session combined RSS median/max: `80096/85552 KiB`;
-- active source parent RSS median/max: `59592/62592 KiB`;
-- no-session parent RSS median/max: `59808/61648 KiB`;
-- no-session adapter RSS median/max: `20288/23904 KiB`.
+TDD/CI evidence:
 
-This ruled out active track/artwork retention as the cause. The root cause was the always-on shipping composition itself: `AppDelegate` created and started `ShippingMediaRuntime` during application launch, so compact idle permanently owned the media observer and adapter process.
-
-## Root-cause fix
-
-The production fix was implemented under RED -> GREEN coverage without changing the accepted M6.3 process/wire/transport semantics.
-
-New lifecycle:
-
-- application launch remains compact and does **not** create `ShippingMediaRuntime`;
-- `NotchPanelTransitionCoordinator` publishes a settled-presentation callback only after the matching transition completion;
-- stale/reversed animation completions cannot publish a settled state;
-- after a successfully settled `.expanded` transition, `AppDelegate` creates and starts one `ShippingMediaRuntime`;
-- after a successfully settled `.compact` transition, `AppDelegate` stops and releases the runtime;
-- app termination still stops/releases any active runtime before panel teardown.
-
-This keeps process creation/teardown outside the animation path, avoids adapter churn on aborted hover expansions, and removes media observation from background compact idle.
-
-TDD evidence:
-
-- CI #690 — RED: new settled-presentation Swift test failed only because the callback did not exist;
-- CI #693 — GREEN: both jobs PASS after the lifecycle implementation;
+- CI #690 — RED for missing settled-presentation callback;
+- CI #693 — GREEN production lifecycle fix;
 - CI #697 — compact parent-only collector contract PASS;
-- CI #699 — RED for the superseded target-runner contract;
-- CI #700 — GREEN for the new compact-vs-expanded target runner; both jobs PASS.
+- CI #699 — RED for superseded target-runner contract;
+- CI #700 — GREEN compact-vs-expanded target runner;
+- CI #703 — docs/tooling head remained fully GREEN.
 
-## Current acceptance contract
+## Current target-Mac evidence — 2026-08-11
 
-The shipping bundle still retains the accepted M6.4 security/package boundary:
+Platform: `Mac16,8` / macOS `26.6`.
 
-- `NotchHubApp -> NotchHubMediaCore` linkage;
-- exact pinned adapter script/framework/license/provenance in the app;
-- candidate/probe tools absent from shipping output;
-- one reviewed production `/usr/bin/perl` process boundary with typed commands only;
-- App Sandbox as the only app entitlement and Hardened Runtime mandatory;
-- no Accessibility, Input Monitoring, Automation, Screen Recording, networking, shell, AppleScript, synthetic-input, or player-specific fallback expansion;
-- privacy-safe target evidence only.
+### Preflight
 
-The runtime acceptance boundary is now explicitly split:
+Current candidate target preflight PASS:
 
-1. **compact background** — parent-only measurement; the adapter must remain absent for the entire warmup/measurement window and P0 idle/stability ceilings remain directly applicable;
-2. **expanded media feature** — exactly one owned adapter is expected only after a settled user expansion; parent+adapter cost is recorded separately as active feature evidence.
+- source/adapter/patch provenance verified;
+- resources verified;
+- top-level and nested signatures verified;
+- Hardened Runtime present;
+- effective entitlement remains App Sandbox only;
+- executable links only expected system libraries;
+- development tools absent;
+- adapter capability symbol verified.
+
+### Compact steady — parent only
+
+The panel remained untouched and the adapter stayed absent for the complete warmup and 60-s measurement.
+
+- sample count: `60` at `1s`;
+- adapter absent: `true`;
+- CPU median/max: `0.0 / 2.4%`;
+- RSS median/max: `59792 / 66160 KiB`;
+- threads median/max: `3 / 4`.
+
+P0 idle ceilings are:
+
+- CPU median <= `0.5%` — PASS;
+- CPU max <= `2.0%` — **FAIL (`2.4%`)**;
+- RSS max <= `43008 KiB` — **FAIL (`66160 KiB`)**;
+- threads max <= `6` — PASS.
+
+The CPU-max miss is small and transient; the material blocker is the approximately `23 MiB` RSS excess over the existing idle ceiling.
+
+### Compact stability — parent only
+
+The adapter stayed absent for the complete warmup and 10-minute measurement.
+
+- sample count: `120` at `5s`;
+- adapter absent: `true`;
+- CPU median/max: `0.0 / 3.3%`;
+- RSS median/max: `59024 / 60320 KiB`;
+- RSS start/end: `56304 -> 58976 KiB` (`+2672 KiB`);
+- threads median/max: `3 / 4`;
+- threads start/end: `3 -> 3`.
+
+P0 stability ceilings are:
+
+- CPU median <= `0.5%` — PASS;
+- CPU max <= `10.0%` — PASS;
+- RSS max <= `45056 KiB` — **FAIL (`60320 KiB`)**;
+- RSS positive drift <= `8192 KiB` — PASS (`+2672 KiB`);
+- threads max <= `9` — PASS;
+- thread positive drift <= `+2` — PASS (`0`).
+
+There is no sustained CPU or thread growth and RSS drift remains bounded. Acceptance is still blocked by the absolute compact RSS footprint.
+
+### Expanded steady — active feature cost
+
+After a real user hover settled the panel expanded, the collector found the expected owned adapter and recorded 60 samples.
+
+Parent:
+
+- CPU median/max: `0.0 / 0.1%`;
+- RSS median/max: `73168 / 78624 KiB`;
+- threads median/max: `3 / 5`.
+
+Adapter:
+
+- CPU median/max: `0.0 / 0.7%`;
+- RSS median/max: `23456 / 26208 KiB`;
+- threads median/max: `2 / 5`.
+
+Conservative combined upper bounds:
+
+- CPU median/max: `0.0 / 0.8%`;
+- RSS median/max: `96624 / 104832 KiB`;
+- threads median/max: `5 / 10`.
+
+This is active-feature evidence, not a replacement for compact idle budgets. No new expanded runtime ceiling is invented from a single run.
+
+### Lifecycle and permissions
+
+Compact run:
+
+- adapter remained absent throughout;
+- parent exited normally.
+
+Expanded run:
+
+- exactly one owned adapter was discovered by the existing fail-closed collector;
+- `parentExited = true`;
+- `adapterExited = true`;
+- `orphanProcessDetected = false`.
+
+Human permission observation:
+
+- Accessibility — NONE;
+- Input Monitoring — NONE;
+- Automation — NONE;
+- Screen Recording — NONE.
 
 ## Acceptance ledger
 
 ### `NH-MEDIA-SHIP-001` — shipping linkage and lifecycle ownership
 
-Status: **PASS — DETERMINISTIC / FIXED AFTER TARGET FINDING**
+Status: **PASS — DETERMINISTIC / TARGET-CONFIRMED**
 
-`NotchHubApp` links `NotchHubMediaCore` and owns the media lifecycle. Media runtime ownership is now scoped to settled expanded presentation rather than application lifetime.
+`NotchHubApp` links `NotchHubMediaCore`; runtime ownership is scoped to settled expanded presentation rather than application lifetime.
 
 ### `NH-MEDIA-SHIP-002` — exact production resources and provenance
 
-Status: **PASS — DETERMINISTIC / HOSTED PREFLIGHT**
+Status: **PASS — DETERMINISTIC / HOSTED + TARGET PREFLIGHT**
 
-Exact pinned production resources ship; development probe/candidate tools remain absent.
+Exact pinned production resources ship and development probe/candidate tools remain absent.
 
 ### `NH-MEDIA-SHIP-003` — signatures, Hardened Runtime, sandbox-only entitlement
 
-Status: **PASS — HOSTED PREFLIGHT / FRESH TARGET RECONFIRMATION PENDING**
+Status: **PASS — HOSTED + TARGET PREFLIGHT**
 
-CI verifies nested/top-level signatures, Hardened Runtime and exact sandbox-only app entitlement on the current candidate.
+Nested/top-level signatures verify; Hardened Runtime is present and App Sandbox remains the only app entitlement.
 
 ### `NH-MEDIA-SHIP-004` — executable dependency boundary
 
-Status: **PASS — HOSTED PREFLIGHT / FRESH TARGET RECONFIRMATION PENDING**
+Status: **PASS — HOSTED + TARGET PREFLIGHT**
 
 The shipping executable links only expected system libraries.
 
@@ -124,60 +183,61 @@ The shipping executable links only expected system libraries.
 
 Status: **PASS — DETERMINISTIC**
 
-Missing/invalid shipping resources/provenance fail closed without expanding authority.
+Missing/invalid shipping resources/provenance fail closed without expanding runtime authority.
 
 ### `NH-MEDIA-SHIP-006` — target owned-adapter lifecycle
 
-Status: **PENDING CURRENT CANDIDATE**
+Status: **PASS — TARGET-MAC**
 
-Required fresh evidence:
-
-- compact launch owns zero adapter processes;
-- settled user expansion causes exactly one owned adapter to appear;
-- normal application termination exits both parent and active adapter with no orphan.
+Compact owns zero adapter processes; settled expansion produces the expected owned adapter; normal termination exits parent and active adapter with no orphan.
 
 ### `NH-MEDIA-SHIP-007` — no sensitive permission prompts
 
-Status: **PENDING CURRENT-CANDIDATE RECONFIRMATION**
+Status: **PASS — TARGET-MAC HUMAN OBSERVATION**
 
-The superseded candidate produced no prompts; current-candidate target acceptance must confirm the same posture.
+Accessibility, Input Monitoring, Automation and Screen Recording prompts were all absent.
 
 ### `NH-MEDIA-SHIP-008` — 60-second target resource evidence
 
-Status: **PENDING CURRENT CANDIDATE**
+Status: **BLOCKED — COMPACT ABSOLUTE RESOURCE FOOTPRINT**
 
-Primary gate is compact parent-only steady evidence with the adapter absent throughout. Compare directly with the accepted P0 idle ceilings:
-
-- CPU median <= `0.5%`;
-- CPU max <= `2.0%`;
-- RSS max <= `43008 KiB`;
-- threads max <= `6`.
-
-Expanded parent+adapter steady evidence is recorded separately as active feature cost and is not substituted for compact idle.
+Adapter absence is confirmed and CPU median/thread behavior are good, but compact parent RSS max is `66160 KiB` versus the accepted P0 idle ceiling `43008 KiB`. CPU max also transiently reaches `2.4%` versus the `2.0%` idle ceiling. No runtime budget is widened.
 
 ### `NH-MEDIA-SHIP-009` — approximately 10-minute target stability
 
-Status: **PENDING CURRENT CANDIDATE**
+Status: **BLOCKED — ABSOLUTE RSS; STABILITY SHAPE PASSES**
 
-Compact parent-only stability must keep the adapter absent throughout and satisfy the existing P0 stability ceilings:
-
-- CPU median <= `0.5%`;
-- CPU max <= `10.0%`;
-- RSS max <= `45056 KiB`;
-- RSS end-minus-start <= `+8192 KiB`;
-- threads max <= `9`;
-- thread end-minus-start <= `+2`.
+No adapter, CPU median `0.0%`, RSS drift only `+2672 KiB`, and threads `3 -> 3` show no sustained growth. Absolute RSS max `60320 KiB` still exceeds the P0 stability ceiling `45056 KiB`.
 
 ### `NH-MEDIA-SHIP-010` — explicit artifact-size impact
 
 Status: **PASS — DETERMINISTIC**
 
-The current candidate remains inside the separately reviewed M6.4 additive feature-size budget over the unchanged immutable P0 baseline.
+The candidate remains inside the separately reviewed M6.4 additive feature-size budget over the unchanged immutable P0 baseline.
+
+## Next diagnostic — shell-only comparator
+
+The remaining question is whether the approximately `59–66 MiB` compact parent footprint is caused by M6.4 static media composition or predates M6.4.
+
+Use the final M6.3 exact-head shipping artifact where `NotchHubApp` still depends only on `NotchHubCore`:
+
+- source `30de94c0cb6ea17dc21bd366404937db2bc73783`;
+- CI #594 / run `31389611697`;
+- artifact `NotchHub-dmg` / ID `9063213178`;
+- Actions digest `sha256:9ab40b4101a013e11570fa013f49d2a42a3c5198251210a337b2985fc64e2a0d`;
+- contained DMG SHA-256 `b1da6681ce49da3c34b3720c39caa32c3fc4508e0abf7d209b63b46f78713fb7`.
+
+The development-only `scripts/run-shell-only-target-diagnostic.sh` exact-pins that DMG and applies the same parent-only 60-s/10-minute collector.
+
+Interpretation:
+
+- if shell-only RSS is also approximately `59–66 MiB`, the regression predates M6.4 and must be traced to earlier shell/interaction work before changing media architecture;
+- if shell-only returns near the accepted P0 range while M6.4 stays near `59–66 MiB`, static shipping media composition is the cause and requires deeper lazy isolation before M6.4 can be accepted.
 
 ## Current decision
 
 **DO NOT MERGE M6.4 YET.**
 
-The target-discovered root cause has been fixed and deterministically qualified. PR #17 remains Draft until the current `fdbe987...` candidate passes compact background resources/stability, expanded adapter lifecycle/steady evidence, permission reconfirmation, and the ledger is explicitly changed to `ACCEPTED`.
+Security, signatures, permissions, process lifecycle and long-run growth behavior pass. The remaining blocker is absolute compact RSS. Complete the exact M6.3 shell-only comparator before choosing the next production optimization.
 
-Media UI, progress rendering, gesture/haptic/seek interaction, and additional-player compatibility remain outside M6.4.
+Media UI, progress rendering, gesture/haptic/seek interaction and additional-player compatibility remain outside M6.4.
