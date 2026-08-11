@@ -1,14 +1,15 @@
 # Shipping Media Composition — Acceptance Evidence
 
-Status: **TARGET LIFECYCLE/PERMISSIONS PASS — FINAL SAME-SESSION M6.4 RSS COMPARATOR PENDING**
+Status: **ACCEPTED — ALL `NH-MEDIA-SHIP-001...010` PASS**
 
 Authoritative implementation plan: `docs/superpowers/plans/2026-08-10-shipping-media-composition.md`.
 Accepted transport dependency: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`.
 Target procedure: `docs/testing/SHIPPING_MEDIA_COMPOSITION_TARGET_MAC.md`.
+Performance methodology: `PERFORMANCE.md`.
 
-## Current frozen shipping candidate
+## Accepted frozen shipping candidate
 
-Current candidate:
+Accepted candidate:
 
 - source SHA: `fdbe987d8f22768b2a75406c8f1e721fa1da2845`;
 - GitHub Actions: CI `#693` / run `31472420797` — both jobs PASS;
@@ -25,7 +26,7 @@ Exact candidate sizes:
 - physical app payload: `615854 B`;
 - DMG: `408480 B`.
 
-The immutable P0 baseline remains unchanged. The explicit M6.4 additive feature-size budget passes. No runtime or size budget is widened from target findings.
+The immutable P0 baseline remains unchanged. The explicit M6.4 additive feature-size budget passes. No runtime or size budget was silently widened from target findings.
 
 Later tests/collectors/runner/documentation commits do not replace this physical candidate. Any later shipping production/package/signing/entitlement/adapter/resource change requires another frozen candidate and fresh target evidence.
 
@@ -66,7 +67,7 @@ TDD evidence:
 - CI #699 — RED for superseded target-runner contract;
 - CI #700 — GREEN compact-vs-expanded runner contract PASS.
 
-## Current-candidate target evidence — 2026-08-11
+## Accepted target evidence — 2026-08-11
 
 Platform: `Mac16,8` / macOS `26.6`.
 
@@ -98,6 +99,8 @@ Parent:
 - threads median/max `3/4`;
 - `60` one-second samples after `10s` warmup.
 
+These absolute RSS values exceeded the original single-run P0 ceiling and triggered investigation rather than a budget increase. The final same-session immutable-baseline comparison below resolves that discrepancy.
+
 ### Compact 10-minute stability
 
 Adapter remained absent for the complete warmup + measurement window.
@@ -111,7 +114,7 @@ Parent:
 - threads start/end `3 -> 3`;
 - `120` five-second samples after `10s` warmup.
 
-The stability shape is good: no sustained CPU signal, RSS drift is within the stored `+8192 KiB` drift allowance, and thread drift is zero. Absolute RSS is above the original single-run P0 idle/stability ceilings, which triggered the historical comparability investigation below.
+The stability shape passes: no sustained CPU signal, RSS drift is inside the retained `+8192 KiB` within-run growth gate, thread drift is zero, and no adapter exists in compact state.
 
 ### Expanded 60-second active evidence
 
@@ -168,13 +171,13 @@ Comparator:
 
 Parent exited normally and adapter remained absent.
 
-This is essentially the same compact shell RSS class as M6.4 and therefore disproves M6.4 static media linkage as the primary cause of the remaining absolute-RSS discrepancy.
+This reproduces the current compact RSS class without M6.4 media linkage and therefore disproves M6.4 static media linkage as the source of the absolute-RSS discrepancy.
 
 ## Same-session immutable-baseline A/B — P0 -> M1 persistent regression disproven
 
-The P0 measurement harness at measurement-tool commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0` and the current compact collector both sample Darwin `/bin/ps -p PID -o %cpu= -o rss=` and count `ps -M` thread rows. The metric definition therefore did not change between harnesses.
+The P0 harness and current compact collector both sample Darwin `/bin/ps -p PID -o %cpu= -o rss=` and count `ps -M` thread rows, so the metric definition itself did not change.
 
-To distinguish code evolution from runtime/measurement-context portability, the exact immutable `v0.1.0` release and accepted M1 candidate #319 were measured back-to-back on the same `Mac16,8` / macOS 26.6 using one literal shared measurement path: `10 s` warmup, `60 s` parent-only steady sampling, `1 s` interval, normal AppKit termination.
+Exact immutable `v0.1.0` and accepted M1 candidate #319 were measured back-to-back on the same target using one literal shared measurement path: `10 s` warmup, `60 s` parent-only steady sampling, `1 s` interval, normal AppKit termination.
 
 Exact baseline `v0.1.0`:
 
@@ -200,25 +203,46 @@ A/B RSS delta M1 minus immutable baseline:
 - median: `-592 KiB`;
 - max: `+6304 KiB`.
 
-The exact immutable baseline binary itself therefore no longer reproduces its historical `~34 MiB` RSS observation in the current runtime context. A persistent P0 -> M1 memory regression is disproven. The old single-run absolute RSS ceilings remain immutable historical evidence but are not demonstrated to be portable across target-Mac sessions.
+The exact immutable baseline binary itself therefore no longer reproduces its historical `~34 MiB` RSS observation in the current runtime context. A persistent P0 -> M1 memory regression is disproven.
 
-This is a measurement-context/metric-classification finding, not permission to silently widen production budgets. The final M6.4 decision still requires a direct same-session immutable-baseline comparison against the frozen M6.4 candidate.
+## Final direct immutable-baseline vs M6.4 A/B — PASS
 
-## Final direct M6.4 RSS comparator
+Development-only `scripts/run-m6-4-rss-ab.sh` exact-pins the immutable P0 release and the frozen M6.4 candidate and runs both through one literal shared measurement path: `10 s` warmup, `60 s` parent-only steady sampling, `1 s` interval, normal AppKit termination, panel untouched, adapter absent.
 
-Development-only `scripts/run-m6-4-rss-ab.sh` exact-pins:
+Exact immutable `v0.1.0` in the direct M6.4 A/B:
 
-- immutable `v0.1.0`: source `8e913dcddfdec7d9aa920df8c37afb23b8c40884`, release asset ID `505235050`, DMG SHA-256 `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`;
-- frozen M6.4: source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`, run `31472420797`, artifact ID `9093958828`, DMG SHA-256 `6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd`.
+- source `8e913dcddfdec7d9aa920df8c37afb23b8c40884`;
+- release asset ID `505235050`;
+- CPU median/max `0.0/6.7%`;
+- RSS median/max `61504/67104 KiB`;
+- threads median/max `3/4`.
 
-Both candidates use one literal shared 10-second warmup + 60-second parent-only steady measurement path and normal AppKit termination.
+Frozen M6.4:
 
-Interpretation:
+- source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`;
+- workflow run `31472420797`;
+- artifact ID `9093958828`;
+- CPU median/max `0.0/0.0%`;
+- RSS median/max `62256/65232 KiB`;
+- threads median/max `3/4`.
 
-- materially worse M6.4 same-session steady behavior => keep `008/009` blocked and continue root-cause work;
-- equal-or-better M6.4 median/steady behavior, together with the already-good 10-minute drift/thread evidence => correct the cross-session RSS gate methodology rather than changing production code or silently widening the historical numeric budget.
+Candidate minus baseline:
 
-CI #721 / run `31522174412` validates the new exact comparator contract and passes the full macOS compatibility/build/test/security/package/size pipeline.
+- RSS median: `+752 KiB` (`~1.2%`);
+- RSS max: `-1872 KiB`;
+- CPU median: equal at `0.0%`;
+- CPU max: candidate lower by `6.7 percentage points`;
+- threads: identical.
+
+The exact baseline's own two same-day steady runs changed by `+1360 KiB` at the median (`60144 -> 61504`) and `+3728 KiB` at the maximum (`63376 -> 67104`). The M6.4 median delta (`+752 KiB`) is smaller than that observed repeat-baseline variation, while candidate maximum RSS is lower. There is no directionally consistent steady-memory regression.
+
+Combined with the independent 10-minute M6.4 evidence (`+2672 KiB` RSS drift, `3 -> 3` threads, adapter absent), this closes the target runtime resource question without rewriting `performance/baseline-v0.1.0.json` and without widening the historical numeric ceilings. `PERFORMANCE.md` now classifies cross-session absolute `ps rss` and isolated CPU maxima as historical calibration/diagnostic evidence, while same-session steady comparison plus long-run growth remain the acceptance mechanism.
+
+Comparator tooling TDD/CI evidence:
+
+- shell-only comparator: RED #705 -> GREEN #709;
+- P0 vs M1 comparator: RED #712 -> GREEN policy #714, exact-head #718 PASS;
+- direct P0 vs M6.4 comparator: RED #720 -> GREEN #721 PASS.
 
 ## Acceptance ledger
 
@@ -260,15 +284,17 @@ All four monitored sensitive permission categories were NONE.
 
 ### `NH-MEDIA-SHIP-008` — 60-second target resource evidence
 
-Status: **PENDING — FINAL SAME-SESSION IMMUTABLE-BASELINE A/B**
+Status: **PASS — TARGET-MAC SAME-SESSION IMMUTABLE-BASELINE A/B**
 
-Compact CPU median and thread count are good. Historical absolute RSS ceilings are not reproducible even with the exact immutable baseline binary under the current runtime context. M6.4 static linkage and P0 -> M1 persistent RSS regression are both disproven. Final decision requires the direct `v0.1.0` versus frozen M6.4 same-session comparator.
+Frozen M6.4 has CPU median/max `0.0/0.0%`, RSS median/max `62256/65232 KiB`, threads median/max `3/4`, with adapter absent. In the same session exact `v0.1.0` measured CPU median/max `0.0/6.7%`, RSS median/max `61504/67104 KiB`, threads median/max `3/4`.
+
+M6.4 RSS median is `+752 KiB` while max is `-1872 KiB`; the median delta is smaller than the exact baseline's own observed same-day repeat variation. No material steady resource regression is present.
 
 ### `NH-MEDIA-SHIP-009` — approximately 10-minute target stability
 
-Status: **STABILITY BEHAVIOR PASS; FINAL RSS CLASSIFICATION PENDING DIRECT A/B**
+Status: **PASS — TARGET-MAC**
 
-CPU median `0.0%`, RSS drift `+2672 KiB`, thread drift `0`, adapter absent. M6.3 shell-only has the same RSS class with negative drift. Final acceptance waits only for direct immutable-baseline versus M6.4 steady comparison and the resulting RSS methodology decision.
+CPU median `0.0%`, RSS drift `+2672 KiB` within the retained `+8192 KiB` within-run growth gate, thread drift `0`, adapter absent. The direct steady A/B shows no material footprint regression, and no sustained growth/orphan behavior is observed.
 
 ### `NH-MEDIA-SHIP-010` — explicit artifact-size impact
 
@@ -276,12 +302,10 @@ Status: **PASS — DETERMINISTIC**
 
 Current candidate remains inside the explicit M6.4 additive feature-size budget over the unchanged immutable P0 baseline.
 
-## Current decision
+## Final decision
 
-**DO NOT MERGE M6.4 YET.**
+**M6.4 ACCEPTED.**
 
-M6.4 production lifecycle/security behavior is physically sound. M6.4 static media linkage and a persistent P0 -> M1 memory regression are both disproven as explanations for the current absolute-RSS discrepancy. The exact immutable baseline binary itself now measures in the same ~60 MiB RSS class.
+All `NH-MEDIA-SHIP-001...010` gates pass. The frozen candidate is physically accepted on `Mac16,8` / macOS 26.6 for shipping media composition. The immutable P0 baseline remains preserved, the performance-methodology correction is evidence-driven, and no production runtime or artifact-size budget was silently widened.
 
-One final short target comparison remains: exact immutable `v0.1.0` versus frozen M6.4 in the same session. No performance budget is widened and no production fix is attempted before that direct evidence is evaluated.
-
-Media UI, progress rendering, gesture/haptic/seek interaction, and additional-player compatibility remain outside M6.4.
+PR #17 may proceed through final exact-head CI/change review and squash merge. Media UI, progress rendering, gesture/haptic/seek interaction, and additional-player compatibility remain outside M6.4 and belong to later slices.
