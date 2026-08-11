@@ -1,4 +1,5 @@
 import CoreGraphics
+import SwiftUI
 import Testing
 @testable import NotchHubCore
 
@@ -33,6 +34,21 @@ struct NotchHostingViewFactoryTests {
         let model = NotchPanelModel()
         let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
 
+        #expect(hostingView.wantsLayer)
+        #expect(hostingView.layer?.masksToBounds == true)
+        #expect(hostingView.layer?.cornerCurve == .continuous)
+        #expect(hostingView.layer?.cornerRadius == 12)
+    }
+
+    @Test
+    func customSwiftUIRootKeepsAcceptedHostingAndChromeInvariants() {
+        let hostingView = NotchHostingViewFactory.make(
+            rootView: Text("Injected content")
+        )
+
+        #expect(hostingView.sizingOptions == [])
+        #expect(hostingView.autoresizingMask.contains(.width))
+        #expect(hostingView.autoresizingMask.contains(.height))
         #expect(hostingView.wantsLayer)
         #expect(hostingView.layer?.masksToBounds == true)
         #expect(hostingView.layer?.cornerCurve == .continuous)
