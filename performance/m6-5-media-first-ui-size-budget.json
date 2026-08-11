@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 430080,
+    "dmgSizeBytes": 376832,
+    "executableSizeBytes": 135168
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9119647587,
+    "sourceCommit": "3db9d05619b38198c00b57b3cdd043af0618f714",
+    "summary": {
+      "appSizeBytes": 699614,
+      "dmgSizeBytes": 461748,
+      "executableSizeBytes": 397408
+    },
+    "workflowRunId": 31537964825
+  },
+  "featureId": "m6.5-media-first-ui",
+  "schemaVersion": 1
+}
