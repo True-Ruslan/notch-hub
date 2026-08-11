@@ -94,7 +94,7 @@ Remaining later M1 work:
 
 ## M6 — Universal Media / System Now Playing
 
-Status: **ACTIVE — M6.1/M6.2/M6.3/M6.4 ACCEPTED; NEXT: MEDIA-FIRST UI**
+Status: **ACTIVE — M6.1/M6.2/M6.3/M6.4 ACCEPTED AND MERGED; NEXT: MEDIA-FIRST UI**
 
 Product contract:
 
@@ -125,7 +125,7 @@ Completed normalized media state, generation/revision freshness, player-agnostic
 
 ### M6.3 — concrete production system transport
 
-Status: **ACCEPTED**
+Status: **ACCEPTED AND MERGED**
 
 Frozen candidate:
 
@@ -136,11 +136,17 @@ Frozen candidate:
 
 All `NH-MEDIA-PROD-001...013` target gates pass, including Yandex Music/Yandex Browser, real toggle/previous/next/seek, no sensitive permission prompts, bounded teardown, 60-second resources and corrected 10-minute stability.
 
-Historical shell-only comparator from final exact M6.3 head `30de94c...` reproduces the current compact RSS class despite `NotchHubApp` still linking only `NotchHubCore`, disproving M6.4 static media linkage as the source of the historical absolute-RSS discrepancy.
+Historical shell-only comparator from final M6.3 head `30de94c...` reproduces the current compact RSS class despite `NotchHubApp` still linking only `NotchHubCore`, disproving M6.4 static media linkage as the source of the historical absolute-RSS discrepancy.
 
 ### M6.4 — shipping media composition
 
-Status: **ACCEPTED — ALL `NH-MEDIA-SHIP-001...010` PASS**
+Status: **ACCEPTED AND MERGED — ALL `NH-MEDIA-SHIP-001...010` PASS**
+
+Merge:
+
+- PR #17 squash commit `4ba603e1c3564d6cdf58169a7936f1954dee2ffd`;
+- final PR-head CI #732 / run `31524951736` — PASS;
+- post-merge `main` CI #733 / run `31525413454` — PASS.
 
 Accepted frozen shipping candidate:
 
@@ -170,7 +176,8 @@ Completed:
 - [x] disprove persistent P0→M1 RSS regression via exact same-session immutable-baseline A/B;
 - [x] run direct same-session `v0.1.0 ↔ frozen M6.4` steady comparator;
 - [x] resolve `NH-MEDIA-SHIP-008/009` under corrected evidence-backed runtime-memory methodology;
-- [x] final decision: `M6.4 ACCEPTED`.
+- [x] final decision: `M6.4 ACCEPTED`;
+- [x] final exact-head CI/review, squash merge and post-merge `main` CI.
 
 Accepted physical evidence:
 
@@ -191,13 +198,12 @@ Comparator/tooling evidence:
 
 ## Current approved priority order — 2026-08-11
 
-1. Finish exact-head CI and independent change review for accepted M6.4 documentation/policy state.
-2. If required checks and review are clean, mark PR #17 ready and squash-merge M6.4 into `main`.
-3. Verify merge commit and `main` CI.
-4. Start compact + expanded media-first UI as the next Universal Media slice, preserving the accepted presentation-scoped media lifecycle and security boundary.
-5. Implement local-window gesture/haptic/seek state machines under TDD as a separate later slice.
-6. Run physical media/haptic acceptance, then P1 whole-app performance review and deferred local tracking experiment.
-7. During P1, evaluate a more portable memory-footprint metric and repeated-run variance before introducing another absolute cross-session memory ceiling.
+1. Define and implement the compact + expanded media-first UI as the next Universal Media slice, preserving the accepted presentation-scoped media lifecycle and security boundary.
+2. Establish explicit UI acceptance IDs before production changes; cover media-state-to-view-state mapping and transition behavior under TDD.
+3. Keep local-window gesture/haptic/seek state machines as a separate later slice after basic media UI is accepted.
+4. Run physical media UI acceptance on the target Mac.
+5. Run P1 whole-app performance review and deferred local tracking experiment.
+6. During P1, evaluate a more portable memory-footprint metric and repeated-run variance before introducing another absolute cross-session memory ceiling.
 
 ## M2 — Shelf
 
