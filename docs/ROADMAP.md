@@ -42,7 +42,7 @@ Accepted immutable artifact baseline:
 - app `223,555 B`;
 - DMG `73,955 B`.
 
-The baseline remains immutable. Feature-specific size growth must be explicit and separately reviewed.
+Runtime ceilings remain immutable unless a separately reviewed evidence-backed performance decision explicitly changes them. Feature-specific artifact growth must be explicit and separately reviewed.
 
 ## P0.1 — Public repository readiness
 
@@ -82,7 +82,7 @@ Remaining later M1 work:
 
 ## M6 — Universal Media / System Now Playing
 
-Status: **ACTIVE — M6.1/M6.2/M6.3 ACCEPTED; M6.4 CI-QUALIFIED, TARGET GATE PENDING**
+Status: **ACTIVE — M6.1/M6.2/M6.3 ACCEPTED; M6.4 PERFORMANCE INVESTIGATION ACTIVE**
 
 Product contract:
 
@@ -126,51 +126,73 @@ All `NH-MEDIA-PROD-001...013` target gates pass, including Yandex Music/Yandex B
 
 ### M6.4 — shipping media composition
 
-Status: **CI-QUALIFIED — TARGET-MAC GATE PENDING**
+Status: **TARGET-MAC LIFECYCLE/PERMISSIONS PASS — COMPACT RSS BLOCKED**
 
-Frozen shipping candidate:
+Current frozen shipping candidate:
 
-- source `c19ce13c5321fce72464ddf0a5d9b1467f770db0`;
-- CI #675 / run `31408757149` — PASS;
-- artifact `NotchHub-shipping-media-candidate` / ID `9070996306`;
-- Actions digest `sha256:c3b279153b8abf75ab77fa2f478888ae1fe9bad6bfdbf64665567bf713b8035d`;
-- contained DMG SHA-256 `ccf8a503515d382c206c6211606ca6401ba33114863a30721e134c1a45af04b9`.
+- source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`;
+- CI #693 / run `31472420797` — PASS;
+- artifact `NotchHub-shipping-media-candidate` / ID `9093958828`;
+- Actions digest `sha256:f055bc87d1f2c8cafe0d3b57d9cf6cdf82d7a712bf85acf3317232679a9689b9`;
+- contained DMG SHA-256 `6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd`;
+- sizes `313,648 B / 615,854 B / 408,480 B` executable/app/DMG.
 
 Completed:
 
 - [x] link `NotchHubMediaCore` into `NotchHubApp`;
-- [x] app-owned `ShippingMediaRuntime` lifecycle;
 - [x] package exact pinned adapter/framework/license/provenance;
-- [x] explicitly sign nested framework before top-level app;
+- [x] sign nested framework before top-level app;
 - [x] retain Hardened Runtime and exact sandbox-only entitlement;
 - [x] retain system-only executable dylib boundary;
 - [x] keep probe/candidate/development tools out of shipping payload;
-- [x] split candidate-only helpers into development-only `NotchHubMediaCandidateCore`;
-- [x] reduce shipping executable from `354,880 B` to `312,816 B` through target isolation;
-- [x] measure exact candidate sizes: executable `312,816 B`, app `615,022 B`, DMG `406,618 B`;
-- [x] preserve immutable P0 baseline and add explicit reviewed M6.4 feature-size allowance;
-- [x] pass additive size gate in CI #675;
-- [x] add privacy-safe shipping preflight/resource/teardown collector;
-- [x] add exact-DMG target-Mac runner with read-only mount and normal AppKit termination;
-- [x] qualify deterministic gates `NH-MEDIA-SHIP-001...005` and `010`;
-- [ ] `NH-MEDIA-SHIP-006` — target app owns exactly one expected adapter and terminates it cleanly;
-- [ ] `NH-MEDIA-SHIP-007` — no Accessibility/Input Monitoring/Automation/Screen Recording prompts;
-- [ ] `NH-MEDIA-SHIP-008` — 60-second target app+adapter resource evidence;
-- [ ] `NH-MEDIA-SHIP-009` — approximately 10-minute target stability/no sustained growth/no orphan;
+- [x] isolate candidate-only helpers from the shipping graph;
+- [x] preserve immutable P0 artifact baseline and enforce explicit M6.4 additive size allowance;
+- [x] add privacy-safe shipping target collectors/runners;
+- [x] fix target-discovered always-on media lifecycle under RED -> GREEN coverage;
+- [x] compact launch owns zero media adapter processes;
+- [x] media runtime starts only after matching settled `.expanded` and stops/releases after settled `.compact`;
+- [x] stale/reversed transitions cannot start media;
+- [x] `NH-MEDIA-SHIP-001...007` — PASS, including current-candidate signatures, permissions, zero-adapter compact state, one-adapter expanded state, clean termination and no orphan;
+- [x] `NH-MEDIA-SHIP-010` — PASS explicit artifact-size impact;
+- [ ] `NH-MEDIA-SHIP-008` — BLOCKED: compact steady RSS max `66,160 KiB` > P0 idle ceiling `43,008 KiB`; CPU max `2.4%` > `2.0%`;
+- [ ] `NH-MEDIA-SHIP-009` — BLOCKED on absolute RSS: 10-minute RSS max `60,320 KiB` > `45,056 KiB`; drift `+2,672 KiB` and threads `3 -> 3` otherwise pass;
 - [ ] final decision: `M6.4 ACCEPTED`.
 
-Until the four target gates pass, PR #17 remains Draft and Media UI is not the next implementation step.
+Expanded active feature evidence is recorded separately: combined RSS median/max `96,624 / 104,832 KiB`, CPU median/max `0.0 / 0.8%`, threads median/max `5 / 10`, clean teardown. No active runtime ceiling is invented from one run.
+
+#### Current M6.4 diagnostic
+
+The lazy lifecycle removed the always-on adapter from compact background, but parent RSS remains approximately `59–66 MiB`.
+
+Next comparator is the exact final M6.3 shell-only shipping app where `NotchHubApp` still depends only on `NotchHubCore`:
+
+- source `30de94c0cb6ea17dc21bd366404937db2bc73783`;
+- CI #594 / run `31389611697`;
+- artifact `NotchHub-dmg` / ID `9063213178`;
+- Actions digest `sha256:9ab40b4101a013e11570fa013f49d2a42a3c5198251210a337b2985fc64e2a0d`;
+- contained DMG SHA-256 `b1da6681ce49da3c34b3720c39caa32c3fc4508e0abf7d209b63b46f78713fb7`.
+
+`run-shell-only-target-diagnostic.sh` exact-pins that candidate and applies the same parent-only 60-second and 10-minute sampler.
+
+Decision rule:
+
+- if shell-only is also approximately `59–66 MiB`, trace a pre-M6.4 shell/interaction regression;
+- if shell-only returns near P0 while M6.4 remains approximately `59–66 MiB`, redesign M6.4 media isolation before acceptance.
+
+PR #17 remains Draft until `NH-MEDIA-SHIP-008/009` pass.
 
 ## Current approved priority order — 2026-08-11
 
-1. Run the exact M6.4 frozen CI #675 shipping candidate through `docs/testing/SHIPPING_MEDIA_COMPOSITION_TARGET_MAC.md` on Mac16,8/macOS 26.6.
-2. Record `NH-MEDIA-SHIP-006...009`; investigate any failure without silently widening permissions or performance budgets.
-3. If the target gate passes, finalize M6.4 docs, exact-head CI/change review and merge PR #17.
-4. Implement compact + expanded media-first UI as a separate slice.
-5. Implement local-window gesture/haptic/seek state machines under TDD.
-6. Run physical media/haptic acceptance on available sources.
-7. Run P1 whole-app performance review, including the production media lifecycle cost and deferred local tracking experiment.
-8. Optimize only from evidence, then resume remaining M1 display/Space hardening and later modules.
+1. Run the exact M6.3 shell-only comparator through `scripts/run-shell-only-target-diagnostic.sh` on Mac16,8/macOS 26.6.
+2. Compare shell-only parent steady/stability RSS with the current M6.4 compact evidence and immutable P0 ceilings.
+3. If the regression predates M6.4, bisect/diagnose shell/interaction evolution before changing media architecture.
+4. If static M6.4 linkage is responsible, design a deeper lazy isolation boundary and implement it under TDD without widening runtime budgets.
+5. Re-freeze and repeat relevant target gates after any production change.
+6. Finalize M6.4 docs, exact-head CI/change review, mark PR #17 Ready and merge only after all stable gates pass.
+7. Implement compact + expanded media-first UI as a separate slice.
+8. Implement local-window gesture/haptic/seek state machines under TDD.
+9. Run P1 whole-app performance review, including the deferred local tracking experiment.
+10. Resume remaining M1 display/Space hardening and later modules.
 
 ## M2 — Shelf
 
