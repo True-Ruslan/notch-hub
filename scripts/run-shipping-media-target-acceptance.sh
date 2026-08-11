@@ -2,28 +2,32 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EXPECTED_SOURCE_COMMIT="c19ce13c5321fce72464ddf0a5d9b1467f770db0"
-EXPECTED_DMG_SHA256="ccf8a503515d382c206c6211606ca6401ba33114863a30721e134c1a45af04b9"
+EXPECTED_SOURCE_COMMIT="fdbe987d8f22768b2a75406c8f1e721fa1da2845"
+EXPECTED_DMG_SHA256="6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd"
 
 usage() {
   cat <<'EOF'
 Usage:
   scripts/run-shipping-media-target-acceptance.sh \
-    --dmg PATH [--output-dir PATH] [--run-mode full|steady]
+    --dmg PATH [--output-dir PATH] [--run-mode compact-full|expanded-steady]
 
-Runs the frozen M6.4 shipping-media candidate through target-Mac preflight,
-60-second steady resource sampling, optional 10-minute stability sampling, and
-normal application termination/orphan verification.
+Runs the frozen lazy-lifecycle M6.4 shipping candidate on the target Mac.
 
 Run modes:
-  full    Default acceptance run: steady + stability + teardown.
-  steady  Short diagnostic run: steady + teardown only.
+  compact-full     Default background acceptance. Keep the panel compact and
+                   untouched. Measures 60-second steady + 10-minute stability
+                   and fails if any owned media adapter appears.
+  expanded-steady  Active feature-cost acceptance. The script launches compact,
+                   then asks you to hover until the panel is visibly expanded
+                   and press Return. Keep the pointer inside the expanded panel
+                   for the 60-second measurement. Exactly one owned adapter is
+                   required and normal application termination must release it.
 EOF
 }
 
 DMG_INPUT=""
 OUTPUT_DIR="$ROOT_DIR/build/m6-4-target-acceptance"
-RUN_MODE="full"
+RUN_MODE="compact-full"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dmg)
@@ -39,7 +43,7 @@ while [[ $# -gt 0 ]]; do
     --run-mode)
       [[ $# -ge 2 ]] || { usage >&2; exit 2; }
       case "$2" in
-        full|steady)
+        compact-full|expanded-steady)
           RUN_MODE="$2"
           ;;
         *)
@@ -103,6 +107,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
+wait_for_parent_exit() {
+  local deadline=$((SECONDS + 10))
+  while /bin/ps -p "$APP_PID" -o pid= >/dev/null 2>&1; do
+    if (( SECONDS >= deadline )); then
+      echo "NotchHub did not terminate within the bounded 10-second window" >&2
+      return 1
+    fi
+    /bin/sleep 0.1
+  done
+}
+
 /usr/bin/hdiutil attach "$DMG_PATH" -readonly -nobrowse -mountpoint "$MOUNT_DIR" >/dev/null
 MOUNTED=1
 APP="$MOUNT_DIR/NotchHub.app"
@@ -151,33 +166,26 @@ done
 
 [[ -n "$APP_PID" ]] || { echo "NotchHub did not launch within the bounded startup window" >&2; exit 1; }
 
-python3 "$ROOT_DIR/scripts/shipping_media_acceptance.py" resources \
-  --attach-pid "$APP_PID" \
-  --source-commit "$EXPECTED_SOURCE_COMMIT" \
-  --mode steady \
-  --output "$OUTPUT_DIR/steady.json"
+if [[ "$RUN_MODE" == "compact-full" ]]; then
+  echo "Compact acceptance: keep the panel untouched for the complete run."
 
-if [[ "$RUN_MODE" == "full" ]]; then
-  python3 "$ROOT_DIR/scripts/shipping_media_acceptance.py" resources \
+  python3 "$ROOT_DIR/scripts/shipping_media_compact_acceptance.py" \
+    --attach-pid "$APP_PID" \
+    --source-commit "$EXPECTED_SOURCE_COMMIT" \
+    --mode steady \
+    --output "$OUTPUT_DIR/compact-steady.json"
+
+  python3 "$ROOT_DIR/scripts/shipping_media_compact_acceptance.py" \
     --attach-pid "$APP_PID" \
     --source-commit "$EXPECTED_SOURCE_COMMIT" \
     --mode stability \
-    --output "$OUTPUT_DIR/stability.json"
-fi
+    --output "$OUTPUT_DIR/compact-stability.json"
 
-python3 "$ROOT_DIR/scripts/shipping_media_acceptance.py" teardown \
-  --attach-pid "$APP_PID" \
-  --source-commit "$EXPECTED_SOURCE_COMMIT" \
-  --timeout-seconds 60 \
-  --output "$OUTPUT_DIR/teardown.json" &
-TEARDOWN_COLLECTOR_PID=$!
+  "$TERMINATOR_BIN" "$APP_PID"
+  wait_for_parent_exit
+  APP_PID=""
 
-/bin/sleep 1
-"$TERMINATOR_BIN" "$APP_PID"
-wait "$TEARDOWN_COLLECTOR_PID"
-APP_PID=""
-
-python3 - "$OUTPUT_DIR" "$EXPECTED_SOURCE_COMMIT" "$RUN_MODE" <<'PY'
+  python3 - "$OUTPUT_DIR" "$EXPECTED_SOURCE_COMMIT" "$RUN_MODE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -187,25 +195,90 @@ import sys
 output_dir = pathlib.Path(sys.argv[1])
 source_commit = sys.argv[2]
 run_mode = sys.argv[3]
-if run_mode not in {"full", "steady"}:
-    raise SystemExit(f"invalid run mode in summary: {run_mode}")
-
-report_names = ["preflight", "steady", "teardown"]
-if run_mode == "full":
-    report_names.insert(2, "stability")
-
 reports = {
     name: json.loads((output_dir / f"{name}.json").read_text(encoding="utf-8"))
-    for name in report_names
+    for name in ("preflight", "compact-steady", "compact-stability")
 }
 for name, report in reports.items():
     if report.get("sourceCommit") != source_commit:
         raise SystemExit(f"{name} source provenance mismatch")
 
+steady = reports["compact-steady"]
+stability = reports["compact-stability"]
+for name, report in (("steady", steady), ("stability", stability)):
+    if report.get("resourceScope") != "compact-parent-only":
+        raise SystemExit(f"{name} is not compact-parent-only evidence")
+    if report.get("adapterAbsent") is not True:
+        raise SystemExit(f"{name} observed an unexpected media adapter")
+
+if steady.get("sampleCount") != 60:
+    raise SystemExit("compact steady acceptance must contain exactly 60 samples")
+if stability.get("sampleCount") != 120:
+    raise SystemExit("compact stability acceptance must contain exactly 120 samples")
+
+summary = {
+    "schemaVersion": 1,
+    "sourceCommit": source_commit,
+    "runMode": run_mode,
+    "resourceScope": "compact-parent-only",
+    "preflightVerified": True,
+    "adapterAbsent": True,
+    "steadySampleCount": steady["sampleCount"],
+    "stabilitySampleCount": stability["sampleCount"],
+    "parentExited": True,
+}
+(output_dir / "summary.json").write_text(
+    json.dumps(summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+  cat "$OUTPUT_DIR/preflight.json"
+  cat "$OUTPUT_DIR/compact-steady.json"
+  cat "$OUTPUT_DIR/compact-stability.json"
+  cat "$OUTPUT_DIR/summary.json"
+else
+  echo "Waiting for settled expanded media runtime."
+  echo "Hover over the notch until the panel is visibly expanded, keep the pointer inside it, then press Return here."
+  IFS= read -r _
+
+  python3 "$ROOT_DIR/scripts/shipping_media_acceptance.py" resources \
+    --attach-pid "$APP_PID" \
+    --source-commit "$EXPECTED_SOURCE_COMMIT" \
+    --mode steady \
+    --output "$OUTPUT_DIR/steady.json"
+
+  python3 "$ROOT_DIR/scripts/shipping_media_acceptance.py" teardown \
+    --attach-pid "$APP_PID" \
+    --source-commit "$EXPECTED_SOURCE_COMMIT" \
+    --timeout-seconds 60 \
+    --output "$OUTPUT_DIR/teardown.json" &
+  TEARDOWN_COLLECTOR_PID=$!
+
+  /bin/sleep 1
+  "$TERMINATOR_BIN" "$APP_PID"
+  wait "$TEARDOWN_COLLECTOR_PID"
+  APP_PID=""
+
+  python3 - "$OUTPUT_DIR" "$EXPECTED_SOURCE_COMMIT" "$RUN_MODE" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+output_dir = pathlib.Path(sys.argv[1])
+source_commit = sys.argv[2]
+run_mode = sys.argv[3]
+reports = {
+    name: json.loads((output_dir / f"{name}.json").read_text(encoding="utf-8"))
+    for name in ("preflight", "steady", "teardown")
+}
+for name, report in reports.items():
+    if report.get("sourceCommit") != source_commit:
+        raise SystemExit(f"{name} source provenance mismatch")
 if reports["steady"].get("sampleCount") != 60:
-    raise SystemExit("steady acceptance must contain exactly 60 samples")
-if run_mode == "full" and reports["stability"].get("sampleCount") != 120:
-    raise SystemExit("stability acceptance must contain exactly 120 samples")
+    raise SystemExit("expanded steady acceptance must contain exactly 60 samples")
 
 teardown = reports["teardown"]
 if teardown.get("parentExited") is not True:
@@ -225,21 +298,16 @@ summary = {
     "adapterExited": True,
     "orphanProcessDetected": False,
 }
-if run_mode == "full":
-    summary["stabilitySampleCount"] = reports["stability"]["sampleCount"]
-
 (output_dir / "summary.json").write_text(
     json.dumps(summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
 PY
 
-cat "$OUTPUT_DIR/preflight.json"
-cat "$OUTPUT_DIR/steady.json"
-if [[ "$RUN_MODE" == "full" ]]; then
-  cat "$OUTPUT_DIR/stability.json"
+  cat "$OUTPUT_DIR/preflight.json"
+  cat "$OUTPUT_DIR/steady.json"
+  cat "$OUTPUT_DIR/teardown.json"
+  cat "$OUTPUT_DIR/summary.json"
 fi
-cat "$OUTPUT_DIR/teardown.json"
-cat "$OUTPUT_DIR/summary.json"
 
 echo "M6.4 target-Mac evidence written to: $OUTPUT_DIR"
