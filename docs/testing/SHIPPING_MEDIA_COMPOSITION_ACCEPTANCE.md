@@ -1,6 +1,6 @@
 # Shipping Media Composition — Acceptance Evidence
 
-Status: **TARGET LIFECYCLE/PERMISSIONS PASS — COMPACT ABSOLUTE RSS BLOCKED; ROOT CAUSE PREDATES M6.4**
+Status: **TARGET LIFECYCLE/PERMISSIONS PASS — FINAL SAME-SESSION M6.4 RSS COMPARATOR PENDING**
 
 Authoritative implementation plan: `docs/superpowers/plans/2026-08-10-shipping-media-composition.md`.
 Accepted transport dependency: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`.
@@ -111,7 +111,7 @@ Parent:
 - threads start/end `3 -> 3`;
 - `120` five-second samples after `10s` warmup.
 
-The stability *shape* is good: no sustained CPU signal, RSS drift is within the stored `+8192 KiB` drift allowance, and thread drift is zero. Absolute RSS remains above stored P0 idle/stability ceilings.
+The stability shape is good: no sustained CPU signal, RSS drift is within the stored `+8192 KiB` drift allowance, and thread drift is zero. Absolute RSS is above the original single-run P0 idle/stability ceilings, which triggered the historical comparability investigation below.
 
 ### Expanded 60-second active evidence
 
@@ -137,7 +137,7 @@ Conservative combined upper bounds:
 
 Normal application termination reports parent exited, adapter exited, and `orphanProcessDetected = false`.
 
-## Historical shell-only comparator — disproves M6.4 as primary remaining RSS cause
+## Historical shell-only comparator — M6.4 static linkage disproven
 
 To distinguish M6.4 static media linkage from an older shell/runtime change, the final exact-head M6.3 shipping app was measured with the same current compact parent-only collector.
 
@@ -168,20 +168,57 @@ Comparator:
 
 Parent exited normally and adapter remained absent.
 
-This is essentially the same compact shell RSS class as M6.4 and therefore **disproves M6.4 static media linkage as the primary cause of the remaining absolute-RSS blocker**. The discrepancy predates M6.4.
+This is essentially the same compact shell RSS class as M6.4 and therefore disproves M6.4 static media linkage as the primary cause of the remaining absolute-RSS discrepancy.
 
-## Measurement comparability check
+## Same-session immutable-baseline A/B — P0 -> M1 persistent regression disproven
 
-The P0 measurement harness at measurement-tool commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0` and the current compact collector both sample Darwin `/bin/ps -p PID -o %cpu= -o rss=` and count `ps -M` thread rows. RSS is therefore compared on the same `ps rss` KiB metric.
+The P0 measurement harness at measurement-tool commit `dfd4f87f8e5be04b467172d720d22bfc054c06d0` and the current compact collector both sample Darwin `/bin/ps -p PID -o %cpu= -o rss=` and count `ps -M` thread rows. The metric definition therefore did not change between harnesses.
 
-The remaining critical uncertainty is runtime context vs code evolution: immutable `v0.1.0` must be remeasured now under the same current conditions before declaring M1 code the source of the increase.
+To distinguish code evolution from runtime/measurement-context portability, the exact immutable `v0.1.0` release and accepted M1 candidate #319 were measured back-to-back on the same `Mac16,8` / macOS 26.6 using one literal shared measurement path: `10 s` warmup, `60 s` parent-only steady sampling, `1 s` interval, normal AppKit termination.
 
-A development-only same-session A/B runner exact-pins:
+Exact baseline `v0.1.0`:
+
+- source `8e913dcddfdec7d9aa920df8c37afb23b8c40884`;
+- release asset ID `505235050`;
+- DMG SHA-256 `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`;
+- CPU median/max `0.0/0.0%`;
+- RSS median/max `60144/63376 KiB`;
+- threads median/max `3/5`.
+
+Accepted M1 candidate #319:
+
+- source `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4`;
+- workflow run `31257399497`;
+- artifact ID `9021802122`;
+- DMG SHA-256 `3a6ead1a716e6cf813d2125a7cdecf18a41a3ac2179bf5ca08f5cd4474856945`;
+- CPU median/max `0.0/3.4%`;
+- RSS median/max `59552/69680 KiB`;
+- threads median/max `3/4`.
+
+A/B RSS delta M1 minus immutable baseline:
+
+- median: `-592 KiB`;
+- max: `+6304 KiB`.
+
+The exact immutable baseline binary itself therefore no longer reproduces its historical `~34 MiB` RSS observation in the current runtime context. A persistent P0 -> M1 memory regression is disproven. The old single-run absolute RSS ceilings remain immutable historical evidence but are not demonstrated to be portable across target-Mac sessions.
+
+This is a measurement-context/metric-classification finding, not permission to silently widen production budgets. The final M6.4 decision still requires a direct same-session immutable-baseline comparison against the frozen M6.4 candidate.
+
+## Final direct M6.4 RSS comparator
+
+Development-only `scripts/run-m6-4-rss-ab.sh` exact-pins:
 
 - immutable `v0.1.0`: source `8e913dcddfdec7d9aa920df8c37afb23b8c40884`, release asset ID `505235050`, DMG SHA-256 `cf53be6081b1836551fcbbb91b85fed800de4c089451961f3c6a21f6b77768bc`;
-- accepted M1 candidate #319: source `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4`, run `31257399497`, artifact ID `9021802122`, DMG SHA-256 `3a6ead1a716e6cf813d2125a7cdecf18a41a3ac2179bf5ca08f5cd4474856945`.
+- frozen M6.4: source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`, run `31472420797`, artifact ID `9093958828`, DMG SHA-256 `6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd`.
 
-Both candidates use literally the same 10-second warmup + 60-second parent-only measurement path and normal AppKit termination.
+Both candidates use one literal shared 10-second warmup + 60-second parent-only steady measurement path and normal AppKit termination.
+
+Interpretation:
+
+- materially worse M6.4 same-session steady behavior => keep `008/009` blocked and continue root-cause work;
+- equal-or-better M6.4 median/steady behavior, together with the already-good 10-minute drift/thread evidence => correct the cross-session RSS gate methodology rather than changing production code or silently widening the historical numeric budget.
+
+CI #721 / run `31522174412` validates the new exact comparator contract and passes the full macOS compatibility/build/test/security/package/size pipeline.
 
 ## Acceptance ledger
 
@@ -223,17 +260,15 @@ All four monitored sensitive permission categories were NONE.
 
 ### `NH-MEDIA-SHIP-008` — 60-second target resource evidence
 
-Status: **BLOCKED — ABSOLUTE COMPACT RSS / HISTORICAL ROOT CAUSE INVESTIGATION**
+Status: **PENDING — FINAL SAME-SESSION IMMUTABLE-BASELINE A/B**
 
-Compact CPU median and thread count are good, but parent RSS max `66160 KiB` exceeds stored P0 idle ceiling `43008 KiB`; CPU max `2.4%` also slightly exceeds stored `2.0%` idle max.
-
-M6.3 shell-only reproduces the same RSS class, so M6.4 media linkage is not the primary cause. Do not widen the budget. Resolve current `v0.1.0` vs M1 same-session comparison first.
+Compact CPU median and thread count are good. Historical absolute RSS ceilings are not reproducible even with the exact immutable baseline binary under the current runtime context. M6.4 static linkage and P0 -> M1 persistent RSS regression are both disproven. Final decision requires the direct `v0.1.0` versus frozen M6.4 same-session comparator.
 
 ### `NH-MEDIA-SHIP-009` — approximately 10-minute target stability
 
-Status: **BLOCKED ON ABSOLUTE RSS; STABILITY BEHAVIOR PASS**
+Status: **STABILITY BEHAVIOR PASS; FINAL RSS CLASSIFICATION PENDING DIRECT A/B**
 
-CPU median `0.0%`, RSS drift `+2672 KiB`, thread drift `0`, adapter absent. Absolute RSS max `60320 KiB` exceeds stored P0 stability ceiling `45056 KiB`. M6.3 shell-only reproduces the same absolute class with negative drift, proving the issue predates M6.4.
+CPU median `0.0%`, RSS drift `+2672 KiB`, thread drift `0`, adapter absent. M6.3 shell-only has the same RSS class with negative drift. Final acceptance waits only for direct immutable-baseline versus M6.4 steady comparison and the resulting RSS methodology decision.
 
 ### `NH-MEDIA-SHIP-010` — explicit artifact-size impact
 
@@ -245,6 +280,8 @@ Current candidate remains inside the explicit M6.4 additive feature-size budget 
 
 **DO NOT MERGE M6.4 YET.**
 
-M6.4 production lifecycle/security behavior is now physically sound, and the remaining absolute-RSS blocker is proven to predate M6.4. The next evidence is a same-session current remeasurement of immutable `v0.1.0` against accepted M1 candidate #319. No performance budget is widened and no production fix is attempted until that test distinguishes environment/baseline-context drift from an M1 code regression.
+M6.4 production lifecycle/security behavior is physically sound. M6.4 static media linkage and a persistent P0 -> M1 memory regression are both disproven as explanations for the current absolute-RSS discrepancy. The exact immutable baseline binary itself now measures in the same ~60 MiB RSS class.
+
+One final short target comparison remains: exact immutable `v0.1.0` versus frozen M6.4 in the same session. No performance budget is widened and no production fix is attempted before that direct evidence is evaluated.
 
 Media UI, progress rendering, gesture/haptic/seek interaction, and additional-player compatibility remain outside M6.4.
