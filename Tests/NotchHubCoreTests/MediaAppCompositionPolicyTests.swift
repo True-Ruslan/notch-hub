@@ -45,7 +45,7 @@ struct MediaAppCompositionPolicyTests {
         for path in [
             "Sources/NotchHubCore/Notch/NotchPanelController.swift",
             "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift",
-            "Sources/NotchHubCore/UI/NotchRootView.swift",
+            "Sources/NotchHubCore/UI/NotchRootView.swift"
         ] {
             let source = try sourceText(relativePath: path)
             #expect(!source.contains("import NotchHubMediaCore"))
