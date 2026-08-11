@@ -39,6 +39,40 @@ struct NotchGeometryTests {
     }
 
     @Test
+    func mediaCompactWingsExtendSymmetricallyWithoutChangingNotchOrExpandedGeometry() {
+        let input = ScreenGeometryInput(
+            frame: CGRect(x: 0, y: 0, width: 1512, height: 982),
+            safeAreaTop: 37,
+            auxiliaryTopLeftArea: CGRect(x: 0, y: 945, width: 668, height: 37),
+            auxiliaryTopRightArea: CGRect(x: 844, y: 945, width: 668, height: 37)
+        )
+        let layout = NotchGeometry.layout(for: input, minimumCompactWidth: 180)
+
+        let mediaLayout = layout.withCompactHorizontalExtension(36)
+
+        #expect(mediaLayout.hasHardwareNotch == layout.hasHardwareNotch)
+        #expect(mediaLayout.hardwareNotchWidth == 176)
+        #expect(mediaLayout.compactFrame.minX == layout.compactFrame.minX - 36)
+        #expect(mediaLayout.compactFrame.width == layout.compactFrame.width + 72)
+        #expect(mediaLayout.compactFrame.height == layout.compactFrame.height)
+        #expect(mediaLayout.compactFrame.midX == layout.compactFrame.midX)
+        #expect(mediaLayout.expandedFrame == layout.expandedFrame)
+    }
+
+    @Test
+    func negativeCompactExtensionIsClampedToZero() {
+        let input = ScreenGeometryInput(
+            frame: CGRect(x: 0, y: 0, width: 1512, height: 982),
+            safeAreaTop: 37,
+            auxiliaryTopLeftArea: CGRect(x: 0, y: 945, width: 668, height: 37),
+            auxiliaryTopRightArea: CGRect(x: 844, y: 945, width: 668, height: 37)
+        )
+        let layout = NotchGeometry.layout(for: input)
+
+        #expect(layout.withCompactHorizontalExtension(-10).compactFrame == layout.compactFrame)
+    }
+
+    @Test
     func fallsBackToCenteredPanelOnDisplayWithoutNotch() {
         let input = ScreenGeometryInput(
             frame: CGRect(x: 1920, y: 0, width: 1920, height: 1080),

@@ -22,15 +22,17 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
             "func applicationDidFinishLaunching", 1
         )[1].split("func applicationWillTerminate", 1)[0]
         self.assertNotIn("ShippingMediaRuntime()", did_finish)
+        self.assertNotIn("ShippingMediaRuntime(presentationModel:", did_finish)
         self.assertNotIn("mediaRuntime.start()", did_finish)
 
         required_app_fragments = (
+            "private let mediaPresentationModel = ShippingMediaPresentationModel()",
             "panelController.settledPresentationHandler",
             "updateMediaRuntime(for: presentation)",
             "private func updateMediaRuntime(for presentation: NotchPresentation)",
             "case .expanded:",
             "guard mediaRuntime == nil else",
-            "let mediaRuntime = ShippingMediaRuntime()",
+            "let mediaRuntime = ShippingMediaRuntime(presentationModel: mediaPresentationModel)",
             "mediaRuntime.start()",
             "case .compact:",
             "mediaRuntime?.stop()",

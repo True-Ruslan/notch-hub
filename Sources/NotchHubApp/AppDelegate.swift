@@ -4,14 +4,44 @@ import NotchHubMediaCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private static let mediaCompactWingWidth: CGFloat = 36
+
     private var panelController: NotchPanelController?
     private var mediaRuntime: ShippingMediaRuntime?
+    private let mediaPresentationModel = ShippingMediaPresentationModel()
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        let panelController = NotchPanelController()
+        let mediaPresentationModel = mediaPresentationModel
+        let panelController = NotchPanelController(contentFactory: { [weak self] model, layout in
+            NotchHostingViewFactory.make(
+                rootView: MediaNotchRootView(
+                    panelModel: model,
+                    mediaModel: mediaPresentationModel,
+                    hardwareNotchWidth: layout.hardwareNotchWidth,
+                    compactBackgroundOpacity: layout.compactBackgroundOpacity,
+                    expandedContentTopInset: layout.expandedContentTopInset,
+                    onTogglePlayPause: { [weak self] in
+                        self?.mediaRuntime?.togglePlayPause()
+                    },
+                    onPrevious: { [weak self] in
+                        self?.mediaRuntime?.goPrevious()
+                    },
+                    onNext: { [weak self] in
+                        self?.mediaRuntime?.goNext()
+                    }
+                )
+            )
+        })
         self.panelController = panelController
+
+        mediaPresentationModel.presentationDidChange = { [weak panelController] presentation in
+            panelController?.setCompactHorizontalExtension(
+                presentation == nil ? 0 : Self.mediaCompactWingWidth
+            )
+        }
+
         panelController.settledPresentationHandler = { [weak self] presentation in
             self?.updateMediaRuntime(for: presentation)
         }
@@ -20,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_: Notification) {
         panelController?.settledPresentationHandler = nil
+        mediaPresentationModel.presentationDidChange = nil
 
         mediaRuntime?.stop()
         mediaRuntime = nil
@@ -39,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            let mediaRuntime = ShippingMediaRuntime()
+            let mediaRuntime = ShippingMediaRuntime(presentationModel: mediaPresentationModel)
             self.mediaRuntime = mediaRuntime
             mediaRuntime.start()
 

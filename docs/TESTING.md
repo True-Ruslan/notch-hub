@@ -8,58 +8,41 @@ A green pipeline is necessary but is not proof of real-device UX or target-Mac e
 
 ## Required CI gate
 
-Protected-branch check: `Build, test and package`, dependent on `macOS 26 compatibility`.
+Protected-branch checks:
+
+- `macOS 26 compatibility`;
+- `Build, test and package` (dependent on the macOS 26 job).
 
 Current CI validates:
 
 1. Swift package structure.
-2. deterministic Personal/Trusted release-policy tests.
-3. deterministic performance-policy/parser/aggregation/budget tests.
-4. strict Swift formatting.
-5. shell/plist syntax.
-6. executable repository security baseline.
-7. deterministic runtime performance-policy source audit.
-8. macOS 26 compilation with warnings as errors.
-9. macOS 26 complete Swift test suite.
-10. packaging-runner compilation with warnings as errors.
-11. complete Swift tests with coverage instrumentation, including state/reversal stress.
-12. release app/DMG packaging.
-13. semantic version/build-number stamping.
-14. ad-hoc code-signature verification.
-15. Hardened Runtime verification.
-16. exact effective App Sandbox entitlement verification.
-17. linked-library inspection; system libraries only at the current milestone.
-18. DMG integrity through `hdiutil verify`.
-19. deterministic executable/app/DMG byte-size capture.
-20. fail-closed comparison against `performance/baseline-v0.1.0.json`.
-21. short development-harness compatibility/schema smoke on a shared runner, with no CPU/RAM magnitude gate.
-22. artifact upload.
+2. Personal/Trusted release-policy tests.
+3. Performance-policy/parser/budget tests, including explicit M6.5 feature-size policy.
+4. Media bridge/probe policy tests.
+5. Strict Swift formatting.
+6. shell/plist syntax.
+7. executable repository security baseline.
+8. deterministic runtime performance source audit.
+9. macOS 26 compilation with warnings as errors.
+10. complete Swift test suite on macOS 26.
+11. production media probe/candidate build and verification.
+12. package-runner warnings-as-errors compilation.
+13. complete Swift tests with coverage instrumentation.
+14. release app/DMG packaging.
+15. semantic version/build-number and source/media provenance stamping.
+16. nested/top-level code-signature verification.
+17. Hardened Runtime verification.
+18. exact effective App Sandbox entitlement verification.
+19. system-library-only application executable dependency inspection.
+20. shipping media preflight/provenance verification.
+21. deterministic executable/app/DMG size capture.
+22. fail-closed feature-size comparison against immutable P0 baseline plus the active reviewed feature envelope.
+23. short shared-runner performance harness compatibility/schema smoke with no CPU/RSS/thread magnitude gate.
+24. artifact upload.
 
 Do not lower assertions, delete useful tests, weaken security/release/performance policy, widen accepted budgets, or weaken production behavior merely to make CI green.
 
-## Policy boundaries
-
-### Release/security
-
-Deterministic release/security checks cover strict SemVer/tag derivation, mandatory Personal Release trust warnings, Gatekeeper-bypass rejection, exact provenance metadata, manual protected-`main` release authority, App Sandbox/Hardened Runtime, immutable release semantics, system-only runtime linkage, no unreviewed subprocess/network/dynamic-loading surface, and separation from the optional future Trusted Release tier.
-
-### Performance
-
-`PERFORMANCE.md` and `performance/baseline-v0.1.0.json` are authoritative. CI deterministically enforces source-policy and artifact-size rules; shared-runner CPU/RSS/thread magnitudes are **not** target-Mac acceptance data.
-
-Accepted immutable `v0.1.0` baseline:
-
-- executable `220,560 B`;
-- app aggregate `223,555 B`;
-- DMG `73,955 B`;
-- target-Mac idle CPU median/max `0.0% / 0.7%`;
-- hover CPU median/max `5.95% / 22.3%`;
-- stability CPU median/max `0.0% / 6.8%`;
-- stability RSS delta `-3,712 KiB`.
-
 ## Test design
-
-Prefer deterministic policies/state machines for geometry, release/security policy, resource policy, dwell behavior, transition lifecycle, accessibility duration policy, and AppKit boundary configuration.
 
 Tests should:
 
@@ -67,167 +50,179 @@ Tests should:
 - assert externally meaningful results;
 - avoid arbitrary sleeps;
 - include boundary/error/denied/stale-callback cases;
-- reproduce reported deterministic regressions before fixes where practical;
-- test exact physical-coordinate boundaries when hardware behavior depends on an inclusive/exclusive edge;
+- reproduce deterministic regressions before fixes where practical;
+- test exact physical-coordinate boundaries when hardware behavior depends on inclusive/exclusive edges;
 - never substitute a nearby interior point for a named physical-edge scenario;
 - never fabricate RED when behavior is already correctly testable;
 - use injected schedulers/output closures around OS boundaries;
 - intentionally invoke cancelled/stale callbacks when race safety is part of the contract;
-- never use noisy shared-runner timing/resource values as tight gates.
+- keep shared-runner runtime magnitudes out of tight target-hardware gates.
 
 No arbitrary global coverage percentage is used.
 
-## M1 deterministic interaction/transition contract
+## Security/release testing boundary
+
+Deterministic checks cover:
+
+- strict SemVer/tag derivation and immutable release semantics;
+- mandatory Personal Release trust warning and Gatekeeper-bypass rejection;
+- unprivileged public/fork PR CI;
+- App Sandbox + Hardened Runtime;
+- exact production process allowlist;
+- no arbitrary shell/executable/private-loading surface;
+- system-only application executable linkage;
+- pinned media resource provenance;
+- no unexpected entitlement/permission expansion;
+- release workflow isolation from untrusted PR execution.
+
+`SECURITY.md` is authoritative.
+
+## Performance testing boundary
+
+`PERFORMANCE.md` and `performance/baseline-v0.1.0.json` are authoritative.
+
+The immutable `v0.1.0` artifact baseline remains:
+
+- executable `220,560 B`;
+- app `223,555 B`;
+- DMG `73,955 B`.
+
+Intentional feature growth is handled by separately reviewed provenance-backed envelopes. M6.4 and M6.5 budgets do not rewrite the P0 baseline.
+
+Shared GitHub runners validate deterministic performance policy/schema/package behavior only. CPU/RSS/thread target acceptance is based on real-hardware evidence and same-session/within-run methodology where required.
+
+## M1 interaction/transition contract
 
 Authoritative specification: `docs/specs/M1_NOTCH_INTERACTION.md`.
-Transition hardening plan: `docs/superpowers/plans/2026-08-08-m1-transition-animation-hardening.md`.
 
-### Pointer intent / dwell
+Deterministic coverage proves:
 
-The suite proves:
+- quick transit shorter than 120 ms does not expand or haptic;
+- deliberate hover emits one eligible expansion intent at threshold;
+- duplicate pointer events keep one pending activation;
+- cancellation/stale callback cannot later win;
+- re-entry receives a fresh dwell;
+- expanded retention/collapse is deterministic;
+- compact activation uses inclusive 4 pt left/right/bottom and 0 pt top boundaries;
+- `NotchPanelTransitionCoordinator` is the sole transition authority;
+- stale/reversed completions cannot win;
+- Reduce Motion retarget creates no duplicate haptic;
+- 10,000 reversal stress retains only latest-generation authority;
+- AppKit owns outer clipping/chrome and exact compact/expanded geometry;
+- pointer monitor owns one local + one global `.mouseMoved` monitor and removes them idempotently;
+- no per-mouse-event Swift concurrency task is allocated;
+- no polling/repeating timer/display-link/sleep loop is introduced.
 
-- quick transit shorter than the accepted `120 ms` dwell emits no expansion intent/haptic;
-- setup/current-pointer synchronization is non-activating;
-- deliberate hover emits one eligible expansion intent only when threshold completes;
-- duplicate `mouseMoved` events keep one pending activation;
-- cancelled dwell cannot later win from a stale callback;
-- re-entry starts a fresh dwell;
-- expanded retention emits no new intent;
-- pointer exit emits non-haptic collapse intent;
-- invalidation cancels pending work;
-- compact activation has **4 pt inward protection on left/right/bottom and no top inset**;
-- compact activation uses explicit inclusive directional comparisons rather than `CGRect.contains` half-open maximum-edge semantics;
-- a point 2 pt inside the bottom edge is rejected and exactly 4 pt is accepted;
-- a point at exactly `compactFrame.maxY` at notch center is accepted;
-- points only 2 pt inside left/right remain rejected at the exact top edge;
-- points exactly 4 pt inside left/right are accepted at the exact top edge.
+Accepted physical M1 matrix:
 
-### Transition lifecycle
+| ID | Scenario | Status |
+| --- | --- | --- |
+| `NH-NOTCH-001` | Physical-notch compact geometry | **PASS** |
+| `NH-HOVER-001` | Deliberate hover opens once | **PASS** |
+| `NH-HOVER-002` | Expanded retention | **PASS** |
+| `NH-HOVER-003` | Exit collapses once | **PASS** |
+| `NH-HOVER-DELAY-001` | Quick transit / second-display transit | **PASS** |
+| `NH-HOVER-DELAY-002` | 120 ms deliberate hover | **PASS** |
+| `NH-HOVER-TOP-001` | Exact top screen-edge activation | **PASS** |
+| `NH-HAPTIC-001` | Eligible deliberate expansion | **PASS** |
+| `NH-HAPTIC-002` | Cancel/retain/collapse | **PASS** |
+| `NH-VISUAL-001...003` | Physical chrome and repeated cycles | **PASS** |
+| `NH-ANIM-001...004` | Normal/reversed/rapid transitions | **PASS** |
+| `NH-MOTION-001...002` | Reduce Motion behavior | **PASS** |
+| Startup pointer overlap | No startup-only expansion/haptic | **PASS** |
+| `NH-SPACE-001` | Spaces/fullscreen policy | Planned later M1 |
+| `NH-DISPLAY-001` | Active-display migration | Planned later M1 |
 
-The suite proves:
+Historical exact artifacts and RED/GREEN details remain in Git history and `CHANGELOG.md`.
 
-- expansion settles only after its matching completion;
-- collapse retains expanded SwiftUI content until matching completion;
-- stale expansion/collapse completions cannot win after reversal;
-- duplicate desired expansion does not duplicate transition/haptic;
-- programmatic expansion remains non-haptic;
-- invalidation makes later completion harmless;
-- Reduce Motion retarget creates no second haptic;
-- 10,000 reversal requests retain only latest-generation authority without production history accumulation.
+## Universal Media acceptance hierarchy
 
-### AppKit animation/chrome
+Detailed acceptance ledgers:
 
-The suite proves:
+- M6.1: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`;
+- M6.3: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`;
+- M6.4: `docs/testing/SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md`;
+- M6.5: `docs/testing/MEDIA_UI_ACCEPTANCE.md`.
 
-- zero-duration path reaches exact frame/radius endpoint synchronously once;
-- positive-duration path installs public Core Animation radius output and does not complete synchronously;
-- accepted normal duration is `0.20 s` with ease-in-out timing;
-- cancellation freezes current presentation-layer radius before removing the prior animation;
-- at least 32 immediate endpoint cycles retain exact frame and AppKit mask/radius invariants;
-- outer clipping is owned by the layer-backed AppKit hosting view;
-- compact/expanded radii remain `12 pt / 22 pt`;
-- hardware-notch compact surface is opaque black;
-- expanded hardware-notch content begins below occlusion.
+### M6.1
 
-### Accessibility motion policy
+Status: **ACCEPTED**.
 
-- normal motion resolves to `0.20 s`;
-- Reduce Motion resolves to `0 s`;
-- controller observes `NSWorkspace.accessibilityDisplayOptionsDidChangeNotification` through selector ownership;
-- block observer token/closure ownership is absent;
-- observer removal is explicit at controller teardown.
+Target testing established system Now Playing feasibility under Sandbox + Hardened Runtime, authoritative capability states, real commands, source switch/disappearance behavior, no sensitive permission prompts, clean teardown and bounded resource behavior.
 
-### Pointer monitor lifecycle/performance
+### M6.2
 
-- exactly one local and one global `.mouseMoved` monitor are registered;
-- repeated start cannot duplicate registrations;
-- invalidation removes both tokens exactly once;
-- live `.mouseMoved` delivery contains no per-event `Task { @MainActor ... }` allocation;
-- main-thread AppKit callbacks route through `MainActor.assumeIsolated`;
-- no broader input mask or sensitive permission is introduced.
+Status: **ACCEPTED AND MERGED**.
 
-The implementation remains event-driven: one pending dwell work item at most; no polling, repeating timer, display link, sleep loop, or custom per-frame animation loop.
+Deterministic tests cover normalized media state, ordering, provider/controller/bridge lifecycle, typed commands, stale callbacks and bounded restart/fail-closed behavior.
 
-## Real-hardware / distribution acceptance matrix
+### M6.3
 
-| ID | Scenario | Expected result | Status / automation |
-| --- | --- | --- | --- |
-| `NH-NOTCH-001` | Compact panel on physical-notch MacBook | Center/width match physical notch | **PASS** on CI #319 artifact; geometry automated |
-| `NH-HOVER-001` | Deliberate compact hover | One expansion; no oscillation | **PASS**; lifecycle automated |
-| `NH-HOVER-002` | Move within expanded retention | Remains expanded | **PASS**; policy automated |
-| `NH-HOVER-003` | Move outside retention | Collapse once and stay compact | **PASS**; state machine automated |
-| `NH-HOVER-DELAY-001` | Quick transit through/near notch toward second display | Stays compact; zero haptic | **PASS on exact CI #332 artifact**; dwell/cancellation automated |
-| `NH-HOVER-DELAY-002` | Deliberate hover | Opens once after 120 ms | **PASS; 120 ms accepted** |
-| `NH-HOVER-TOP-001` | Built-in display, pointer deliberately held at exact top screen edge over notch | Opens once after 120 ms with one haptic; no oscillation | **PASS on exact CI #332 artifact**; exact inclusive boundary automated |
-| `NH-HAPTIC-001` | Successful deliberate hover | Exactly one acceptable tactile event | **PASS; `.levelChange` accepted** |
-| `NH-HAPTIC-002` | Cancelled transit/retention/collapse | No haptic | **PASS** |
-| `NH-VISUAL-001` | Compact physical-notch state | Black rounded surface; no square leakage | **PASS** |
-| `NH-VISUAL-002` | Hold expanded state | Controls visible below notch | **PASS** |
-| `NH-VISUAL-003` | At least 20 open/collapse cycles | Rounded chrome remains rounded | **PASS**; 32-cycle deterministic regression |
-| `NH-ANIM-001` | Normal expansion/collapse | Both directions smooth | **PASS; 0.20 s accepted** |
-| `NH-ANIM-002` | Reverse expansion -> collapse | No snap/flicker/stale endpoint/extra haptic | **PASS** |
-| `NH-ANIM-003` | Reverse collapse -> expansion | Same continuity rules | **PASS** |
-| `NH-ANIM-004` | Rapid hover/leave churn | No stuck phase/stale completion | **PASS**; 10k stress automated |
-| `NH-MOTION-001` | Reduce Motion enabled before transition | Immediate exact endpoint | **PASS** |
-| `NH-MOTION-002` | Toggle Reduce Motion during transition | Immediate desired endpoint, no duplicate haptic/flicker | **PASS** |
-| Startup pointer overlap | Launch while pointer already overlaps notch | No startup-only activation/haptic | **PASS** |
-| `NH-SPACE-001` | Switch Spaces/fullscreen | Behavior matches future M1 policy | Planned M1 |
-| `NH-DISPLAY-001` | Connect/move between displays | Correct target-display geometry/migration | Planned M1 |
+Status: **ACCEPTED AND MERGED**.
 
-## M1 acceptance evidence — 2026-08-08
+All `NH-MEDIA-PROD-001...013` gates pass, including Yandex Music/Yandex Browser observation, real toggle/previous/next/seek, no sensitive permission prompts, bounded teardown and target resource evidence.
 
-### Broad hardware acceptance
+### M6.4
 
-Exact target-Mac artifact:
+Status: **ACCEPTED AND MERGED**.
 
-- source SHA `f6de06f5d045fc9375b3b31b0a7feb97a13cebe4`;
-- CI #319 / run `31257399497`;
-- `NotchHub-dmg` artifact ID `9021802122`.
+All `NH-MEDIA-SHIP-001...010` gates pass. Physical evidence confirms zero adapter throughout compact steady/stability, one expected adapter after settled expansion, clean normal teardown and no sensitive permission prompts.
 
-Physical result: every broad interaction, visual, haptic, animation/reversal, rapid-churn, Reduce Motion and startup check listed above passed. This accepts `120 ms`, `.levelChange`, `0.20 s`, the transition authority, AppKit chrome ownership and the existing side/bottom activation depth.
+### M6.5 — Media-first UI
 
-The only follow-up requested from this successful cycle was deliberate activation at the very top screen edge when not using a second-display transit.
+Status: **ACCEPTED ON TARGET MAC — ALL `NH-MEDIA-UI-001...011` PASS**.
 
-### Top-edge refinement and physical failure
+Frozen physical candidate:
 
-Requirement: keep 4 pt protection on left/right/bottom, remove top inset entirely.
+- source `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`;
+- CI #763 / run `31539442148` — both required jobs PASS on exact source after retrying one external runner TLS failure;
+- 194 Swift tests — PASS;
+- shipping artifact ID `9120231721`;
+- Actions digest `sha256:0d18a0c9ce5305b90808f0937531211094b85947ce96b2afd0a2c4020e4e7007`;
+- DMG SHA-256 `3993330bf57ac86ead949215ba5370a0a33ec6b8f6a17f1d65baa30c41f5f6ad`.
 
-Initial cycle:
+Deterministic/policy coverage proves:
 
-- RED `f4d19fc7e508fe11a35aae6fb56f80e0fa7ec13e` / CI #320 established the asymmetric geometry;
-- GREEN `c7c10033d223197309eafeba63e67b30ae29ba33` / CI #321 passed **52/52 Swift tests**;
-- clean documented candidate `969a7c52203adf7e3dd8bb5f198a6895b2fb7f7a` / CI #325 passed all automated gates and produced artifact `9022296152`;
-- target-Mac `NH-HOVER-TOP-001` on #325 **FAILED**: the cursor held against the physical top edge did not open the panel.
+- Core composition seam does not introduce a media dependency into `NotchHubCore`;
+- media presentation maps authoritative state without metadata/capability fabrication;
+- fresh runtime events may replace retained presentation without cross-runtime raw-sequence comparison;
+- runtime attaches/detaches presentation callbacks in lifecycle-safe order;
+- UI exposes only typed click commands in M6.5;
+- compact wings are geometry inputs to the existing transition authority;
+- no polling/timer/display-link/global scroll monitor is introduced;
+- M6.5 size envelope is explicit, provenanced and fail-closed.
 
-The failure exposed an inaccurate boundary approximation in the automated test: it used `compactFrame.maxY - 1`, while the real scenario is `compactFrame.maxY`. Production then passed that point to `CGRect.contains`, whose maximum X/Y boundaries are excluded. Therefore the test was green without covering the physical edge it claimed to represent.
+Physical target acceptance confirmed:
 
-Corrective TDD:
+| ID | Scenario | Status |
+| --- | --- | --- |
+| `NH-MEDIA-UI-001` | Cold exact-notch compact / zero adapter | **PASS** |
+| `NH-MEDIA-UI-002` | Expanded active session -> Media-first UI | **PASS** |
+| `NH-MEDIA-UI-003` | Playing/paused presentation | **PASS** |
+| `NH-MEDIA-UI-004` | Partial metadata/artwork fallback | **PASS** |
+| `NH-MEDIA-UI-005` | Capability-driven previous/next + real clicks | **PASS** |
+| `NH-MEDIA-UI-006` | Trustworthy static progress / no periodic worker | **PASS** |
+| `NH-MEDIA-UI-007` | Media disappears while expanded -> Home, no collapse | **PASS** |
+| `NH-MEDIA-UI-008` | Retained 36 pt compact wings / adapter absent | **PASS** |
+| `NH-MEDIA-UI-009` | Fresh re-expansion replaces retained state | **PASS** |
+| `NH-MEDIA-UI-010` | Typed command/security/transition boundary | **PASS** |
+| `NH-MEDIA-UI-011` | Full Mac16,8/macOS 26.6 Yandex Music + Yandex Browser acceptance | **PASS** |
 
-- RED `3d0d40b5426cb8a8fe0bd19393688a68247637b0` / CI #326 changed the scenario to exact `y == compactFrame.maxY` and added exact accepted 4 pt left/right boundaries;
-- #326 ran **54 tests** and failed only the three new exact-boundary assertions; all existing behavior remained green;
-- GREEN `9022ab55221070b4899853fffd3dc6709384ab1b` / CI #327 replaced compact `CGRect.contains` with explicit inclusive comparisons and passed **54/54 Swift tests** plus all release/security/performance/package gates and the unchanged P0 size budget;
-- #327 sizes: executable `250,320 B`, app `253,317 B`, DMG `84,679 B`.
+Physical acceptance also confirmed no Accessibility, Input Monitoring, Automation/Apple Events or Screen Recording prompts and no orphan adapter after normal Quit.
 
-### Final targeted hardware acceptance
+Documentation-only commits after frozen source `431d9fbaf1ff5ba98f2ceec09732acafe5f65794` require fresh exact-head CI but do **not** require another physical run because they do not alter the tested application artifact.
 
-Exact corrected artifact:
+## Next testing contract
 
-- source SHA `6d4c13739216503ec97fe3e71eada0fc9b32f298`;
-- CI #332 / run `31260116337`;
-- `NotchHub-dmg` artifact ID `9022551570`;
-- digest `sha256:f79a01f5dd65f6056d3021231667ac15cb7f340d32c4fc8bf383ccea0723a758`.
+The next Universal Media slice must establish `NH-MEDIA-GESTURE-*` IDs before production changes. Coverage must include:
 
-Physical target-Mac result:
+- local-only gesture state machine;
+- no global scroll monitor;
+- gesture cancellation/reversal boundaries;
+- haptic eligibility and no duplicate feedback;
+- seek only when authoritative capability is supported;
+- bounded typed seek values;
+- no periodic progress worker;
+- target-Mac gesture feel, haptic feel, actual seek correctness and regression checks.
 
-- `NH-HOVER-TOP-001`: **PASS**;
-- `NH-HOVER-DELAY-001`: **PASS**.
-
-The corrected exact-edge behavior and cross-display regression are therefore physically accepted together on the same artifact. Final accepted compact geometry is **inclusive 4 pt left/right/bottom, inclusive 0 pt top** with the already accepted 120 ms dwell.
-
-Acceptance-record commits after source `6d4c13739216503ec97fe3e71eada0fc9b32f298` are documentation-only. They require a fresh exact-head CI before integration but do not require another target-Mac physical run.
-
-## Historical TDD highlights
-
-Earlier RED/GREEN evidence remains in Git history and `CHANGELOG.md`: initial interaction seams (#147/#148/#150), size-gate correction (#157/#158), setup synchronization (#165/#167), visual regressions (#172/#189/#196/#204), transition authority and reversal hardening (#225/#231/#273/#279/#283/#292), size optimization (#295/#305/#308), pointer hot-path optimization (#309/#310), and the exact-edge correction (#326/#327).
-
-The invariant throughout is unchanged: hardware success does not replace deterministic tests, and green CI does not claim physical behavior it cannot observe.
+The invariant remains unchanged: hardware success does not replace deterministic tests, and green CI does not claim physical behavior it cannot observe.

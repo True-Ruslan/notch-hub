@@ -78,15 +78,28 @@ struct ShippingMediaBundlePaths: Equatable, Sendable {
 public final class ShippingMediaRuntime {
     private let bundle: Bundle
     private let fileManager: FileManager
+    private let presentationModel: ShippingMediaPresentationModel
     private var controller: MediaSessionController?
 
     public convenience init() {
-        self.init(bundle: .main)
+        self.init(
+            bundle: .main,
+            presentationModel: ShippingMediaPresentationModel()
+        )
     }
 
-    init(bundle: Bundle, fileManager: FileManager = .default) {
+    public convenience init(presentationModel: ShippingMediaPresentationModel) {
+        self.init(bundle: .main, presentationModel: presentationModel)
+    }
+
+    init(
+        bundle: Bundle,
+        fileManager: FileManager = .default,
+        presentationModel: ShippingMediaPresentationModel = ShippingMediaPresentationModel()
+    ) {
         self.bundle = bundle
         self.fileManager = fileManager
+        self.presentationModel = presentationModel
     }
 
     public func start() {
@@ -95,6 +108,7 @@ public final class ShippingMediaRuntime {
         }
 
         guard let paths = try? resolveValidatedPaths() else {
+            presentationModel.clear()
             return
         }
 
@@ -105,12 +119,44 @@ public final class ShippingMediaRuntime {
         let bridge = SystemMediaBridge(transport: transport)
         let controller = MediaSessionController(provider: bridge)
         self.controller = controller
+        controller.changeHandler = { [weak controller, weak presentationModel] in
+            guard let controller, let presentationModel else {
+                return
+            }
+            presentationModel.apply(
+                state: controller.state,
+                snapshot: controller.snapshot
+            )
+        }
         controller.start()
     }
 
     public func stop() {
+        controller?.changeHandler = nil
         controller?.stop()
         controller = nil
+    }
+
+    public func togglePlayPause() {
+        send(.togglePlayPause)
+    }
+
+    public func goPrevious() {
+        send(.previous)
+    }
+
+    public func goNext() {
+        send(.next)
+    }
+
+    private func send(_ command: MediaCommand) {
+        guard let controller else {
+            return
+        }
+
+        Task {
+            _ = await controller.send(command)
+        }
     }
 
     private func resolveValidatedPaths() throws -> ShippingMediaBundlePaths {
