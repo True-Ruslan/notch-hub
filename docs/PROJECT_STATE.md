@@ -8,9 +8,11 @@ Protected branch: `main`
 
 ## Current state
 
-**M6.5 Media-first UI is ACCEPTED on the primary target.** The exact physically tested application source is `431d9fbaf1ff5ba98f2ceec09732acafe5f65794` from PR #19. All `NH-MEDIA-UI-001...011` acceptance gates pass. Subsequent PR #19 commits are documentation-only acceptance/integration records and require fresh exact-head CI, but no repeat physical run.
+**M6.5 Media-first UI is ACCEPTED AND MERGED.** PR #19 was squash-merged into `main` as `5305dbb87d7a2d0d1c7e4bc1eba156cfcafd4e86`. The exact physically tested application source remains `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`; all `NH-MEDIA-UI-001...011` acceptance gates pass. The commits between that frozen physical source and PR #19 final head were documentation-only. Final PR-head CI #771 passed and post-merge `main` CI #772 / run `31543163536` passed both required jobs.
 
-PR #19 remains the integration vehicle until final documentation review/CI and squash merge. The currently published `v0.1.0` release predates M1/P0.1/M6 and remains unchanged; publishing the accumulated source work later requires a new version.
+The currently published `v0.1.0` release predates M1/P0.1/M6 and remains unchanged. Publishing the accumulated source work later requires a new version because existing tags/releases are immutable.
+
+The next active product slice is M6.6: local media gestures, media-control haptics and draggable seek. Before adding those behaviors, the bounded collapse-layout edge tracked in issue #20 should be covered/fixed under TDD because the next slice increases transition-sensitive interaction.
 
 ## Accepted foundations
 
@@ -24,7 +26,7 @@ PR #19 remains the integration vehicle until final documentation review/CI and s
 - M6.2 normalized media state/controller/bridge boundary — accepted and merged.
 - M6.3 concrete production system-media transport — accepted and merged.
 - M6.4 shipping media composition/lazy lifecycle — accepted and merged.
-- M6.5 compact + expanded Media-first UI — **accepted on target Mac; PR #19 merge pending**.
+- M6.5 compact + expanded Media-first UI — **accepted and merged via PR #19 as `5305dbb87d7a2d0d1c7e4bc1eba156cfcafd4e86`**.
 
 ## Product
 
@@ -88,12 +90,19 @@ Accepted direct same-session immutable `v0.1.0` vs M6.4 steady RSS evidence show
 
 ### M6.5 — Media-first UI
 
-**ACCEPTED ON TARGET MAC — ALL `NH-MEDIA-UI-001...011` PASS.**
+**ACCEPTED AND MERGED — ALL `NH-MEDIA-UI-001...011` PASS.**
+
+Integration:
+
+- PR #19 squash merge `5305dbb87d7a2d0d1c7e4bc1eba156cfcafd4e86`;
+- final PR head `db243614d9b50cc857150bef30027d5478f23d11`;
+- final PR-head CI #771 — PASS;
+- post-merge `main` CI #772 / run `31543163536` — PASS.
 
 Frozen physical candidate:
 
 - source `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`;
-- CI #763 / run `31539442148` — both required jobs PASS after retrying one external runner TLS failure on the same source;
+- CI #763 / run `31539442148` — both required jobs PASS after retrying one external runner TLS failure on the exact source;
 - 194 Swift tests — PASS;
 - shipping artifact ID `9120231721`;
 - Actions digest `sha256:0d18a0c9ce5305b90808f0937531211094b85947ce96b2afd0a2c4020e4e7007`;
@@ -148,6 +157,7 @@ Intentional shipping feature growth is recorded through separately reviewed, pro
 ## Known limitations / technical debt
 
 - media gestures/haptics/draggable seek are not implemented yet;
+- **issue #20**: if media context clears during the short in-flight collapse after its target frame has captured retained-media wings, the current extension-state update does not retarget that already-running collapse; this is a bounded recoverable visual/geometry edge and should be hardened first in M6.6 under TDD;
 - compact retained media is intentionally not live-observed while compact because zero-adapter compact lifecycle is the accepted resource invariant;
 - Apple Music, Spotify and additional-player compatibility remain unverified;
 - active-display migration/fullscreen/Spaces/screen-configuration/notchless/click-pin behavior remains later M1 work;
@@ -156,11 +166,9 @@ Intentional shipping feature growth is recorded through separately reviewed, pro
 
 ## Next optimal step
 
-After PR #19 integration:
-
-1. Define the next Universal Media slice for **local media gestures, media-control haptics and draggable seek** from the already approved Universal Media design.
-2. Establish stable `NH-MEDIA-GESTURE-*` acceptance IDs and a TDD implementation plan before production changes.
-3. Keep gesture recognition local to the NotchHub window/panel; do not add a global scroll monitor or synthetic media keys.
-4. Preserve the M6.4/M6.5 zero-adapter compact lifecycle and event-driven progress policy.
-5. Physically accept the gesture/haptic/seek slice on the target Mac.
-6. Then run P1 whole-app performance/resource review, including the deferred window-local pointer-tracking experiment and memory-metric evaluation.
+1. Start M6.6 with TDD hardening for issue #20 so compact geometry retargets correctly if media context clears during an in-flight collapse.
+2. Define the remaining M6.6 acceptance contract for **local media gestures, media-control haptics and draggable seek** from the approved Universal Media design.
+3. Establish stable `NH-MEDIA-GESTURE-*` acceptance IDs and an implementation plan before adding gesture production behavior.
+4. Keep gesture recognition local to the NotchHub window/panel; do not add a global scroll monitor or synthetic media keys.
+5. Preserve the M6.4/M6.5 zero-adapter compact lifecycle and event-driven progress policy.
+6. Physically accept M6.6 on the target Mac, then run P1 whole-app performance/resource review including the deferred window-local pointer-tracking experiment and memory-metric evaluation.

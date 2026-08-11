@@ -1,15 +1,16 @@
 # M6.5 Media-first UI Acceptance
 
-Status: **ACCEPTED ON TARGET MAC / PR #19 INTEGRATION PENDING / NOT RELEASED**
+Status: **ACCEPTED AND MERGED / NOT RELEASED**
 Acceptance date: 2026-08-12
 Primary target: `Mac16,8` / macOS 26.6
 PR: #19 — `M6.5 Media-first UI`
+Merge: `5305dbb87d7a2d0d1c7e4bc1eba156cfcafd4e86`
 Design: `docs/superpowers/specs/2026-08-11-media-first-ui-design.md`
 Implementation plan: `docs/superpowers/plans/2026-08-11-media-first-ui.md`
 
 ## Accepted scope
 
-M6.5 adds the first shipping Universal Media presentation on top of the accepted M6.1–M6.4 transport/composition foundation without weakening the M6.4 presentation-scoped lifecycle.
+M6.5 adds the first shipping-source Universal Media presentation on top of the accepted M6.1–M6.4 transport/composition foundation without weakening the M6.4 presentation-scoped lifecycle.
 
 Accepted behavior:
 
@@ -114,10 +115,21 @@ Physical acceptance additionally confirmed:
 - no Accessibility, Input Monitoring, Automation/Apple Events or Screen Recording prompts appear;
 - normal Quit leaves no orphan media adapter.
 
+## Integration evidence
+
+The physical candidate remained frozen at `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`. The remaining PR #19 commits through final head `db243614d9b50cc857150bef30027d5478f23d11` changed source-of-truth documentation only.
+
+Integration gates:
+
+- final PR-head CI #771 — both required jobs PASS;
+- final review — no P0/P1 blockers; one bounded P2 transition edge tracked separately as issue #20;
+- PR #19 squash merge — `5305dbb87d7a2d0d1c7e4bc1eba156cfcafd4e86`;
+- post-merge `main` CI #772 / run `31543163536` — both required jobs PASS.
+
+Issue #20 is not part of the accepted M6.5 matrix: if media context clears during the short in-flight collapse after its compact target has captured retained-media wings, the future layout state changes but the already-running transition target is not currently retargeted. It is a bounded recoverable visual/geometry edge with no security/process authority expansion. It is scheduled as the first TDD hardening task in M6.6 before adding more transition-sensitive gestures.
+
 ## Exit decision
 
-**M6.5 is ACCEPTED.**
+**M6.5 is ACCEPTED AND MERGED. It is not released.**
 
-The physical candidate is frozen at `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`. Any subsequent commits in PR #19 must be documentation-only acceptance/integration records and require fresh exact-head CI, but do not require another physical run because they do not change the tested application artifact.
-
-After final documentation sync, exact-head review and green CI, PR #19 may be squash-merged. The next product slice may then move to the separately designed local gesture/haptic/draggable-seek work; P1 whole-app performance/local-tracking review remains the following optimization stage.
+The next product slice is M6.6 local media gestures, haptics and draggable seek, beginning with issue #20 hardening. P1 whole-app performance/local-tracking review remains the following optimization stage.

@@ -113,11 +113,17 @@ All `NH-MEDIA-SHIP-001...010` gates passed.
 
 ### M6.5 — compact + expanded Media-first UI
 
-Status: **ACCEPTED ON TARGET MAC — ALL `NH-MEDIA-UI-001...011` PASS**
+Status: **ACCEPTED AND MERGED — ALL `NH-MEDIA-UI-001...011` PASS**
 
-Implementation vehicle: PR #19.
+Integration:
+
+- PR #19 squash merge `5305dbb87d7a2d0d1c7e4bc1eba156cfcafd4e86`;
+- final PR head `db243614d9b50cc857150bef30027d5478f23d11`;
+- final PR-head CI #771 — PASS;
+- post-merge `main` CI #772 / run `31543163536` — PASS.
+
 Frozen physical candidate: `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`.
-CI: #763 / run `31539442148` — both required jobs PASS on the exact source after retrying one external runner TLS failure without weakening TLS/security policy.
+Physical candidate CI: #763 / run `31539442148` — PASS on exact source after retrying one external runner TLS failure without weakening TLS/security policy.
 
 Accepted:
 
@@ -138,11 +144,15 @@ Accepted:
 
 Authoritative evidence: `docs/testing/MEDIA_UI_ACCEPTANCE.md`.
 
+Final read-only review found one bounded P2 transition edge outside the accepted matrix and tracked it as issue #20: if media context clears during an already-running retained-media collapse, the future compact layout changes to zero wings but the in-flight transition target is not currently retargeted. It is recoverable and does not widen security/process/resource authority, but should be hardened before adding more transition-sensitive gestures.
+
 ### M6.6 — local media gestures, haptics and draggable seek
 
 Status: **NEXT**
 
-Before production changes:
+Start with hardening issue #20 under TDD, then add the gesture/seek feature contract.
+
+Before production gesture changes:
 
 - define stable `NH-MEDIA-GESTURE-*` acceptance IDs;
 - write a dedicated design delta/implementation plan from the approved Universal Media design;
@@ -224,9 +234,9 @@ Only when Apple Developer Program membership becomes worthwhile:
 
 ## Current priority order — 2026-08-12
 
-1. Complete PR #19 integration after documentation-only exact-head CI/review.
-2. Define M6.6 gesture/haptic/draggable-seek acceptance contract and implementation plan.
-3. Implement M6.6 under TDD without widening permission/process/global-input authority.
+1. M6.6 Task 0: reproduce and harden issue #20 under TDD without changing accepted panel authority.
+2. Define `NH-MEDIA-GESTURE-*` acceptance contract and M6.6 implementation plan.
+3. Implement local gestures/media haptics/draggable seek under TDD without widening permission/process/global-input authority.
 4. Run target-Mac M6.6 physical acceptance.
 5. Run P1 whole-app performance/resource review and local pointer-tracking experiment.
-6. Resume the remaining product modules from the roadmap after the media/performance foundation is stable.
+6. Resume the remaining product modules after the media/performance foundation is stable.
