@@ -8,7 +8,7 @@ Protected branch target: `main`
 
 ## Current product state
 
-**M6.4 shipping media composition is implemented and CI-qualified on a frozen shipping artifact. Physical target-Mac lifecycle/resource/permission acceptance is the only remaining gate before M6.4 can be accepted and merged. Media UI remains blocked until that gate passes.**
+**M6.4 shipping media composition is implemented and CI-qualified on a new lazy-lifecycle frozen shipping artifact after target-Mac testing exposed and fixed an always-on media resource regression. Fresh current-candidate target acceptance is the only remaining gate before M6.4 can be accepted and merged. Media UI remains blocked until that gate passes.**
 
 Accepted foundations/integrations:
 
@@ -21,7 +21,7 @@ Accepted foundations/integrations:
 - M6.1 transport probe — accepted/merged as `7d5210eb0363933d120334d29daf40956b53cb50`, final outcome `ACCEPT_TRANSPORT`;
 - M6.2 production media state/controller/bridge boundary — accepted/merged as `1ccea500570f9a5ca927739be58d7f7eaadd775a`;
 - M6.3 concrete production transport — accepted on frozen candidate `c63f39c40b90d647e48271b9dc1d5ffd6e612c0b`;
-- M6.4 shipping media composition — **CI-qualified, target-Mac gate pending**.
+- M6.4 shipping media composition — **CI-qualified after target-discovered compact-idle lifecycle fix; fresh target gate pending**.
 
 Authoritative evidence:
 
@@ -107,55 +107,60 @@ All `NH-MEDIA-PROD-001...013` gates pass on Mac16,8/macOS 26.6, including actual
 
 ### M6.4 — shipping media composition
 
-Status: **CI-QUALIFIED — TARGET-MAC GATE PENDING**.
+Status: **CI-QUALIFIED — CURRENT-CANDIDATE TARGET GATE PENDING**.
 
-Frozen deterministic shipping candidate:
+Current frozen shipping candidate:
 
-- source `c19ce13c5321fce72464ddf0a5d9b1467f770db0`;
-- CI #675 / run `31408757149` — both jobs PASS;
+- source `fdbe987d8f22768b2a75406c8f1e721fa1da2845`;
+- CI #693 / run `31472420797` — both jobs PASS;
 - artifact `NotchHub-shipping-media-candidate`;
-- artifact ID `9070996306`;
-- Actions digest `sha256:c3b279153b8abf75ab77fa2f478888ae1fe9bad6bfdbf64665567bf713b8035d`;
-- contained DMG SHA-256 `ccf8a503515d382c206c6211606ca6401ba33114863a30721e134c1a45af04b9`.
+- artifact ID `9093958828`;
+- Actions digest `sha256:f055bc87d1f2c8cafe0d3b57d9cf6cdf82d7a712bf85acf3317232679a9689b9`;
+- contained DMG SHA-256 `6371e8695e30f06697d37d2d018e043674e8b27a44022e3d8e846d0e1dad01fd`;
+- exact sizes: executable `313,648 B`, physical app payload `615,854 B`, DMG `408,480 B`.
 
 Implemented and deterministic/hosted-qualified:
 
-- `NotchHubApp` now links `NotchHubMediaCore` and owns `ShippingMediaRuntime` start/stop;
-- exact pinned adapter script/framework/license/provenance ship in `NotchHub.app`;
-- nested framework and top-level app signatures verify;
-- Hardened Runtime and exact sandbox-only entitlement remain intact;
-- shipping executable links only system libraries;
-- development probe/candidate tools remain absent from shipping output;
-- candidate-only helper code was moved into the development-only `NotchHubMediaCandidateCore` target, reducing the shipping executable from `354,880 B` to `312,816 B`;
-- exact frozen artifact sizes are executable `312,816 B`, app `615,022 B`, DMG `406,618 B`;
-- immutable P0 baseline remains unchanged;
-- M6.4 uses a separate reviewed additive feature-size budget (`65,536 B` executable, `360,448 B` app, `327,680 B` DMG) and CI #675 passes it;
-- `scripts/shipping_media_acceptance.py` provides privacy-safe exact preflight, app+owned-adapter resource sampling, and bounded teardown evidence;
-- `scripts/run-shipping-media-target-acceptance.sh` pins the exact frozen DMG hash and automates read-only mount, preflight, 60-second steady sampling, 10-minute stability sampling, normal AppKit termination, and no-orphan verification;
-- target runner development followed RED -> GREEN; acceptance tooling commits after `c19ce13...` do not alter the frozen shipping binary/package/security boundary.
+- `NotchHubApp` links `NotchHubMediaCore` and ships the exact pinned production adapter resources;
+- nested framework/top-level signatures, Hardened Runtime, sandbox-only entitlement and system-library dependency boundary remain intact;
+- candidate-only helpers remain development-only;
+- immutable P0 artifact baseline remains unchanged and the explicit M6.4 additive size gate still passes;
+- target-discovered performance root cause was fixed: compact application launch no longer creates or starts `ShippingMediaRuntime`;
+- the media runtime starts only after a matching transition successfully settles `.expanded` and stops/releases after a matching transition settles `.compact`;
+- stale/reversed transition completions cannot trigger media lifecycle changes;
+- the start/stop process cost stays outside the animation completion path and aborted hover expansion does not churn the adapter;
+- compact target collector samples the parent only and fails if any owned media adapter appears;
+- active expanded collector still requires exactly one owned adapter and clean normal teardown;
+- target runner now separates `compact-full` background acceptance from `expanded-steady` active feature-cost evidence.
+
+Target finding that caused the fix:
+
+- superseded candidate `c19ce13...` held approximately `80–86 MiB` combined RSS in both active and no-session steady runs;
+- no-session A/B evidence was essentially unchanged from active media, ruling out artwork/session retention;
+- the root cause was the unconditional app-launch media runtime and always-on adapter process, not a leak: the original 10-minute run showed negative RSS drift and zero median CPU.
 
 Current M6.4 ledger:
 
 - `NH-MEDIA-SHIP-001...005` — PASS deterministic/hosted;
-- `NH-MEDIA-SHIP-006` — PENDING target owned-adapter lifecycle/normal termination;
-- `NH-MEDIA-SHIP-007` — PENDING human no-sensitive-permission observation;
-- `NH-MEDIA-SHIP-008` — PENDING target 60-second resources;
-- `NH-MEDIA-SHIP-009` — PENDING target approximately 10-minute stability/no orphan;
+- `NH-MEDIA-SHIP-006` — PENDING fresh target proof: zero adapter while compact, exactly one adapter after settled expansion, clean normal termination/no orphan;
+- `NH-MEDIA-SHIP-007` — PENDING current-candidate no-sensitive-permission reconfirmation;
+- `NH-MEDIA-SHIP-008` — PENDING compact 60-second parent-only target resources against existing P0 idle ceilings;
+- `NH-MEDIA-SHIP-009` — PENDING compact approximately 10-minute parent-only stability with adapter absent throughout;
 - `NH-MEDIA-SHIP-010` — PASS explicit artifact-size impact.
 
-PR #17 must remain Draft and must not merge until `NH-MEDIA-SHIP-006...009` pass and the acceptance ledger explicitly becomes `ACCEPTED`.
+PR #17 must remain Draft and must not merge until the current candidate passes the fresh physical gates and the acceptance ledger explicitly becomes `ACCEPTED`.
 
 ## Security baseline
 
 `SECURITY.md` remains authoritative.
 
-The shipping app now intentionally contains the accepted M6.3 media transport through the narrow M6.4 composition boundary. The production subprocess executable remains exactly `/usr/bin/perl`; adapter provenance is pinned; command surface remains typed and closed; I/O and teardown remain bounded; no shell/player-specific fallback/networking/telemetry/sensitive-permission expansion was added.
+The shipping app intentionally contains the accepted M6.3 media transport through the narrow M6.4 composition boundary. The production subprocess executable remains exactly `/usr/bin/perl`; adapter provenance is pinned; command surface remains typed and closed; I/O and teardown remain bounded; no shell/player-specific fallback/networking/telemetry/sensitive-permission expansion was added.
 
-App Sandbox remains the only application entitlement and Hardened Runtime remains mandatory. The target gate must confirm that composition still causes no Accessibility, Input Monitoring, Automation, or Screen Recording prompt.
+App Sandbox remains the only application entitlement and Hardened Runtime remains mandatory. Lazy presentation-scoped media lifecycle changes when the accepted subprocess exists, not what authority it has.
 
 ## Known limitations / technical debt
 
-- M6.4 target-Mac lifecycle/resource/permission acceptance is still pending;
+- M6.4 fresh current-candidate compact/expanded target acceptance remains pending;
 - no compact/expanded media UI, progress rendering or gesture/haptic/seek interaction ships yet;
 - Apple Music, Spotify and additional-player compatibility are not physically verified;
 - the global `.mouseMoved` fallback remains pending the P1 `NSTrackingArea` / window-local comparison;
@@ -164,9 +169,10 @@ App Sandbox remains the only application entitlement and Hardened Runtime remain
 
 ## Next optimal step
 
-1. Run `docs/testing/SHIPPING_MEDIA_COMPOSITION_TARGET_MAC.md` against the exact frozen CI #675 DMG on Mac16,8/macOS 26.6.
-2. Record `NH-MEDIA-SHIP-006...009` evidence; investigate instead of widening permissions/budgets if any gate fails.
-3. If all target gates pass, mark M6.4 `ACCEPTED`, perform exact-head CI/change review, move PR #17 out of Draft and merge.
-4. Only then implement compact + expanded media-first UI.
-5. Implement local-window gesture/haptic/seek state machines under TDD and run physical media/haptic acceptance.
-6. After the complete functional media slice, run P1 whole-app resource review and the deferred `NSTrackingArea` / window-local pointer experiment.
+1. Download the exact current M6.4 candidate from CI #693 and run `compact-full` on Mac16,8/macOS 26.6 without touching/expanding the panel.
+2. Require adapter absence for the complete steady/stability windows and compare parent-only metrics directly with the existing P0 idle/stability ceilings.
+3. Run `expanded-steady`, manually settle the panel expanded, require exactly one owned adapter, collect active feature-cost evidence, and verify clean normal parent/adapter teardown.
+4. Reconfirm no Accessibility/Input Monitoring/Automation/Screen Recording prompts.
+5. If all current-candidate gates pass, mark M6.4 `ACCEPTED`, perform exact-head CI/change review, move PR #17 out of Draft and merge.
+6. Only then implement compact + expanded media-first UI.
+7. After the complete functional media slice, run P1 whole-app resource review and the deferred `NSTrackingArea` / window-local pointer experiment.
