@@ -1,8 +1,10 @@
 # Shipping Media Composition — Implementation Plan
 
-Status: **COMPLETED — M6.4 ACCEPTED; FINAL PR INTEGRATION PENDING**
+Status: **COMPLETED AND MERGED**
 Date: 2026-08-10
 Base: `main` at `e967393ea4deb574883f0234465313cfc5cdd71a`
+Merged: PR #17 as squash commit `4ba603e1c3564d6cdf58169a7936f1954dee2ffd`
+Post-merge verification: CI #733 / run `31525413454` — PASS
 
 ## Goal
 
@@ -68,15 +70,17 @@ The nested framework is explicitly signed before the top-level application. The 
 7. No-session A/B produced essentially the same footprint, ruling out active metadata/artwork retention.
 8. RED/GREEN production lifecycle fix moved media runtime from application lifetime to matching settled expanded presentation.
 9. Compact parent-only collector added; any owned adapter during compact measurement fails closed.
-10. Current candidate physically confirmed zero adapter while compact, one adapter while expanded, clean normal teardown/no orphan, and no sensitive permission prompts.
+10. Accepted candidate physically confirmed zero adapter while compact, one adapter while expanded, clean normal teardown/no orphan, and no sensitive permission prompts.
 11. Final M6.3 shell-only comparator reproduced the same current compact RSS class without M6.4 media linkage, disproving M6.4 static linkage as the source of the historical absolute-RSS discrepancy.
 12. Exact same-session immutable `v0.1.0` vs M1 #319 comparator measured RSS medians `60,144 KiB` vs `59,552 KiB`, disproving a persistent P0→M1 memory regression.
 13. Exact direct same-session immutable `v0.1.0` vs frozen M6.4 comparator measured baseline RSS median/max `61,504/67,104 KiB` and candidate `62,256/65,232 KiB`; candidate delta `+752 KiB` median and `-1,872 KiB` max, CPU candidate `0.0/0.0%` vs baseline `0.0/6.7%`, threads identical `3/4`.
 14. The exact baseline's own repeated same-day median varied by `1,360 KiB`, larger than the candidate median delta. There is no material directionally consistent M6.4 steady-memory regression.
-15. Independent 10-minute M6.4 compact stability passes with RSS drift `+2,672 KiB` inside the retained `+8,192 KiB` growth gate and threads `3 -> 3`.
+15. Independent M6.4 compact stability passes with RSS drift `+2,672 KiB` inside the retained `+8,192 KiB` growth gate and threads `3 -> 3`.
 16. `PERFORMANCE.md` was corrected from evidence: immutable historical P0 numbers remain preserved, while cross-session absolute `ps rss` and isolated CPU maxima are no longer standalone gates; same-session immutable-baseline steady comparison plus long-run growth remain the acceptance mechanism.
 17. `NH-MEDIA-SHIP-008/009` resolved PASS without rewriting `performance/baseline-v0.1.0.json` or silently raising a numeric runtime budget.
-18. Acceptance/state/roadmap/changelog synchronized; final exact-head CI/change review and PR integration remain.
+18. Acceptance/state/roadmap/changelog synchronized; final exact-head CI #732 passed; independent change review returned `Looks good` with no P0/P1/P2 blockers and no unresolved review threads.
+19. PR #17 was marked Ready and squash-merged into protected `main` as `4ba603e1c3564d6cdf58169a7936f1954dee2ffd`.
+20. Post-merge `main` CI #733 / run `31525413454` passed both jobs including release packaging, signatures/sandbox, shipping preflight, feature-size gate and performance smoke.
 
 Comparator tooling evidence:
 
@@ -105,6 +109,6 @@ Comparator tooling evidence:
 - `NH-MEDIA-SHIP-009` — approximately 10-minute target stability — **PASS**; RSS/thread growth bounded and no compact adapter/orphan.
 - `NH-MEDIA-SHIP-010` — artifact-size impact measured explicitly with no silent budget widening — **PASS**.
 
-## Merge boundary
+## Final integration
 
-All M6.4 acceptance gates pass. PR #17 may leave Draft only after the final documentation/policy head passes required CI and independent change review. Then merge via squash into protected `main`, verify the merge/main CI, and proceed to Media UI as a separate slice.
+M6.4 is complete and merged. Merge commit `4ba603e1c3564d6cdf58169a7936f1954dee2ffd` passed post-merge `main` CI #733. The next slice is compact + expanded media-first UI; gestures/haptics/seek behavior remain separate later work.
