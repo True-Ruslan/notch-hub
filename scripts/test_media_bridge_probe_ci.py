@@ -5,6 +5,7 @@ from test_production_media_transport_acceptance import ProductionMediaTransportA
 from test_production_media_transport_candidate_ci import ProductionMediaTransportCandidateCITests
 from test_shipping_media_acceptance import ShippingMediaAcceptanceTests
 from test_shipping_media_composition import ShippingMediaCompositionPolicyTests
+from test_shipping_media_diagnostic_mode import ShippingMediaDiagnosticModeTests
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
