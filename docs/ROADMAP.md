@@ -26,11 +26,11 @@ Immutable `v0.1.0` is accepted for personal use with ad-hoc signing, Sandbox, Ha
 
 ## P0 — Performance Foundation
 
-Status: **ACCEPTED AND MERGED; HISTORICAL ABSOLUTE-RSS COMPARABILITY UNDER REVIEW**
+Status: **ACCEPTED AND MERGED; CROSS-SESSION ABSOLUTE-RSS METHODOLOGY CORRECTION PENDING**
 
 Merge: `a056aa74bad5d8e193eb4c76a76e6c910344bd09`.
 
-Accepted target baseline:
+Accepted historical target observation:
 
 - idle CPU median/max `0.0% / 0.7%`, RSS max `33,808 KiB`, threads max `4`;
 - hover CPU median/max `5.95% / 22.3%`, RSS max `38,816 KiB`, threads max `7`;
@@ -42,7 +42,9 @@ Accepted immutable artifact baseline:
 - app `223,555 B`;
 - DMG `73,955 B`.
 
-The baseline remains immutable. Current target testing has discovered that final M6.3 shell-only and M6.4 compact apps both report ~56–66 MiB RSS under the current collector. Before interpreting that as a feature regression, immutable `v0.1.0` must be remeasured under the same current conditions; the stored baseline is not rewritten either way.
+The baseline remains immutable. Current same-session target evidence shows that the exact immutable `v0.1.0` binary itself now measures steady RSS median/max `60,144/63,376 KiB`, while M1 #319 measures `59,552/69,680 KiB`. A persistent P0→M1 memory regression is disproven. The original single-run absolute `ps rss` ceilings therefore remain historical evidence but are not proven portable across target sessions.
+
+The final M6.4 decision uses a direct same-session immutable-baseline comparator plus 10-minute growth/leak evidence. Future performance work should introduce a better single-number memory-impact metric such as physical footprint without weakening security or removing leak/growth checks.
 
 ## P0.1 — Public repository readiness
 
@@ -52,7 +54,7 @@ Public fork CI remains read-only/unprivileged; release authority and immutable-r
 
 ## M1 — Notch Core hardening and interaction
 
-Status: **INTERACTION/TRANSITION SLICE ACCEPTED; RSS HISTORICAL BISECT TARGET IF CURRENT v0.1.0 REMAINS LOW**
+Status: **INTERACTION/TRANSITION SLICE ACCEPTED; PERSISTENT P0→M1 RSS REGRESSION DISPROVEN**
 
 Accepted:
 
@@ -67,7 +69,13 @@ Accepted:
 - no per-mouse-event Swift concurrency task allocation;
 - no polling/repeating timer/display link/sensitive input permission.
 
-Accepted M1 candidate #319 (`f6de06f...`) is retained as an exact historical DMG comparator. If immutable `v0.1.0` remeasures near the original ~34 MiB while M1 is materially higher, M1 artifacts become the next physical bisect range before any performance fix.
+Same-session current-target A/B:
+
+- immutable `v0.1.0`: RSS median/max `60,144/63,376 KiB`;
+- accepted M1 #319: RSS median/max `59,552/69,680 KiB`;
+- median delta M1-baseline `-592 KiB`.
+
+Do not bisect M1 for the historical RSS discrepancy unless new direct evidence contradicts this result.
 
 Deferred to P1 after functional media integration:
 
@@ -84,7 +92,7 @@ Remaining later M1 work:
 
 ## M6 — Universal Media / System Now Playing
 
-Status: **ACTIVE — M6.1/M6.2/M6.3 ACCEPTED; M6.4 LIFECYCLE/SECURITY PASS, PERFORMANCE ROOT-CAUSE GATE OPEN**
+Status: **ACTIVE — M6.1/M6.2/M6.3 ACCEPTED; M6.4 FINAL SAME-SESSION RSS COMPARATOR PENDING**
 
 Product contract:
 
@@ -126,11 +134,11 @@ Frozen candidate:
 
 All `NH-MEDIA-PROD-001...013` target gates pass, including Yandex Music/Yandex Browser, real toggle/next/previous/seek, no sensitive permission prompts, bounded teardown, 60-second resources and corrected 10-minute stability.
 
-Historical shell-only comparator from final exact M6.3 head `30de94c...` reproduces elevated compact RSS despite `NotchHubApp` still linking only `NotchHubCore`: steady RSS median/max `58,656/62,624 KiB`; stability `56,384/60,400 KiB`. This disproves M6.4 static media linkage as the primary source of the absolute shell RSS increase.
+Historical shell-only comparator from final exact M6.3 head `30de94c...` reproduces elevated compact RSS despite `NotchHubApp` still linking only `NotchHubCore`: steady RSS median/max `58,656/62,624 KiB`; stability `56,384/60,400 KiB`. This disproves M6.4 static media linkage as the primary source of the absolute shell RSS discrepancy.
 
 ### M6.4 — shipping media composition
 
-Status: **TARGET LIFECYCLE/PERMISSIONS PASS — `NH-MEDIA-SHIP-008/009` BLOCKED BY HISTORICAL ABSOLUTE-RSS DISCREPANCY**
+Status: **TARGET LIFECYCLE/PERMISSIONS PASS — FINAL DIRECT IMMUTABLE-BASELINE RSS A/B PENDING**
 
 Frozen shipping candidate:
 
@@ -156,8 +164,11 @@ Completed:
 - [x] prove normal parent/adapter teardown with no orphan;
 - [x] confirm no Accessibility/Input Monitoring/Automation/Screen Recording prompts;
 - [x] record expanded active feature cost separately;
-- [ ] `NH-MEDIA-SHIP-008` — resolve compact absolute RSS discrepancy before acceptance;
-- [ ] `NH-MEDIA-SHIP-009` — resolve compact absolute RSS discrepancy; stability drift/thread behavior already passes;
+- [x] disprove M6.4 static linkage as the source of the remaining compact RSS discrepancy via exact M6.3 shell-only comparison;
+- [x] disprove persistent P0→M1 RSS regression via exact same-session immutable-baseline A/B;
+- [ ] run direct same-session `v0.1.0 ↔ frozen M6.4` steady comparator;
+- [ ] `NH-MEDIA-SHIP-008` — decide under corrected evidence-backed RSS methodology;
+- [ ] `NH-MEDIA-SHIP-009` — finalize RSS classification; stability drift/thread behavior already passes;
 - [ ] final decision: `M6.4 ACCEPTED`.
 
 Current physical compact evidence:
@@ -165,18 +176,24 @@ Current physical compact evidence:
 - steady CPU median/max `0.0/2.4%`, RSS median/max `59,792/66,160 KiB`, threads max `4`;
 - 10-minute stability CPU median/max `0.0/3.3%`, RSS median/max `59,024/60,320 KiB`, RSS drift `+2,672 KiB`, threads `3 -> 3`.
 
-No runtime budget is widened. PR #17 remains Draft while root-cause work continues.
+Historical/current comparator evidence:
+
+- M6.3 shell-only steady RSS median/max `58,656/62,624 KiB`, stability `56,384/60,400 KiB`;
+- exact current `v0.1.0` steady RSS median/max `60,144/63,376 KiB`;
+- exact M1 #319 steady RSS median/max `59,552/69,680 KiB`.
+
+No runtime budget is widened. `scripts/run-m6-4-rss-ab.sh` exact-pins immutable `v0.1.0` and the frozen M6.4 candidate and uses one shared measurement path. CI #721 / run `31522174412` passes the complete pipeline for the new comparator tooling. PR #17 remains Draft pending that one physical A/B.
 
 ## Current approved priority order — 2026-08-11
 
-1. Run the exact same-session 60-second RSS A/B between immutable `v0.1.0` (`8e913dc...`) and accepted M1 candidate #319 (`f6de06f...`) with `scripts/run-shell-rss-bisect.sh`.
-2. If `v0.1.0` now also reports ~56–62 MiB, investigate runtime/environment/baseline-context drift before changing code or budgets.
-3. If `v0.1.0` remains near its original ~34 MiB and M1 is high, physically bisect available M1 CI artifacts and prove the first resource-changing mechanism (Reduce Motion/transition/system-service initialization are hypotheses, not conclusions).
-4. Apply a narrow TDD fix only after root cause is proven; re-run the relevant target gates.
-5. Finalize M6.4 docs, exact-head CI/change review and merge PR #17 only after `008/009` are honestly resolved.
+1. Run exact same-session `v0.1.0 ↔ frozen M6.4` steady A/B with `scripts/run-m6-4-rss-ab.sh`.
+2. If M6.4 is materially worse in same-session median/steady behavior, continue root-cause investigation without changing budgets.
+3. If M6.4 is equal-or-better in same-session median/steady behavior, combine that with the already-passing 10-minute drift/thread evidence and correct `PERFORMANCE.md` so historical absolute `ps rss` observations remain immutable evidence but are no longer treated as a portable cross-session release gate.
+4. Resolve `NH-MEDIA-SHIP-008/009`, synchronize acceptance/state/roadmap/changelog, run exact-head CI and final change review.
+5. Mark PR #17 ready and squash-merge only after all M6.4 gates are honestly accepted.
 6. Implement compact + expanded media-first UI as a separate slice.
 7. Implement local-window gesture/haptic/seek state machines under TDD.
-8. Run physical media/haptic acceptance, then P1 whole-app performance review and deferred local tracking experiment.
+8. Run physical media/haptic acceptance, then P1 whole-app performance review and deferred local tracking experiment, including evaluation of a physical-footprint memory metric for future baselines.
 
 ## M2 — Shelf
 
