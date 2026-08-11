@@ -1,11 +1,11 @@
 import SwiftUI
 
-struct NotchRootView: View {
+public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
     private let compactBackgroundOpacity: Double
     private let expandedContentTopInset: CGFloat
 
-    init(
+    public init(
         model: NotchPanelModel,
         compactBackgroundOpacity: Double,
         expandedContentTopInset: CGFloat
@@ -15,7 +15,7 @@ struct NotchRootView: View {
         self.expandedContentTopInset = expandedContentTopInset
     }
 
-    var body: some View {
+    public var body: some View {
         Group {
             switch model.contentPresentation {
             case .compact:
