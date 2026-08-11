@@ -6,11 +6,11 @@ public struct NotchLayout: Equatable, Sendable {
     public let compactFrame: CGRect
     public let expandedFrame: CGRect
 
-    var compactBackgroundOpacity: Double {
+    public var compactBackgroundOpacity: Double {
         1
     }
 
-    var expandedContentTopInset: CGFloat {
+    public var expandedContentTopInset: CGFloat {
         hasHardwareNotch ? compactFrame.height + 12 : 20
     }
 
@@ -24,6 +24,20 @@ public struct NotchLayout: Equatable, Sendable {
         self.hardwareNotchWidth = hardwareNotchWidth
         self.compactFrame = compactFrame
         self.expandedFrame = expandedFrame
+    }
+
+    public func withCompactHorizontalExtension(_ extensionWidth: CGFloat) -> NotchLayout {
+        let boundedExtension = max(0, extensionWidth)
+        guard boundedExtension > 0 else {
+            return self
+        }
+
+        return NotchLayout(
+            hasHardwareNotch: hasHardwareNotch,
+            hardwareNotchWidth: hardwareNotchWidth,
+            compactFrame: compactFrame.insetBy(dx: -boundedExtension, dy: 0),
+            expandedFrame: expandedFrame
+        )
     }
 }
 
