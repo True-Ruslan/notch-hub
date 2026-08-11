@@ -74,6 +74,18 @@ struct NotchPanelOwnershipTests {
         #expect(!controllerSource.contains("import NotchHubMediaCore"))
     }
 
+    @Test
+    func compactWingGeometryRemainsOwnedByPanelTransitionInput() throws {
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(controllerSource.contains("public func setCompactHorizontalExtension"))
+        #expect(controllerSource.contains("baseLayout.withCompactHorizontalExtension"))
+        #expect(controllerSource.contains("currentLayout"))
+        #expect(!controllerSource.contains("panel.setFrame("))
+    }
+
     private func sourceText(relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot =
