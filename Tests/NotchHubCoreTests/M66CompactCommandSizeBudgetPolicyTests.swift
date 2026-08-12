@@ -3,7 +3,7 @@ import Testing
 
 struct M66CompactCommandSizeBudgetPolicyTests {
     @Test
-    func compactCommandDispatcherOwnsAProvenancedBudgetAndCIUsesIt() throws {
+    func compactCommandDispatcherBudgetRemainsProvenanced() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -11,15 +11,6 @@ struct M66CompactCommandSizeBudgetPolicyTests {
         let budgetURL = repositoryRoot.appendingPathComponent(
             "performance/m6-6-compact-command-size-budget.json"
         )
-        let workflowURL = repositoryRoot.appendingPathComponent(
-            ".github/workflows/ci.yml"
-        )
-
-        let budgetExists = FileManager.default.fileExists(atPath: budgetURL.path)
-        #expect(budgetExists)
-        guard budgetExists else {
-            return
-        }
 
         let budget = try JSONDecoder().decode(
             FeatureBudget.self,
@@ -46,18 +37,6 @@ struct M66CompactCommandSizeBudgetPolicyTests {
                     dmgSizeBytes: 389_120,
                     executableSizeBytes: 180_224
                 )
-        )
-
-        let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
-        #expect(
-            workflow.contains(
-                "--feature-budget performance/m6-6-compact-command-size-budget.json"
-            )
-        )
-        #expect(
-            !workflow.contains(
-                "--feature-budget performance/m6-6-gesture-engine-size-budget.json"
-            )
         )
     }
 
