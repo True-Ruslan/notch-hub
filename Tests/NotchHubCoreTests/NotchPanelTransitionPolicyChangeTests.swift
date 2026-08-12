@@ -51,6 +51,52 @@ struct NotchPanelTransitionPolicyChangeTests {
     }
 
     @Test
+    func compactLayoutChangeRetargetsInFlightCollapseAndRejectsStaleCompletion() {
+        let model = NotchPanelModel()
+        let driver = PolicyChangeDriver()
+        var feedbackCount = 0
+        let coordinator = NotchPanelTransitionCoordinator(
+            model: model,
+            animationDuration: { 0.20 },
+            animate: { frame, radius, seconds, completion in
+                driver.animate(frame: frame, radius: radius, duration: seconds, completion: completion)
+            },
+            cancelAnimation: { driver.cancel() },
+            performExpansionHaptic: { feedbackCount += 1 }
+        )
+
+        coordinator.accept(.deliberateExpansion, layout: layout)
+        driver.complete(index: 0)
+        #expect(coordinator.phase.isExpanded)
+        #expect(feedbackCount == 1)
+
+        let retainedMediaLayout = layout.withCompactHorizontalExtension(36)
+        coordinator.accept(.pointerExitCollapse, layout: retainedMediaLayout)
+
+        #expect(driver.requests.count == 2)
+        #expect(driver.requests[1].frame == retainedMediaLayout.compactFrame)
+        #expect(driver.requests[1].duration == 0.20)
+        #expect(coordinator.phase.isCollapsing)
+
+        coordinator.animationPolicyDidChange(layout: layout)
+
+        #expect(driver.cancelCount == 1)
+        #expect(driver.requests.count == 3)
+        #expect(driver.requests[2].frame == layout.compactFrame)
+        #expect(driver.requests[2].duration == 0.20)
+        #expect(feedbackCount == 1)
+        #expect(coordinator.phase.isCollapsing)
+
+        driver.complete(index: 1)
+        #expect(coordinator.phase.isCollapsing)
+        #expect(model.contentPresentation == .expanded)
+
+        driver.complete(index: 2)
+        #expect(coordinator.phase.isCompact)
+        #expect(model.contentPresentation == .compact)
+    }
+
+    @Test
     func policyChangeAtStableEndpointStartsNoTransition() {
         let model = NotchPanelModel()
         let driver = PolicyChangeDriver()
@@ -87,6 +133,10 @@ private extension NotchPanelTransitionPhase {
 
     var isExpanded: Bool {
         if case .expanded = self { true } else { false }
+    }
+
+    var isCollapsing: Bool {
+        if case .collapsing = self { true } else { false }
     }
 }
 
