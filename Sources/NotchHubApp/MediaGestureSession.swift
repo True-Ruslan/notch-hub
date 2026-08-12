@@ -4,7 +4,7 @@ import NotchHubMediaCore
 
 @MainActor
 final class MediaGestureSession {
-    private enum ActivePanelInteraction {
+    private enum ActivePanelInteraction: Equatable {
         case expansion
         case collapse
     }
