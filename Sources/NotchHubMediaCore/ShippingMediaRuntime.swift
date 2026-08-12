@@ -72,6 +72,54 @@ struct ShippingMediaBundlePaths: Equatable, Sendable {
             adapterPatchSHA256: pinnedAdapterPatchSHA256
         )
     }
+
+    static func resolveValidated(
+        bundle: Bundle,
+        fileManager: FileManager = .default
+    ) throws -> Self {
+        let info = bundle.infoDictionary ?? [:]
+        let paths = try resolve(
+            bundleURL: bundle.bundleURL,
+            resourceURL: bundle.resourceURL,
+            sourceCommit: info["NHSourceCommit"] as? String,
+            adapterCommit: info["NHAdapterCommit"] as? String,
+            adapterPatchSHA256: info["NHAdapterPatchSHA256"] as? String
+        )
+
+        guard
+            isFile(paths.scriptURL, fileManager: fileManager),
+            isDirectory(paths.frameworkURL, fileManager: fileManager),
+            isFile(paths.licenseURL, fileManager: fileManager),
+            isFile(paths.provenanceURL, fileManager: fileManager)
+        else {
+            throw ShippingMediaBundleError.missingResources
+        }
+
+        let data = try Data(contentsOf: paths.provenanceURL, options: [.mappedIfSafe])
+        let provenance = try JSONDecoder().decode(ShippingMediaProvenance.self, from: data)
+        guard
+            provenance.schemaVersion == 1,
+            provenance.sourceCommit == paths.sourceCommit,
+            provenance.adapterCommit == paths.adapterCommit,
+            provenance.adapterPatchSHA256 == paths.adapterPatchSHA256
+        else {
+            throw ShippingMediaBundleError.invalidProvenance
+        }
+
+        return paths
+    }
+
+    private static func isFile(_ url: URL, fileManager: FileManager) -> Bool {
+        var isDirectory: ObjCBool = false
+        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
+            && !isDirectory.boolValue
+    }
+
+    private static func isDirectory(_ url: URL, fileManager: FileManager) -> Bool {
+        var isDirectory: ObjCBool = false
+        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
+    }
 }
 
 @MainActor
@@ -107,7 +155,12 @@ public final class ShippingMediaRuntime {
             return
         }
 
-        guard let paths = try? resolveValidatedPaths() else {
+        guard
+            let paths = try? ShippingMediaBundlePaths.resolveValidated(
+                bundle: bundle,
+                fileManager: fileManager
+            )
+        else {
             presentationModel.clear()
             return
         }
@@ -157,51 +210,6 @@ public final class ShippingMediaRuntime {
         Task {
             _ = await controller.send(command)
         }
-    }
-
-    private func resolveValidatedPaths() throws -> ShippingMediaBundlePaths {
-        let info = bundle.infoDictionary ?? [:]
-        let paths = try ShippingMediaBundlePaths.resolve(
-            bundleURL: bundle.bundleURL,
-            resourceURL: bundle.resourceURL,
-            sourceCommit: info["NHSourceCommit"] as? String,
-            adapterCommit: info["NHAdapterCommit"] as? String,
-            adapterPatchSHA256: info["NHAdapterPatchSHA256"] as? String
-        )
-
-        guard
-            isFile(paths.scriptURL),
-            isDirectory(paths.frameworkURL),
-            isFile(paths.licenseURL),
-            isFile(paths.provenanceURL)
-        else {
-            throw ShippingMediaBundleError.missingResources
-        }
-
-        let data = try Data(contentsOf: paths.provenanceURL, options: [.mappedIfSafe])
-        let provenance = try JSONDecoder().decode(ShippingMediaProvenance.self, from: data)
-        guard
-            provenance.schemaVersion == 1,
-            provenance.sourceCommit == paths.sourceCommit,
-            provenance.adapterCommit == paths.adapterCommit,
-            provenance.adapterPatchSHA256 == paths.adapterPatchSHA256
-        else {
-            throw ShippingMediaBundleError.invalidProvenance
-        }
-
-        return paths
-    }
-
-    private func isFile(_ url: URL) -> Bool {
-        var isDirectory: ObjCBool = false
-        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
-            && !isDirectory.boolValue
-    }
-
-    private func isDirectory(_ url: URL) -> Bool {
-        var isDirectory: ObjCBool = false
-        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
-            && isDirectory.boolValue
     }
 }
 

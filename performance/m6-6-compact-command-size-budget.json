@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 479232,
+    "dmgSizeBytes": 389120,
+    "executableSizeBytes": 180224
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9138085911,
+    "sourceCommit": "55f2ee429932b68ed7a02c3750cd28a28c9bd3d9",
+    "summary": {
+      "appSizeBytes": 745582,
+      "dmgSizeBytes": 475100,
+      "executableSizeBytes": 443376
+    },
+    "workflowRunId": 31588206985
+  },
+  "featureId": "m6.6-compact-command",
+  "schemaVersion": 1
+}

@@ -430,7 +430,54 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             ),
         )
 
-    def test_ci_uses_m6_6_gesture_engine_feature_budget_over_immutable_baseline(self):
+    def test_repository_m6_6_compact_command_budget_is_provenanced_tight_and_self_validating(self):
+        baseline = json.loads(
+            (REPOSITORY_ROOT / "performance" / "baseline-v0.1.0.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        feature_budget = json.loads(
+            (
+                REPOSITORY_ROOT
+                / "performance"
+                / "m6-6-compact-command-size-budget.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        self.assertEqual("m6.6-compact-command", feature_budget["featureId"])
+        self.assertEqual("v0.1.0", feature_budget["baselineId"])
+        self.assertEqual(
+            {
+                "appSizeBytes": 479232,
+                "dmgSizeBytes": 389120,
+                "executableSizeBytes": 180224,
+            },
+            feature_budget["allowanceBytes"],
+        )
+        self.assertEqual(
+            "55f2ee429932b68ed7a02c3750cd28a28c9bd3d9",
+            feature_budget["evidence"]["sourceCommit"],
+        )
+        self.assertEqual(31588206985, feature_budget["evidence"]["workflowRunId"])
+        self.assertEqual(9138085911, feature_budget["evidence"]["artifactId"])
+        self.assertEqual(
+            {
+                "appSizeBytes": 745582,
+                "dmgSizeBytes": 475100,
+                "executableSizeBytes": 443376,
+            },
+            feature_budget["evidence"]["summary"],
+        )
+        self.assertEqual(
+            [],
+            compare_size_summary_to_feature_budget(
+                feature_budget["evidence"]["summary"],
+                baseline,
+                feature_budget,
+            ),
+        )
+
+    def test_ci_uses_m6_6_compact_command_feature_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -438,6 +485,10 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
+            "--feature-budget performance/m6-6-compact-command-size-budget.json",
+            workflow,
+        )
+        self.assertNotIn(
             "--feature-budget performance/m6-6-gesture-engine-size-budget.json",
             workflow,
         )
