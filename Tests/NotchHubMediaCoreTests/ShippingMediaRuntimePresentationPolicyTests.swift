@@ -25,16 +25,19 @@ struct ShippingMediaRuntimePresentationPolicyTests {
     }
 
     @Test
-    func runtimeExposesOnlyTypedClickCommandsForThisSlice() throws {
+    func runtimeExposesOnlyTypedMediaCommandsIncludingValidatedSeek() throws {
         let source = try runtimeSource()
 
         #expect(source.contains("public func togglePlayPause()"))
         #expect(source.contains("public func goPrevious()"))
         #expect(source.contains("public func goNext()"))
+        #expect(source.contains("public func seek(to positionSeconds: Double)"))
+        #expect(source.contains("positionSeconds.isFinite"))
+        #expect(source.contains("positionSeconds >= 0"))
         #expect(source.contains("send(.togglePlayPause)"))
         #expect(source.contains("send(.previous)"))
         #expect(source.contains("send(.next)"))
-        #expect(!source.contains("public func seek"))
+        #expect(source.contains("send(.seek(seconds: positionSeconds))"))
     }
 
     @Test
