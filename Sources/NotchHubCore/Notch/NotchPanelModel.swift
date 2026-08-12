@@ -2,6 +2,7 @@ import SwiftUI
 
 public enum NotchPresentation: Equatable, Sendable {
     case compact
+    case peek
     case expanded
 }
 
