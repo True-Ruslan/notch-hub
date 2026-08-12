@@ -171,8 +171,16 @@ public final class ShippingMediaPresentationModel: ObservableObject {
         )
     }
 
-    func clear() {
+    public func applyOneShotPresentation(_ presentation: ShippingMediaPresentation) {
+        setPresentation(presentation)
+    }
+
+    public func clearAuthoritativePresentation() {
         setPresentation(nil)
+    }
+
+    func clear() {
+        clearAuthoritativePresentation()
     }
 
     private func setPresentation(_ newPresentation: ShippingMediaPresentation?) {
