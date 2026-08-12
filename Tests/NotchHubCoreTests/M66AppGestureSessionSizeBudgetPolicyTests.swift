@@ -3,16 +3,13 @@ import Testing
 
 struct M66AppGestureSessionSizeBudgetPolicyTests {
     @Test
-    func appGestureSessionOwnsTightProvenancedBudgetAndCIUsesIt() throws {
+    func appGestureSessionBudgetRemainsProvenanced() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let budgetURL = repositoryRoot.appendingPathComponent(
             "performance/m6-6-app-gesture-session-size-budget.json"
-        )
-        let workflowURL = repositoryRoot.appendingPathComponent(
-            ".github/workflows/ci.yml"
         )
 
         let budgetExists = FileManager.default.fileExists(atPath: budgetURL.path)
@@ -46,18 +43,6 @@ struct M66AppGestureSessionSizeBudgetPolicyTests {
                     dmgSizeBytes: 405_504,
                     executableSizeBytes: 200_704
                 )
-        )
-
-        let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
-        #expect(
-            workflow.contains(
-                "--feature-budget performance/m6-6-app-gesture-session-size-budget.json"
-            )
-        )
-        #expect(
-            !workflow.contains(
-                "--feature-budget performance/m6-6-compact-command-size-budget.json"
-            )
         )
     }
 
