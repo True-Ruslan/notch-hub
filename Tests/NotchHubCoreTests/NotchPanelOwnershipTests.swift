@@ -86,6 +86,27 @@ struct NotchPanelOwnershipTests {
         #expect(!controllerSource.contains("panel.setFrame("))
     }
 
+    @Test
+    func compactExtensionChangeRetargetsTransitionOnlyWhenEffectiveValueChanges() throws {
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(controllerSource.contains("let boundedExtension = max(0, extensionWidth)"))
+        #expect(
+            controllerSource.contains(
+                "guard boundedExtension != layoutState.compactHorizontalExtension else"
+            )
+        )
+        #expect(controllerSource.contains("layoutState.compactHorizontalExtension = boundedExtension"))
+        #expect(
+            controllerSource.contains(
+                "transitionCoordinator.animationPolicyDidChange(layout: layoutState.currentLayout)"
+            )
+        )
+        #expect(!controllerSource.contains("panel.setFrame("))
+    }
+
     private func sourceText(relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot =

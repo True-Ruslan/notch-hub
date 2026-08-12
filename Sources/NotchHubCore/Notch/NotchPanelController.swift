@@ -124,7 +124,13 @@ public final class NotchPanelController: NSObject {
     }
 
     public func setCompactHorizontalExtension(_ extensionWidth: CGFloat) {
-        layoutState.compactHorizontalExtension = max(0, extensionWidth)
+        let boundedExtension = max(0, extensionWidth)
+        guard boundedExtension != layoutState.compactHorizontalExtension else {
+            return
+        }
+
+        layoutState.compactHorizontalExtension = boundedExtension
+        transitionCoordinator.animationPolicyDidChange(layout: layoutState.currentLayout)
     }
 
     public func invalidate() {
