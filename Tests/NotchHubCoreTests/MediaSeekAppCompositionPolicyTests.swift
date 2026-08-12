@@ -80,7 +80,7 @@ struct MediaSeekAppCompositionPolicyTests {
         #expect(source.contains("mediaGestureSession?.cancelSeek()"))
         #expect(source.contains("case .expanded:"))
         #expect(source.contains("ShippingMediaRuntime(presentationModel: mediaPresentationModel)"))
-        #expect(source.contains("case .compact:"))
+        #expect(source.contains("case .compact, .peek:"))
         #expect(source.contains("mediaRuntime?.stop()"))
     }
 
