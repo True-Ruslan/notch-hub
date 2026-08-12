@@ -3,82 +3,95 @@ import Testing
 
 struct MediaSourceAppIconCompositionPolicyTests {
     @Test
-    func sourceIconResolverUsesOnlyPublicBoundedWorkspaceLookup() throws {
-        let source = try sourceText(
-            relativePath: "Sources/NotchHubApp/SourceApplicationIconResolver.swift"
-        )
-
-        #expect(source.contains("final class SourceApplicationIconResolver"))
-        #expect(source.contains("capacity: Int = 8"))
-        #expect(source.contains("urlForApplication("))
-        #expect(source.contains("withBundleIdentifier: bundleIdentifier"))
-        #expect(source.contains("workspace.icon(forFile:"))
-        #expect(source.contains("private var cache:"))
-        #expect(source.contains("private var cacheOrder:"))
-        #expect(source.contains("func icon(for bundleIdentifier: String?) -> NSImage?"))
-        #expect(!source.contains("FileManager"))
-        #expect(!source.contains("Timer"))
-        #expect(!source.contains("URLSession"))
-        #expect(!source.contains("Process("))
-        #expect(!source.contains("MediaRemote"))
-    }
-
-    @Test
-    func appOwnsResolverAndMediaViewRefreshesIconOnlyWhenSourceIdentityChanges() throws {
+    func appOwnsPublicWorkspaceResolverAndInjectsItIntoMediaRoot() throws {
         let appSource = try sourceText(
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
-        let viewSource = try sourceText(
-            relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
+        let resolverSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/SourceApplicationIconResolver.swift"
         )
 
         #expect(appSource.contains("private let sourceApplicationIconResolver = SourceApplicationIconResolver()"))
         #expect(appSource.contains("sourceApplicationIconResolver: sourceApplicationIconResolver"))
-        #expect(viewSource.contains("private let sourceApplicationIconResolver: SourceApplicationIconResolver"))
-        #expect(viewSource.contains("@State private var sourceApplicationIcon: NSImage?"))
-        #expect(viewSource.contains(".onChange(of: presentation.sourceBundleIdentifier"))
-        #expect(viewSource.contains("sourceApplicationIconResolver.icon(for:"))
+        #expect(resolverSource.contains("NSWorkspace"))
+        #expect(resolverSource.contains("urlForApplication(withBundleIdentifier:"))
+        #expect(resolverSource.contains("icon(forFile:"))
+        #expect(resolverSource.contains("capacity: Int = 8"))
+        #expect(resolverSource.contains("entries.count >= capacity"))
+        #expect(!resolverSource.contains("FileManager"))
+        #expect(!resolverSource.contains("Timer("))
+        #expect(!resolverSource.contains("Task {"))
+        #expect(!resolverSource.contains("URLSession"))
+        #expect(!resolverSource.contains("UserDefaults"))
     }
 
     @Test
-    func expandedMediaUsesIconBadgeInsteadOfPersistentVisualSourceText() throws {
+    func expandedMediaUsesIconBadgeAndRemovesPersistentSourceTextChrome() throws {
+        let source = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
+        )
+        let expandedSection = try sourceSection(
+            source,
+            from: "private func expandedMediaContent",
+            to: "private func seekProgress"
+        )
+
+        #expect(expandedSection.contains("artworkWithSourceBadge"))
+        #expect(!expandedSection.contains("sourceDisplayName"))
+        #expect(!expandedSection.contains("sourceBundleIdentifier"))
+        #expect(!expandedSection.contains("Text(presentation.source"))
+        #expect(source.contains("private func sourceApplicationBadge"))
+        #expect(source.contains("Image(systemName: \"app\")"))
+        #expect(source.contains(".frame(width: 24, height: 24)"))
+    }
+
+    @Test
+    func peekMediaDoesNotGainSourceIconOrTransportChrome() throws {
+        let source = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
+        )
+        let peekSection = try sourceSection(
+            source,
+            from: "private func peekMediaContent",
+            to: "private func expandedMediaContent"
+        )
+
+        #expect(!peekSection.contains("sourceApplicationBadge"))
+        #expect(!peekSection.contains("sourceDisplayName"))
+        #expect(!peekSection.contains("Button(action: onPrevious)"))
+        #expect(!peekSection.contains("Button(action: onNext)"))
+        #expect(!peekSection.contains("Button(action: onTogglePlayPause)"))
+    }
+
+    @Test
+    func sourceIdentityRemainsAvailableForAccessibilityWhenTextChromeIsAbsent() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
         )
 
-        #expect(source.contains("sourceApplicationBadge("))
-        #expect(source.contains(".overlay(alignment: .bottomTrailing)"))
-        #expect(source.contains(".frame(width: 24, height: 24)"))
-        #expect(source.contains("Image(systemName: \"app\")"))
         #expect(source.contains(".accessibilityLabel(Text(presentation.sourceDisplayName))"))
-        #expect(!hasStandaloneSourceDisplayNameText(in: source))
-
-        #expect(source.contains("artwork(presentation, size: 24)"))
-        #expect(source.contains("artworkWithSourceBadge(presentation, size: 92)"))
     }
 
     @Test
-    func sourceIconImplementationContainsNoExternalCopiedImplementationMarkers() throws {
-        let resolver = try sourceText(
-            relativePath: "Sources/NotchHubApp/SourceApplicationIconResolver.swift"
-        )
-        let view = try sourceText(
+    func resolverLookupIsRestrictedToExpandedPresentation() throws {
+        let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
         )
-        let combined = resolver + view
 
-        #expect(!combined.contains("TheBoringNotch"))
-        #expect(!combined.contains("BoringNotch"))
-        #expect(!combined.contains("boringNotch"))
-        #expect(!combined.contains("MusicManager.shared"))
-        #expect(!combined.contains("AppIcon(for:"))
+        #expect(source.contains(".onChange(of: presentation.sourceBundleIdentifier, initial: true)"))
+        #expect(source.contains("if panelModel.contentPresentation == .expanded"))
+        #expect(source.contains("sourceApplicationIconResolver.icon(for: bundleIdentifier)"))
+        #expect(source.contains(".onChange(of: panelModel.contentPresentation)"))
     }
 
-    private func hasStandaloneSourceDisplayNameText(in source: String) -> Bool {
-        source.split(separator: "\n").contains { line in
-            line.trimmingCharacters(in: .whitespaces)
-                == "Text(presentation.sourceDisplayName)"
-        }
+    private func sourceSection(
+        _ source: String,
+        from startMarker: String,
+        to endMarker: String
+    ) throws -> String {
+        let start = try #require(source.range(of: startMarker))
+        let end = try #require(source.range(of: endMarker, range: start.upperBound..<source.endIndex))
+        return String(source[start.lowerBound..<end.lowerBound])
     }
 
     private func sourceText(relativePath: String) throws -> String {
