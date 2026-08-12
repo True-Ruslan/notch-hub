@@ -9,6 +9,8 @@ struct MediaNotchRootView: View {
     @ObservedObject private var mediaModel: ShippingMediaPresentationModel
     @ObservedObject private var mediaGestureVisualModel: MediaGestureVisualModel
     @State private var sourceApplicationIcon: NSImage?
+    @State private var seekPreviewSeconds: Double?
+    @State private var isSeekDragging = false
 
     private let sourceApplicationIconResolver: SourceApplicationIconResolver
     private let hardwareNotchWidth: CGFloat
@@ -17,6 +19,9 @@ struct MediaNotchRootView: View {
     private let onTogglePlayPause: () -> Void
     private let onPrevious: () -> Void
     private let onNext: () -> Void
+    private let onSeekBegan: () -> Bool
+    private let onSeekCommitted: (Double) -> Void
+    private let onSeekCancelled: () -> Void
 
     init(
         panelModel: NotchPanelModel,
@@ -28,7 +33,10 @@ struct MediaNotchRootView: View {
         expandedContentTopInset: CGFloat,
         onTogglePlayPause: @escaping () -> Void,
         onPrevious: @escaping () -> Void,
-        onNext: @escaping () -> Void
+        onNext: @escaping () -> Void,
+        onSeekBegan: @escaping () -> Bool,
+        onSeekCommitted: @escaping (Double) -> Void,
+        onSeekCancelled: @escaping () -> Void
     ) {
         self.panelModel = panelModel
         self.mediaModel = mediaModel
@@ -40,6 +48,9 @@ struct MediaNotchRootView: View {
         self.onTogglePlayPause = onTogglePlayPause
         self.onPrevious = onPrevious
         self.onNext = onNext
+        self.onSeekBegan = onSeekBegan
+        self.onSeekCommitted = onSeekCommitted
+        self.onSeekCancelled = onSeekCancelled
     }
 
     var body: some View {
@@ -53,6 +64,9 @@ struct MediaNotchRootView: View {
                     expandedContentTopInset: expandedContentTopInset
                 )
             }
+        }
+        .onDisappear {
+            cancelSeekPreview()
         }
     }
 
@@ -72,6 +86,11 @@ struct MediaNotchRootView: View {
         .contentShape(Rectangle())
         .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
             sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
+        }
+        .onChange(of: presentation.canSeek) { _, canSeek in
+            if !canSeek {
+                cancelSeekPreview()
+            }
         }
     }
 
@@ -127,9 +146,11 @@ struct MediaNotchRootView: View {
             if let position = presentation.positionSeconds,
                 let duration = presentation.durationSeconds
             {
-                ProgressView(value: position, total: duration)
-                    .progressViewStyle(.linear)
-                    .tint(.white.opacity(0.85))
+                seekProgress(
+                    position: position,
+                    duration: duration,
+                    canSeek: presentation.canSeek
+                )
             }
 
             HStack(spacing: 28) {
@@ -165,6 +186,89 @@ struct MediaNotchRootView: View {
         .padding(.horizontal, 24)
         .padding(.bottom, 18)
         .padding(.top, expandedContentTopInset)
+    }
+
+    private func seekProgress(
+        position: Double,
+        duration: Double,
+        canSeek: Bool
+    ) -> some View {
+        GeometryReader { geometry in
+            ProgressView(
+                value: seekPreviewSeconds ?? position,
+                total: duration
+            )
+            .progressViewStyle(.linear)
+            .tint(.white.opacity(0.85))
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard canSeek else {
+                            cancelSeekPreview()
+                            return
+                        }
+
+                        if !isSeekDragging {
+                            guard onSeekBegan() else {
+                                return
+                            }
+                            isSeekDragging = true
+                        }
+
+                        seekPreviewSeconds = seekPosition(
+                            locationX: value.location.x,
+                            width: geometry.size.width,
+                            duration: duration
+                        )
+                    }
+                    .onEnded { value in
+                        guard isSeekDragging else {
+                            return
+                        }
+
+                        let positionSeconds = seekPosition(
+                            locationX: value.location.x,
+                            width: geometry.size.width,
+                            duration: duration
+                        )
+                        isSeekDragging = false
+                        seekPreviewSeconds = nil
+                        onSeekCommitted(positionSeconds)
+                    }
+            )
+        }
+        .frame(height: 8)
+        .opacity(canSeek ? 1 : 0.55)
+    }
+
+    private func seekPosition(
+        locationX: CGFloat,
+        width: CGFloat,
+        duration: Double
+    ) -> Double {
+        guard
+            locationX.isFinite,
+            width.isFinite,
+            width > 0,
+            duration.isFinite,
+            duration > 0
+        else {
+            return 0
+        }
+
+        let clampedX = min(max(0, locationX), width)
+        return Double(clampedX / width) * duration
+    }
+
+    private func cancelSeekPreview() {
+        guard isSeekDragging || seekPreviewSeconds != nil else {
+            return
+        }
+
+        isSeekDragging = false
+        seekPreviewSeconds = nil
+        onSeekCancelled()
     }
 
     private func artworkWithSourceBadge(

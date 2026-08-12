@@ -202,6 +202,14 @@ public final class ShippingMediaRuntime {
         send(.next)
     }
 
+    public func seek(to positionSeconds: Double) {
+        guard positionSeconds.isFinite, positionSeconds >= 0 else {
+            return
+        }
+
+        send(.seek(seconds: positionSeconds))
+    }
+
     private func send(_ command: MediaCommand) {
         guard let controller else {
             return

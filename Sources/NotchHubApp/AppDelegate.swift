@@ -51,6 +51,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     },
                     onNext: { [weak self] in
                         self?.mediaRuntime?.goNext()
+                    },
+                    onSeekBegan: { [weak mediaGestureSession] in
+                        mediaGestureSession?.beginSeek() ?? false
+                    },
+                    onSeekCommitted: { [weak mediaGestureSession] positionSeconds in
+                        mediaGestureSession?.commitSeek(to: positionSeconds)
+                    },
+                    onSeekCancelled: { [weak mediaGestureSession] in
+                        mediaGestureSession?.cancelSeek()
                     }
                 ),
                 onScrollWheel: { [weak mediaGestureSession] event in

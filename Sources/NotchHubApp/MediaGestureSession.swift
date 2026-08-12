@@ -22,6 +22,7 @@ final class MediaGestureSession {
     private var activeSurface: MediaGestureSurface?
     private var activePanelInteraction: ActivePanelInteraction?
     private var compactCapabilityTask: Task<Void, Never>?
+    private var isSeekActive = false
     private var isInvalidated = false
 
     init(
@@ -87,7 +88,7 @@ final class MediaGestureSession {
             surface: surface,
             previous: capabilities.previous,
             next: capabilities.next,
-            seekActive: false
+            seekActive: isSeekActive
         )
         let panelCommit = handleEffects(effects, surface: surface)
 
@@ -107,12 +108,67 @@ final class MediaGestureSession {
         }
     }
 
+    func beginSeek() -> Bool {
+        guard
+            !isInvalidated,
+            !isSeekActive,
+            let panelModel,
+            panelModel.contentPresentation == .expanded,
+            let presentation = presentationProvider(),
+            presentation.canSeek,
+            runtimeProvider() != nil
+        else {
+            return false
+        }
+
+        compactCapabilityTask?.cancel()
+        compactCapabilityTask = nil
+        finishPanelInteraction(commit: false)
+        activeSurface = nil
+        _ = coordinator.invalidate()
+        visualModel.reset()
+        isSeekActive = true
+        return true
+    }
+
+    func commitSeek(to positionSeconds: Double) {
+        guard isSeekActive else {
+            return
+        }
+        defer {
+            finishSeekIsolation()
+        }
+
+        guard
+            positionSeconds.isFinite,
+            positionSeconds >= 0,
+            let panelModel,
+            panelModel.contentPresentation == .expanded,
+            let presentation = presentationProvider(),
+            presentation.canSeek,
+            let runtime = runtimeProvider()
+        else {
+            return
+        }
+
+        runtime.seek(to: positionSeconds)
+    }
+
+    func cancelSeek() {
+        guard isSeekActive else {
+            return
+        }
+
+        finishSeekIsolation()
+    }
+
     func invalidate() {
         guard !isInvalidated else {
             return
         }
 
         isInvalidated = true
+        isSeekActive = false
         compactCapabilityTask?.cancel()
         compactCapabilityTask = nil
         _ = coordinator.invalidate()
@@ -145,6 +201,16 @@ final class MediaGestureSession {
         case .expanded:
             activeSurface = .expanded
         }
+    }
+
+    private func finishSeekIsolation() {
+        isSeekActive = false
+        compactCapabilityTask?.cancel()
+        compactCapabilityTask = nil
+        finishPanelInteraction(commit: false)
+        activeSurface = nil
+        _ = coordinator.invalidate()
+        visualModel.reset()
     }
 
     private func handleEffects(
