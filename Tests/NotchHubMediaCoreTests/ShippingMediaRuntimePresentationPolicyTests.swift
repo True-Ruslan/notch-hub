@@ -9,10 +9,14 @@ struct ShippingMediaRuntimePresentationPolicyTests {
         #expect(source.contains("private let presentationModel: ShippingMediaPresentationModel"))
         #expect(source.contains("public convenience init(presentationModel: ShippingMediaPresentationModel)"))
         #expect(source.contains("controller.changeHandler ="))
+        #expect(source.contains("switch controller.lastChangeKind"))
+        #expect(source.contains("case .ready:"))
+        #expect(source.contains("case .session:"))
         #expect(source.contains("presentationModel.apply("))
         #expect(source.contains("state: controller.state"))
         #expect(source.contains("snapshot: controller.snapshot"))
-        #expect(source.contains("presentationModel.clear()"))
+        #expect(source.contains("case .noSession, .unavailable:"))
+        #expect(source.contains("presentationModel.clearAuthoritativePresentation()"))
     }
 
     @Test
