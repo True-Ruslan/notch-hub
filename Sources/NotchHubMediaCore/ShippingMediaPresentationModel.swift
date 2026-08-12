@@ -6,6 +6,32 @@ public enum ShippingMediaPlaybackState: Sendable, Equatable {
     case playing
 }
 
+public struct ShippingMediaSessionIdentity: Sendable, Equatable {
+    public let generation: UInt64
+    public let sourceBundleIdentifier: String
+
+    public init(generation: UInt64, sourceBundleIdentifier: String) {
+        self.generation = generation
+        self.sourceBundleIdentifier = sourceBundleIdentifier
+    }
+}
+
+public struct ShippingMediaSeekTransaction: Sendable, Equatable {
+    public let sessionIdentity: ShippingMediaSessionIdentity
+
+    public init?(presentation: ShippingMediaPresentation) {
+        guard presentation.canSeek, let sessionIdentity = presentation.sessionIdentity else {
+            return nil
+        }
+
+        self.sessionIdentity = sessionIdentity
+    }
+
+    public func accepts(_ presentation: ShippingMediaPresentation) -> Bool {
+        presentation.canSeek && presentation.sessionIdentity == sessionIdentity
+    }
+}
+
 public struct ShippingMediaPresentation: Sendable, Equatable {
     public let playbackState: ShippingMediaPlaybackState
     public let title: String?
@@ -19,6 +45,7 @@ public struct ShippingMediaPresentation: Sendable, Equatable {
     public let canSeek: Bool
     public let positionSeconds: Double?
     public let durationSeconds: Double?
+    public let sessionIdentity: ShippingMediaSessionIdentity?
 
     public init(
         playbackState: ShippingMediaPlaybackState,
@@ -32,7 +59,8 @@ public struct ShippingMediaPresentation: Sendable, Equatable {
         canGoNext: Bool,
         canSeek: Bool,
         positionSeconds: Double?,
-        durationSeconds: Double?
+        durationSeconds: Double?,
+        sessionIdentity: ShippingMediaSessionIdentity? = nil
     ) {
         self.playbackState = playbackState
         self.title = title
@@ -46,6 +74,7 @@ public struct ShippingMediaPresentation: Sendable, Equatable {
         self.canSeek = canSeek
         self.positionSeconds = positionSeconds
         self.durationSeconds = durationSeconds
+        self.sessionIdentity = sessionIdentity
     }
 }
 
@@ -78,6 +107,12 @@ public final class ShippingMediaPresentationModel: ObservableObject {
             durationSeconds: snapshot.durationSeconds
         )
         let sourceBundleIdentifier = Self.normalizedText(snapshot.source.bundleIdentifier)
+        let sessionIdentity = sourceBundleIdentifier.map {
+            ShippingMediaSessionIdentity(
+                generation: snapshot.sequence.generation,
+                sourceBundleIdentifier: $0
+            )
+        }
 
         setPresentation(
             ShippingMediaPresentation(
@@ -94,7 +129,8 @@ public final class ShippingMediaPresentationModel: ObservableObject {
                 canGoNext: snapshot.capabilities.next == .supported,
                 canSeek: snapshot.capabilities.seek == .supported,
                 positionSeconds: progress.position,
-                durationSeconds: progress.duration
+                durationSeconds: progress.duration,
+                sessionIdentity: sessionIdentity
             )
         )
     }

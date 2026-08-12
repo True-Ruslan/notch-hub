@@ -22,7 +22,7 @@ final class MediaGestureSession {
     private var activeSurface: MediaGestureSurface?
     private var activePanelInteraction: ActivePanelInteraction?
     private var compactCapabilityTask: Task<Void, Never>?
-    private var isSeekActive = false
+    private var activeSeekTransaction: ShippingMediaSeekTransaction?
     private var isInvalidated = false
 
     init(
@@ -59,6 +59,10 @@ final class MediaGestureSession {
             event.hasPreciseScrollingDeltas,
             event.momentumPhase.isEmpty
         else {
+            return
+        }
+
+        guard activeSeekTransaction == nil else {
             return
         }
 
@@ -99,7 +103,7 @@ final class MediaGestureSession {
             surface: surface,
             previous: capabilities.previous,
             next: capabilities.next,
-            seekActive: isSeekActive
+            seekActive: activeSeekTransaction != nil
         )
         let panelCommit = handleEffects(effects, surface: surface)
 
@@ -122,11 +126,11 @@ final class MediaGestureSession {
     func beginSeek() -> Bool {
         guard
             !isInvalidated,
-            !isSeekActive,
+            activeSeekTransaction == nil,
             let panelModel,
             panelModel.contentPresentation == .expanded,
             let presentation = presentationProvider(),
-            presentation.canSeek,
+            let transaction = ShippingMediaSeekTransaction(presentation: presentation),
             runtimeProvider() != nil
         else {
             return false
@@ -138,12 +142,12 @@ final class MediaGestureSession {
         activeSurface = nil
         _ = coordinator.invalidate()
         visualModel.reset()
-        isSeekActive = true
+        activeSeekTransaction = transaction
         return true
     }
 
     func commitSeek(to positionSeconds: Double) {
-        guard isSeekActive else {
+        guard let transaction = activeSeekTransaction else {
             return
         }
         defer {
@@ -156,7 +160,7 @@ final class MediaGestureSession {
             let panelModel,
             panelModel.contentPresentation == .expanded,
             let presentation = presentationProvider(),
-            presentation.canSeek,
+            transaction.accepts(presentation),
             let runtime = runtimeProvider()
         else {
             return
@@ -166,7 +170,7 @@ final class MediaGestureSession {
     }
 
     func cancelSeek() {
-        guard isSeekActive else {
+        guard activeSeekTransaction != nil else {
             return
         }
 
@@ -179,7 +183,7 @@ final class MediaGestureSession {
         }
 
         isInvalidated = true
-        isSeekActive = false
+        activeSeekTransaction = nil
         compactCapabilityTask?.cancel()
         compactCapabilityTask = nil
         _ = coordinator.invalidate()
@@ -215,7 +219,7 @@ final class MediaGestureSession {
     }
 
     private func finishSeekIsolation() {
-        isSeekActive = false
+        activeSeekTransaction = nil
         compactCapabilityTask?.cancel()
         compactCapabilityTask = nil
         finishPanelInteraction(commit: false)

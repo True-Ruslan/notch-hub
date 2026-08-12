@@ -111,6 +111,9 @@ struct MediaNotchRootView: View {
         .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
             sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
         }
+        .onChange(of: presentation.sessionIdentity) { _, _ in
+            cancelSeekPreview()
+        }
     }
 
     private func compactMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
