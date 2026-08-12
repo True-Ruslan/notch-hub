@@ -417,7 +417,26 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_app_gesture_session_feature_budget_over_immutable_baseline(self):
+    def test_repository_m6_6_source_app_icon_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-source-app-icon-size-budget.json",
+            feature_id="m6.6-source-app-icon",
+            source_commit="066b8264f53c1dc1afe01fe8a120bb8ab9509102",
+            workflow_run_id=31601331136,
+            artifact_id=9143349824,
+            summary={
+                "appSizeBytes": 782414,
+                "dmgSizeBytes": 506515,
+                "executableSizeBytes": 480208,
+            },
+            allowance={
+                "appSizeBytes": 518144,
+                "dmgSizeBytes": 421888,
+                "executableSizeBytes": 219136,
+            },
+        )
+
+    def test_ci_uses_source_app_icon_feature_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -425,10 +444,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-app-gesture-session-size-budget.json",
+            "--feature-budget performance/m6-6-source-app-icon-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-6-app-gesture-session-size-budget.json",
             "m6-6-compact-command-size-budget.json",
             "m6-6-gesture-engine-size-budget.json",
             "m6-6-one-shot-lifecycle-size-budget.json",
