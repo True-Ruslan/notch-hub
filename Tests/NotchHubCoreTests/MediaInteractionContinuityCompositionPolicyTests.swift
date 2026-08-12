@@ -48,7 +48,6 @@ struct MediaInteractionContinuityCompositionPolicyTests {
 
     @Test
     func horizontalVisualResetUsesBoundedAnimationOnlyForSemanticReset() throws {
-        sourceText(relativePath: "Sources/NotchHubApp/MediaGestureVisualModel.swift")
         let sessionSource = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
