@@ -151,18 +151,26 @@ public final class NotchPanelController: NSObject {
 
     @discardableResult
     public func beginInteractiveExpansion() -> Bool {
-        transitionCoordinator.beginInteractiveTransition(
+        let didBegin = transitionCoordinator.beginInteractiveTransition(
             from: .compact,
             layout: layoutState.currentLayout
         )
+        if didBegin {
+            interactionCoordinator.cancelPendingActivationForInteractiveTransition()
+        }
+        return didBegin
     }
 
     @discardableResult
     public func beginInteractiveCollapse() -> Bool {
-        transitionCoordinator.beginInteractiveTransition(
+        let didBegin = transitionCoordinator.beginInteractiveTransition(
             from: .expanded,
             layout: layoutState.currentLayout
         )
+        if didBegin {
+            interactionCoordinator.cancelPendingActivationForInteractiveTransition()
+        }
+        return didBegin
     }
 
     public func updateInteractiveTransition(verticalDistance: CGFloat) {
