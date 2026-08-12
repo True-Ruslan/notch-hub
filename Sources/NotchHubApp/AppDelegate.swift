@@ -123,7 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.mediaRuntime = mediaRuntime
             mediaRuntime.start()
 
-        case .compact:
+        case .compact, .peek:
             mediaRuntime?.stop()
             mediaRuntime = nil
         }
