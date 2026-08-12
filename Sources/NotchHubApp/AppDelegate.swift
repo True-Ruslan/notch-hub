@@ -111,6 +111,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panelController.show()
     }
 
+    func applicationDidResignActive(_: Notification) {
+        mediaGestureSession?.cancelSeek()
+    }
+
     func applicationWillTerminate(_: Notification) {
         panelController?.settledPresentationHandler = nil
         panelController?.hoverPeekRequestHandler = nil
