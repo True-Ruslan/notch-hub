@@ -149,6 +149,10 @@ public final class NotchPanelController: NSObject {
         transitionCoordinator.requestProgrammaticCollapse(layout: layoutState.currentLayout)
     }
 
+    public func cancelPendingHoverActivation() {
+        interactionCoordinator.cancelPendingActivationForInteractiveTransition()
+    }
+
     @discardableResult
     public func beginInteractiveExpansion() -> Bool {
         let didBegin = transitionCoordinator.beginInteractiveTransition(

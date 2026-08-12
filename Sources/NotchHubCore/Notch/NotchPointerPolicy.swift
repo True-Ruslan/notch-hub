@@ -10,7 +10,7 @@ public enum NotchPointerPolicy {
     ) -> NotchPresentation {
         switch current {
         case .compact:
-            let frame = layout.compactFrame
+            let frame = compactActivationFrame(for: layout)
             let isInsideActivationRegion =
                 pointer.x >= frame.minX + activationInset
                 && pointer.x <= frame.maxX - activationInset
@@ -25,5 +25,19 @@ public enum NotchPointerPolicy {
             )
             return activeFrame.contains(pointer) ? .expanded : .compact
         }
+    }
+
+    private static func compactActivationFrame(for layout: NotchLayout) -> CGRect {
+        guard layout.hasHardwareNotch, layout.hardwareNotchWidth > 0 else {
+            return layout.compactFrame
+        }
+
+        let activationWidth = min(layout.compactFrame.width, layout.hardwareNotchWidth)
+        return CGRect(
+            x: layout.compactFrame.midX - (activationWidth / 2),
+            y: layout.compactFrame.minY,
+            width: activationWidth,
+            height: layout.compactFrame.height
+        )
     }
 }

@@ -57,13 +57,22 @@ final class MediaGestureSession {
         guard
             !isInvalidated,
             event.hasPreciseScrollingDeltas,
-            event.momentumPhase.isEmpty,
-            let phase = Self.gesturePhase(for: event.phase)
+            event.momentumPhase.isEmpty
         else {
             return
         }
 
+        if event.phase.contains(.mayBegin) {
+            panelController?.cancelPendingHoverActivation()
+            return
+        }
+
+        guard let phase = Self.gesturePhase(for: event.phase) else {
+            return
+        }
+
         if phase == .began {
+            panelController?.cancelPendingHoverActivation()
             beginPhysicalGesture()
         }
 
