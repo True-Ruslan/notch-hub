@@ -211,7 +211,7 @@ final class MediaGestureSession {
         }
 
         switch panelModel.contentPresentation {
-        case .compact:
+        case .compact, .peek:
             activeSurface = .compact
         case .expanded:
             activeSurface = .expanded
