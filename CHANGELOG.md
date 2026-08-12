@@ -10,6 +10,8 @@ The current published release remains `v0.1.0`; everything below is source work 
 
 ### Added
 
+- **M6.6 gesture/haptic/seek acceptance contract** with stable `NH-MEDIA-GESTURE-001...018` gates and a TDD implementation plan.
+- M6.6 compact-command design delta: bounded current-system one-shot capability validation before compact arming, preserving zero persistent observation while compact.
 - **M6.5 Media-first UI**: compact retained media context and expanded Media-first presentation driven by authoritative macOS Now Playing state.
 - App-owned `ShippingMediaPresentationModel` that projects normalized media state into UI-only data without leaking transport/private-command details into SwiftUI.
 - Expanded artwork/title/artist/album/source presentation with capability-driven previous/play-pause/next controls and trustworthy static progress.
@@ -29,12 +31,15 @@ The current published release remains `v0.1.0`; everything below is source work 
 
 ### Changed
 
+- **M6.6 Task 0 is accepted and merged.** Issue #20 was fixed on exact physically accepted source `0d40391721ae934653a9c75fc981dd683121cf46` and squash-merged via PR #22 as `f017addd2efc9aed5b60b1556205bdb8eab23e0e`.
+- M6.6 implementation now starts with explicit ownership/cancellation of all in-flight media one-shot processes before compact gestures increase one-shot usage.
+- The frozen compact gesture contract does not keep `ShippingMediaRuntime` alive in compact mode and does not add global scroll observation; compact capability/command operations are bounded uses of the existing fixed media process boundary only.
 - **M6.5 is accepted on `Mac16,8` / macOS 26.6.** All `NH-MEDIA-UI-001...011` gates pass on frozen physical source `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`.
 - Cold/no-media compact remains exact-notch and zero-adapter. After a real expanded media session, normal collapse retains the last authoritative visual context in 36 pt side wings while the media runtime is stopped/released.
 - Media disappearance while expanded now returns to the existing Home surface without collapsing the panel.
 - Fresh expanded runtime events replace retained compact context without comparing raw media sequence numbers across runtime lifetimes; ordering remains `MediaSessionController` responsibility.
 - Previous/next availability is strictly capability-driven; missing metadata/capability state is not fabricated.
-- Progress remains event-driven/static in M6.5; draggable seek, gesture handling, media haptics and live compact observation remain separate later work.
+- Progress remains event-driven/static in M6.5; draggable seek, gesture handling and media haptics remain M6.6 work.
 - The first complete M6.5 UI candidate measured `412,992 / 715,198 / 465,177 B` executable/app/DMG. Reusing the existing Home/Foundation view instead of duplicating it reduced the accepted implementation to `397,408 / 699,614 / 461,740 B` on the frozen physical candidate.
 - The immutable P0 artifact baseline and historical M6.4 budget remain unchanged. M6.5 growth is represented by a separate provenance-backed feature envelope; no runtime CPU/RSS/thread budget was widened.
 - **M6.4 shipping media composition remains accepted.** All `NH-MEDIA-SHIP-001...010` gates passed on frozen source `fdbe987d8f22768b2a75406c8f1e721fa1da2845` and PR #17 was merged as `4ba603e1c3564d6cdf58169a7936f1954dee2ffd`.
@@ -45,6 +50,7 @@ The current published release remains `v0.1.0`; everything below is source work 
 
 ### Fixed
 
+- M6.6 Task 0 now retargets an in-flight collapse when compact extension changes, so media disappearance during collapse settles at the exact ordinary hardware-notch frame instead of stale empty media wings; stale completion cannot win and no second haptic is emitted.
 - Media UI no longer attempts to place compact artwork/status inside the physically occluded camera-housing width; retained media uses side wings while ordinary compact remains exact-notch.
 - M6.5 no longer duplicates the existing Home/Foundation SwiftUI hierarchy inside the media root, reducing the shipping payload without changing behavior.
 - Media presentation teardown detaches the UI callback before controller stop so ordinary compact teardown preserves retained visual context without keeping the adapter alive.
@@ -57,6 +63,7 @@ The current published release remains `v0.1.0`; everything below is source work 
 
 ### Testing
 
+- M6.6 Task 0 TDD: RED source `785c48d8cc6831f4196cfa7c78843b826acb9a07`, CI #775 / run `31567022553`; GREEN/physical source `0d40391721ae934653a9c75fc981dd683121cf46`, CI #776 / run `31567162859`, 196 Swift tests / 39 suites PASS; target-Mac focused matrix PASS; PR #22 merge `f017addd2efc9aed5b60b1556205bdb8eab23e0e`; post-merge main CI #777 / run `31572634042` PASS in both required jobs.
 - M6.5 TDD cycles: Core content seam RED #736 -> GREEN #738; media presentation RED #740 -> GREEN #741; runtime presentation/typed commands RED #742 -> GREEN #743; App/UI composition RED #745 -> GREEN; feature-size policy RED #760 -> GREEN #762.
 - Frozen M6.5 physical candidate `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`: CI #763 / run `31539442148`, 194 Swift tests PASS, shipping artifact ID `9120231721`, Actions digest `sha256:0d18a0c9ce5305b90808f0937531211094b85947ce96b2afd0a2c4020e4e7007`, contained DMG SHA-256 `3993330bf57ac86ead949215ba5370a0a33ec6b8f6a17f1d65baa30c41f5f6ad`.
 - The first #763 attempt failed only while cloning the pinned external adapter because the GitHub-hosted runner reported a self-signed-certificate TLS error; warnings-as-errors build and all Swift tests had already passed. Retrying failed/dependent jobs on the exact same source passed the complete pipeline without weakening TLS/security policy.
@@ -67,6 +74,8 @@ The current published release remains `v0.1.0`; everything below is source work 
 
 ### Security
 
+- M6.6 Task 0 changed transition routing only and did not widen runtime authority.
+- The frozen M6.6 gesture design explicitly prohibits global scroll capture, synthetic keys and new sensitive permissions; compact one-shot validation/commands must use the same fixed pinned `/usr/bin/perl` boundary and return to zero process ownership.
 - M6.5 adds UI/presentation behavior only and does not widen runtime authority.
 - App Sandbox remains the only application entitlement and Hardened Runtime remains mandatory.
 - The sole production process exception remains the fixed `/usr/bin/perl` Universal Media boundary with pinned resources and a closed typed command surface.
