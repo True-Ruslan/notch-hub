@@ -10,7 +10,8 @@ struct MediaSourceAppIconCompositionPolicyTests {
 
         #expect(source.contains("final class SourceApplicationIconResolver"))
         #expect(source.contains("capacity: Int = 8"))
-        #expect(source.contains("urlForApplication(withBundleIdentifier:"))
+        #expect(source.contains("urlForApplication("))
+        #expect(source.contains("withBundleIdentifier: bundleIdentifier"))
         #expect(source.contains("workspace.icon(forFile:"))
         #expect(source.contains("private var cache:"))
         #expect(source.contains("private var cacheOrder:"))
