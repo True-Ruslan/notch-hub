@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mediaRuntime: ShippingMediaRuntime?
     private let mediaPresentationModel = ShippingMediaPresentationModel()
     private let mediaGestureVisualModel = MediaGestureVisualModel()
+    private let sourceApplicationIconResolver = SourceApplicationIconResolver()
     private var mediaGestureSession: MediaGestureSession?
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -17,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let mediaPresentationModel = mediaPresentationModel
         let mediaGestureVisualModel = mediaGestureVisualModel
+        let sourceApplicationIconResolver = sourceApplicationIconResolver
         let mediaGestureSession = MediaGestureSession(
             compactDispatcher: ShippingMediaCompactCommandDispatcher(),
             visualModel: mediaGestureVisualModel,
@@ -37,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     panelModel: model,
                     mediaModel: mediaPresentationModel,
                     mediaGestureVisualModel: mediaGestureVisualModel,
+                    sourceApplicationIconResolver: sourceApplicationIconResolver,
                     hardwareNotchWidth: layout.hardwareNotchWidth,
                     compactBackgroundOpacity: layout.compactBackgroundOpacity,
                     expandedContentTopInset: layout.expandedContentTopInset,
