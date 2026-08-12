@@ -7,18 +7,19 @@ struct NotchPointerPolicyTests {
         hasHardwareNotch: true,
         hardwareNotchWidth: 180,
         compactFrame: CGRect(x: 410, y: 868, width: 180, height: 32),
+        peekFrame: CGRect(x: 320, y: 804, width: 360, height: 96),
         expandedFrame: CGRect(x: 240, y: 650, width: 520, height: 250)
     )
 
     @Test
-    func compactPointerInsideActivationRegionExpands() {
+    func compactPointerInsideActivationRegionTargetsPeek() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
             pointer: CGPoint(x: 500, y: 884),
             layout: layout
         )
 
-        #expect(result == .expanded)
+        #expect(result == .peek)
     }
 
     @Test
@@ -33,25 +34,25 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
-    func compactPointerFourPointsInsideBottomEdgeActivates() {
+    func compactPointerFourPointsInsideBottomEdgeTargetsPeek() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
             pointer: CGPoint(x: 500, y: 872),
             layout: layout
         )
 
-        #expect(result == .expanded)
+        #expect(result == .peek)
     }
 
     @Test
-    func compactPointerAtExactTopScreenEdgeActivatesWithoutTopInset() {
+    func compactPointerAtExactTopScreenEdgeTargetsPeekWithoutTopInset() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
             pointer: CGPoint(x: 500, y: layout.compactFrame.maxY),
             layout: layout
         )
 
-        #expect(result == .expanded)
+        #expect(result == .peek)
     }
 
     @Test
@@ -66,14 +67,14 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
-    func compactPointerAtExactLeftInsetActivates() {
+    func compactPointerAtExactLeftInsetTargetsPeek() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
             pointer: CGPoint(x: layout.compactFrame.minX + 4, y: layout.compactFrame.maxY),
             layout: layout
         )
 
-        #expect(result == .expanded)
+        #expect(result == .peek)
     }
 
     @Test
@@ -88,14 +89,14 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
-    func compactPointerAtExactRightInsetActivates() {
+    func compactPointerAtExactRightInsetTargetsPeek() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
             pointer: CGPoint(x: layout.compactFrame.maxX - 4, y: layout.compactFrame.maxY),
             layout: layout
         )
 
-        #expect(result == .expanded)
+        #expect(result == .peek)
     }
 
     @Test
@@ -127,11 +128,33 @@ struct NotchPointerPolicyTests {
             layout: extended
         )
 
-        #expect(result == .expanded)
+        #expect(result == .peek)
     }
 
     @Test
-    func expandedPointerInsideExpandedRetentionRegionStaysExpanded() {
+    func peekPointerInsideRetentionRegionStaysPeek() {
+        let result = NotchPointerPolicy.presentation(
+            current: .peek,
+            pointer: CGPoint(x: 500, y: 840),
+            layout: layout
+        )
+
+        #expect(result == .peek)
+    }
+
+    @Test
+    func peekPointerOutsideRetentionRegionTargetsCompact() {
+        let result = NotchPointerPolicy.presentation(
+            current: .peek,
+            pointer: CGPoint(x: 100, y: 500),
+            layout: layout
+        )
+
+        #expect(result == .compact)
+    }
+
+    @Test
+    func expandedPointerInsideExpandedRegionStaysExpanded() {
         let result = NotchPointerPolicy.presentation(
             current: .expanded,
             pointer: CGPoint(x: 300, y: 760),
@@ -142,13 +165,13 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
-    func expandedPointerOutsideRetentionRegionCollapses() {
+    func expandedPointerOutsideExpandedRegionStillStaysExpanded() {
         let result = NotchPointerPolicy.presentation(
             current: .expanded,
             pointer: CGPoint(x: 100, y: 500),
             layout: layout
         )
 
-        #expect(result == .compact)
+        #expect(result == .expanded)
     }
 }
