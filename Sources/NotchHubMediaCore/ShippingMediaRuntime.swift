@@ -161,7 +161,7 @@ public final class ShippingMediaRuntime {
                 fileManager: fileManager
             )
         else {
-            presentationModel.clear()
+            presentationModel.clearAuthoritativePresentation()
             return
         }
 
@@ -176,10 +176,20 @@ public final class ShippingMediaRuntime {
             guard let controller, let presentationModel else {
                 return
             }
-            presentationModel.apply(
-                state: controller.state,
-                snapshot: controller.snapshot
-            )
+
+            switch controller.lastChangeKind {
+            case .ready:
+                break
+
+            case .session:
+                presentationModel.apply(
+                    state: controller.state,
+                    snapshot: controller.snapshot
+                )
+
+            case .noSession, .unavailable:
+                presentationModel.clearAuthoritativePresentation()
+            }
         }
         controller.start()
     }
