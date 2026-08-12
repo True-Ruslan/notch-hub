@@ -436,7 +436,26 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_source_app_icon_feature_budget_over_immutable_baseline(self):
+    def test_repository_m6_6_media_seek_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-media-seek-size-budget.json",
+            feature_id="m6.6-media-seek",
+            source_commit="01bb282f7cbc5eab57b11b1695ccf9768fc6cb2e",
+            workflow_run_id=31606258918,
+            artifact_id=9145423733,
+            summary={
+                "appSizeBytes": 802190,
+                "dmgSizeBytes": 520488,
+                "executableSizeBytes": 499984,
+            },
+            allowance={
+                "appSizeBytes": 536576,
+                "dmgSizeBytes": 434176,
+                "executableSizeBytes": 237568,
+            },
+        )
+
+    def test_ci_uses_media_seek_feature_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -444,10 +463,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-source-app-icon-size-budget.json",
+            "--feature-budget performance/m6-6-media-seek-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-6-source-app-icon-size-budget.json",
             "m6-6-app-gesture-session-size-budget.json",
             "m6-6-compact-command-size-budget.json",
             "m6-6-gesture-engine-size-budget.json",
