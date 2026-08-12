@@ -3,22 +3,23 @@ import Testing
 
 struct MediaSeekAppCompositionPolicyTests {
     @Test
-    func seekSessionIsIdentityLockedAndOwnsGestureIsolation() throws {
+    func seekSessionIsIdentityLockedAndOwnsGestureIsolationAcrossPeekAndExpanded() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
 
         #expect(source.contains("private var activeSeekTransaction: ShippingMediaSeekTransaction?"))
+        #expect(source.contains("private var activeSeekSurface: MediaGestureSurface?"))
         #expect(source.contains("func beginSeek() -> Bool"))
-        #expect(source.contains("panelModel.contentPresentation == .expanded"))
         #expect(source.contains("ShippingMediaSeekTransaction(presentation: presentation)"))
         #expect(source.contains("runtimeProvider()"))
         #expect(source.contains("activeSeekTransaction != nil"))
-        #expect(source.contains("guard activeSeekTransaction == nil else"))
+        #expect(source.contains("activeSeekTransaction == nil"))
         #expect(source.contains("func commitSeek(to positionSeconds: Double)"))
         #expect(source.contains("positionSeconds.isFinite"))
         #expect(source.contains("transaction.accepts(presentation)"))
-        #expect(source.contains("runtime.seek(to:"))
+        #expect(source.contains("compactDispatcher.seek(to: positionSeconds)"))
+        #expect(source.contains("runtime.seek(to: positionSeconds)"))
         #expect(source.contains("func cancelSeek()"))
         #expect(source.contains("_ = coordinator.invalidate()"))
         #expect(source.contains("compactCapabilityTask?.cancel()"))
@@ -29,7 +30,7 @@ struct MediaSeekAppCompositionPolicyTests {
     }
 
     @Test
-    func expandedMediaUsesLocalDragPreviewAndSingleSemanticCommit() throws {
+    func mediaSurfacesUseLocalDragPreviewAndSingleSemanticCommit() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
         )
@@ -54,6 +55,7 @@ struct MediaSeekAppCompositionPolicyTests {
         )
 
         #expect(source.contains("private var isSeekSurfaceAvailable: Bool"))
+        #expect(source.contains("panelModel.contentPresentation == .peek"))
         #expect(source.contains("panelModel.contentPresentation == .expanded"))
         #expect(source.contains("let presentation = mediaModel.presentation"))
         #expect(source.contains("presentation.canSeek"))
@@ -67,7 +69,7 @@ struct MediaSeekAppCompositionPolicyTests {
     }
 
     @Test
-    func appWiresSeekOnlyThroughExistingExpandedRuntimeSession() throws {
+    func appWiresSeekWhilePersistentRuntimeRemainsExpandedOnly() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
@@ -85,7 +87,7 @@ struct MediaSeekAppCompositionPolicyTests {
     }
 
     @Test
-    func compactDispatcherRemainsPreviousNextOnlyAfterSeekWiring() throws {
+    func boundedDispatcherKeepsPreviousNextEnumAndAddsTypedSeekMethodsWithoutObservation() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubMediaCore/ShippingMediaCompactCommandDispatcher.swift"
         )
@@ -93,7 +95,10 @@ struct MediaSeekAppCompositionPolicyTests {
         #expect(source.contains("case previous"))
         #expect(source.contains("case next"))
         #expect(!source.contains("case seek"))
-        #expect(!source.contains(".seek("))
+        #expect(source.contains("public func canSeek() async -> Bool"))
+        #expect(source.contains("public func seek(to positionSeconds: Double) async -> Bool"))
+        #expect(source.contains(".seek(seconds: positionSeconds)"))
+        #expect(!source.contains("startObservation("))
     }
 
     private func sourceText(relativePath: String) throws -> String {
