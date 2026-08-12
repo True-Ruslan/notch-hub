@@ -61,6 +61,7 @@ public final class MediaGestureCoordinator {
     private static let horizontalDisarmHysteresis = 20.0
     private static let verticalCommitThreshold = 70.0
     private static let axisDominanceRatio = 1.25
+    private static let thresholdComparisonTolerance = 1e-9
 
     private enum CapturedAxis: Equatable {
         case undecided
@@ -123,7 +124,8 @@ public final class MediaGestureCoordinator {
             gesture.id == gestureID,
             gesture.surface == .compact,
             gesture.capturedAxis == .horizontal(direction),
-            gesture.requestedCompactCapability
+            gesture.requestedCompactCapability,
+            gesture.compactCapability == .pending
         else {
             return []
         }
@@ -131,7 +133,10 @@ public final class MediaGestureCoordinator {
         gesture.compactCapability = supported ? .supported : .unavailable
         var effects: [MediaGestureEffect] = []
         if supported, !gesture.isArmed,
-            directionalDistance(for: gesture, direction: direction) >= gesture.horizontalThreshold
+            Self.reachedThreshold(
+                directionalDistance(for: gesture, direction: direction),
+                threshold: gesture.horizontalThreshold
+            )
         {
             gesture.isArmed = true
             effects.append(.requestArmHaptic)
@@ -267,7 +272,10 @@ public final class MediaGestureCoordinator {
             return
         }
 
-        guard capability == .supported, distance >= gesture.horizontalThreshold else {
+        guard
+            capability == .supported,
+            Self.reachedThreshold(distance, threshold: gesture.horizontalThreshold)
+        else {
             return
         }
         gesture.isArmed = true
@@ -338,5 +346,9 @@ public final class MediaGestureCoordinator {
             maximumHorizontalThreshold,
             max(minimumHorizontalThreshold, finiteWidth * horizontalThresholdRatio)
         )
+    }
+
+    private static func reachedThreshold(_ distance: Double, threshold: Double) -> Bool {
+        distance + thresholdComparisonTolerance >= threshold
     }
 }
