@@ -6,15 +6,13 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 
 ## Completed foundations
 
-- **M0 Engineering Foundation — ACCEPTED / MERGED**: Swift 6 native shell, notch geometry, AppKit/SwiftUI ownership, Sandbox/Hardened Runtime, strict CI/security/release policy.
-- **R0.1 Personal Release — ACCEPTED / RELEASED**: immutable ad-hoc-signed `v0.1.0`; Developer ID/notarization remains optional/deferred.
-- **P0 Performance Foundation — ACCEPTED / MERGED**: immutable baseline, same-session resource methodology and deterministic artifact-size policy.
+- **M0 Engineering Foundation — ACCEPTED / MERGED**.
+- **R0.1 Personal Release — ACCEPTED / RELEASED**: immutable `v0.1.0`.
+- **P0 Performance Foundation — ACCEPTED / MERGED**.
 - **P0.1 Public repository readiness — ACCEPTED**.
-- **M1 primary interaction foundation — ACCEPTED / MERGED**: deterministic hover/transition authority, Reduce Motion and explicit monitor ownership. Active-display/fullscreen/Spaces/notchless/multi-monitor hardening remains deferred.
+- **M1 primary interaction foundation — ACCEPTED / MERGED**; active-display/fullscreen/Spaces/notchless/multi-monitor hardening remains deferred.
 
 ## M6 — Universal Media / System Now Playing
-
-Product contract: player-agnostic macOS Now Playing source, truthful capabilities/metadata, event-driven lifecycle, zero persistent adapter while compact, local-only gestures, no sensitive input permissions or synthetic media keys.
 
 - **M6.1 transport feasibility — ACCEPTED**.
 - **M6.2 production media boundary — ACCEPTED / MERGED**.
@@ -24,30 +22,25 @@ Product contract: player-agnostic macOS Now Playing source, truthful capabilitie
 
 ### M6.6 — gestures, haptics, interactive notch, seek and Hover Peek
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICAL ACCEPTANCE PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
-Merged prerequisites on `main` include one-shot lifecycle ownership, deterministic gesture coordinator, local AppKit scroll seam, bounded compact previous/next dispatcher, interactive transition authority and vertical visual tracking.
+Draft PR #33 contains stable `compact`, `peek`, `expanded` presentation ownership, 120 ms media-only hover Peek, 140 ms exit grace, explicit click/DOWN expansion, local media gestures/haptics, interactive panel motion, bounded compact/Peek one-shot media work, expanded-only persistent runtime, source icon, seek/cursor isolation and event-driven continuity.
 
-Draft PR #33 contains the consolidated user-visible slice:
+Hover Peek deterministic size policy is active through `performance/m6-6-hover-peek-size-budget.json`; immutable P0 and older feature budgets remain unchanged.
 
-- stable `compact`, `peek`, `expanded` presentations under one panel transition authority;
-- 120 ms hover dwell to media-only Peek and 140 ms Peek exit grace;
-- click or physical DOWN as explicit expansion;
-- local `MediaGestureSession` with RIGHT previous, LEFT next, DOWN expand and expanded UP compact;
-- one public AppKit arm haptic per horizontal armed transition;
-- follow-finger interactive panel motion;
-- compact/Peek bounded one-shot media capability and command work with zero persistent observer;
-- expanded-only presentation-scoped shipping runtime;
-- public `NSWorkspace` source-app icon badge with bounded cache;
-- capability-gated draggable seek in Peek and expanded;
-- source/track identity-locked seek cancellation;
-- cursor ownership only during a valid seek, without warp/lock;
-- bounded event-driven media/Home and horizontal-release continuity;
-- dedicated Hover Peek cumulative artifact-size budget over immutable P0 while all prior budgets remain historical and unchanged.
+#### Current acceptance blocker
 
-The first physical candidate `d008f698b323963f084eedce601620ee957ef442` was rejected despite CI #872 success. Its defects were repaired under focused RED -> GREEN cycles.
+The first docs-synchronized Hover Peek physical candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 was rejected on target hardware.
 
-Hover Peek then intentionally reopened deterministic size acceptance. CI #939 established exact evidence, CI #940 provided the clean missing-budget RED, and `745baa55b7a53519b3832f21305fa9c357ce05fa` / CI #944 passed both required jobs with `performance/m6-6-hover-peek-size-budget.json` active.
+A reproducible restart/stationary-pointer defect was identified: `show()` synchronized the current mouse location with hover activation disabled, so relaunching while the pointer was already on the notch could never arm the 120 ms dwell without a further `mouseMoved` event.
+
+Focused TDD repair:
+
+- RED `553cf973722dfb214f0fcb741ddb6c9b0b44ff02` / CI #947: exactly the new stationary-startup regression test failed among 328 tests;
+- GREEN `d17bd27be72c8c3bd022fb2c3613050c398c622e` / CI #948: both required jobs PASS, 328 tests PASS, security/signing/preflight/size/performance gates PASS;
+- production change is limited to allowing the existing hover policy to evaluate `NSEvent.mouseLocation` normally during `show()`; no new polling, monitor or authority.
+
+An unexpected full-expanded Home surface was also observed during the rejected physical run. Code inspection does not prove it shares the restart root cause because hover resolution routes only to Peek. The next physical candidate must explicitly prove that hover alone never expands; a repeat without click/DOWN becomes a separate TDD defect.
 
 Acceptance ledgers:
 
@@ -55,32 +48,28 @@ Acceptance ledgers:
 - `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`;
 - `docs/testing/MEDIA_PEEK_ACCEPTANCE.md`.
 
-No P1 work, merge or release is allowed before the applicable physical gates pass on one exact docs-synchronized CI candidate.
+No P1 work, merge or release is allowed before applicable physical gates pass on one exact candidate.
 
 ## P1 — whole-app performance/resource review
 
 Status: **AFTER M6.6 ACCEPTANCE / MERGE**.
 
-Planned:
-
-- remeasure the real functional app on the target Mac;
-- CPU/RSS/threads plus wakeups/energy/compositor continuity;
-- compare current global `.mouseMoved` fallback with reliable local tracking and adopt local-only only if correctness/resources are equal-or-better;
-- characterize repeated-run variance before any new absolute memory gate.
+Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, global `.mouseMoved` fallback comparison, repeated-run variance characterization.
 
 ## Product modules after media/performance foundation
 
-- **M2 Shelf** — sandbox-compatible file references and security-scoped access; removing a reference never deletes source data.
-- **M3 Snippets** — sandbox-local store, groups/search/copy; direct paste only after separate Accessibility decision.
-- **M4 Calendar** — EventKit adapter, explicit permission/denial states.
-- **M5 Translator** — Apple Translation where available; no direct app-network translation without separate review.
-- **M7 Product shell** — settings, narrow shortcuts, supported launch-at-login, module ordering/enable-disable.
-- **M8 Trusted distribution — optional** — Developer ID/notarization only if Apple Developer Program membership becomes worthwhile; never replace an existing published tag.
+- **M2 Shelf**.
+- **M3 Snippets**.
+- **M4 Calendar**.
+- **M5 Translator**.
+- **M7 Product shell**.
+- **M8 Trusted distribution — optional**.
 
 ## Current priority
 
-1. Pass both required CI jobs on the docs-synchronized PR #33 head and freeze its exact source/artifacts.
-2. Run the target-Mac M6.6 acceptance matrix across `NH-MEDIA-PEEK-*` and affected gesture/interactive/source-icon gates, including process teardown and permission checks.
-3. If physical feel alone requires it, perform the single allowed visual travel/damping tuning pass with deterministic tests and a new exact candidate.
-4. Only after full physical PASS: record evidence, mark PR #33 ready, merge and verify post-merge `main` CI.
-5. Then start P1.
+1. Pass CI on the docs-synchronized stationary-hover repair head and freeze its exact source/artifacts.
+2. Retest `NH-MEDIA-PEEK-001` first: normal hover, restart with pointer already stationary on the notch, and proof that hover alone never opens full expanded UI.
+3. If that focused retest passes, continue `NH-MEDIA-PEEK-002...013` plus affected gesture/interactive/source-icon gates.
+4. Any repeatable failure gets an independent RED -> GREEN cycle and a new exact candidate.
+5. Only after full physical PASS: record evidence, mark PR #33 ready, merge and verify post-merge `main` CI.
+6. Then start P1.

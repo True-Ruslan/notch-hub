@@ -29,40 +29,34 @@ Current `main` head before PR #33 remains `172805f8cd63dab664d0dbc6747576fb51b13
 
 ## Active work — M6.6 PR #33
 
-PR #33 `M6.6: app media gesture session TDD` is **implemented / automated-tested / physical acceptance pending / draft / not merged / not released**.
+PR #33 `M6.6: app media gesture session TDD` remains **implemented / automated-tested / physical acceptance pending / draft / not merged / not released**.
 
-The current consolidated user-visible slice now uses three stable presentation states under the existing single transition authority:
+The consolidated user-visible slice uses stable `compact <-> peek <-> expanded` presentation states under one transition authority. Hover previews Peek after 120 ms; click or physical DOWN explicitly expands; Peek exit grace is 140 ms. Compact and settled Peek own zero persistent media observer; only settled expanded owns the presentation-scoped shipping runtime.
 
-`compact <-> peek <-> expanded`
+### Hover Peek physical result
 
-Hover previews media in Peek after the frozen 120 ms dwell; click or physical DOWN explicitly expands. Peek has a 140 ms pointer-exit grace. Compact and settled Peek own zero persistent media observer; only settled expanded owns the presentation-scoped shipping runtime.
+The docs-synchronized candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 was **physically rejected** on Mac16,8/macOS 26.6.
 
-The branch includes:
+Observed during the first test block:
 
-- local App-owned `MediaGestureSession` with RIGHT -> previous, LEFT -> next, DOWN -> expand and expanded UP -> compact semantics independent of macOS scroll-direction preference;
-- one public AppKit arm haptic per horizontal armed transition;
-- interactive follow-finger panel motion through the existing Core transition authority;
-- bounded compact/Peek one-shot media capability and command work without persistent observation;
-- public `NSWorkspace` source-app icon resolution with an 8-entry in-memory cache;
-- capability-gated draggable seek in Peek and expanded presentation;
-- seek transaction identity locking across track/source changes;
-- cursor hide/restore only while a valid seek owns interaction, with no pointer warp/lock;
-- bounded event-driven media/Home and horizontal-release continuity without polling, repeating timers or display links.
+- an unexpected full expanded Home/foundation surface appeared and looked stuck during the initial interaction sequence;
+- after restarting while the pointer was already stationary on the physical notch, compact did not enter Peek despite the pointer remaining in the hover region.
 
-### Physical repair and Hover Peek progression
+The restart/stationary symptom has a proven code cause: `NotchPanelController.show()` passed the current `NSEvent.mouseLocation` into the interaction coordinator with `allowActivation: false`. With a stationary pointer, no subsequent `mouseMoved` existed to schedule the normal 120 ms dwell.
 
-First complete physical candidate `d008f698b323963f084eedce601620ee957ef442` / CI #872 passed automation but failed target acceptance on hover/gesture arbitration, physical vertical direction, stale seek across source/track change and visual continuity. It is superseded.
+The unexpected full-expanded observation is not assigned that root cause. The hover success path routes only to Peek; full expansion is owned by explicit click/DOWN. The next target retest must therefore explicitly prove that hover alone never expands. A repeat without click/DOWN is a separate defect requiring its own RED -> GREEN cycle.
 
-Those defects were repaired under independent RED -> GREEN cycles and the physical-repair size envelope became green at `6403dae0e33281f6dcd5bcbd79ec5147b6580c0a` / CI #883.
+### Stationary startup repair TDD
 
-The subsequent Hover Peek follow-up changed the acceptance surface and intentionally required a new cumulative size envelope rather than modifying historical budgets:
+- RED `553cf973722dfb214f0fcb741ddb6c9b0b44ff02` / CI #947: 328 tests / 68 suites, exactly the new `showKeepsStationaryPointerEligibleForHoverDwell` regression test failed; warnings-as-errors build passed;
+- GREEN `d17bd27be72c8c3bd022fb2c3613050c398c622e`: removed only the startup activation suppression from `show()`;
+- CI #948 / run `31645020620`: both required jobs PASS with 328 Swift tests, policy/security checks, Sandbox/Hardened Runtime/signing, shipping preflight, active Hover Peek size enforcement and performance smoke;
+- CI #948 artifact sizes remain inside the active envelope: `562,368 / 864,574 / 555,281 B` executable/app/DMG;
+- shipping artifact `9160475207`, digest `sha256:77b8d08df15f698068ecf45ca13e1b811ff3c3db5b82f74e183ac46299dfcab0`;
+- standalone DMG artifact `9160479006`, digest `sha256:d36f5f1cd4d9ed71328900338d069838f6fbe3905c182136df3372395467e667`;
+- contained DMG SHA-256 `51b6b7b947153edd722ba92cc87080e02afc57cb553b96c07cb28423060ff587`.
 
-- CI #939 on `7daffde9b7c2a734e2ddfa234b1ee744b0d96d9e` established functional/security/package evidence and exact sizes `562,368 / 864,574 / 555,272 B` executable/app/DMG; only the previous repair envelope failed;
-- commit `4bc15c4757727922817b4aaac35c7991c852019a` added the focused Hover Peek budget policy and CI #940 provided a clean RED: 327 Swift tests / 68 suites with exactly the missing budget failing;
-- `performance/m6-6-hover-peek-size-budget.json` is bound to CI #939 evidence; prior repair/seek/icon/gesture budgets remain immutable historical evidence;
-- `745baa55b7a53519b3832f21305fa9c357ce05fa` / CI #944 passed both required jobs with the Hover Peek envelope active, including policy/security checks, 327 Swift tests, Sandbox/Hardened Runtime, signing, shipping preflight, deterministic size enforcement and performance smoke.
-
-This documentation sync follows that pre-docs green head. The exact docs-synchronized acceptance candidate and artifacts are recorded in PR #33 after its own CI completes.
+CI #948 is pre-docs repair evidence. This documentation sync must itself pass both required jobs; that exact docs-synchronized head/artifact becomes the next physical candidate.
 
 ## Security/resource invariants
 
@@ -72,25 +66,23 @@ This documentation sync follows that pre-docs green head. The exact docs-synchro
 - Settled compact and Peek own zero persistent adapter; settled expanded owns the expected presentation-scoped runtime; normal Quit must leave no orphan.
 - Source icon lookup is public local `NSWorkspace` with bounded in-memory cache.
 - Gesture/Peek hot paths add no polling, timer/display-link, broad global scroll capture, per-event process creation or logging.
+- The stationary-startup fix adds no monitor or periodic work; it only allows the existing one-shot dwell policy to evaluate the already-known cursor location on `show()`.
 
 ## Performance state
 
 `performance/baseline-v0.1.0.json` remains immutable. All prior M6 feature budgets remain immutable provenance records.
 
-The active cumulative deterministic artifact-size envelope is now `performance/m6-6-hover-peek-size-budget.json`, sourced from CI #939 evidence. This is an explicit reviewed feature-growth envelope over immutable P0, not a baseline rewrite. CI #944 proves the branch passes the new active gate.
-
-Target-Mac CPU/RSS/threads/wakeups/energy acceptance remains separate from shared-runner CI. P1 whole-app resource review does not begin before M6.6 is physically accepted and merged.
+The active cumulative deterministic artifact-size envelope remains `performance/m6-6-hover-peek-size-budget.json`. CI #948 proves the repair remains within it. Target-Mac CPU/RSS/threads/wakeups/energy acceptance remains separate from shared-runner CI.
 
 ## Not yet accepted
 
-- `NH-MEDIA-PEEK-001...013` require target-Mac physical acceptance on one exact docs-synchronized CI candidate.
-- Applicable `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*` and `NH-MEDIA-SOURCE-ICON-*` gates must be rechecked on the same candidate.
-- Process ownership must be explicitly verified for settled compact, settled Peek, settled expanded and normal Quit.
-- No Accessibility, Input Monitoring, Automation or Screen Recording prompt may appear.
-- P1 whole-app performance/resource review remains blocked until M6.6 is accepted/merged.
+- `NH-MEDIA-PEEK-001` failed on `bbba...` and requires retest on the new exact docs-synchronized candidate, including restart while the cursor is already stationary on the notch.
+- Hover alone must be shown not to open full expanded UI; a repeat without click/DOWN is a separate blocker.
+- `NH-MEDIA-PEEK-002...013` and affected `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`, `NH-MEDIA-SOURCE-ICON-*` remain physically pending.
+- Process ownership and sensitive-permission checks remain pending.
+- P1 whole-app performance/resource review remains blocked until M6.6 is physically accepted and merged.
 - Active-display migration, fullscreen/Spaces, screen configuration, notchless mode and broader multi-monitor hardening remain later M1 work.
-- Apple Music/Spotify/additional players remain unverified unless available on the target Mac.
 
 ## Next optimal step
 
-Run CI on this docs-synchronized head, freeze that exact successful candidate and artifacts, then run the focused M6.6 target-Mac acceptance matrix on Mac16,8/macOS 26.6. Only after full physical PASS may PR #33 leave draft, merge, and receive post-merge `main` verification. P1 remains blocked until then.
+Pass both required CI jobs on this docs-synchronized repair head, freeze its exact DMG/provenance, then retest the narrow startup/hover regression first on Mac16,8/macOS 26.6. Only if that passes should the remaining M6.6 physical matrix continue. PR #33 remains draft; P1 remains blocked.
