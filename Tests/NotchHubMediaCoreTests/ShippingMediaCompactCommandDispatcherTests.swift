@@ -145,7 +145,8 @@ struct ShippingMediaCompactCommandDispatcherTests {
         relativePath: String
     ) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
-        let repositoryRoot = testFile
+        let repositoryRoot =
+            testFile
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
