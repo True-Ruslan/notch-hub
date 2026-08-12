@@ -60,7 +60,6 @@ struct MediaNotchRootView: View {
         ZStack {
             if let presentation = mediaModel.presentation {
                 mediaContent(presentation)
-                    .id(presentation.sessionIdentity)
                     .transition(.opacity)
             } else {
                 NotchRootView(
