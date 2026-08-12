@@ -14,6 +14,9 @@ final class MediaGestureVisualModel: ObservableObject {
         case .compact:
             scale = 0.25
             limit = 18
+        case .peek:
+            scale = 0.35
+            limit = 36
         case .expanded:
             scale = 0.50
             limit = 72
