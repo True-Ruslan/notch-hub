@@ -45,6 +45,25 @@ struct MediaSeekAppCompositionPolicyTests {
     }
 
     @Test
+    func disappearingSeekSurfaceCancelsOwnershipAndUnsupportedProgressIsPassive() throws {
+        let source = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
+        )
+
+        #expect(source.contains("private var isSeekSurfaceAvailable: Bool"))
+        #expect(source.contains("panelModel.contentPresentation == .expanded"))
+        #expect(source.contains("let presentation = mediaModel.presentation"))
+        #expect(source.contains("presentation.canSeek"))
+        #expect(source.contains("presentation.positionSeconds"))
+        #expect(source.contains("presentation.durationSeconds"))
+        #expect(source.contains(".onChange(of: isSeekSurfaceAvailable)"))
+        #expect(source.contains("if !available"))
+        #expect(source.contains("cancelSeekPreview()"))
+        #expect(source.contains(".onDisappear"))
+        #expect(source.contains(".allowsHitTesting(canSeek)"))
+    }
+
+    @Test
     func appWiresSeekOnlyThroughExistingExpandedRuntimeSession() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
