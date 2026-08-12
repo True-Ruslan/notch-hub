@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let mediaGestureVisualModel = MediaGestureVisualModel()
     private let sourceApplicationIconResolver = SourceApplicationIconResolver()
     private var mediaGestureSession: MediaGestureSession?
+    private var mediaPeekSession: MediaPeekSession?
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -82,13 +83,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
 
+        let mediaPeekSession = MediaPeekSession(
+            probe: ShippingMediaPeekProbe(),
+            presentationModel: mediaPresentationModel,
+            panelController: panelController
+        )
+        self.mediaPeekSession = mediaPeekSession
+        panelController.hoverPeekRequestHandler = { [weak mediaPeekSession] request in
+            mediaPeekSession?.handleHoverRequest(request)
+        }
+
         mediaPresentationModel.presentationDidChange = { [weak panelController] presentation in
             panelController?.setCompactHorizontalExtension(
                 presentation == nil ? 0 : Self.mediaCompactWingWidth
             )
         }
 
-        panelController.settledPresentationHandler = { [weak self] presentation in
+        panelController.settledPresentationHandler = { [weak self, weak mediaPeekSession] presentation in
+            if presentation != .peek, let mediaPeekSession {
+                mediaPeekSession.cancel()
+            }
             self?.updateMediaRuntime(for: presentation)
         }
         panelController.show()
@@ -96,7 +110,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_: Notification) {
         panelController?.settledPresentationHandler = nil
+        panelController?.hoverPeekRequestHandler = nil
         mediaPresentationModel.presentationDidChange = nil
+
+        if let mediaPeekSession {
+            mediaPeekSession.invalidate()
+        }
+        mediaPeekSession = nil
 
         mediaGestureSession?.invalidate()
         mediaGestureSession = nil
