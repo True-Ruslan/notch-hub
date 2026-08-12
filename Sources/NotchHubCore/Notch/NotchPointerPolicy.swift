@@ -18,6 +18,14 @@ public enum NotchPointerPolicy {
                 && pointer.y <= frame.maxY
 
             return isInsideActivationRegion ? .expanded : .compact
+
+        case .peek:
+            let activeFrame = layout.peekFrame.insetBy(
+                dx: -retentionPadding,
+                dy: -retentionPadding
+            )
+            return activeFrame.contains(pointer) ? .peek : .compact
+
         case .expanded:
             let activeFrame = layout.expandedFrame.insetBy(
                 dx: -retentionPadding,
