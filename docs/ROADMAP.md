@@ -10,7 +10,7 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 - **R0.1 Personal Release — ACCEPTED / RELEASED**: immutable ad-hoc-signed `v0.1.0`; Developer ID/notarization remains optional/deferred.
 - **P0 Performance Foundation — ACCEPTED / MERGED**: immutable baseline, same-session resource methodology and deterministic artifact-size policy.
 - **P0.1 Public repository readiness — ACCEPTED**.
-- **M1 primary interaction foundation — ACCEPTED / MERGED**: 120 ms cancellable hover, deterministic activation/retention, one expansion haptic, single transition authority, Reduce Motion, explicit monitor ownership. Active-display/fullscreen/Spaces/notchless/click-pin hardening remains deferred.
+- **M1 primary interaction foundation — ACCEPTED / MERGED**: deterministic hover/transition authority, Reduce Motion and explicit monitor ownership. Active-display/fullscreen/Spaces/notchless/multi-monitor hardening remains deferred.
 
 ## M6 — Universal Media / System Now Playing
 
@@ -22,37 +22,44 @@ Product contract: player-agnostic macOS Now Playing source, truthful capabilitie
 - **M6.4 shipping composition — ACCEPTED / MERGED**.
 - **M6.5 Media-first UI — ACCEPTED / MERGED**.
 
-### M6.6 — local gestures, haptics, interactive notch and seek
+### M6.6 — gestures, haptics, interactive notch, seek and Hover Peek
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICAL RETEST PENDING / NOT MERGED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICAL ACCEPTANCE PENDING / NOT MERGED / NOT RELEASED**.
 
 Merged prerequisites on `main` include one-shot lifecycle ownership, deterministic gesture coordinator, local AppKit scroll seam, bounded compact previous/next dispatcher, interactive transition authority and vertical visual tracking.
 
 Draft PR #33 contains the consolidated user-visible slice:
 
-- local `MediaGestureSession` and bounded horizontal visual model;
-- one-arm-haptic previous/next semantics;
-- follow-finger compact/expanded interactive panel motion;
+- stable `compact`, `peek`, `expanded` presentations under one panel transition authority;
+- 120 ms hover dwell to media-only Peek and 140 ms Peek exit grace;
+- click or physical DOWN as explicit expansion;
+- local `MediaGestureSession` with RIGHT previous, LEFT next, DOWN expand and expanded UP compact;
+- one public AppKit arm haptic per horizontal armed transition;
+- follow-finger interactive panel motion;
+- compact/Peek bounded one-shot media capability and command work with zero persistent observer;
+- expanded-only presentation-scoped shipping runtime;
 - public `NSWorkspace` source-app icon badge with bounded cache;
-- capability-gated draggable seek;
+- capability-gated draggable seek in Peek and expanded;
 - source/track identity-locked seek cancellation;
-- hover/gesture arbitration that keeps media wings interactive without broadening hover activation;
-- physical-axis normalization: RIGHT previous, LEFT next, DOWN expand, UP collapse;
-- bounded event-driven media/Home and horizontal-release visual continuity;
-- dedicated physical-acceptance repair size budget over immutable P0.
+- cursor ownership only during a valid seek, without warp/lock;
+- bounded event-driven media/Home and horizontal-release continuity;
+- dedicated Hover Peek cumulative artifact-size budget over immutable P0 while all prior budgets remain historical and unchanged.
 
-The first candidate `d008f698b323963f084eedce601620ee957ef442` was rejected by target testing despite CI #872 success. Repair head `6403dae0e33281f6dcd5bcbd79ec5147b6580c0a` passed CI #883; documentation sync and one new exact candidate precede the required retest.
+The first physical candidate `d008f698b323963f084eedce601620ee957ef442` was rejected despite CI #872 success. Its defects were repaired under focused RED -> GREEN cycles.
+
+Hover Peek then intentionally reopened deterministic size acceptance. CI #939 established exact evidence, CI #940 provided the clean missing-budget RED, and `745baa55b7a53519b3832f21305fa9c357ce05fa` / CI #944 passed both required jobs with `performance/m6-6-hover-peek-size-budget.json` active.
 
 Acceptance ledgers:
 
 - `docs/testing/MEDIA_GESTURE_ACCEPTANCE.md`;
-- `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`.
+- `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`;
+- `docs/testing/MEDIA_PEEK_ACCEPTANCE.md`.
 
-No P1 work or merge is allowed before this physical acceptance closes.
+No P1 work, merge or release is allowed before the applicable physical gates pass on one exact docs-synchronized CI candidate.
 
 ## P1 — whole-app performance/resource review
 
-Status: **AFTER M6.6 ACCEPTANCE**.
+Status: **AFTER M6.6 ACCEPTANCE / MERGE**.
 
 Planned:
 
@@ -72,8 +79,8 @@ Planned:
 
 ## Current priority
 
-1. Finish docs-sync exact candidate CI for PR #33.
-2. Run focused target-Mac M6.6 retest, including compact/expanded directions, hover parity, seek source-change cancellation, source icon, permissions and process teardown.
-3. If feel requires it, perform the single allowed visual travel/damping tuning pass with deterministic tests and a new exact candidate.
-4. Only after full physical PASS: record acceptance, make PR #33 ready, merge and verify post-merge `main` CI.
+1. Pass both required CI jobs on the docs-synchronized PR #33 head and freeze its exact source/artifacts.
+2. Run the target-Mac M6.6 acceptance matrix across `NH-MEDIA-PEEK-*` and affected gesture/interactive/source-icon gates, including process teardown and permission checks.
+3. If physical feel alone requires it, perform the single allowed visual travel/damping tuning pass with deterministic tests and a new exact candidate.
+4. Only after full physical PASS: record evidence, mark PR #33 ready, merge and verify post-merge `main` CI.
 5. Then start P1.
