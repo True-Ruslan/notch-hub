@@ -12,6 +12,7 @@ final class MediaGestureSession {
     private let coordinator: MediaGestureCoordinator
     private let compactDispatcher: ShippingMediaCompactCommandDispatcher
     private let visualModel: MediaGestureVisualModel
+    private let cursorVisibilityController: CursorVisibilityController
     private let performArmHaptic: @MainActor () -> Void
 
     private weak var panelController: NotchPanelController?
@@ -30,11 +31,13 @@ final class MediaGestureSession {
         coordinator: MediaGestureCoordinator = MediaGestureCoordinator(),
         compactDispatcher: ShippingMediaCompactCommandDispatcher,
         visualModel: MediaGestureVisualModel,
+        cursorVisibilityController: CursorVisibilityController = CursorVisibilityController(),
         performArmHaptic: @escaping @MainActor () -> Void
     ) {
         self.coordinator = coordinator
         self.compactDispatcher = compactDispatcher
         self.visualModel = visualModel
+        self.cursorVisibilityController = cursorVisibilityController
         self.performArmHaptic = performArmHaptic
     }
 
@@ -164,6 +167,7 @@ final class MediaGestureSession {
         if seekSurface == .peek {
             panelController?.setPeekInteractionHeld(true)
         }
+        cursorVisibilityController.acquireHiddenCursor()
         return true
     }
 
@@ -277,6 +281,7 @@ final class MediaGestureSession {
         _ = coordinator.invalidate()
         visualModel.reset()
         releasePeekInteractionHoldIfNeeded(surface: seekSurface)
+        cursorVisibilityController.releaseHiddenCursor()
     }
 
     private func handleEffects(
