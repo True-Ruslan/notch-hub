@@ -72,6 +72,13 @@ final class NotchInteractionCoordinator {
         }
     }
 
+    func cancelPendingActivationForInteractiveTransition() {
+        guard !isInvalidated else {
+            return
+        }
+        cancelPendingActivation()
+    }
+
     func invalidate() {
         guard !isInvalidated else {
             return
