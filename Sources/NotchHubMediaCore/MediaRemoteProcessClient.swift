@@ -101,6 +101,8 @@ final class MediaRemoteProcessClient {
     private var observationProcess: (any MediaRemoteProcessHandle)?
     private var stdoutBuffer = Data()
     private var observationGeneration: UInt64 = 0
+    private var nextOneShotOperationID: UInt64 = 0
+    private var oneShotOperations: [UInt64: MediaRemoteOneShotOperation] = [:]
 
     private(set) var state: MediaRemoteProcessState = .stopped
     private(set) var stderrByteCount = 0
@@ -171,20 +173,25 @@ final class MediaRemoteProcessClient {
 
     func stop() {
         observationGeneration &+= 1
+        var clean = true
 
-        guard let process = observationProcess else {
-            stdoutBuffer.removeAll(keepingCapacity: false)
-            state = .stopped
-            lastTeardownClean = true
-            return
+        if let process = observationProcess {
+            let observationClean = MediaRemoteProcessTerminationPolicy.stop(process)
+            clean = observationClean && clean
+            if observationClean {
+                observationProcess = nil
+            }
         }
 
-        let clean = MediaRemoteProcessTerminationPolicy.stop(process)
+        let operations = Array(oneShotOperations.values)
+        for operation in operations {
+            clean = operation.cancel() && clean
+        }
+
         lastTeardownClean = clean
         stdoutBuffer.removeAll(keepingCapacity: false)
 
         if clean {
-            observationProcess = nil
             state = .stopped
         } else {
             state = .teardownFailure
@@ -269,6 +276,8 @@ final class MediaRemoteProcessClient {
             standardOutputMode: standardOutputMode
         )
         let operationReference = MediaRemoteOneShotOperationReference()
+        nextOneShotOperationID &+= 1
+        let operationID = nextOneShotOperationID
 
         return try await withCheckedThrowingContinuation { continuation in
             do {
@@ -285,9 +294,16 @@ final class MediaRemoteProcessClient {
                     process: process,
                     standardOutputMode: standardOutputMode,
                     maximumStdoutBytes: maximumStdoutBytes,
-                    continuation: continuation
+                    continuation: continuation,
+                    teardownDidFinish: { [weak self] clean in
+                        guard clean else {
+                            return
+                        }
+                        self?.oneShotOperations.removeValue(forKey: operationID)
+                    }
                 )
                 operationReference.operation = operation
+                oneShotOperations[operationID] = operation
                 operation.timeoutToken = timeoutScheduler.schedule(
                     after: Self.oneShotTimeoutSeconds,
                     action: { [weak operation] in
@@ -407,20 +423,24 @@ private final class MediaRemoteOneShotOperation {
     let standardOutputMode: MediaRemoteProcessOutputMode
     let maximumStdoutBytes: Int
     let continuation: CheckedContinuation<(status: Int32, stdout: Data), Error>
+    let teardownDidFinish: @MainActor (Bool) -> Void
 
     var timeoutToken: (any MediaRemoteTimeoutToken)?
     private var isCompleted = false
+    private var needsTeardownRetry = false
 
     init(
         process: any MediaRemoteProcessHandle,
         standardOutputMode: MediaRemoteProcessOutputMode,
         maximumStdoutBytes: Int,
-        continuation: CheckedContinuation<(status: Int32, stdout: Data), Error>
+        continuation: CheckedContinuation<(status: Int32, stdout: Data), Error>,
+        teardownDidFinish: @escaping @MainActor (Bool) -> Void
     ) {
         self.process = process
         self.standardOutputMode = standardOutputMode
         self.maximumStdoutBytes = maximumStdoutBytes
         self.continuation = continuation
+        self.teardownDidFinish = teardownDidFinish
     }
 
     func finish(status: Int32) {
@@ -428,9 +448,11 @@ private final class MediaRemoteOneShotOperation {
             return
         }
         isCompleted = true
+        needsTeardownRetry = false
         timeoutToken?.cancel()
         timeoutToken = nil
         process.clearHandlers()
+        teardownDidFinish(true)
 
         do {
             let stdout: Data
@@ -452,9 +474,33 @@ private final class MediaRemoteOneShotOperation {
         isCompleted = true
         timeoutToken = nil
         let clean = MediaRemoteProcessTerminationPolicy.stop(process)
+        needsTeardownRetry = !clean
+        teardownDidFinish(clean)
         continuation.resume(
             throwing: clean ? MediaRemoteProcessClientError.timedOut : .teardownFailed
         )
+    }
+
+    func cancel() -> Bool {
+        if isCompleted {
+            guard needsTeardownRetry else {
+                return true
+            }
+
+            let clean = MediaRemoteProcessTerminationPolicy.stop(process)
+            needsTeardownRetry = !clean
+            teardownDidFinish(clean)
+            return clean
+        }
+
+        isCompleted = true
+        timeoutToken?.cancel()
+        timeoutToken = nil
+        let clean = MediaRemoteProcessTerminationPolicy.stop(process)
+        needsTeardownRetry = !clean
+        teardownDidFinish(clean)
+        continuation.resume(throwing: clean ? CancellationError() : MediaRemoteProcessClientError.teardownFailed)
+        return clean
     }
 }
 
