@@ -65,9 +65,33 @@ struct MediaNotchRootView: View {
                 )
             }
         }
+        .onChange(of: isSeekSurfaceAvailable) { _, available in
+            if !available {
+                cancelSeekPreview()
+            }
+        }
         .onDisappear {
             cancelSeekPreview()
         }
+    }
+
+    private var isSeekSurfaceAvailable: Bool {
+        guard
+            panelModel.contentPresentation == .expanded,
+            let presentation = mediaModel.presentation,
+            presentation.canSeek,
+            let position = presentation.positionSeconds,
+            let duration = presentation.durationSeconds,
+            position.isFinite,
+            position >= 0,
+            duration.isFinite,
+            duration > 0,
+            position <= duration
+        else {
+            return false
+        }
+
+        return true
     }
 
     @ViewBuilder
@@ -86,11 +110,6 @@ struct MediaNotchRootView: View {
         .contentShape(Rectangle())
         .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
             sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
-        }
-        .onChange(of: presentation.canSeek) { _, canSeek in
-            if !canSeek {
-                cancelSeekPreview()
-            }
         }
     }
 
@@ -240,6 +259,7 @@ struct MediaNotchRootView: View {
         }
         .frame(height: 8)
         .opacity(canSeek ? 1 : 0.55)
+        .allowsHitTesting(canSeek)
     }
 
     private func seekPosition(
