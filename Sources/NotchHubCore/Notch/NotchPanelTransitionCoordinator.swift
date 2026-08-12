@@ -81,6 +81,18 @@ final class NotchPanelTransitionCoordinator {
         )
     }
 
+    func requestProgrammaticCollapse(layout: NotchLayout) {
+        guard !isInvalidated, desiredPresentation != .compact else {
+            return
+        }
+
+        beginTransition(
+            to: .compact,
+            layout: layout,
+            hapticEligible: false
+        )
+    }
+
     func animationPolicyDidChange(layout: NotchLayout) {
         guard !isInvalidated else {
             return

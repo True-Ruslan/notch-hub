@@ -133,6 +133,14 @@ public final class NotchPanelController: NSObject {
         transitionCoordinator.animationPolicyDidChange(layout: layoutState.currentLayout)
     }
 
+    public func requestExpansion() {
+        transitionCoordinator.requestProgrammaticExpansion(layout: layoutState.currentLayout)
+    }
+
+    public func requestCollapse() {
+        transitionCoordinator.requestProgrammaticCollapse(layout: layoutState.currentLayout)
+    }
+
     public func invalidate() {
         settledPresentationHandler = nil
         pointerMonitor.invalidate()
