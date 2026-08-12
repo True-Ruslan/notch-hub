@@ -18,7 +18,7 @@ public struct NotchRootView: View {
     public var body: some View {
         Group {
             switch model.contentPresentation {
-            case .compact:
+            case .compact, .peek:
                 compactContent
             case .expanded:
                 expandedContent
