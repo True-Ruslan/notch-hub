@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct ShippingMediaCompactCommandDispatcherTests {
     @Test
-    func mapsPreviousAndNextCapabilitiesExactlyWithoutObservation() async {
+    func mapsPreviousNextAndSeekCapabilitiesExactlyWithoutObservation() async {
         let client = CompactCommandProcessClient()
         client.capabilityResult = .success(
             MediaCommandCapabilities(
@@ -18,7 +18,8 @@ struct ShippingMediaCompactCommandDispatcherTests {
 
         #expect(await dispatcher.isSupported(.previous))
         #expect(!(await dispatcher.isSupported(.next)))
-        #expect(client.capabilitiesCount == 2)
+        #expect(await dispatcher.canSeek())
+        #expect(client.capabilitiesCount == 3)
         #expect(client.startObservationCount == 0)
         #expect(client.commands.isEmpty)
     }
@@ -31,13 +32,14 @@ struct ShippingMediaCompactCommandDispatcherTests {
                 MediaCommandCapabilities(
                     previous: capability,
                     next: capability,
-                    seek: .supported
+                    seek: capability
                 )
             )
             let dispatcher = ShippingMediaCompactCommandDispatcher(processClient: client)
 
             #expect(!(await dispatcher.isSupported(.previous)))
             #expect(!(await dispatcher.isSupported(.next)))
+            #expect(!(await dispatcher.canSeek()))
             #expect(client.startObservationCount == 0)
         }
 
@@ -48,12 +50,13 @@ struct ShippingMediaCompactCommandDispatcherTests {
         )
 
         #expect(!(await failingDispatcher.isSupported(.previous)))
-        #expect(failingClient.capabilitiesCount == 1)
+        #expect(!(await failingDispatcher.canSeek()))
+        #expect(failingClient.capabilitiesCount == 2)
         #expect(failingClient.startObservationCount == 0)
     }
 
     @Test
-    func sendMapsOnlyPreviousAndNextAndReturnsTransportResult() async {
+    func sendMapsPreviousAndNextAndReturnsTransportResult() async {
         let client = CompactCommandProcessClient()
         let dispatcher = ShippingMediaCompactCommandDispatcher(processClient: client)
 
@@ -66,6 +69,26 @@ struct ShippingMediaCompactCommandDispatcherTests {
         #expect(!(await dispatcher.send(.next)))
         #expect(client.commands == [.previous, .next, .next])
         #expect(client.startObservationCount == 0)
+    }
+
+    @Test
+    func seekValidatesInputSendsExactlyOnceAndNeverStartsObservation() async {
+        let client = CompactCommandProcessClient()
+        let dispatcher = ShippingMediaCompactCommandDispatcher(processClient: client)
+
+        #expect(!(await dispatcher.seek(to: -.infinity)))
+        #expect(!(await dispatcher.seek(to: -1)))
+        #expect(!(await dispatcher.seek(to: .nan)))
+        #expect(client.commands.isEmpty)
+
+        client.sendResult = .sent
+        #expect(await dispatcher.seek(to: 42))
+        #expect(client.commands == [.seek(seconds: 42)])
+        #expect(client.startObservationCount == 0)
+
+        client.sendResult = .failed
+        #expect(!(await dispatcher.seek(to: 84)))
+        #expect(client.commands == [.seek(seconds: 42), .seek(seconds: 84)])
     }
 
     @Test
@@ -84,7 +107,9 @@ struct ShippingMediaCompactCommandDispatcherTests {
         )
 
         #expect(!(await dispatcher.isSupported(.previous)))
+        #expect(!(await dispatcher.canSeek()))
         #expect(!(await dispatcher.send(.next)))
+        #expect(!(await dispatcher.seek(to: 1)))
         #expect(processClientCreationCount == 0)
     }
 
@@ -105,7 +130,9 @@ struct ShippingMediaCompactCommandDispatcherTests {
         #expect(client.stopCount == 1)
         #expect(!(await supportTask.value))
         #expect(!(await dispatcher.isSupported(.next)))
+        #expect(!(await dispatcher.canSeek()))
         #expect(!(await dispatcher.send(.next)))
+        #expect(!(await dispatcher.seek(to: 12)))
         #expect(client.capabilitiesCount == 1)
         #expect(client.commands.isEmpty)
         #expect(client.startObservationCount == 0)
@@ -124,7 +151,9 @@ struct ShippingMediaCompactCommandDispatcherTests {
         #expect(runtimeSource.contains("ShippingMediaBundlePaths.resolveValidated("))
         #expect(!dispatcherSource.contains("startObservation("))
         #expect(!dispatcherSource.contains("togglePlayPause"))
-        #expect(!dispatcherSource.contains("seek(seconds:"))
+        #expect(dispatcherSource.contains("public func canSeek() async -> Bool"))
+        #expect(dispatcherSource.contains("public func seek(to positionSeconds: Double) async -> Bool"))
+        #expect(dispatcherSource.contains(".seek(seconds: positionSeconds)"))
         #expect(!dispatcherSource.contains("Process()"))
         #expect(!dispatcherSource.contains("Timer("))
         #expect(!dispatcherSource.contains("sleep("))
