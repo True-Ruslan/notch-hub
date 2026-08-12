@@ -7,6 +7,11 @@ public typealias NotchLocalScrollHandler = @MainActor (NSEvent) -> Void
 private final class NotchLocalScrollHostingView<Content: View>: NSHostingView<Content> {
     private let onScrollWheel: NotchLocalScrollHandler?
 
+    required init(rootView: Content) {
+        self.onScrollWheel = nil
+        super.init(rootView: rootView)
+    }
+
     init(
         rootView: Content,
         onScrollWheel: NotchLocalScrollHandler?
