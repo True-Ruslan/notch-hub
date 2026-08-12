@@ -111,6 +111,34 @@ struct NotchInteractionCoordinatorTests {
     }
 
     @Test
+    func interactiveTransitionCancelsPendingHoverActivationWithoutInvalidatingPointerCoordinator() {
+        let fixture = makeFixture()
+
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact
+        )
+        #expect(fixture.scheduler.pendingCount == 1)
+
+        fixture.coordinator.cancelPendingActivationForInteractiveTransition()
+        #expect(fixture.scheduler.pendingCount == 0)
+
+        fixture.scheduler.advance(by: 1, invokeCancelled: true)
+        #expect(fixture.intents.isEmpty)
+
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact
+        )
+        fixture.scheduler.advance(by: 0.12)
+
+        #expect(fixture.intents.count == 1)
+        #expect(fixture.intents[0].isDeliberateExpansion)
+    }
+
+    @Test
     func reentryStartsFreshFullDwell() {
         let fixture = makeFixture()
 
