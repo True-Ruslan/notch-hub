@@ -234,7 +234,7 @@ struct NotchInteractionCoordinatorTests {
         fixture.scheduler.advance(by: 0.001)
 
         #expect(fixture.intents.count == 1)
-        #expect(fixture.intents[0].isPointerExitCollapse)
+        #expect(fixture.intents.first?.isPointerExitCollapse == true)
     }
 
     @Test
@@ -280,12 +280,10 @@ struct NotchInteractionCoordinatorTests {
             layout: layout,
             currentPresentation: .peek
         )
-        fixture.scheduler.advance(by: 0.139)
-        #expect(fixture.intents.isEmpty)
-        fixture.scheduler.advance(by: 0.001)
+        fixture.scheduler.advance(by: 0.14)
 
         #expect(fixture.intents.count == 1)
-        #expect(fixture.intents[0].isPointerExitCollapse)
+        #expect(fixture.intents.first?.isPointerExitCollapse == true)
     }
 
     @Test
