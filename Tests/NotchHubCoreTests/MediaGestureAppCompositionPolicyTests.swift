@@ -120,7 +120,7 @@ struct MediaGestureAppCompositionPolicyTests {
 
         #expect(modelSource.contains("@Published private(set) var horizontalOffset: CGFloat = 0"))
         #expect(modelSource.contains("func setHorizontalOffset("))
-        #expect(modelSource.contains("func reset()"))
+        #expect(modelSource.contains("func reset(animated: Bool = false)"))
         #expect(modelSource.contains("case .compact"))
         #expect(modelSource.contains("case .expanded"))
 
