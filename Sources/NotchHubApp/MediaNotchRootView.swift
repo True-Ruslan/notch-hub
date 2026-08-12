@@ -105,7 +105,7 @@ struct MediaNotchRootView: View {
     private func mediaContent(_ presentation: ShippingMediaPresentation) -> some View {
         Group {
             switch panelModel.contentPresentation {
-            case .compact:
+            case .compact, .peek:
                 compactMediaContent(presentation)
             case .expanded:
                 expandedMediaContent(presentation)
