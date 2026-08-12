@@ -7,6 +7,7 @@ import SwiftUI
 struct MediaNotchRootView: View {
     @ObservedObject private var panelModel: NotchPanelModel
     @ObservedObject private var mediaModel: ShippingMediaPresentationModel
+    @ObservedObject private var mediaGestureVisualModel: MediaGestureVisualModel
 
     private let hardwareNotchWidth: CGFloat
     private let compactBackgroundOpacity: Double
@@ -18,6 +19,7 @@ struct MediaNotchRootView: View {
     init(
         panelModel: NotchPanelModel,
         mediaModel: ShippingMediaPresentationModel,
+        mediaGestureVisualModel: MediaGestureVisualModel,
         hardwareNotchWidth: CGFloat,
         compactBackgroundOpacity: Double,
         expandedContentTopInset: CGFloat,
@@ -27,6 +29,7 @@ struct MediaNotchRootView: View {
     ) {
         self.panelModel = panelModel
         self.mediaModel = mediaModel
+        self.mediaGestureVisualModel = mediaGestureVisualModel
         self.hardwareNotchWidth = hardwareNotchWidth
         self.compactBackgroundOpacity = compactBackgroundOpacity
         self.expandedContentTopInset = expandedContentTopInset
@@ -60,6 +63,7 @@ struct MediaNotchRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .offset(x: mediaGestureVisualModel.horizontalOffset)
         .background(Color.black)
         .contentShape(Rectangle())
     }
