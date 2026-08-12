@@ -141,7 +141,9 @@ struct ShippingMediaCompactCommandDispatcherTests {
         }
     }
 
-    private func sourceText(relativePath: String) throws -> String {
+    private func sourceText(
+        relativePath: String
+    ) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot = testFile
             .deletingLastPathComponent()
