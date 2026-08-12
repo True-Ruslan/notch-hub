@@ -45,7 +45,8 @@ Accepted:
 - Reduce Motion exact endpoint behavior;
 - explicit event-monitor/observer ownership;
 - no per-event Swift concurrency allocation in the pointer hot path;
-- no polling/repeating timer/display-link/sensitive input permission.
+- no polling/repeating timer/display-link/sensitive input permission;
+- M6.6 Task 0 later proved in-flight compact-layout retargeting through the same transition authority without duplicate haptic.
 
 Deferred M1 hardening:
 
@@ -102,7 +103,7 @@ Accepted shipping invariants:
 - nested/top-level signatures, Sandbox-only entitlement and Hardened Runtime stay intact;
 - runtime starts only after settled expansion;
 - runtime stops/releases after settled compact;
-- compact owns zero adapter processes;
+- compact owns zero persistent adapter processes;
 - expanded owns one expected adapter;
 - stale/reversed transition completions cannot start media;
 - normal termination leaves no orphan;
@@ -144,25 +145,41 @@ Accepted:
 
 Authoritative evidence: `docs/testing/MEDIA_UI_ACCEPTANCE.md`.
 
-Final read-only review found one bounded P2 transition edge outside the accepted matrix and tracked it as issue #20: if media context clears during an already-running retained-media collapse, the future compact layout changes to zero wings but the in-flight transition target is not currently retargeted. It is recoverable and does not widen security/process/resource authority, but should be hardened before adding more transition-sensitive gestures.
-
 ### M6.6 — local media gestures, haptics and draggable seek
 
-Status: **NEXT**
+Status: **TASK 0 ACCEPTED AND MERGED / GESTURE CONTRACT FROZEN / IMPLEMENTATION NEXT**
 
-Start with hardening issue #20 under TDD, then add the gesture/seek feature contract.
+#### Task 0 — collapse-layout retarget hardening
 
-Before production gesture changes:
+**ACCEPTED AND MERGED.** Issue #20 was reproduced under TDD and fixed without changing panel authority.
 
-- define stable `NH-MEDIA-GESTURE-*` acceptance IDs;
-- write a dedicated design delta/implementation plan from the approved Universal Media design;
-- preserve the single panel-transition authority;
-- keep gesture recognition local to the NotchHub window/panel;
-- do not introduce a global scroll monitor, synthetic media keys or hidden permissions;
-- implement gesture state machines under RED -> GREEN tests;
-- make draggable seek visible only when seek capability is authoritatively supported;
-- keep progress/event handling bounded and event-driven;
-- physically validate gesture feel, haptic semantics, seek correctness and regressions on the target Mac.
+Evidence:
+
+- RED source `785c48d8cc6831f4196cfa7c78843b826acb9a07`, CI #775 / run `31567022553`;
+- exact GREEN/physical source `0d40391721ae934653a9c75fc981dd683121cf46`;
+- GREEN CI #776 / run `31567162859` — 196 Swift tests / 39 suites PASS and both required jobs PASS;
+- PR #22 squash merge `f017addd2efc9aed5b60b1556205bdb8eab23e0e`;
+- post-merge `main` CI #777 / run `31572634042` — both required jobs PASS;
+- focused target-Mac acceptance PASS, including media disappearance during in-flight collapse, exact no-media compact endpoint, no duplicate haptic, zero adapter after compact settlement and no orphan after Quit.
+
+#### Gesture + haptic + seek contract
+
+Stable `NH-MEDIA-GESTURE-001...018` acceptance IDs are frozen in `docs/testing/MEDIA_GESTURE_ACCEPTANCE.md` and the TDD execution plan is `docs/superpowers/plans/2026-08-12-media-gestures-haptics-seek.md`.
+
+The implementation must:
+
+- use a pure deterministic `MediaGestureCoordinator` with commit-on-release;
+- keep all scroll/gesture recognition local to the NotchHub-owned view/window;
+- use the approved 28% / 70...120 pt horizontal threshold and 20 pt disarm hysteresis before hardware tuning;
+- reject momentum and ambiguous diagonal movement;
+- request one `.levelChange` haptic only when entering armed;
+- preserve horizontal/vertical/seek interaction isolation;
+- route compact-down / expanded-up through existing panel transition authority;
+- make draggable seek actionable only with authoritative seek capability and valid timing;
+- never fabricate successful seek/track changes before authoritative system state confirms them;
+- preserve event-driven progress and zero persistent adapter in compact.
+
+Because retained compact media is intentionally not live-observed, compact previous/next arming must use a bounded current-system one-shot capability validation rather than blindly trusting stale retained capability. Release while armed may send one bounded typed one-shot command. This reuses the existing fixed pinned `/usr/bin/perl` boundary and may not start persistent observation. One-shot process ownership/cancellation is the first TDD implementation task so normal Quit remains no-orphan even if an operation is in flight.
 
 ### P1 — whole-app performance/resource review
 
@@ -234,9 +251,11 @@ Only when Apple Developer Program membership becomes worthwhile:
 
 ## Current priority order — 2026-08-12
 
-1. M6.6 Task 0: reproduce and harden issue #20 under TDD without changing accepted panel authority.
-2. Define `NH-MEDIA-GESTURE-*` acceptance contract and M6.6 implementation plan.
-3. Implement local gestures/media haptics/draggable seek under TDD without widening permission/process/global-input authority.
-4. Run target-Mac M6.6 physical acceptance.
-5. Run P1 whole-app performance/resource review and local pointer-tracking experiment.
-6. Resume the remaining product modules after the media/performance foundation is stable.
+1. M6.6 Task 1: harden ownership/cancellation of in-flight media one-shot processes under RED -> GREEN tests.
+2. Implement the deterministic `MediaGestureCoordinator` and local-only AppKit delivery seam under TDD.
+3. Implement bounded compact capability validation + previous/next dispatch, then expanded gesture/haptic wiring.
+4. Implement capability-gated draggable seek with seek/track/panel gesture isolation.
+5. Freeze an exact CI candidate and run `NH-MEDIA-GESTURE-001...018` on the target Mac.
+6. Merge accepted M6.6 and verify post-merge `main` CI.
+7. Run P1 whole-app performance/resource review and local pointer-tracking experiment.
+8. Resume the remaining product modules after the media/performance foundation is stable.
