@@ -21,7 +21,7 @@ struct NotchLocalGestureInputTests {
             onScrollWheel: { _ in }
         )
 
-        #expect(view.sizingOptions == [.minSize, .maxSize])
+        #expect(view.sizingOptions == [])
 
         let source = try repositorySource(
             "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift"
