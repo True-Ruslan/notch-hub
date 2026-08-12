@@ -43,7 +43,7 @@ struct MediaPeekAppCompositionPolicyTests {
         #expect(source.contains("func invalidate()"))
         #expect(source.contains("probe.cancel()"))
         #expect(source.contains("generation &+= 1"))
-        #expect(source.contains("guard generation == expectedGeneration"))
+        #expect(source.contains("generation == expectedGeneration"))
     }
 
     @Test
@@ -53,11 +53,61 @@ struct MediaPeekAppCompositionPolicyTests {
         #expect(source.contains("private var mediaPeekSession: MediaPeekSession?"))
         #expect(source.contains("let mediaPeekSession = MediaPeekSession("))
         #expect(source.contains("panelController.hoverPeekRequestHandler"))
-        #expect(source.contains("mediaPeekSession.handleHoverRequest(request)"))
+        #expect(source.contains("mediaPeekSession?.handleHoverRequest(request)"))
         #expect(source.contains("mediaPeekSession.cancel()"))
         #expect(source.contains("mediaPeekSession.invalidate()"))
         #expect(source.contains("case .compact, .peek:"))
         #expect(source.contains("case .expanded:"))
+    }
+
+    @Test
+    func gestureSessionMapsPeekToDedicatedSurfaceAndHoldsGraceDuringOwnedInput() throws {
+        let source = try sourceText(relativePath: "Sources/NotchHubApp/MediaGestureSession.swift")
+
+        #expect(source.contains("case .peek:"))
+        #expect(source.contains("activeSurface = .peek"))
+        #expect(source.contains("panelController?.setPeekInteractionHeld(true)"))
+        #expect(source.contains("panelController?.setPeekInteractionHeld(false)"))
+        #expect(source.contains("case .compact, .peek:"))
+        #expect(source.contains("requestCompactCapability"))
+        #expect(source.contains("panelController?.requestExpansion()"))
+    }
+
+    @Test
+    func peekSeekUsesBoundedDispatcherWhileExpandedSeekKeepsRuntime() throws {
+        let source = try sourceText(relativePath: "Sources/NotchHubApp/MediaGestureSession.swift")
+
+        #expect(source.contains("private var activeSeekSurface: MediaGestureSurface?"))
+        #expect(source.contains("case .peek:"))
+        #expect(source.contains("compactDispatcher.seek(to: positionSeconds)"))
+        #expect(source.contains("case .expanded:"))
+        #expect(source.contains("runtime.seek(to: positionSeconds)"))
+        #expect(source.contains("ShippingMediaSeekTransaction(presentation: presentation)"))
+    }
+
+    @Test
+    func rootViewHasRealOneLinePeekAndExplicitExpansionWithoutTransportButtons() throws {
+        let source = try sourceText(relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift")
+
+        #expect(source.contains("case .peek:"))
+        #expect(source.contains("peekMediaContent(presentation)"))
+        #expect(source.contains("private func peekMediaContent"))
+        #expect(source.contains("artwork(presentation, size: 40)"))
+        #expect(source.contains("onExplicitExpansion"))
+        #expect(source.contains("panelModel.contentPresentation == .peek"))
+        #expect(source.contains("panelModel.contentPresentation == .expanded"))
+        #expect(!source.contains("peekMediaContent") || !source.contains("sourceApplicationBadge(presentation)"))
+    }
+
+    @Test
+    func explicitClickExpansionIsWiredForMediaAndNoMediaCompactStates() throws {
+        let appSource = try sourceText(relativePath: "Sources/NotchHubApp/AppDelegate.swift")
+        let rootSource = try sourceText(relativePath: "Sources/NotchHubCore/UI/NotchRootView.swift")
+
+        #expect(appSource.contains("onExplicitExpansion:"))
+        #expect(appSource.contains("self?.panelController?.requestExpansion()"))
+        #expect(rootSource.contains("onExplicitExpansion"))
+        #expect(rootSource.contains(".onTapGesture"))
     }
 
     private func sourceText(relativePath: String) throws -> String {
