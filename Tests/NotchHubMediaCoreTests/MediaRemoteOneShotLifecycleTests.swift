@@ -81,7 +81,7 @@ struct MediaRemoteOneShotLifecycleTests {
             handle.waitTimeouts
                 == [
                     MediaRemoteProcessClient.gracefulTerminationTimeoutSeconds,
-                    MediaRemoteProcessClient.forcedTerminationTimeoutSeconds,
+                    MediaRemoteProcessClient.forcedTerminationTimeoutSeconds
                 ])
         #expect(scheduler.cancelledCount == 1)
 
@@ -100,7 +100,7 @@ struct MediaRemoteOneShotLifecycleTests {
                 == [
                     MediaRemoteProcessClient.gracefulTerminationTimeoutSeconds,
                     MediaRemoteProcessClient.forcedTerminationTimeoutSeconds,
-                    MediaRemoteProcessClient.gracefulTerminationTimeoutSeconds,
+                    MediaRemoteProcessClient.gracefulTerminationTimeoutSeconds
                 ])
     }
 
