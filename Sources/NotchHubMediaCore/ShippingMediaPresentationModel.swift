@@ -12,6 +12,7 @@ public struct ShippingMediaPresentation: Sendable, Equatable {
     public let artist: String?
     public let album: String?
     public let artworkData: Data?
+    public let sourceBundleIdentifier: String?
     public let sourceDisplayName: String
     public let canGoPrevious: Bool
     public let canGoNext: Bool
@@ -25,6 +26,7 @@ public struct ShippingMediaPresentation: Sendable, Equatable {
         artist: String?,
         album: String?,
         artworkData: Data?,
+        sourceBundleIdentifier: String?,
         sourceDisplayName: String,
         canGoPrevious: Bool,
         canGoNext: Bool,
@@ -37,6 +39,7 @@ public struct ShippingMediaPresentation: Sendable, Equatable {
         self.artist = artist
         self.album = album
         self.artworkData = artworkData
+        self.sourceBundleIdentifier = sourceBundleIdentifier
         self.sourceDisplayName = sourceDisplayName
         self.canGoPrevious = canGoPrevious
         self.canGoNext = canGoNext
@@ -74,6 +77,7 @@ public final class ShippingMediaPresentationModel: ObservableObject {
             positionSeconds: snapshot.positionSeconds,
             durationSeconds: snapshot.durationSeconds
         )
+        let sourceBundleIdentifier = Self.normalizedText(snapshot.source.bundleIdentifier)
 
         setPresentation(
             ShippingMediaPresentation(
@@ -82,7 +86,9 @@ public final class ShippingMediaPresentationModel: ObservableObject {
                 artist: Self.normalizedText(snapshot.artist),
                 album: Self.normalizedText(snapshot.album),
                 artworkData: snapshot.artworkData,
+                sourceBundleIdentifier: sourceBundleIdentifier,
                 sourceDisplayName: Self.normalizedText(snapshot.source.displayName)
+                    ?? sourceBundleIdentifier
                     ?? snapshot.source.bundleIdentifier,
                 canGoPrevious: snapshot.capabilities.previous == .supported,
                 canGoNext: snapshot.capabilities.next == .supported,
