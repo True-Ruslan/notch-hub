@@ -7,11 +7,11 @@ Scope: M6.6 user-visible interaction layer after merged Tasks 0–4
 
 ## 1. Purpose
 
-NotchHub should feel physically connected to the MacBook notch rather than behaving like a conventional popover that merely appears below it. The next M6.6 user-visible slice therefore adds an interactive compact-to-expanded morph, local media swipe tracking, semantic haptics, and source-application identity as an icon rather than persistent source text.
+NotchHub should feel physically connected to the MacBook notch rather than behaving like a conventional popover that merely appears below it. The next M6.6 user-visible slice therefore adds an interactive compact-to-expanded morph, local media swipe tracking, semantic media haptics, and source-application identity as an icon rather than persistent source text.
 
-The product direction is inspired by the interaction qualities the user likes in notch utilities such as NotchHook and by the compact source-app icon treatment seen in TheBoringNotch. These products are references for interaction goals only. NotchHub must use an independent implementation, its existing architecture, and its own visual language. No external implementation is copied.
+The product direction is inspired by the interaction qualities the user likes in notch utilities such as NotchHook and by the source-app icon treatment seen in TheBoringNotch. These products are references for interaction goals only. NotchHub must use an independent implementation, its existing architecture, and its own visual language. No external implementation is copied.
 
-This design supersedes the old M6.6 Task 5+ interaction assumptions where they conflict. M6.6 Tasks 0–4 remain accepted foundations and are not reopened.
+This design supersedes the old M6.6 Task 5+ interaction assumptions where they conflict. M6.6 Tasks 0–4 remain accepted foundations and are not reopened; later tasks may consume their public seams without weakening their accepted behavior.
 
 ## 2. Product outcome
 
@@ -21,9 +21,9 @@ The user should perceive one continuous surface attached to the physical notch:
 - a local downward trackpad gesture progressively pulls the notch surface open rather than waiting until release and then playing a fixed endpoint animation;
 - a local upward gesture from expanded progressively pushes the panel back into the physical notch;
 - cancelling or reversing before commit returns smoothly to the starting endpoint;
-- crossing the semantic commit threshold provides one haptic confirmation;
-- releasing while committed settles to the destination using the existing animation policy;
+- releasing after the existing 70 pt vertical commit threshold settles to the destination using the existing animation policy;
 - horizontal media gestures visibly track the finger and commit previous/next only on physical release;
+- horizontal media arm transitions keep the already-frozen one-haptic semantics;
 - the source application is represented primarily by its application icon, not a persistent textual label in the visual player chrome;
 - draggable seek remains capability-driven and isolated from track/panel gestures.
 
@@ -43,6 +43,7 @@ This slice does not add:
 - artwork-driven continuous color extraction;
 - a second panel/geometry owner;
 - continuous media observation while settled compact;
+- a new vertical-gesture haptic contract;
 - any new Accessibility, Input Monitoring, Automation, Screen Recording, network, telemetry, file, Contacts, Calendar, or clipboard authority.
 
 Those remain separate future decisions.
@@ -69,7 +70,7 @@ Neither `AppDelegate`, SwiftUI views, nor the gesture session may call `NSPanel.
 
 ### 5.2 New interactive transition state
 
-The transition coordinator gains an interactive transition mode that is distinct from its existing endpoint animation phases.
+The transition coordinator gains an interactive transition mode distinct from its existing endpoint animation phases.
 
 Conceptual state:
 
@@ -92,8 +93,10 @@ The coordinator owns:
 - transition origin (`compact` or `expanded`);
 - normalized interactive progress `0...1`;
 - current interpolated frame and corner radius;
-- commit/cancel decision handoff;
+- commit/cancel handoff to the existing endpoint settle path;
 - generation invalidation when another authoritative transition wins.
+
+The existing `NotchPanelController` remains the AppKit panel owner and injects the narrow immediate-presentation callback used by the coordinator. The controller may update its owned panel only when invoked by the coordinator; application composition code does not gain direct panel-frame authority.
 
 ### 5.3 Geometry interpolation
 
@@ -113,7 +116,7 @@ The interpolation must use the same top-edge/screen-space conventions as the acc
 
 ### 5.4 Progress mapping
 
-The initial vertical interaction distance is the already-approved M6.6 vertical threshold of `70 pt` for commit semantics.
+The semantic vertical commit threshold remains the already-frozen `70 pt` in `MediaGestureCoordinator`.
 
 Visual progress is intentionally more responsive than commit semantics:
 
@@ -122,7 +125,7 @@ visualProgress = clamp(abs(cumulativeVerticalDelta) / interactiveTravel, 0...1)
 interactiveTravel = max(140 pt, min(expandedHeight - compactHeight, 220 pt))
 ```
 
-The gesture can therefore visually follow the finger before the 70 pt commit threshold is reached, while the existing `MediaGestureCoordinator` remains authoritative for whether the gesture is semantically committed.
+The gesture can therefore visually follow the finger before the semantic commit threshold is reached, while `MediaGestureCoordinator` remains authoritative for whether release requests expansion/collapse.
 
 Target-Mac physical acceptance may tune `interactiveTravel` once if the motion feels too stiff or too eager. Any accepted value is then frozen into deterministic tests. The `70 pt` semantic threshold is not silently changed by visual tuning.
 
@@ -130,8 +133,8 @@ Target-Mac physical acceptance may tune `interactiveTravel` once if the motion f
 
 On physical gesture end:
 
-- if `MediaGestureCoordinator` emitted `requestExpansion`, interactive expansion settles to `.expanded` through the normal transition coordinator animation path;
-- if it emitted `requestCollapse`, interactive collapse settles to `.compact` through the normal transition coordinator animation path;
+- if `MediaGestureCoordinator` emitted `requestExpansion`, interactive expansion settles to `.expanded` through the normal transition coordinator path;
+- if it emitted `requestCollapse`, interactive collapse settles to `.compact` through the normal transition coordinator path;
 - if no semantic transition intent was emitted, the panel settles back to its origin endpoint;
 - `.cancelled` always returns to the origin endpoint;
 - momentum cannot begin, arm, commit, or continue an interactive panel transition.
@@ -160,12 +163,14 @@ For horizontal gestures:
 - compact artwork/status may translate subtly with the finger;
 - expanded Media artwork/card may translate more visibly;
 - visual translation is clamped and damped; it does not represent a fabricated next track;
-- entering `armed` produces exactly one public AppKit `.levelChange` haptic per armed transition;
+- entering horizontal `armed` produces exactly one public AppKit `.levelChange` haptic per armed transition;
 - leaving `armed` through hysteresis resets the armed treatment without an extra haptic;
 - physical release while armed sends exactly one previous/next command;
 - commit does not emit a second haptic;
 - the view returns to authoritative media state after command completion/event update;
 - stale async capability/command results are ignored by existing generation/lifecycle rules.
+
+Vertical panel morph uses visual tracking only. It does not add a new haptic signal. Hover expansion keeps its already-accepted haptic behavior, and horizontal gesture haptics must not double-fire with it.
 
 The App-owned session does not know about MediaRemote details. It calls only the accepted `ShippingMediaRuntime`, `ShippingMediaCompactCommandDispatcher`, and panel-controller seams.
 
@@ -173,7 +178,7 @@ The App-owned session does not know about MediaRemote details. It calls only the
 
 ### 7.1 Presentation data
 
-`ShippingMediaPresentation` gains a separate optional `sourceBundleIdentifier` in addition to any normalized source display name retained for accessibility/debug-contract purposes.
+`ShippingMediaPresentation` gains a separate optional `sourceBundleIdentifier` in addition to the normalized source display name retained for accessibility/help semantics and deterministic tests.
 
 The bundle identifier is normalized from authoritative `MediaSessionSnapshot.source.bundleIdentifier`. It is not inferred from title/artist text.
 
@@ -186,7 +191,7 @@ Introduce a small `SourceApplicationIconResolver` with these rules:
 - input: normalized bundle identifier;
 - resolve via public `NSWorkspace.urlForApplication(withBundleIdentifier:)`;
 - obtain the icon via public workspace/application APIs;
-- cache only the latest small set of resolved bundle IDs in memory;
+- in-memory cache capacity: at most 8 bundle identifiers for the application lifetime;
 - no filesystem crawling;
 - no persistence;
 - no polling;
@@ -201,13 +206,13 @@ Expanded Media removes the persistent source text row from normal visual chrome.
 
 Instead:
 
-- show a `22...24 pt` source application icon badge at the lower trailing corner of the album artwork;
-- preserve artwork legibility with a subtle black/material backing or border only if required by physical visual acceptance;
-- when icon resolution fails, show a neutral application glyph badge rather than textual source chrome;
-- expose the normalized source display name through accessibility/help metadata so source identity is still understandable without relying exclusively on the icon;
+- show a `24 pt` source application icon badge at the lower trailing corner of the album artwork;
+- use a lightweight dark backing/border only as needed to keep the badge legible over bright artwork;
+- when icon resolution fails, show a neutral system application glyph badge rather than textual source chrome;
+- expose the normalized source display name through accessibility/help metadata so source identity remains understandable without relying exclusively on the icon;
 - compact Media does not gain an additional source icon in this slice; it remains artwork-left/status-right to preserve the accepted 36 pt wings.
 
-This pattern is independently implemented. TheBoringNotch is a visual/product reference only; its GPL-licensed source is not copied.
+This pattern is independently implemented. TheBoringNotch is a visual/product reference only. The inspected repository revision is GPL-3.0, so no source text or implementation is copied into NotchHub.
 
 ## 8. Media runtime lifecycle during interactive motion
 
@@ -251,14 +256,14 @@ Use `NSHapticFeedbackManager.defaultPerformer` only through an injectable App-ow
 Haptic events:
 
 - horizontal previous/next: one `.levelChange` when entering armed;
-- vertical expand/collapse: one `.levelChange` when the semantic commit threshold is first armed;
-- staying armed: none;
-- commit: none;
-- cancellation: none;
+- staying horizontally armed: none;
+- horizontal commit: none;
+- horizontal cancellation: none;
 - unsupported media action: none;
-- hover expansion continues to use its already-accepted haptic policy and must not double-fire because an interactive gesture is also active.
+- vertical interactive expansion/collapse: no new M6.6 haptic;
+- hover expansion keeps its existing accepted haptic policy.
 
-Tests assert semantic requests, not physical vibration.
+Tests assert semantic haptic requests, not physical vibration.
 
 ## 11. Performance policy
 
@@ -316,7 +321,7 @@ Add Core tests for:
 - Reduce Motion settles exactly;
 - stale generation cannot restore old interactive geometry;
 - retarget/layout change uses current authoritative endpoints;
-- no expansion haptic originates from transition coordinator interactive plumbing.
+- no expansion haptic originates from interactive transition plumbing.
 
 ### 13.2 App gesture-session tests
 
@@ -328,8 +333,9 @@ Test with injected fakes:
 - compact command path uses dispatcher only;
 - expanded command path uses runtime only;
 - vertical visual progress routes only through panel interactive API;
-- exactly one haptic call per arm effect;
-- no second haptic on commit;
+- horizontal arm effect maps to exactly one haptic call;
+- no second haptic on horizontal commit;
+- vertical interaction produces no new haptic;
 - momentum ignored;
 - seek-active suppresses notch gestures;
 - invalidation resets visual state and stops compact dispatcher ownership.
@@ -341,8 +347,9 @@ Test:
 - bundle ID propagated independently of display name;
 - resolver success returns icon;
 - resolver failure returns nil/fallback path;
+- cache never exceeds 8 source bundle identifiers;
 - repeated same-source rendering does not repeatedly resolve through workspace;
-- source switch invalidates/updates cached presentation identity;
+- source switch updates resolved presentation identity;
 - visual source text is absent from normal expanded chrome;
 - accessibility/help identity remains available.
 
@@ -357,14 +364,36 @@ Keep fail-closed tests that reject:
 - new sensitive entitlements;
 - polling/repeating-timer additions in the gesture path.
 
-## 14. Physical acceptance
+## 14. Acceptance ledger extension
+
+The frozen `NH-MEDIA-GESTURE-001...018` IDs remain unchanged. This design adds a separate ledger so already-frozen semantics are not renumbered or rewritten.
+
+Create `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md` with these stable IDs:
+
+| ID | Gate | Required result |
+|---|---|---|
+| `NH-NOTCH-INTERACTIVE-001` | Compact downward tracking | Physical local downward gesture visibly interpolates from the exact current compact layout without waiting for release. |
+| `NH-NOTCH-INTERACTIVE-002` | Compact cancellation | Short/reversed/cancelled downward gesture returns to the exact compact endpoint and never starts persistent media observation. |
+| `NH-NOTCH-INTERACTIVE-003` | Compact commit | Qualifying downward gesture settles through transition authority to exact expanded endpoint. |
+| `NH-NOTCH-INTERACTIVE-004` | Expanded upward tracking | Physical local upward gesture visibly interpolates from expanded toward compact while expanded runtime remains authoritative until settlement. |
+| `NH-NOTCH-INTERACTIVE-005` | Expanded cancel/commit | Cancel returns to exact expanded; qualifying release settles to exact compact and then releases runtime. |
+| `NH-NOTCH-INTERACTIVE-006` | Arbitration + stale safety | Horizontal/seek capture cannot move panel; momentum cannot drive interactive progress; stale generations/layout updates cannot restore an obsolete frame. |
+| `NH-NOTCH-INTERACTIVE-007` | Hover parity | Existing 120 ms hover expansion remains correct and its accepted haptic does not duplicate because interactive input exists. |
+| `NH-NOTCH-INTERACTIVE-008` | Reduce Motion | Interactive gesture may track physical input, but settle obeys Reduce Motion and lands exactly at the authoritative endpoint. |
+| `NH-NOTCH-INTERACTIVE-009` | Resource lifecycle | Settled compact owns zero persistent adapter, cancelled compact expansion starts none, settled expanded owns the expected adapter, Quit leaves no orphan. |
+| `NH-MEDIA-SOURCE-ICON-001` | Authoritative identity | Expanded source badge derives only from authoritative source bundle identifier, never track metadata heuristics. |
+| `NH-MEDIA-SOURCE-ICON-002` | Correct/fallback rendering | Resolvable source shows its application icon; unresolved source shows neutral app glyph without fabricated identity. |
+| `NH-MEDIA-SOURCE-ICON-003` | Text removal + accessibility | Persistent visual source text is absent from expanded chrome while source name remains available to accessibility/help semantics. |
+| `NH-MEDIA-SOURCE-ICON-004` | Local bounded lookup | Icon lookup uses public `NSWorkspace`, no network/persistence/crawling, and in-memory cache is capped at 8 bundle identifiers. |
+
+## 15. Physical acceptance
 
 The first candidate containing interactive panel motion, gesture haptics, source icon, and seek requires target acceptance on macOS 26.6 / Mac16,8 before merge/release status is claimed.
 
-Minimum physical matrix:
+Minimum physical matrix combines applicable existing `NH-MEDIA-GESTURE-*` gates with all new `NH-NOTCH-INTERACTIVE-*` and `NH-MEDIA-SOURCE-ICON-*` gates. In particular verify:
 
 1. Cold no-media hover expansion/collapse remains correct.
-2. Compact swipe-down visually follows fingers and commits to expanded at the threshold.
+2. Compact swipe-down visually follows fingers and commits at the existing semantic threshold.
 3. Short/reversed swipe-down returns smoothly to compact with no persistent adapter startup.
 4. Expanded swipe-up follows fingers and commits to compact.
 5. Short/reversed swipe-up returns smoothly to expanded.
@@ -372,35 +401,37 @@ Minimum physical matrix:
 7. Horizontal compact next/previous works with one arm haptic and one command.
 8. Horizontal expanded next/previous visibly tracks and commits once.
 9. Unsupported previous/next cannot arm and produces no haptic.
-10. Source app is represented by the correct application icon for Yandex Music and Yandex Browser/Chromium when resolvable.
-11. Source icon fallback is non-misleading when application resolution fails.
-12. Seek drags only when capability is supported and commits once.
-13. No Accessibility/Input Monitoring/Automation/Screen Recording prompt appears.
-14. Settled compact owns zero persistent adapter process.
-15. Settled expanded owns the expected persistent adapter.
-16. Cancelled compact expansion never starts a persistent adapter.
-17. Normal Quit leaves no NotchHub/media child orphan.
-18. Motion feels continuous with no obvious frame jump at handoff from interactive progress to endpoint settle animation.
+10. Vertical morph introduces no new haptic beyond existing hover behavior.
+11. Source app is represented by the correct application icon for Yandex Music and Yandex Browser/Chromium when resolvable.
+12. Source icon fallback is non-misleading when application resolution fails.
+13. Seek drags only when capability is supported and commits once.
+14. No Accessibility/Input Monitoring/Automation/Screen Recording prompt appears.
+15. Settled compact owns zero persistent adapter process.
+16. Settled expanded owns the expected persistent adapter.
+17. Cancelled compact expansion never starts a persistent adapter.
+18. Normal Quit leaves no NotchHub/media child orphan.
+19. Motion feels continuous with no obvious frame jump at handoff from interactive progress to endpoint settle animation.
 
 One explicit tuning pass is allowed for visual interactive travel/damping based on target-Mac feel. Any tuned constants must be frozen in tests before acceptance.
 
-## 15. Implementation order
+## 16. Implementation order
 
 After this written spec is reviewed, implementation proceeds under strict TDD in this order:
 
-1. interactive transition model/API in `NotchHubCore`;
-2. App-owned `MediaGestureSession` and haptic routing;
-3. interactive horizontal/vertical visual wiring;
-4. source bundle identity propagation and `SourceApplicationIconResolver`;
-5. source icon UI replacing persistent source text;
-6. capability-gated draggable seek;
-7. source-level security/performance policy checks and any justified size-budget cycle;
-8. exact-head CI;
-9. one consolidated target-Mac physical acceptance candidate;
-10. documentation sync, merge, post-merge CI, then P1 performance/resource review.
+1. create/freeze the new interactive/source-icon acceptance ledger;
+2. interactive transition model/API in `NotchHubCore`;
+3. App-owned `MediaGestureSession` and horizontal haptic routing;
+4. interactive horizontal/vertical visual wiring;
+5. source bundle identity propagation and `SourceApplicationIconResolver`;
+6. source icon UI replacing persistent source text;
+7. capability-gated draggable seek;
+8. source-level security/performance policy checks and any justified size-budget cycle;
+9. exact-head CI;
+10. one consolidated target-Mac physical acceptance candidate;
+11. documentation sync, merge, post-merge CI, then P1 performance/resource review.
 
-## 16. Reference policy
+## 17. Reference policy
 
 External notch utilities are used only to identify desirable product qualities and interaction patterns. NotchHub implementation remains independent.
 
-TheBoringNotch reference inspected during design uses public `NSWorkspace` application lookup for app icons and visually overlays an app icon on album artwork. NotchHub adopts only the general product idea, with its own types, caching, layout, tests, and architecture. No GPL implementation text is copied into NotchHub source.
+The inspected TheBoringNotch revision resolves application identity/icon through public `NSWorkspace` APIs and overlays an app icon on album artwork. Its repository license is GPL-3.0. NotchHub adopts only the general product idea and implements its own types, bounded cache, layout, tests, lifecycle, and accessibility behavior. No GPL implementation text is copied into NotchHub source.
