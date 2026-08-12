@@ -50,7 +50,7 @@ struct MediaSourceAppIconCompositionPolicyTests {
         #expect(source.contains(".frame(width: 24, height: 24)"))
         #expect(source.contains("Image(systemName: \"app\")"))
         #expect(source.contains(".accessibilityLabel(Text(presentation.sourceDisplayName))"))
-        #expect(!source.contains("Text(presentation.sourceDisplayName)"))
+        #expect(!hasStandaloneSourceDisplayNameText(in: source))
 
         #expect(source.contains("artwork(presentation, size: 24)"))
         #expect(source.contains("artworkWithSourceBadge(presentation, size: 92)"))
@@ -71,6 +71,13 @@ struct MediaSourceAppIconCompositionPolicyTests {
         #expect(!combined.contains("boringNotch"))
         #expect(!combined.contains("MusicManager.shared"))
         #expect(!combined.contains("AppIcon(for:"))
+    }
+
+    private func hasStandaloneSourceDisplayNameText(in source: String) -> Bool {
+        source.split(separator: "\n").contains { line in
+            line.trimmingCharacters(in: .whitespaces)
+                == "Text(presentation.sourceDisplayName)"
+        }
     }
 
     private func sourceText(relativePath: String) throws -> String {
