@@ -56,14 +56,15 @@ Peek exists only when NotchHub has a retained or freshly confirmed media context
 Peek is intentionally smaller than the full expanded surface and contains only:
 
 - small artwork at leading edge;
-- one-line title;
-- one-line artist treatment within the same compact metadata area, truncating with ellipsis as needed;
+- one single-line metadata strip containing title and artist inline, e.g. `Title — Artist`, truncated with ellipsis as needed;
 - interactive timeline spanning most of the available width;
 - lightweight play/pause state indicator;
 - no previous/next buttons;
 - no dedicated play/pause button;
 - no source-application icon;
 - no Home content or generic non-media placeholder.
+
+Initial target-Mac Peek geometry is **360 x 96 pt**. On other layouts it is clamped between the current compact and expanded frames while remaining centered on the same hardware-notch axis. One target-Mac visual tuning pass may adjust Peek width/height and animation damping after physical testing; accepted values must then be frozen in deterministic tests. This tuning may not change input semantics, the 120 ms activation dwell, or the 140 ms collapse grace.
 
 Peek supports:
 
@@ -130,15 +131,19 @@ The existing interactive compact<->expanded path remains authoritative for verti
 
 ### 6.1 Activation
 
-Hover uses the existing short dwell concept, but its destination changes from full expansion to Peek.
+Hover keeps the existing accepted **120 ms activation dwell**, but its destination changes from full expansion to Peek.
 
 Activation rules:
 
-- media context is required;
 - a quick pass through the hover region before dwell completion remains compact;
-- beginning an owned swipe/seek cancels pending hover activation;
+- beginning an owned swipe/seek cancels pending hover activation before any hover haptic fires;
 - hover activation must not steal an already-started compact gesture;
-- activation produces no full-interface state transition.
+- activation produces no full-interface state transition;
+- a retained media snapshot may satisfy the initial media-context requirement immediately;
+- when no retained snapshot exists, NotchHub remains compact while one bounded freshness acquisition runs; only a positive media result while the pointer is still hover-eligible may open Peek;
+- a negative/no-session result leaves the panel compact and shows no blank/generic Peek.
+
+A successful hover-to-Peek activation preserves the existing accepted hover haptic exactly once. Cancelled, no-media, or stale activation produces no hover haptic.
 
 ### 6.2 Peek collapse grace
 
@@ -180,20 +185,28 @@ Peek must feel immediate without introducing compact polling.
 
 ### 8.1 Cached-first presentation
 
-When hover dwell completes and an in-memory media presentation exists:
+When hover dwell completes:
 
-1. show Peek immediately from the last in-memory snapshot;
-2. start exactly one bounded freshness acquisition through the existing media boundary;
-3. if fresh media confirms the session, update Peek in place;
-4. if media is no longer available, collapse Peek to compact without showing Home.
+- **retained snapshot available:** show Peek immediately from the in-memory snapshot and issue exactly one bounded freshness acquisition;
+- **no retained snapshot:** remain compact and issue exactly one bounded freshness acquisition; if it positively confirms usable media while the pointer is still hover-eligible, open Peek; otherwise remain compact;
+- **fresh media confirms/updates the session:** update Peek in place;
+- **fresh media reports no session:** collapse an already-visible cached Peek to compact without showing Home.
 
 No media state is persisted to disk for Peek.
 
-### 8.2 No persistent compact observation
+### 8.2 No persistent compact or Peek observation
 
 Settled compact continues to own zero persistent `mediaremote-adapter.pl` observation.
 
-Peek may own only the minimum bounded lifecycle required to refresh and support its active interaction contract. The implementation must not introduce:
+Peek also does **not** own a persistent media observer. It may use only bounded one-shot operations already compatible with the compact architecture:
+
+- one freshness acquisition at hover activation;
+- bounded capability/command work at semantic media-gesture boundaries;
+- bounded seek commit/cancellation work.
+
+No persistent adapter process is kept alive merely because Peek is visible. The existing persistent expanded runtime starts only after authoritative settlement to `expanded` and stops according to the existing expanded-to-compact lifecycle contract.
+
+The implementation must not introduce:
 
 - polling;
 - repeating timers;
@@ -201,8 +214,6 @@ Peek may own only the minimum bounded lifecycle required to refresh and support 
 - sleep loops;
 - background history collection;
 - speculative long-lived observation after returning to compact.
-
-Any persistent runtime required by the existing expanded UI still starts/stops according to authoritative expanded lifecycle settlement.
 
 ## 9. Continuity and no-blink contract
 
@@ -251,22 +262,25 @@ The design does not request Accessibility, Input Monitoring, Automation, Screen 
 
 ## 11. Haptic policy
 
-Existing approved M6.6 haptics remain unchanged:
+Existing approved haptic semantics are preserved:
 
+- successful hover-to-Peek activation: existing hover haptic exactly once;
+- cancelled/no-media hover: none;
 - horizontal previous/next: one `.levelChange` when entering armed;
-- commit/cancel: no additional haptic;
+- horizontal commit/cancel: no additional haptic;
 - unsupported gesture: no haptic;
-- vertical expansion/collapse: no new haptic.
+- vertical expansion/collapse: no new haptic;
+- seek: no new haptic.
 
-Peek does not add hover or seek haptics in this slice. Cursor hiding during seek is visual feedback only.
+Hover activation and horizontal arm ownership must remain mutually exclusive for the same physical interaction so haptics cannot double-fire.
 
 ## 12. Error handling
 
 Fail closed:
 
-- no media at hover time -> remain compact;
+- no usable media at hover time -> remain compact;
 - cached media later disproved -> collapse Peek to compact;
-- refresh failure without authoritative evidence of session loss -> do not fabricate new media state; preserve only bounded current Peek presentation until normal exit/teardown policy resolves it;
+- refresh failure without authoritative evidence of session loss -> do not fabricate new media state; preserve only the bounded current Peek presentation until normal exit/teardown policy resolves it;
 - source identity changes during seek -> cancel seek, restore cursor, do not apply the old target to the new source;
 - panel/layout authority invalidation -> cancel active interaction, restore cursor, resolve to the current authoritative stable state;
 - stale async completion -> ignored by generation/session identity.
@@ -304,8 +318,9 @@ Before production changes, TDD must freeze at minimum:
 
 ### State machine
 
-- compact + media hover dwell -> Peek;
-- compact + no media hover dwell -> compact;
+- compact + retained-media hover dwell -> Peek;
+- compact + no retained media -> stays compact until one-shot freshness positively confirms media;
+- compact + no usable media -> compact;
 - compact click -> expanded;
 - compact DOWN -> expanded directly;
 - Peek free-surface click -> expanded;
@@ -313,14 +328,23 @@ Before production changes, TDD must freeze at minimum:
 - expanded UP -> compact;
 - expanded pointer exit -> remains expanded.
 
-### Grace and ownership
+### Geometry and timing
 
+- default activation dwell remains exactly 120 ms;
+- target-Mac initial Peek target is 360 x 96 pt;
+- Peek geometry stays between compact and expanded bounds on alternate layouts;
 - Peek pointer exit does not collapse before 140 ms;
 - exactly-at/after 140 ms with no return collapses;
-- re-entry before deadline cancels collapse;
+- re-entry before deadline cancels collapse.
+
+### Grace and ownership
+
 - active swipe prevents collapse;
 - active seek prevents collapse;
-- transition to expanded cancels pending collapse.
+- transition to expanded cancels pending collapse;
+- starting a gesture cancels pending hover activation before its haptic;
+- successful Peek activation emits existing hover haptic once;
+- no-media/cancelled activation emits none.
 
 ### Input arbitration
 
@@ -333,11 +357,12 @@ Before production changes, TDD must freeze at minimum:
 ### Media lifecycle
 
 - cached snapshot can render immediate Peek;
+- no-cache path waits in compact for one bounded freshness result;
 - one freshness request updates Peek in place;
 - media disappearance collapses Peek without Home flash;
 - settled compact has zero persistent adapter ownership;
+- settled Peek has zero persistent adapter observer ownership;
 - cancelled compact expansion starts no persistent adapter;
-- Peek collapse releases any bounded Peek ownership;
 - no polling/repeating media worker is introduced.
 
 ### Continuity
@@ -375,8 +400,8 @@ Add a separate stable `NH-MEDIA-PEEK-*` ledger rather than renumbering frozen M6
 
 | ID | Gate | Required result |
 |---|---|---|
-| `NH-MEDIA-PEEK-001` | Hover destination | With media available, hover dwell opens Peek only; full expanded UI never opens from hover alone. |
-| `NH-MEDIA-PEEK-002` | No-media hover | With no media context, hover leaves the panel compact. |
+| `NH-MEDIA-PEEK-001` | Hover destination | With media available, 120 ms hover dwell opens Peek only; full expanded UI never opens from hover alone. |
+| `NH-MEDIA-PEEK-002` | No-media hover | With no usable media context, hover leaves the panel compact. |
 | `NH-MEDIA-PEEK-003` | Fast pointer pass | Rapid pointer passage through the notch does not expand full UI or leave Peek stuck. |
 | `NH-MEDIA-PEEK-004` | Grace | Leaving Peek and returning within 140 ms keeps Peek stable; staying outside beyond the grace returns to compact. |
 | `NH-MEDIA-PEEK-005` | Explicit expansion | Click on free Peek surface and physical DOWN each open expanded exactly once. |
@@ -386,7 +411,7 @@ Add a separate stable `NH-MEDIA-PEEK-*` ledger rather than renumbering frozen M6
 | `NH-MEDIA-PEEK-009` | Track continuity | Track/source changes update media content without an obvious Home/interface blink while media remains valid. |
 | `NH-MEDIA-PEEK-010` | Downward continuity | Compact DOWN follows existing interactive expansion and reaches expanded without visible intermediate Home blink. |
 | `NH-MEDIA-PEEK-011` | Expanded collapse | Expanded physical UP returns directly to compact; pointer exit alone does not close expanded. |
-| `NH-MEDIA-PEEK-012` | Lifecycle | Settled compact and normal Quit leave no unexpected persistent `mediaremote-adapter.pl` process. |
+| `NH-MEDIA-PEEK-012` | Lifecycle | Settled compact, settled Peek, and normal Quit leave no unexpected persistent `mediaremote-adapter.pl` observer process. |
 | `NH-MEDIA-PEEK-013` | Permissions | No Accessibility, Input Monitoring, Automation, or Screen Recording prompts are introduced. |
 
 The previously physically passed M6.6 semantic gates remain valid unless production code affecting them changes. Any modified behavior must be rerun where relevant on the exact candidate.
@@ -398,7 +423,7 @@ After written-spec approval, implementation planning should use small RED -> GRE
 1. freeze three-state panel semantics and hover destination;
 2. add Peek geometry/presentation under existing transition authority;
 3. add 140 ms grace and input ownership;
-4. wire cached-first media freshness without persistent compact observation;
+4. wire cached-first media freshness without persistent compact/Peek observation;
 5. preserve swipe/seek behavior inside Peek;
 6. add balanced seek cursor-visibility ownership;
 7. remove track/downward transition blink at its state-source boundary;
