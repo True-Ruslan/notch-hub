@@ -20,7 +20,7 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
 
         did_finish = app_delegate.split(
             "func applicationDidFinishLaunching", 1
-        )[1].split("func applicationWillTerminate", 1)[0]
+        )[1].split("func applicationDidResignActive", 1)[0]
         self.assertNotIn("ShippingMediaRuntime()", did_finish)
         self.assertNotIn("ShippingMediaRuntime(presentationModel:", did_finish)
         self.assertNotIn("mediaRuntime.start()", did_finish)
@@ -34,13 +34,20 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
             "guard mediaRuntime == nil else",
             "let mediaRuntime = ShippingMediaRuntime(presentationModel: mediaPresentationModel)",
             "mediaRuntime.start()",
-            "case .compact:",
+            "case .compact, .peek:",
             "mediaRuntime?.stop()",
             "mediaRuntime = nil",
         )
         for fragment in required_app_fragments:
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, app_delegate)
+
+        update_runtime = app_delegate.split(
+            "private func updateMediaRuntime(for presentation: NotchPresentation)", 1
+        )[1]
+        compact_peek_branch = update_runtime.split("case .compact, .peek:", 1)[1]
+        self.assertNotIn("ShippingMediaRuntime(", compact_peek_branch)
+        self.assertNotIn("mediaRuntime.start()", compact_peek_branch)
 
         self.assertIn(
             "public var settledPresentationHandler:",
