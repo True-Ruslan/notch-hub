@@ -4,15 +4,18 @@ public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
     private let compactBackgroundOpacity: Double
     private let expandedContentTopInset: CGFloat
+    private let onExplicitExpansion: () -> Void
 
     public init(
         model: NotchPanelModel,
         compactBackgroundOpacity: Double,
-        expandedContentTopInset: CGFloat
+        expandedContentTopInset: CGFloat,
+        onExplicitExpansion: @escaping () -> Void = {}
     ) {
         self.model = model
         self.compactBackgroundOpacity = compactBackgroundOpacity
         self.expandedContentTopInset = expandedContentTopInset
+        self.onExplicitExpansion = onExplicitExpansion
     }
 
     public var body: some View {
@@ -42,6 +45,10 @@ public struct NotchRootView: View {
             Spacer()
         }
         .padding(.top, 3)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onExplicitExpansion()
+        }
     }
 
     private var expandedContent: some View {
@@ -66,7 +73,7 @@ public struct NotchRootView: View {
 
             Spacer(minLength: 0)
 
-            Text("Move the pointer away to collapse")
+            Text("Use the upward gesture to collapse")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.55))
         }
