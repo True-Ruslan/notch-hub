@@ -18,17 +18,36 @@ private final class NotchPanelLayoutState {
 }
 
 @MainActor
+private final class NotchHoverPeekRequestRelay {
+    var handler: (@MainActor @Sendable (NotchHoverPeekRequest) -> Void)?
+
+    func emit(_ request: NotchHoverPeekRequest) {
+        handler?(request)
+    }
+}
+
+@MainActor
 public final class NotchPanelController: NSObject {
     private let panel: NSPanel
     private let interactionCoordinator: NotchInteractionCoordinator
     private let transitionCoordinator: NotchPanelTransitionCoordinator
     private let pointerMonitor: NotchPointerMonitor
     private let layoutState: NotchPanelLayoutState
+    private let hoverPeekRequestRelay: NotchHoverPeekRequestRelay
     private var reduceMotionEnabled: Bool
 
     public var settledPresentationHandler: (@MainActor @Sendable (NotchPresentation) -> Void)? {
         didSet {
             transitionCoordinator.settledPresentationHandler = settledPresentationHandler
+        }
+    }
+
+    public var hoverPeekRequestHandler: (@MainActor @Sendable (NotchHoverPeekRequest) -> Void)? {
+        get {
+            hoverPeekRequestRelay.handler
+        }
+        set {
+            hoverPeekRequestRelay.handler = newValue
         }
     }
 
@@ -89,6 +108,7 @@ public final class NotchPanelController: NSObject {
                 )
             }
         )
+        let hoverPeekRequestRelay = NotchHoverPeekRequestRelay()
         let interactionCoordinator = NotchInteractionCoordinator(
             scheduleActivation: { delaySeconds, action in
                 let workItem = DispatchWorkItem {
@@ -102,6 +122,9 @@ public final class NotchPanelController: NSObject {
                 )
                 return { workItem.cancel() }
             },
+            emitHoverPeekRequest: { request in
+                hoverPeekRequestRelay.emit(request)
+            },
             emitIntent: { intent in
                 transitionCoordinator.accept(intent, layout: layoutState.currentLayout)
             }
@@ -112,6 +135,7 @@ public final class NotchPanelController: NSObject {
         self.transitionCoordinator = transitionCoordinator
         self.pointerMonitor = NotchPointerMonitor()
         self.layoutState = layoutState
+        self.hoverPeekRequestRelay = hoverPeekRequestRelay
         self.reduceMotionEnabled = initialReduceMotion
 
         super.init()
@@ -141,11 +165,38 @@ public final class NotchPanelController: NSObject {
         transitionCoordinator.animationPolicyDidChange(layout: layoutState.currentLayout)
     }
 
+    public func resolveHoverPeekRequest(
+        _ request: NotchHoverPeekRequest,
+        mediaAvailable: Bool
+    ) {
+        let accepted = interactionCoordinator.resolveHoverPeekRequest(
+            request,
+            mediaAvailable: mediaAvailable,
+            layout: layoutState.currentLayout,
+            currentPresentation: transitionCoordinator.desiredPresentation
+        )
+        guard accepted else {
+            return
+        }
+
+        transitionCoordinator.requestPeek(layout: layoutState.currentLayout)
+    }
+
+    public func setPeekInteractionHeld(_ held: Bool) {
+        interactionCoordinator.setPeekInteractionHeld(
+            held,
+            layout: layoutState.currentLayout,
+            currentPresentation: transitionCoordinator.desiredPresentation
+        )
+    }
+
     public func requestExpansion() {
+        interactionCoordinator.cancelPendingActivationForInteractiveTransition()
         transitionCoordinator.requestProgrammaticExpansion(layout: layoutState.currentLayout)
     }
 
     public func requestCollapse() {
+        interactionCoordinator.cancelPendingActivationForInteractiveTransition()
         transitionCoordinator.requestProgrammaticCollapse(layout: layoutState.currentLayout)
     }
 
@@ -193,6 +244,7 @@ public final class NotchPanelController: NSObject {
 
     public func invalidate() {
         settledPresentationHandler = nil
+        hoverPeekRequestHandler = nil
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
         transitionCoordinator.invalidate()
