@@ -3,23 +3,26 @@ import Testing
 
 struct MediaSeekAppCompositionPolicyTests {
     @Test
-    func seekSessionIsExpandedCapabilityGatedAndOwnsGestureIsolation() throws {
+    func seekSessionIsIdentityLockedAndOwnsGestureIsolation() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
 
-        #expect(source.contains("private var isSeekActive = false"))
+        #expect(source.contains("private var activeSeekTransaction: ShippingMediaSeekTransaction?"))
         #expect(source.contains("func beginSeek() -> Bool"))
         #expect(source.contains("panelModel.contentPresentation == .expanded"))
-        #expect(source.contains("presentation.canSeek"))
+        #expect(source.contains("ShippingMediaSeekTransaction(presentation: presentation)"))
         #expect(source.contains("runtimeProvider()"))
-        #expect(source.contains("seekActive: isSeekActive"))
+        #expect(source.contains("activeSeekTransaction != nil"))
+        #expect(source.contains("guard activeSeekTransaction == nil else"))
         #expect(source.contains("func commitSeek(to positionSeconds: Double)"))
         #expect(source.contains("positionSeconds.isFinite"))
+        #expect(source.contains("transaction.accepts(presentation)"))
         #expect(source.contains("runtime.seek(to:"))
         #expect(source.contains("func cancelSeek()"))
         #expect(source.contains("_ = coordinator.invalidate()"))
         #expect(source.contains("compactCapabilityTask?.cancel()"))
+        #expect(!source.contains("private var isSeekActive"))
         #expect(!source.contains("compactDispatcher.send(.seek"))
         #expect(!source.contains("Timer("))
         #expect(!source.contains("Task.sleep"))
@@ -45,7 +48,7 @@ struct MediaSeekAppCompositionPolicyTests {
     }
 
     @Test
-    func disappearingSeekSurfaceCancelsOwnershipAndUnsupportedProgressIsPassive() throws {
+    func seekSurfaceOrMediaIdentityChangeCancelsOwnershipAndUnsupportedProgressIsPassive() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
         )
@@ -57,7 +60,7 @@ struct MediaSeekAppCompositionPolicyTests {
         #expect(source.contains("presentation.positionSeconds"))
         #expect(source.contains("presentation.durationSeconds"))
         #expect(source.contains(".onChange(of: isSeekSurfaceAvailable)"))
-        #expect(source.contains("if !available"))
+        #expect(source.contains(".onChange(of: presentation.sessionIdentity)"))
         #expect(source.contains("cancelSeekPreview()"))
         #expect(source.contains(".onDisappear"))
         #expect(source.contains(".allowsHitTesting(canSeek)"))
