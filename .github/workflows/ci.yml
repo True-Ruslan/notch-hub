@@ -418,7 +418,7 @@ jobs:
           python3 scripts/performance_policy.py check-size-feature-budget \
             --summary build/perf-size.json \
             --baseline performance/baseline-v0.1.0.json \
-            --feature-budget performance/m6-6-media-seek-size-budget.json
+            --feature-budget performance/m6-6-physical-acceptance-repair-size-budget.json
 
       - name: Performance harness compatibility smoke
         run: |
