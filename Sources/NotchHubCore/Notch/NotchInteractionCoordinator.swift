@@ -59,6 +59,17 @@ final class NotchInteractionCoordinator {
                 cancelPendingActivation()
             }
 
+        case .peek:
+            cancelPendingActivation()
+            let target = NotchPointerPolicy.presentation(
+                current: .peek,
+                pointer: pointer,
+                layout: layout
+            )
+            if target == .compact {
+                emitIntent(.pointerExitCollapse)
+            }
+
         case .expanded:
             cancelPendingActivation()
             let target = NotchPointerPolicy.presentation(
