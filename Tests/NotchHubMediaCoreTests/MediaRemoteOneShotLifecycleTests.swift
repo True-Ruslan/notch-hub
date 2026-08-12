@@ -59,7 +59,7 @@ struct MediaRemoteOneShotLifecycleTests {
     }
 
     @Test
-    func failedOneShotTeardownFailsClosedAndRemainsOwnedForRetry() async {
+    func failedOneShotTeardownFailsClosedAndRemainsOwnedForRetry() async throws {
         let launcher = OneShotLifecycleLauncher { _ in [false, false] }
         let scheduler = OneShotLifecycleTimeoutScheduler()
         let client = makeClient(launcher: launcher, scheduler: scheduler)
@@ -69,16 +69,16 @@ struct MediaRemoteOneShotLifecycleTests {
         }
 
         await waitForLaunchCount(1, launcher: launcher)
-        let handle = try? #require(launcher.records.first?.handle)
+        let handle = try #require(launcher.records.first?.handle)
 
         client.stop()
 
         #expect(!client.lastTeardownClean)
         #expect(client.state == .teardownFailure)
-        #expect(handle?.terminateCount == 1)
-        #expect(handle?.forceTerminateCount == 1)
+        #expect(handle.terminateCount == 1)
+        #expect(handle.forceTerminateCount == 1)
         #expect(
-            handle?.waitTimeouts
+            handle.waitTimeouts
                 == [
                     MediaRemoteProcessClient.gracefulTerminationTimeoutSeconds,
                     MediaRemoteProcessClient.forcedTerminationTimeoutSeconds,
@@ -88,15 +88,15 @@ struct MediaRemoteOneShotLifecycleTests {
         scheduler.fireAll()
         #expect(await commandTask.value == .failed)
 
-        handle?.replaceWaitResults([true])
+        handle.replaceWaitResults([true])
         client.stop()
 
         #expect(client.lastTeardownClean)
         #expect(client.state == .stopped)
-        #expect(handle?.terminateCount == 2)
-        #expect(handle?.forceTerminateCount == 1)
+        #expect(handle.terminateCount == 2)
+        #expect(handle.forceTerminateCount == 1)
         #expect(
-            handle?.waitTimeouts
+            handle.waitTimeouts
                 == [
                     MediaRemoteProcessClient.gracefulTerminationTimeoutSeconds,
                     MediaRemoteProcessClient.forcedTerminationTimeoutSeconds,
@@ -241,7 +241,7 @@ private final class OneShotLifecycleTimeoutScheduler: MediaRemoteTimeoutScheduli
     private(set) var entries: [OneShotLifecycleScheduledAction] = []
 
     var cancelledCount: Int {
-        entries.count(where: \.isCancelled)
+        entries.filter(\.isCancelled).count
     }
 
     func schedule(
