@@ -23,6 +23,7 @@ final class MediaGestureSession {
     private var activePanelInteraction: ActivePanelInteraction?
     private var compactCapabilityTask: Task<Void, Never>?
     private var activeSeekTransaction: ShippingMediaSeekTransaction?
+    private var activeSeekSurface: MediaGestureSurface?
     private var isInvalidated = false
 
     init(
@@ -110,11 +111,13 @@ final class MediaGestureSession {
         switch phase {
         case .ended:
             finishPanelInteraction(commit: panelCommit)
+            releasePeekInteractionHoldIfNeeded(surface: surface)
             activeSurface = nil
             compactCapabilityTask?.cancel()
             compactCapabilityTask = nil
         case .cancelled:
             finishPanelInteraction(commit: false)
+            releasePeekInteractionHoldIfNeeded(surface: surface)
             activeSurface = nil
             compactCapabilityTask?.cancel()
             compactCapabilityTask = nil
@@ -128,26 +131,47 @@ final class MediaGestureSession {
             !isInvalidated,
             activeSeekTransaction == nil,
             let panelModel,
-            panelModel.contentPresentation == .expanded,
             let presentation = presentationProvider(),
-            let transaction = ShippingMediaSeekTransaction(presentation: presentation),
-            runtimeProvider() != nil
+            Self.hasTrustworthyTiming(presentation),
+            let transaction = ShippingMediaSeekTransaction(presentation: presentation)
         else {
             return false
+        }
+
+        let seekSurface: MediaGestureSurface
+        switch panelModel.contentPresentation {
+        case .compact:
+            return false
+        case .peek:
+            seekSurface = .peek
+        case .expanded:
+            guard runtimeProvider() != nil else {
+                return false
+            }
+            seekSurface = .expanded
         }
 
         compactCapabilityTask?.cancel()
         compactCapabilityTask = nil
         finishPanelInteraction(commit: false)
+        releasePeekInteractionHoldIfNeeded(surface: activeSurface)
         activeSurface = nil
         _ = coordinator.invalidate()
         visualModel.reset()
+
         activeSeekTransaction = transaction
+        activeSeekSurface = seekSurface
+        if seekSurface == .peek {
+            panelController?.setPeekInteractionHeld(true)
+        }
         return true
     }
 
     func commitSeek(to positionSeconds: Double) {
-        guard let transaction = activeSeekTransaction else {
+        guard
+            let transaction = activeSeekTransaction,
+            let seekSurface = activeSeekSurface
+        else {
             return
         }
         defer {
@@ -158,15 +182,34 @@ final class MediaGestureSession {
             positionSeconds.isFinite,
             positionSeconds >= 0,
             let panelModel,
-            panelModel.contentPresentation == .expanded,
             let presentation = presentationProvider(),
-            transaction.accepts(presentation),
-            let runtime = runtimeProvider()
+            transaction.accepts(presentation)
         else {
             return
         }
 
-        runtime.seek(to: positionSeconds)
+        switch seekSurface {
+        case .compact:
+            return
+
+        case .peek:
+            guard panelModel.contentPresentation == .peek else {
+                return
+            }
+            let compactDispatcher = compactDispatcher
+            Task {
+                _ = await compactDispatcher.seek(to: positionSeconds)
+            }
+
+        case .expanded:
+            guard
+                panelModel.contentPresentation == .expanded,
+                let runtime = runtimeProvider()
+            else {
+                return
+            }
+            runtime.seek(to: positionSeconds)
+        }
     }
 
     func cancelSeek() {
@@ -183,12 +226,13 @@ final class MediaGestureSession {
         }
 
         isInvalidated = true
-        activeSeekTransaction = nil
+        finishSeekIsolation()
         compactCapabilityTask?.cancel()
         compactCapabilityTask = nil
         _ = coordinator.invalidate()
         visualModel.reset()
         finishPanelInteraction(commit: false)
+        releasePeekInteractionHoldIfNeeded(surface: activeSurface)
         compactDispatcher.stop()
 
         activeSurface = nil
@@ -202,6 +246,7 @@ final class MediaGestureSession {
         compactCapabilityTask?.cancel()
         compactCapabilityTask = nil
         finishPanelInteraction(commit: false)
+        releasePeekInteractionHoldIfNeeded(surface: activeSurface)
         _ = coordinator.invalidate()
         visualModel.reset()
 
@@ -211,21 +256,27 @@ final class MediaGestureSession {
         }
 
         switch panelModel.contentPresentation {
-        case .compact, .peek:
+        case .compact:
             activeSurface = .compact
+        case .peek:
+            activeSurface = .peek
+            panelController?.setPeekInteractionHeld(true)
         case .expanded:
             activeSurface = .expanded
         }
     }
 
     private func finishSeekIsolation() {
+        let seekSurface = activeSeekSurface
         activeSeekTransaction = nil
+        activeSeekSurface = nil
         compactCapabilityTask?.cancel()
         compactCapabilityTask = nil
         finishPanelInteraction(commit: false)
         activeSurface = nil
         _ = coordinator.invalidate()
         visualModel.reset()
+        releasePeekInteractionHoldIfNeeded(surface: seekSurface)
     }
 
     private func handleEffects(
@@ -250,8 +301,13 @@ final class MediaGestureSession {
                 commitMediaCommand(direction, surface: surface)
 
             case .requestExpansion:
-                if surface == .compact {
+                switch surface {
+                case .compact:
                     panelCommit = true
+                case .peek:
+                    panelController?.requestExpansion()
+                case .expanded:
+                    break
                 }
 
             case .requestCollapse:
@@ -281,7 +337,7 @@ final class MediaGestureSession {
         direction: MediaGestureDirection,
         surface: MediaGestureSurface
     ) {
-        guard surface == .compact else {
+        guard surface == .compact || surface == .peek else {
             return
         }
 
@@ -311,11 +367,11 @@ final class MediaGestureSession {
         surface: MediaGestureSurface
     ) {
         switch surface {
-        case .compact:
-            let dispatcher = compactDispatcher
+        case .compact, .peek:
+            let compactDispatcher = compactDispatcher
             let action = compactAction(for: direction)
             Task {
-                _ = await dispatcher.send(action)
+                _ = await compactDispatcher.send(action)
             }
 
         case .expanded:
@@ -354,6 +410,9 @@ final class MediaGestureSession {
                 verticalDistance: max(0, verticalOffset)
             )
 
+        case .peek:
+            break
+
         case .expanded:
             guard verticalOffset < 0 || activePanelInteraction == .collapse else {
                 return
@@ -381,6 +440,13 @@ final class MediaGestureSession {
         activePanelInteraction = nil
     }
 
+    private func releasePeekInteractionHoldIfNeeded(surface: MediaGestureSurface?) {
+        guard surface == .peek else {
+            return
+        }
+        panelController?.setPeekInteractionHeld(false)
+    }
+
     private func liveCapabilities(
         for surface: MediaGestureSurface
     ) -> (previous: MediaGestureCapability, next: MediaGestureCapability) {
@@ -403,6 +469,22 @@ final class MediaGestureSession {
         case .next:
             return .next
         }
+    }
+
+    private static func hasTrustworthyTiming(_ presentation: ShippingMediaPresentation) -> Bool {
+        guard
+            presentation.canSeek,
+            let position = presentation.positionSeconds,
+            let duration = presentation.durationSeconds,
+            position.isFinite,
+            position >= 0,
+            duration.isFinite,
+            duration > 0,
+            position <= duration
+        else {
+            return false
+        }
+        return true
     }
 
     private static func gesturePhase(for phase: NSEvent.Phase) -> MediaGesturePhase? {
