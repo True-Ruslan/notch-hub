@@ -27,7 +27,6 @@ enum MediaRemoteProcessFailure: Equatable, Sendable {
 }
 
 enum MediaRemoteProcessClientError: Error, Equatable {
-    case cancelled
     case timedOut
     case teardownFailed
     case operationFailed(exitCode: Int32)
@@ -500,9 +499,7 @@ private final class MediaRemoteOneShotOperation {
         let clean = MediaRemoteProcessTerminationPolicy.stop(process)
         needsTeardownRetry = !clean
         teardownDidFinish(clean)
-        continuation.resume(
-            throwing: clean ? MediaRemoteProcessClientError.cancelled : .teardownFailed
-        )
+        continuation.resume(throwing: clean ? CancellationError() : MediaRemoteProcessClientError.teardownFailed)
         return clean
     }
 }
@@ -686,7 +683,7 @@ private final class FoundationMediaRemoteProcessHandle: MediaRemoteProcessHandle
         var result = Data()
 
         for _ in 0...maximumBytes {
-            let remaining = maximumStdoutBytesForRead(maximumBytes: maximumBytes, currentCount: result.count)
+            let remaining = maximumBytes + 1 - result.count
             guard remaining > 0 else {
                 throw MediaRemoteProcessClientError.standardOutputTooLarge
             }
@@ -702,10 +699,6 @@ private final class FoundationMediaRemoteProcessHandle: MediaRemoteProcessHandle
         }
 
         throw MediaRemoteProcessClientError.standardOutputTooLarge
-    }
-
-    private func maximumStdoutBytesForRead(maximumBytes: Int, currentCount: Int) -> Int {
-        maximumBytes + 1 - currentCount
     }
 
     func clearHandlers() {
