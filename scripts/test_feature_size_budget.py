@@ -317,7 +317,7 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assert_repository_budget(
             filename="m6-4-shipping-media-size-budget.json",
             feature_id="m6.4-shipping-media-composition",
-            source_commit="409cd69b82eaa4105df9ae9790a6aa70f341e4fd",
+            source_commit="21318c94cfcda45f147d3967ddcd7194034e9812",
             workflow_run_id=31402487785,
             artifact_id=9068350685,
         )
