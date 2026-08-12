@@ -8,10 +8,12 @@ struct M66GestureSizeBudgetPolicyTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let budgetURL = repositoryRoot
-            .appendingPathComponent("performance/m6-6-gesture-engine-size-budget.json")
-        let workflowURL = repositoryRoot
-            .appendingPathComponent(".github/workflows/ci.yml")
+        let budgetURL = repositoryRoot.appendingPathComponent(
+            "performance/m6-6-gesture-engine-size-budget.json"
+        )
+        let workflowURL = repositoryRoot.appendingPathComponent(
+            ".github/workflows/ci.yml"
+        )
 
         let budget = try JSONDecoder().decode(
             FeatureBudget.self,
