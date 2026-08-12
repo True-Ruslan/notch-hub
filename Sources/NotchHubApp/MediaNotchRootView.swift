@@ -8,7 +8,9 @@ struct MediaNotchRootView: View {
     @ObservedObject private var panelModel: NotchPanelModel
     @ObservedObject private var mediaModel: ShippingMediaPresentationModel
     @ObservedObject private var mediaGestureVisualModel: MediaGestureVisualModel
+    @State private var sourceApplicationIcon: NSImage?
 
+    private let sourceApplicationIconResolver: SourceApplicationIconResolver
     private let hardwareNotchWidth: CGFloat
     private let compactBackgroundOpacity: Double
     private let expandedContentTopInset: CGFloat
@@ -20,6 +22,7 @@ struct MediaNotchRootView: View {
         panelModel: NotchPanelModel,
         mediaModel: ShippingMediaPresentationModel,
         mediaGestureVisualModel: MediaGestureVisualModel,
+        sourceApplicationIconResolver: SourceApplicationIconResolver,
         hardwareNotchWidth: CGFloat,
         compactBackgroundOpacity: Double,
         expandedContentTopInset: CGFloat,
@@ -30,6 +33,7 @@ struct MediaNotchRootView: View {
         self.panelModel = panelModel
         self.mediaModel = mediaModel
         self.mediaGestureVisualModel = mediaGestureVisualModel
+        self.sourceApplicationIconResolver = sourceApplicationIconResolver
         self.hardwareNotchWidth = hardwareNotchWidth
         self.compactBackgroundOpacity = compactBackgroundOpacity
         self.expandedContentTopInset = expandedContentTopInset
@@ -66,6 +70,9 @@ struct MediaNotchRootView: View {
         .offset(x: mediaGestureVisualModel.horizontalOffset)
         .background(Color.black)
         .contentShape(Rectangle())
+        .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
+            sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
+        }
     }
 
     private func compactMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
@@ -90,7 +97,7 @@ struct MediaNotchRootView: View {
     private func expandedMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
         VStack(spacing: 14) {
             HStack(alignment: .top, spacing: 16) {
-                artwork(presentation, size: 92)
+                artworkWithSourceBadge(presentation, size: 92)
 
                 VStack(alignment: .leading, spacing: 5) {
                     if let title = presentation.title {
@@ -113,11 +120,6 @@ struct MediaNotchRootView: View {
                     }
 
                     Spacer(minLength: 0)
-
-                    Text(presentation.sourceDisplayName)
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.45))
-                        .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
             }
@@ -163,6 +165,40 @@ struct MediaNotchRootView: View {
         .padding(.horizontal, 24)
         .padding(.bottom, 18)
         .padding(.top, expandedContentTopInset)
+    }
+
+    private func artworkWithSourceBadge(
+        _ presentation: ShippingMediaPresentation,
+        size: CGFloat
+    ) -> some View {
+        artwork(presentation, size: size)
+            .overlay(alignment: .bottomTrailing) {
+                sourceApplicationBadge(presentation)
+                    .offset(x: 4, y: 4)
+            }
+    }
+
+    private func sourceApplicationBadge(_ presentation: ShippingMediaPresentation) -> some View {
+        Group {
+            if let sourceApplicationIcon {
+                Image(nsImage: sourceApplicationIcon)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(systemName: "app")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(4)
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+        }
+        .frame(width: 24, height: 24)
+        .background {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.black.opacity(0.75))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .accessibilityLabel(Text(presentation.sourceDisplayName))
     }
 
     private func artwork(
