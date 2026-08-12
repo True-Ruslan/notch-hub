@@ -88,15 +88,22 @@ struct MediaPeekAppCompositionPolicyTests {
     @Test
     func rootViewHasRealOneLinePeekAndExplicitExpansionWithoutTransportButtons() throws {
         let source = try sourceText(relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift")
+        let peekSection = try sourceSection(
+            source,
+            from: "private func peekMediaContent",
+            to: "private func expandedMediaContent"
+        )
 
         #expect(source.contains("case .peek:"))
         #expect(source.contains("peekMediaContent(presentation)"))
-        #expect(source.contains("private func peekMediaContent"))
-        #expect(source.contains("artwork(presentation, size: 40)"))
-        #expect(source.contains("onExplicitExpansion"))
+        #expect(peekSection.contains("artwork(presentation, size: 40)"))
+        #expect(peekSection.contains("onExplicitExpansion"))
         #expect(source.contains("panelModel.contentPresentation == .peek"))
         #expect(source.contains("panelModel.contentPresentation == .expanded"))
-        #expect(!source.contains("peekMediaContent") || !source.contains("sourceApplicationBadge(presentation)"))
+        #expect(!peekSection.contains("sourceApplicationBadge"))
+        #expect(!peekSection.contains("Button(action: onPrevious)"))
+        #expect(!peekSection.contains("Button(action: onNext)"))
+        #expect(!peekSection.contains("Button(action: onTogglePlayPause)"))
     }
 
     @Test
@@ -108,6 +115,16 @@ struct MediaPeekAppCompositionPolicyTests {
         #expect(appSource.contains("self?.panelController?.requestExpansion()"))
         #expect(rootSource.contains("onExplicitExpansion"))
         #expect(rootSource.contains(".onTapGesture"))
+    }
+
+    private func sourceSection(
+        _ source: String,
+        from startMarker: String,
+        to endMarker: String
+    ) throws -> String {
+        let start = try #require(source.range(of: startMarker))
+        let end = try #require(source.range(of: endMarker, range: start.upperBound..<source.endIndex))
+        return String(source[start.lowerBound..<end.lowerBound])
     }
 
     private func sourceText(relativePath: String) throws -> String {
