@@ -50,6 +50,7 @@ public enum MediaGestureEffect: Sendable, Equatable {
     case requestExpansion
     case requestCollapse
     case visualOffset(Double)
+    case panelVisualOffset(Double)
     case resetVisualOffset
 }
 
@@ -188,7 +189,7 @@ public final class MediaGestureCoordinator {
         case .undecided:
             break
         case .vertical:
-            break
+            effects.append(.panelVisualOffset(gesture.cumulativeY))
         case .horizontal(let direction):
             gesture.hasHorizontalVisualOffset = true
             effects.append(.visualOffset(gesture.cumulativeX))
