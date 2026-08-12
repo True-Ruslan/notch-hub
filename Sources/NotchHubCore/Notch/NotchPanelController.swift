@@ -150,8 +150,7 @@ public final class NotchPanelController: NSObject {
         interactionCoordinator.pointerMoved(
             to: NSEvent.mouseLocation,
             layout: layoutState.currentLayout,
-            currentPresentation: transitionCoordinator.desiredPresentation,
-            allowActivation: false
+            currentPresentation: transitionCoordinator.desiredPresentation
         )
     }
 
