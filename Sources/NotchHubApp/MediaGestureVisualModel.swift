@@ -22,7 +22,13 @@ final class MediaGestureVisualModel: ObservableObject {
         horizontalOffset = min(limit, max(-limit, value * scale))
     }
 
-    func reset() {
-        horizontalOffset = 0
+    func reset(animated: Bool = false) {
+        if animated {
+            withAnimation(.easeOut(duration: 0.16)) {
+                horizontalOffset = 0
+            }
+        } else {
+            horizontalOffset = 0
+        }
     }
 }

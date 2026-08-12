@@ -269,7 +269,7 @@ final class MediaGestureSession {
                 )
 
             case .resetVisualOffset:
-                visualModel.reset()
+                visualModel.reset(animated: true)
             }
         }
 

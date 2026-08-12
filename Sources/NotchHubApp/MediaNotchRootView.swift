@@ -54,17 +54,24 @@ struct MediaNotchRootView: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
             if let presentation = mediaModel.presentation {
                 mediaContent(presentation)
+                    .id(presentation.sessionIdentity)
+                    .transition(.opacity)
             } else {
                 NotchRootView(
                     model: panelModel,
                     compactBackgroundOpacity: compactBackgroundOpacity,
                     expandedContentTopInset: expandedContentTopInset
                 )
+                .transition(.opacity)
             }
         }
+        .animation(
+            .easeInOut(duration: 0.12),
+            value: mediaModel.presentation?.sessionIdentity
+        )
         .onChange(of: isSeekSurfaceAvailable) { _, available in
             if !available {
                 cancelSeekPreview()
