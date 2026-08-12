@@ -44,6 +44,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     hardwareNotchWidth: layout.hardwareNotchWidth,
                     compactBackgroundOpacity: layout.compactBackgroundOpacity,
                     expandedContentTopInset: layout.expandedContentTopInset,
+                    onExplicitExpansion: { [weak self] in
+                        self?.panelController?.requestExpansion()
+                    },
                     onTogglePlayPause: { [weak self] in
                         self?.mediaRuntime?.togglePlayPause()
                     },
