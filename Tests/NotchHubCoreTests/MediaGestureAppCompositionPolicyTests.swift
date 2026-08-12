@@ -3,148 +3,94 @@ import Testing
 
 struct MediaGestureAppCompositionPolicyTests {
     @Test
-    func appOwnsLocalGestureSessionAndKeepsMediaRuntimeSettledPresentationScoped() throws {
-        let source = try sourceText(
+    func appOwnsGestureSessionAndMapsOnlyPublicHapticAndExistingCommandPaths() throws {
+        let appSource = try sourceText(
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
-
-        #expect(source.contains("private let mediaGestureVisualModel = MediaGestureVisualModel()"))
-        #expect(source.contains("private var mediaGestureSession: MediaGestureSession?"))
-        #expect(source.contains("ShippingMediaCompactCommandDispatcher()"))
-        #expect(source.contains("MediaGestureSession("))
-        #expect(source.contains("onScrollWheel:"))
-        #expect(source.contains("handleScrollWheel(event)"))
-        #expect(source.contains("mediaGestureSession.bind("))
-        #expect(source.contains("mediaGestureSession?.invalidate()"))
-        #expect(source.contains("settledPresentationHandler ="))
-        #expect(source.contains("updateMediaRuntime(for: presentation)"))
-        #expect(occurrenceCount(of: "ShippingMediaRuntime(", in: source) == 1)
-        #expect(!source.contains("addGlobalMonitorForEvents"))
-        #expect(!source.contains("addLocalMonitorForEvents"))
-        #expect(!source.contains("CGEventTap"))
-        #expect(!source.contains("NSPanel.setFrame"))
-    }
-
-    @Test
-    func gestureSessionUsesPureAxisAwarePhysicalDirectionNormalizationAndIgnoresMomentum() throws {
-        let source = try sourceText(
-            relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
-        )
-
-        #expect(source.contains("event.hasPreciseScrollingDeltas"))
-        #expect(source.contains("event.momentumPhase.isEmpty"))
-        #expect(source.contains("MediaGestureInputNormalizer.semanticDeltas("))
-        #expect(source.contains("scrollingDeltaX:"))
-        #expect(source.contains("scrollingDeltaY:"))
-        #expect(source.contains("isDirectionInvertedFromDevice:"))
-        #expect(!source.contains("let directionScale:"))
-        #expect(source.contains("MediaGestureSample("))
-        #expect(source.contains("case .began:"))
-        #expect(source.contains("case .changed:"))
-        #expect(source.contains("case .ended:"))
-        #expect(source.contains("case .cancelled:"))
-        #expect(source.contains("event.window?.contentView?.bounds.width"))
-        #expect(!source.contains("Timer("))
-        #expect(!source.contains("Timer.publish"))
-        #expect(!source.contains("DispatchSourceTimer"))
-        #expect(!source.contains("sleep("))
-    }
-
-    @Test
-    func preciseLocalGesturePreemptsPendingHoverBeforeSemanticCapture() throws {
         let sessionSource = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
-        let controllerSource = try sourceText(
-            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
-        )
 
-        #expect(sessionSource.contains("event.phase.contains(.mayBegin)"))
-        #expect(sessionSource.contains("panelController?.cancelPendingHoverActivation()"))
-        #expect(controllerSource.contains("public func cancelPendingHoverActivation()"))
+        #expect(appSource.contains("MediaGestureSession("))
+        #expect(appSource.contains("ShippingMediaCompactCommandDispatcher()"))
+        #expect(appSource.contains("NSHapticFeedbackManager.defaultPerformer"))
+        #expect(appSource.contains(".levelChange"))
+        #expect(appSource.contains("ShippingMediaRuntime(presentationModel: mediaPresentationModel)"))
+
+        #expect(sessionSource.contains("event.hasPreciseScrollingDeltas"))
+        #expect(sessionSource.contains("event.momentumPhase.isEmpty"))
+        #expect(sessionSource.contains("MediaGestureInputNormalizer.semanticDeltas("))
+        #expect(sessionSource.contains("case .compact:"))
+        #expect(sessionSource.contains("case .peek:"))
+        #expect(sessionSource.contains("case .expanded:"))
+        #expect(sessionSource.contains("compactDispatcher.isSupported(action)"))
+        #expect(sessionSource.contains("let compactDispatcher = compactDispatcher"))
+        #expect(sessionSource.contains("compactDispatcher.send(action)"))
+        #expect(sessionSource.contains("runtimeProvider()?.goPrevious()"))
+        #expect(sessionSource.contains("runtimeProvider()?.goNext()"))
+        #expect(sessionSource.contains("compactDispatcher.seek(to: positionSeconds)"))
+        #expect(sessionSource.contains("runtime.seek(to: positionSeconds)"))
+
+        #expect(!appSource.contains("NSEvent.addGlobalMonitorForEvents"))
+        #expect(!appSource.contains("NSEvent.addLocalMonitorForEvents"))
+        #expect(!sessionSource.contains("NSEvent.addGlobalMonitorForEvents"))
+        #expect(!sessionSource.contains("NSEvent.addLocalMonitorForEvents"))
+        #expect(!sessionSource.contains("CGEventTap"))
+        #expect(!sessionSource.contains("MPRemoteCommandCenter"))
     }
 
     @Test
-    func gestureSessionCapturesSurfaceAndRoutesOnlyApprovedSemanticEffects() throws {
+    func gestureSessionOwnsOnlySemanticBoundaryTasksAndNoPerEventWorker() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
 
-        #expect(source.contains("panelModel.contentPresentation"))
-        #expect(source.contains("activeSurface"))
-        #expect(source.contains("compactDispatcher.isSupported("))
-        #expect(source.contains("coordinator.resolveCompactCapability("))
-        #expect(source.contains("let dispatcher = compactDispatcher"))
-        #expect(source.contains("dispatcher.send("))
-        #expect(source.contains("runtimeProvider()?"))
-        #expect(source.contains("performArmHaptic()"))
-        #expect(source.contains("beginInteractiveExpansion()"))
-        #expect(source.contains("beginInteractiveCollapse()"))
-        #expect(source.contains("panelController.updateInteractiveTransition("))
-        #expect(source.contains("verticalDistance:"))
-        #expect(source.contains("finishInteractiveTransition(commit:"))
-        #expect(source.contains("visualModel.setHorizontalOffset("))
-        #expect(source.contains("visualModel.reset()"))
-        #expect(!source.contains("ShippingMediaRuntime("))
-        #expect(!source.contains("startObservation"))
-        #expect(!source.contains("NSPanel"))
-        #expect(!source.contains("addGlobalMonitorForEvents"))
-        #expect(!source.contains("addLocalMonitorForEvents"))
-        #expect(!source.contains("CGEventTap"))
+        #expect(source.contains("compactCapabilityTask = Task"))
+        #expect(source.contains("Task {\n                _ = await compactDispatcher.send(action)"))
+        #expect(source.contains("Task {\n                _ = await compactDispatcher.seek(to: positionSeconds)"))
+        #expect(!source.contains("Task {\n            let deltas"))
+        #expect(!source.contains("Timer("))
+        #expect(!source.contains("Task.sleep"))
+        #expect(!source.contains("CVDisplayLink"))
     }
 
     @Test
-    func compactCapabilityWorkIsGenerationSafeAndLifecycleOwned() throws {
+    func compactAndPeekUseBoundedDispatcherWhileExpandedUsesLiveRuntime() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
 
-        #expect(source.contains("private var compactCapabilityTask: Task<Void, Never>?"))
-        #expect(source.contains("compactCapabilityTask?.cancel()"))
-        #expect(source.contains("Task.isCancelled"))
-        #expect(source.contains("gestureID:"))
-        #expect(source.contains("direction:"))
-        #expect(source.contains("compactDispatcher.stop()"))
-        #expect(source.contains("coordinator.invalidate()"))
-        #expect(source.contains("func invalidate()"))
+        #expect(source.contains("guard surface == .compact || surface == .peek else"))
+        #expect(source.contains("case .compact, .peek:"))
+        #expect(source.contains("compactDispatcher.send(action)"))
+        #expect(source.contains("case .expanded:"))
+        #expect(source.contains("runtimeProvider()?.goPrevious()"))
+        #expect(source.contains("runtimeProvider()?.goNext()"))
     }
 
     @Test
-    func horizontalVisualModelIsBoundedAndAppliedInsideStableMediaBackground() throws {
-        let modelSource = try sourceText(
-            relativePath: "Sources/NotchHubApp/MediaGestureVisualModel.swift"
-        )
-        let rootSource = try sourceText(
-            relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
-        )
-
-        #expect(modelSource.contains("@Published private(set) var horizontalOffset: CGFloat = 0"))
-        #expect(modelSource.contains("func setHorizontalOffset("))
-        #expect(modelSource.contains("func reset(animated: Bool = false)"))
-        #expect(modelSource.contains("case .compact"))
-        #expect(modelSource.contains("case .expanded"))
-
-        #expect(rootSource.contains("@ObservedObject private var mediaGestureVisualModel"))
-        #expect(rootSource.contains("mediaGestureVisualModel: MediaGestureVisualModel"))
-        #expect(rootSource.contains(".offset(x: mediaGestureVisualModel.horizontalOffset)"))
-        #expect(rootSource.contains(".background(Color.black)"))
-    }
-
-    @Test
-    func appHapticUsesPublicSemanticAppKitFeedbackOnly() throws {
+    func scrollMayBeginAndBeganCancelPendingHoverBeforeGestureOwnership() throws {
         let source = try sourceText(
-            relativePath: "Sources/NotchHubApp/AppDelegate.swift"
+            relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
 
-        #expect(source.contains("NSHapticFeedbackManager.defaultPerformer.perform("))
-        #expect(source.contains(".levelChange"))
-        #expect(source.contains("performanceTime: .now"))
-        #expect(!source.contains("NSSound"))
-        #expect(!source.contains("IOHID"))
+        #expect(source.contains("event.phase.contains(.mayBegin)"))
+        #expect(source.contains("panelController?.cancelPendingHoverActivation()"))
+        #expect(source.contains("if phase == .began"))
+        #expect(source.contains("beginPhysicalGesture()"))
     }
 
-    private func occurrenceCount(of needle: String, in haystack: String) -> Int {
-        haystack.components(separatedBy: needle).count - 1
+    @Test
+    func peekGestureAndSeekHoldCollapseGraceOnlyWhileInteractionIsOwned() throws {
+        let source = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
+        )
+
+        #expect(source.contains("activeSurface = .peek"))
+        #expect(source.contains("panelController?.setPeekInteractionHeld(true)"))
+        #expect(source.contains("panelController?.setPeekInteractionHeld(false)"))
+        #expect(source.contains("releasePeekInteractionHoldIfNeeded"))
+        #expect(source.contains("activeSeekSurface = seekSurface"))
     }
 
     private func sourceText(relativePath: String) throws -> String {
