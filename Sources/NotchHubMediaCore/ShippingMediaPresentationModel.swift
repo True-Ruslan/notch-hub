@@ -78,17 +78,13 @@ public struct ShippingMediaPresentation: Sendable, Equatable {
     }
 }
 
-@MainActor
-public final class ShippingMediaPresentationModel: ObservableObject {
-    @Published public private(set) var presentation: ShippingMediaPresentation?
-    public var presentationDidChange: (@MainActor (ShippingMediaPresentation?) -> Void)?
-
-    public init() {}
-
-    func apply(state: MediaSubsystemState, snapshot: MediaSessionSnapshot?) {
+enum ShippingMediaPresentationProjection {
+    static func make(
+        state: MediaSubsystemState,
+        snapshot: MediaSessionSnapshot?
+    ) -> ShippingMediaPresentation? {
         guard let snapshot else {
-            setPresentation(nil)
-            return
+            return nil
         }
 
         let playbackState: ShippingMediaPlaybackState
@@ -98,15 +94,14 @@ public final class ShippingMediaPresentationModel: ObservableObject {
         case .paused:
             playbackState = .paused
         case .unavailable, .idle:
-            setPresentation(nil)
-            return
+            return nil
         }
 
-        let progress = Self.normalizedProgress(
+        let progress = normalizedProgress(
             positionSeconds: snapshot.positionSeconds,
             durationSeconds: snapshot.durationSeconds
         )
-        let sourceBundleIdentifier = Self.normalizedText(snapshot.source.bundleIdentifier)
+        let sourceBundleIdentifier = normalizedText(snapshot.source.bundleIdentifier)
         let sessionIdentity = sourceBundleIdentifier.map {
             ShippingMediaSessionIdentity(
                 generation: snapshot.sequence.generation,
@@ -114,38 +109,23 @@ public final class ShippingMediaPresentationModel: ObservableObject {
             )
         }
 
-        setPresentation(
-            ShippingMediaPresentation(
-                playbackState: playbackState,
-                title: Self.normalizedText(snapshot.title),
-                artist: Self.normalizedText(snapshot.artist),
-                album: Self.normalizedText(snapshot.album),
-                artworkData: snapshot.artworkData,
-                sourceBundleIdentifier: sourceBundleIdentifier,
-                sourceDisplayName: Self.normalizedText(snapshot.source.displayName)
-                    ?? sourceBundleIdentifier
-                    ?? snapshot.source.bundleIdentifier,
-                canGoPrevious: snapshot.capabilities.previous == .supported,
-                canGoNext: snapshot.capabilities.next == .supported,
-                canSeek: snapshot.capabilities.seek == .supported,
-                positionSeconds: progress.position,
-                durationSeconds: progress.duration,
-                sessionIdentity: sessionIdentity
-            )
+        return ShippingMediaPresentation(
+            playbackState: playbackState,
+            title: normalizedText(snapshot.title),
+            artist: normalizedText(snapshot.artist),
+            album: normalizedText(snapshot.album),
+            artworkData: snapshot.artworkData,
+            sourceBundleIdentifier: sourceBundleIdentifier,
+            sourceDisplayName: normalizedText(snapshot.source.displayName)
+                ?? sourceBundleIdentifier
+                ?? snapshot.source.bundleIdentifier,
+            canGoPrevious: snapshot.capabilities.previous == .supported,
+            canGoNext: snapshot.capabilities.next == .supported,
+            canSeek: snapshot.capabilities.seek == .supported,
+            positionSeconds: progress.position,
+            durationSeconds: progress.duration,
+            sessionIdentity: sessionIdentity
         )
-    }
-
-    func clear() {
-        setPresentation(nil)
-    }
-
-    private func setPresentation(_ newPresentation: ShippingMediaPresentation?) {
-        guard presentation != newPresentation else {
-            return
-        }
-
-        presentation = newPresentation
-        presentationDidChange?(newPresentation)
     }
 
     private static func normalizedText(_ value: String?) -> String? {
@@ -172,5 +152,35 @@ public final class ShippingMediaPresentationModel: ObservableObject {
         }
 
         return (min(positionSeconds, durationSeconds), durationSeconds)
+    }
+}
+
+@MainActor
+public final class ShippingMediaPresentationModel: ObservableObject {
+    @Published public private(set) var presentation: ShippingMediaPresentation?
+    public var presentationDidChange: (@MainActor (ShippingMediaPresentation?) -> Void)?
+
+    public init() {}
+
+    func apply(state: MediaSubsystemState, snapshot: MediaSessionSnapshot?) {
+        setPresentation(
+            ShippingMediaPresentationProjection.make(
+                state: state,
+                snapshot: snapshot
+            )
+        )
+    }
+
+    func clear() {
+        setPresentation(nil)
+    }
+
+    private func setPresentation(_ newPresentation: ShippingMediaPresentation?) {
+        guard presentation != newPresentation else {
+            return
+        }
+
+        presentation = newPresentation
+        presentationDidChange?(newPresentation)
     }
 }
