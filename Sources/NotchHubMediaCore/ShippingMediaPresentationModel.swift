@@ -6,7 +6,7 @@ public enum ShippingMediaPlaybackState: Sendable, Equatable {
     case playing
 }
 
-public struct ShippingMediaSessionIdentity: Sendable, Equatable {
+public struct ShippingMediaSessionIdentity: Sendable, Equatable, Hashable {
     public let generation: UInt64
     public let sourceBundleIdentifier: String
 
