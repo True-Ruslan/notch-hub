@@ -130,7 +130,9 @@ struct ShippingMediaCompactCommandDispatcherTests {
         #expect(!dispatcherSource.contains("sleep("))
     }
 
-    private func waitForCapabilitiesStart(_ client: CompactCommandProcessClient) async {
+    private func waitForCapabilitiesStart(
+        _ client: CompactCommandProcessClient
+    ) async {
         for _ in 0..<32 {
             if client.capabilitiesCount > 0 {
                 return
