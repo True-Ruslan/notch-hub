@@ -1,6 +1,6 @@
 # Media Peek Acceptance
 
-Status: AUTOMATED REPAIR GREEN / EXACT CANDIDATE FROZEN / TARGET-MAC PHYSICAL RETEST PENDING
+Status: AUTOMATED REPAIR GREEN / FINAL DOCS-ONLY HEAD CI PENDING / TARGET-MAC PHYSICAL RETEST PENDING
 Date: 2026-08-13
 Target: macOS 26.6 / Mac16,8
 Scope: M6.6 PR #33 Hover Peek follow-up
@@ -19,21 +19,15 @@ This ledger is additive. Existing `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`
 - Seek hides the cursor only while a valid seek interaction owns it; no pointer warp/lock is used.
 - Existing gesture semantics remain LEFT -> next, RIGHT -> previous, DOWN -> expand, expanded UP -> compact.
 
-## Exact retest candidate
+## Candidate provenance rule
 
-- source SHA: `2d9e041d05ebb949133565ae828aa8011ef66e32`;
-- CI #949 / run `31645727617`: both required jobs PASS;
-- Swift tests: 328 PASS;
-- shipping artifact `9160723064`, Actions digest `sha256:3bd3a1de2d6c562dbb741ae0e0fa7e595589955eb8d536e5e600e7c4c8372819`;
-- standalone DMG artifact `9160726090`, Actions digest `sha256:dfad8109dca3e78a60bc5d732f9b64f40eb8e50aa0f586756942a32910ffd290`;
-- executable/app/DMG sizes `562,368 / 864,574 / 555,277 B`;
-- contained DMG SHA-256 `bab80c3776a93553d83b71998c7270dc719ec28c7790f591fb4ad2b09b70edf6`.
+The final physical candidate is the **current PR head after this ledger correction**, once that exact head passes both required CI jobs. Its source SHA, workflow run, artifact IDs/digests, sizes and contained DMG SHA-256 are frozen in PR #33 **without another repository commit**. This avoids changing the candidate merely by documenting its own future SHA.
 
-CI #949 passes warnings-as-errors, release/security/performance/media policy, Sandbox/Hardened Runtime/signing, DMG verification, shipping preflight, active Hover Peek size enforcement and performance smoke.
+Pre-final docs evidence `2d9e041d05ebb949133565ae828aa8011ef66e32` / CI #949 passed both required jobs with 328 Swift tests and all release/security/performance/media/signing/preflight/size/performance-smoke gates. It proves the repair plus first docs sync, but is not used as the final physical candidate after the ledger correction changed branch head.
 
 ## Physical rejection and repair evidence
 
-The prior docs-synchronized candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 was rejected on Mac16,8/macOS 26.6.
+The prior physical candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 was rejected on Mac16,8/macOS 26.6.
 
 Observed:
 
@@ -48,13 +42,13 @@ Focused TDD repair:
 
 - RED `553cf973722dfb214f0fcb741ddb6c9b0b44ff02` / CI #947: warnings-as-errors build PASS; 328 tests / 68 suites with exactly `showKeepsStationaryPointerEligibleForHoverDwell` failing;
 - GREEN `d17bd27be72c8c3bd022fb2c3613050c398c622e` / CI #948: minimum production change removed only startup activation suppression; both required jobs PASS with 328 tests and all policy/security/package gates;
-- docs-synchronized exact candidate `2d9e041d05ebb949133565ae828aa8011ef66e32` / CI #949: both required jobs PASS.
+- docs evidence `2d9e041d05ebb949133565ae828aa8011ef66e32` / CI #949: both required jobs PASS.
 
 ## Stable acceptance IDs
 
 | ID | Gate | Required result | Automated | Physical |
 |---|---|---|---|---|
-| `NH-MEDIA-PEEK-001` | Hover destination + stationary restart | With usable media, 120 ms hover dwell opens Peek only; hover alone never opens full expanded UI. The same holds when NotchHub is shown/restarted while the pointer is already stationary inside the physical notch; no extra pointer movement is required. | RED #947 -> GREEN #948/#949 | FAIL on `bbba...`; RETEST `2d9e...` |
+| `NH-MEDIA-PEEK-001` | Hover destination + stationary restart | With usable media, 120 ms hover dwell opens Peek only; hover alone never opens full expanded UI. The same holds when NotchHub is shown/restarted while the pointer is already stationary inside the physical notch; no extra pointer movement is required. | RED #947 -> GREEN #948/#949 | FAIL on `bbba...`; RETEST REQUIRED |
 | `NH-MEDIA-PEEK-002` | No-media hover | With no retained/fresh media context, hover remains compact and shows no generic Peek. | Covered | PENDING |
 | `NH-MEDIA-PEEK-003` | Fast pointer pass | Pointer transit shorter than dwell does not open expanded UI or leave Peek stuck. | Covered | PENDING |
 | `NH-MEDIA-PEEK-004` | 140 ms grace | Exit/re-entry before 140 ms keeps Peek; remaining outside through the deadline returns to compact. | Covered | PENDING |
@@ -70,7 +64,7 @@ Focused TDD repair:
 
 ## Focused target-Mac procedure
 
-Use exact candidate `2d9e041d05ebb949133565ae828aa8011ef66e32` / CI #949.
+Use the exact final candidate frozen in PR #33 after this head's CI succeeds.
 
 1. With media playing, place the pointer outside the notch, enter the physical notch and hold. Confirm 120 ms hover opens only Peek, never full expanded UI.
 2. Restart/stationary regression: with media playing and the pointer already inside the physical notch, quit and relaunch the exact candidate without moving the pointer away. After normal 120 ms dwell, Peek must open. No extra leave/re-enter movement may be required.
