@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "featureId": "m6.6-source-app-icon",
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "sourceCommit": "066b8264f53c1dc1afe01fe8a120bb8ab9509102",
+    "workflowRunId": 31601331136,
+    "artifactId": 9143349824,
+    "summary": {
+      "executableSizeBytes": 480208,
+      "appSizeBytes": 782414,
+      "dmgSizeBytes": 506515
+    }
+  },
+  "allowanceBytes": {
+    "executableSizeBytes": 219136,
+    "appSizeBytes": 518144,
+    "dmgSizeBytes": 421888
+  }
+}
