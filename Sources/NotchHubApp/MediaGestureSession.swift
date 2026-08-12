@@ -71,17 +71,19 @@ final class MediaGestureSession {
             return
         }
 
-        let directionScale: CGFloat = event.isDirectionInvertedFromDevice ? -1 : 1
-        let deltaX = Double(event.scrollingDeltaX * directionScale)
-        let deltaY = Double(event.scrollingDeltaY * directionScale)
+        let deltas = MediaGestureInputNormalizer.semanticDeltas(
+            scrollingDeltaX: Double(event.scrollingDeltaX),
+            scrollingDeltaY: Double(event.scrollingDeltaY),
+            isDirectionInvertedFromDevice: event.isDirectionInvertedFromDevice
+        )
         let interactiveWidth = Double(event.window?.contentView?.bounds.width ?? 0)
         let capabilities = liveCapabilities(for: surface)
 
         let effects = coordinator.handle(
             MediaGestureSample(
                 phase: phase,
-                deltaX: deltaX,
-                deltaY: deltaY,
+                deltaX: deltas.x,
+                deltaY: deltas.y,
                 interactiveWidth: interactiveWidth,
                 isMomentum: false
             ),

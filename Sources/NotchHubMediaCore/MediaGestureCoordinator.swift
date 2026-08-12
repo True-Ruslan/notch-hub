@@ -37,6 +37,30 @@ public struct MediaGestureSample: Sendable, Equatable {
     }
 }
 
+public struct MediaGestureInputDeltas: Sendable, Equatable {
+    public let x: Double
+    public let y: Double
+
+    public init(x: Double, y: Double) {
+        self.x = x
+        self.y = y
+    }
+}
+
+public enum MediaGestureInputNormalizer {
+    public static func semanticDeltas(
+        scrollingDeltaX: Double,
+        scrollingDeltaY: Double,
+        isDirectionInvertedFromDevice: Bool
+    ) -> MediaGestureInputDeltas {
+        let preferenceScale = isDirectionInvertedFromDevice ? -1.0 : 1.0
+        return MediaGestureInputDeltas(
+            x: scrollingDeltaX * preferenceScale,
+            y: -scrollingDeltaY * preferenceScale
+        )
+    }
+}
+
 public enum MediaGestureCapability: Sendable, Equatable {
     case pending
     case supported
