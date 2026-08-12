@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "featureId": "m6.6-media-seek",
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "sourceCommit": "01bb282f7cbc5eab57b11b1695ccf9768fc6cb2e",
+    "workflowRunId": 31606258918,
+    "artifactId": 9145423733,
+    "summary": {
+      "executableSizeBytes": 499984,
+      "appSizeBytes": 802190,
+      "dmgSizeBytes": 520488
+    }
+  },
+  "allowanceBytes": {
+    "executableSizeBytes": 237568,
+    "appSizeBytes": 536576,
+    "dmgSizeBytes": 434176
+  }
+}
