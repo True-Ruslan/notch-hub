@@ -5,16 +5,15 @@ public typealias NotchLocalScrollHandler = @MainActor (NSEvent) -> Void
 
 @MainActor
 private final class NotchLocalScrollHostingView<Content: View>: NSHostingView<Content> {
-    private let onScrollWheel: NotchLocalScrollHandler?
+    private let onScrollWheel: NotchLocalScrollHandler
 
     required init(rootView: Content) {
-        self.onScrollWheel = nil
-        super.init(rootView: rootView)
+        fatalError("Use init(rootView:onScrollWheel:) for local gesture input")
     }
 
     init(
         rootView: Content,
-        onScrollWheel: NotchLocalScrollHandler?
+        onScrollWheel: @escaping NotchLocalScrollHandler
     ) {
         self.onScrollWheel = onScrollWheel
         super.init(rootView: rootView)
@@ -26,11 +25,6 @@ private final class NotchLocalScrollHostingView<Content: View>: NSHostingView<Co
     }
 
     override func scrollWheel(with event: NSEvent) {
-        guard let onScrollWheel else {
-            super.scrollWheel(with: event)
-            return
-        }
-
         onScrollWheel(event)
     }
 }
@@ -41,10 +35,16 @@ public enum NotchHostingViewFactory {
         rootView: Content,
         onScrollWheel: NotchLocalScrollHandler? = nil
     ) -> NSHostingView<Content> {
-        let hostingView = NotchLocalScrollHostingView(
-            rootView: rootView,
-            onScrollWheel: onScrollWheel
-        )
+        let hostingView: NSHostingView<Content>
+        if let onScrollWheel {
+            hostingView = NotchLocalScrollHostingView(
+                rootView: rootView,
+                onScrollWheel: onScrollWheel
+            )
+        } else {
+            hostingView = NSHostingView(rootView: rootView)
+        }
+
         hostingView.sizingOptions = []
         hostingView.autoresizingMask = [.width, .height]
         hostingView.wantsLayer = true
