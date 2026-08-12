@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 450560,
+    "dmgSizeBytes": 376832,
+    "executableSizeBytes": 151552
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9133032338,
+    "sourceCommit": "55d08e58ce755a4e5d32a1128bd1a1262fe1ff42",
+    "summary": {
+      "appSizeBytes": 717406,
+      "dmgSizeBytes": 465191,
+      "executableSizeBytes": 415200
+    },
+    "workflowRunId": 31575348332
+  },
+  "featureId": "m6.6-one-shot-lifecycle",
+  "schemaVersion": 1
+}
