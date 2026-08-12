@@ -4,6 +4,7 @@ public struct NotchLayout: Equatable, Sendable {
     public let hasHardwareNotch: Bool
     public let hardwareNotchWidth: CGFloat
     public let compactFrame: CGRect
+    public let peekFrame: CGRect
     public let expandedFrame: CGRect
 
     public var compactBackgroundOpacity: Double {
@@ -18,11 +19,13 @@ public struct NotchLayout: Equatable, Sendable {
         hasHardwareNotch: Bool,
         hardwareNotchWidth: CGFloat,
         compactFrame: CGRect,
+        peekFrame: CGRect? = nil,
         expandedFrame: CGRect
     ) {
         self.hasHardwareNotch = hasHardwareNotch
         self.hardwareNotchWidth = hardwareNotchWidth
         self.compactFrame = compactFrame
+        self.peekFrame = peekFrame ?? compactFrame
         self.expandedFrame = expandedFrame
     }
 
@@ -36,6 +39,7 @@ public struct NotchLayout: Equatable, Sendable {
             hasHardwareNotch: hasHardwareNotch,
             hardwareNotchWidth: hardwareNotchWidth,
             compactFrame: compactFrame.insetBy(dx: -boundedExtension, dy: 0),
+            peekFrame: peekFrame,
             expandedFrame: expandedFrame
         )
     }
@@ -46,6 +50,8 @@ public enum NotchGeometry {
         for input: ScreenGeometryInput,
         minimumCompactWidth: CGFloat = 180,
         fallbackCompactHeight: CGFloat = 32,
+        peekWidth: CGFloat = 360,
+        peekHeight: CGFloat = 96,
         expandedWidth: CGFloat = 520,
         expandedHeight: CGFloat = 250,
         horizontalMargin: CGFloat = 16
@@ -63,10 +69,18 @@ public enum NotchGeometry {
             height: compactHeight
         )
 
-        let maximumExpandedWidth = max(compactWidth, input.frame.width - horizontalMargin * 2)
-        let resolvedExpandedWidth = min(max(expandedWidth, compactWidth), maximumExpandedWidth)
-        let resolvedExpandedHeight = max(expandedHeight, compactHeight)
+        let maximumPanelWidth = max(compactWidth, input.frame.width - horizontalMargin * 2)
+        let resolvedPeekWidth = min(max(peekWidth, compactWidth), maximumPanelWidth)
+        let resolvedPeekHeight = max(peekHeight, compactHeight)
+        let peekFrame = CGRect(
+            x: centerX - resolvedPeekWidth / 2,
+            y: input.frame.maxY - resolvedPeekHeight,
+            width: resolvedPeekWidth,
+            height: resolvedPeekHeight
+        )
 
+        let resolvedExpandedWidth = min(max(expandedWidth, compactWidth), maximumPanelWidth)
+        let resolvedExpandedHeight = max(expandedHeight, compactHeight)
         let expandedFrame = CGRect(
             x: centerX - resolvedExpandedWidth / 2,
             y: input.frame.maxY - resolvedExpandedHeight,
@@ -78,6 +92,7 @@ public enum NotchGeometry {
             hasHardwareNotch: detectedNotch != nil,
             hardwareNotchWidth: hardwareWidth,
             compactFrame: compactFrame,
+            peekFrame: peekFrame,
             expandedFrame: expandedFrame
         )
     }
