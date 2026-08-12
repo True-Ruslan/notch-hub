@@ -16,6 +16,7 @@ struct MediaNotchRootView: View {
     private let hardwareNotchWidth: CGFloat
     private let compactBackgroundOpacity: Double
     private let expandedContentTopInset: CGFloat
+    private let onExplicitExpansion: () -> Void
     private let onTogglePlayPause: () -> Void
     private let onPrevious: () -> Void
     private let onNext: () -> Void
@@ -31,6 +32,7 @@ struct MediaNotchRootView: View {
         hardwareNotchWidth: CGFloat,
         compactBackgroundOpacity: Double,
         expandedContentTopInset: CGFloat,
+        onExplicitExpansion: @escaping () -> Void,
         onTogglePlayPause: @escaping () -> Void,
         onPrevious: @escaping () -> Void,
         onNext: @escaping () -> Void,
@@ -45,6 +47,7 @@ struct MediaNotchRootView: View {
         self.hardwareNotchWidth = hardwareNotchWidth
         self.compactBackgroundOpacity = compactBackgroundOpacity
         self.expandedContentTopInset = expandedContentTopInset
+        self.onExplicitExpansion = onExplicitExpansion
         self.onTogglePlayPause = onTogglePlayPause
         self.onPrevious = onPrevious
         self.onNext = onNext
@@ -63,7 +66,8 @@ struct MediaNotchRootView: View {
                 NotchRootView(
                     model: panelModel,
                     compactBackgroundOpacity: compactBackgroundOpacity,
-                    expandedContentTopInset: expandedContentTopInset
+                    expandedContentTopInset: expandedContentTopInset,
+                    onExplicitExpansion: onExplicitExpansion
                 )
                 .transition(.opacity)
             }
@@ -83,8 +87,11 @@ struct MediaNotchRootView: View {
     }
 
     private var isSeekSurfaceAvailable: Bool {
+        let presentationAllowsSeek =
+            panelModel.contentPresentation == .peek
+            || panelModel.contentPresentation == .expanded
         guard
-            panelModel.contentPresentation == .expanded,
+            presentationAllowsSeek,
             let presentation = mediaModel.presentation,
             presentation.canSeek,
             let position = presentation.positionSeconds,
@@ -105,8 +112,10 @@ struct MediaNotchRootView: View {
     private func mediaContent(_ presentation: ShippingMediaPresentation) -> some View {
         Group {
             switch panelModel.contentPresentation {
-            case .compact, .peek:
+            case .compact:
                 compactMediaContent(presentation)
+            case .peek:
+                peekMediaContent(presentation)
             case .expanded:
                 expandedMediaContent(presentation)
             }
@@ -116,7 +125,16 @@ struct MediaNotchRootView: View {
         .background(Color.black)
         .contentShape(Rectangle())
         .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
-            sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
+            if panelModel.contentPresentation == .expanded {
+                sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
+            }
+        }
+        .onChange(of: panelModel.contentPresentation) { _, panelPresentation in
+            if panelPresentation == .expanded {
+                sourceApplicationIcon = sourceApplicationIconResolver.icon(
+                    for: presentation.sourceBundleIdentifier
+                )
+            }
         }
         .onChange(of: presentation.sessionIdentity) { _, _ in
             cancelSeekPreview()
@@ -140,6 +158,62 @@ struct MediaNotchRootView: View {
             .frame(width: 36, height: 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onExplicitExpansion()
+        }
+    }
+
+    private func peekMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
+        ZStack {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onExplicitExpansion()
+                }
+
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    artwork(presentation, size: 40)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(presentation.title ?? "Playing")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Text(presentation.artist ?? "")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.68))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(
+                        systemName: presentation.playbackState == .playing
+                            ? "waveform"
+                            : "pause.fill"
+                    )
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .frame(width: 22)
+                }
+
+                if let position = presentation.positionSeconds,
+                    let duration = presentation.durationSeconds
+                {
+                    seekProgress(
+                        position: position,
+                        duration: duration,
+                        canSeek: presentation.canSeek
+                    )
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 28)
+            .padding(.bottom, 10)
+        }
     }
 
     private func expandedMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
@@ -230,7 +304,7 @@ struct MediaNotchRootView: View {
             .progressViewStyle(.linear)
             .tint(.white.opacity(0.85))
             .contentShape(Rectangle())
-            .gesture(
+            .highPriorityGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
                         guard canSeek else {
