@@ -1,9 +1,17 @@
+enum MediaSessionChangeKind: Equatable, Sendable {
+    case ready
+    case session
+    case noSession
+    case unavailable
+}
+
 @MainActor
 final class MediaSessionController {
     private let provider: any MediaProvider
 
     private(set) var state: MediaSubsystemState = .unavailable
     private(set) var snapshot: MediaSessionSnapshot?
+    private(set) var lastChangeKind: MediaSessionChangeKind = .unavailable
     var changeHandler: (@MainActor @Sendable () -> Void)?
 
     private var latestSequence: MediaSequence?
@@ -38,7 +46,7 @@ final class MediaSessionController {
             provider.stop()
         }
         isStarted = false
-        publish(state: .unavailable, snapshot: nil)
+        publish(kind: .unavailable, state: .unavailable, snapshot: nil)
     }
 
     func send(_ command: MediaCommand) async -> MediaCommandResult {
@@ -99,7 +107,7 @@ final class MediaSessionController {
         switch event {
         case .ready:
             if snapshot == nil {
-                publish(state: .idle, snapshot: nil)
+                publish(kind: .ready, state: .idle, snapshot: nil)
             }
 
         case .session(let newSnapshot):
@@ -109,14 +117,19 @@ final class MediaSessionController {
             latestSequence = newSnapshot.sequence
             let nextState: MediaSubsystemState =
                 newSnapshot.playbackState == .playing ? .playing : .paused
-            publish(state: nextState, snapshot: newSnapshot)
+            publish(kind: .session, state: nextState, snapshot: newSnapshot)
 
         case .noSession(let sequence):
             guard accepts(sequence: sequence) else {
                 return
             }
             latestSequence = sequence
-            publish(state: .idle, snapshot: nil)
+            publish(
+                kind: .noSession,
+                state: .idle,
+                snapshot: nil,
+                force: true
+            )
 
         case .failed, .stopped:
             handleUnexpectedFailure()
@@ -132,7 +145,7 @@ final class MediaSessionController {
 
     private func handleUnexpectedFailure() {
         latestSequence = nil
-        publish(state: .unavailable, snapshot: nil)
+        publish(kind: .unavailable, state: .unavailable, snapshot: nil)
 
         invalidateProviderHandler()
         provider.stop()
@@ -148,8 +161,10 @@ final class MediaSessionController {
     }
 
     private func publish(
+        kind: MediaSessionChangeKind,
         state newState: MediaSubsystemState,
-        snapshot newSnapshot: MediaSessionSnapshot?
+        snapshot newSnapshot: MediaSessionSnapshot?,
+        force: Bool = false
     ) {
         let snapshotChanged: Bool
         switch (snapshot, newSnapshot) {
@@ -161,12 +176,13 @@ final class MediaSessionController {
             snapshotChanged = true
         }
 
-        guard state != newState || snapshotChanged else {
+        guard force || state != newState || snapshotChanged else {
             return
         }
 
         state = newState
         snapshot = newSnapshot
+        lastChangeKind = kind
         changeHandler?()
     }
 }
