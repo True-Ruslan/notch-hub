@@ -12,6 +12,7 @@ struct NotchInteractivePanelOwnershipTests {
         #expect(source.contains("public func beginInteractiveCollapse() -> Bool"))
         #expect(source.contains("public func updateInteractiveTransition(verticalDistance: CGFloat)"))
         #expect(source.contains("public func finishInteractiveTransition(commit: Bool)"))
+        #expect(source.contains("interactionCoordinator.cancelPendingActivationForInteractiveTransition()"))
         #expect(source.contains("transitionCoordinator.beginInteractiveTransition"))
         #expect(source.contains("transitionCoordinator.updateInteractiveTransition"))
         #expect(source.contains("transitionCoordinator.finishInteractiveTransition"))
