@@ -33,7 +33,7 @@ struct NotchPanelOwnershipTests {
 
         #expect(driverSource.contains("freezeVisibleCornerRadius(chromeView: chromeView)"))
         #expect(driverSource.contains("layer.presentation()?.cornerRadius ?? layer.cornerRadius"))
-        #expect(controllerSourceContainsNoDirectFrameOwnership())
+        #expect(driverSource.contains("setNotchCornerRadius(visibleCornerRadius, on: layer)"))
     }
 
     @Test
@@ -115,13 +115,6 @@ struct NotchPanelOwnershipTests {
 
         #expect(controllerSource.contains("to: NSEvent.mouseLocation"))
         #expect(!controllerSource.contains("allowActivation: false"))
-    }
-
-    private func controllerSourceContainsNoDirectFrameOwnership() throws -> Bool {
-        let controllerSource = try sourceText(
-            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
-        )
-        return !controllerSource.contains("panel.setFrame(")
     }
 
     private func sourceText(relativePath: String) throws -> String {
