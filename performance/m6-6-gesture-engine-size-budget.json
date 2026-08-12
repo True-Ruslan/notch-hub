@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 458752,
+    "dmgSizeBytes": 389120,
+    "executableSizeBytes": 159744
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9135807459,
+    "sourceCommit": "ddad4a3efa579caf818693dece9845059fbcd810",
+    "summary": {
+      "appSizeBytes": 724814,
+      "dmgSizeBytes": 474960,
+      "executableSizeBytes": 422608
+    },
+    "workflowRunId": 31582412364
+  },
+  "featureId": "m6.6-gesture-engine",
+  "schemaVersion": 1
+}
