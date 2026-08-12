@@ -79,6 +79,14 @@ public final class NotchPanelController: NSObject {
             },
             performExpansionHaptic: {
                 haptics.performExpansionHaptic()
+            },
+            applyInteractivePresentation: { frame, cornerRadius in
+                applyInteractiveNotchPanelPresentation(
+                    panel: panel,
+                    chromeView: hostingView,
+                    frame: frame,
+                    cornerRadius: cornerRadius
+                )
             }
         )
         let interactionCoordinator = NotchInteractionCoordinator(
@@ -139,6 +147,36 @@ public final class NotchPanelController: NSObject {
 
     public func requestCollapse() {
         transitionCoordinator.requestProgrammaticCollapse(layout: layoutState.currentLayout)
+    }
+
+    @discardableResult
+    public func beginInteractiveExpansion() -> Bool {
+        transitionCoordinator.beginInteractiveTransition(
+            from: .compact,
+            layout: layoutState.currentLayout
+        )
+    }
+
+    @discardableResult
+    public func beginInteractiveCollapse() -> Bool {
+        transitionCoordinator.beginInteractiveTransition(
+            from: .expanded,
+            layout: layoutState.currentLayout
+        )
+    }
+
+    public func updateInteractiveTransition(verticalDistance: CGFloat) {
+        transitionCoordinator.updateInteractiveTransition(
+            verticalDistance: verticalDistance,
+            layout: layoutState.currentLayout
+        )
+    }
+
+    public func finishInteractiveTransition(commit: Bool) {
+        transitionCoordinator.finishInteractiveTransition(
+            commit: commit,
+            layout: layoutState.currentLayout
+        )
     }
 
     public func invalidate() {
