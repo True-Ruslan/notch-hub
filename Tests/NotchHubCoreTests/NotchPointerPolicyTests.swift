@@ -99,6 +99,38 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
+    func mediaCompactExtensionWingsDoNotBroadenHoverActivationRegion() {
+        let extended = layout.withCompactHorizontalExtension(36)
+        let y = extended.compactFrame.maxY - 8
+
+        let leftWing = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: extended.compactFrame.minX + 8, y: y),
+            layout: extended
+        )
+        let rightWing = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: extended.compactFrame.maxX - 8, y: y),
+            layout: extended
+        )
+
+        #expect(leftWing == .compact)
+        #expect(rightWing == .compact)
+    }
+
+    @Test
+    func mediaCompactExtensionKeepsOriginalHardwareHoverRegionActive() {
+        let extended = layout.withCompactHorizontalExtension(36)
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: layout.compactFrame.minX + 4, y: layout.compactFrame.maxY),
+            layout: extended
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
     func expandedPointerInsideExpandedRetentionRegionStaysExpanded() {
         let result = NotchPointerPolicy.presentation(
             current: .expanded,

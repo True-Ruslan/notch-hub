@@ -26,16 +26,18 @@ struct MediaGestureAppCompositionPolicyTests {
     }
 
     @Test
-    func gestureSessionUsesPrecisePhysicalDeviceDirectionAndIgnoresMomentum() throws {
+    func gestureSessionUsesPureAxisAwarePhysicalDirectionNormalizationAndIgnoresMomentum() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
 
         #expect(source.contains("event.hasPreciseScrollingDeltas"))
         #expect(source.contains("event.momentumPhase.isEmpty"))
-        #expect(source.contains("event.isDirectionInvertedFromDevice"))
-        #expect(source.contains("event.scrollingDeltaX"))
-        #expect(source.contains("event.scrollingDeltaY"))
+        #expect(source.contains("MediaGestureInputNormalizer.semanticDeltas("))
+        #expect(source.contains("scrollingDeltaX:"))
+        #expect(source.contains("scrollingDeltaY:"))
+        #expect(source.contains("isDirectionInvertedFromDevice:"))
+        #expect(!source.contains("let directionScale:"))
         #expect(source.contains("MediaGestureSample("))
         #expect(source.contains("case .began:"))
         #expect(source.contains("case .changed:"))
@@ -46,6 +48,20 @@ struct MediaGestureAppCompositionPolicyTests {
         #expect(!source.contains("Timer.publish"))
         #expect(!source.contains("DispatchSourceTimer"))
         #expect(!source.contains("sleep("))
+    }
+
+    @Test
+    func preciseLocalGesturePreemptsPendingHoverBeforeSemanticCapture() throws {
+        let sessionSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
+        )
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(sessionSource.contains("event.phase.contains(.mayBegin)"))
+        #expect(sessionSource.contains("panelController?.cancelPendingHoverActivation()"))
+        #expect(controllerSource.contains("public func cancelPendingHoverActivation()"))
     }
 
     @Test
