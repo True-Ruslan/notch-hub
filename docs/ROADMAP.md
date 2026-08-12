@@ -147,11 +147,11 @@ Authoritative evidence: `docs/testing/MEDIA_UI_ACCEPTANCE.md`.
 
 ### M6.6 — local media gestures, haptics and draggable seek
 
-Status: **TASK 0 ACCEPTED AND MERGED / GESTURE CONTRACT FROZEN / IMPLEMENTATION NEXT**
+Status: **TASKS 0-1 MERGED / GESTURE CONTRACT FROZEN / TASK 2 NEXT**
 
 #### Task 0 — collapse-layout retarget hardening
 
-**ACCEPTED AND MERGED.** Issue #20 was reproduced under TDD and fixed without changing panel authority.
+**PHYSICALLY ACCEPTED AND MERGED.** Issue #20 was reproduced under TDD and fixed without changing panel authority.
 
 Evidence:
 
@@ -162,24 +162,48 @@ Evidence:
 - post-merge `main` CI #777 / run `31572634042` — both required jobs PASS;
 - focused target-Mac acceptance PASS, including media disappearance during in-flight collapse, exact no-media compact endpoint, no duplicate haptic, zero adapter after compact settlement and no orphan after Quit.
 
+#### Task 1 — one-shot lifecycle ownership
+
+**AUTOMATED-ACCEPTED AND MERGED; NO SEPARATE PHYSICAL GATE REQUIRED.**
+
+Evidence:
+
+- lifecycle RED source `440b830e01d843491027ced174ffcf504707570b`, CI #780 / run `31574477720`;
+- behavioral GREEN + old size-policy RED source `55d08e58ce755a4e5d32a1128bd1a1262fe1ff42`, CI #783 / run `31575348332` — 198 Swift tests PASS;
+- size-policy RED source `ccf569d7d2f6f1ae5dce3738176f2be3fc97c683`, CI #784 / run `31575902157`;
+- final exact PR head `5a141dd30196bd8bd050a217c8bf9a6fed6ad02c`, CI #786 / run `31576327027` — both required jobs PASS, 198 Swift tests PASS;
+- PR #24 squash merge `957e2f085ebf1fae1b3f741a7f79dd6a45b599b6`;
+- post-merge `main` CI #787 / run `31577048395` — both required jobs PASS.
+
+Delivered:
+
+- client ownership of all active one-shot capability/command processes;
+- bounded cancellation on normal `stop()` alongside observation teardown;
+- timeout-token cancellation and fail-closed continuation completion;
+- stale callback safety;
+- retained ownership/retry when forced termination cannot be confirmed;
+- no executable/path/argument/permission/trust-boundary widening.
+
+Task-1 size growth is constrained by `performance/m6-6-one-shot-lifecycle-size-budget.json`. Immutable P0 and historical feature budgets remain unchanged. Final exact-head sizes were `415,200 / 717,406 / 465,179 B`; Task-1 ceilings are `417,792 / 720,896 / 466,944 B`.
+
 #### Gesture + haptic + seek contract
 
 Stable `NH-MEDIA-GESTURE-001...018` acceptance IDs are frozen in `docs/testing/MEDIA_GESTURE_ACCEPTANCE.md` and the TDD execution plan is `docs/superpowers/plans/2026-08-12-media-gestures-haptics-seek.md`.
 
-The implementation must:
+Task 2 must implement a pure deterministic `MediaGestureCoordinator` before any AppKit/UI wiring. It must encode:
 
-- use a pure deterministic `MediaGestureCoordinator` with commit-on-release;
-- keep all scroll/gesture recognition local to the NotchHub-owned view/window;
-- use the approved 28% / 70...120 pt horizontal threshold and 20 pt disarm hysteresis before hardware tuning;
-- reject momentum and ambiguous diagonal movement;
-- request one `.levelChange` haptic only when entering armed;
-- preserve horizontal/vertical/seek interaction isolation;
-- route compact-down / expanded-up through existing panel transition authority;
-- make draggable seek actionable only with authoritative seek capability and valid timing;
-- never fabricate successful seek/track changes before authoritative system state confirms them;
-- preserve event-driven progress and zero persistent adapter in compact.
+- commit-on-release horizontal semantics;
+- approved 28% / 70...120 pt horizontal threshold and 20 pt disarm hysteresis;
+- one arm-haptic effect per armed transition;
+- momentum and ambiguous diagonal rejection;
+- captured-axis isolation;
+- compact-down / expanded-up semantic panel intents;
+- unsupported/unknown capability fail-closed behavior;
+- compact one-shot capability generation/freshness handling without performing transport itself;
+- stale/late capability response rejection;
+- seek-active gesture isolation.
 
-Because retained compact media is intentionally not live-observed, compact previous/next arming must use a bounded current-system one-shot capability validation rather than blindly trusting stale retained capability. Release while armed may send one bounded typed one-shot command. This reuses the existing fixed pinned `/usr/bin/perl` boundary and may not start persistent observation. One-shot process ownership/cancellation is the first TDD implementation task so normal Quit remains no-orphan even if an operation is in flight.
+Subsequent tasks then add local-only AppKit delivery, bounded compact dispatcher, haptic wiring and capability-gated draggable seek. Retained compact media stays non-live-observed; persistent `ShippingMediaRuntime` is not kept alive in compact.
 
 ### P1 — whole-app performance/resource review
 
@@ -251,11 +275,11 @@ Only when Apple Developer Program membership becomes worthwhile:
 
 ## Current priority order — 2026-08-12
 
-1. M6.6 Task 1: harden ownership/cancellation of in-flight media one-shot processes under RED -> GREEN tests.
-2. Implement the deterministic `MediaGestureCoordinator` and local-only AppKit delivery seam under TDD.
+1. M6.6 Task 2: implement the deterministic `MediaGestureCoordinator` under strict RED -> GREEN tests.
+2. Add the local-only AppKit scroll delivery seam and route vertical panel intents through existing transition authority.
 3. Implement bounded compact capability validation + previous/next dispatch, then expanded gesture/haptic wiring.
 4. Implement capability-gated draggable seek with seek/track/panel gesture isolation.
 5. Freeze an exact CI candidate and run `NH-MEDIA-GESTURE-001...018` on the target Mac.
-6. Merge accepted M6.6 and verify post-merge `main` CI.
+6. Merge the accepted remaining M6.6 slice and verify post-merge `main` CI.
 7. Run P1 whole-app performance/resource review and local pointer-tracking experiment.
 8. Resume the remaining product modules after the media/performance foundation is stable.
