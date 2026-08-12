@@ -387,6 +387,15 @@ class FeatureSizeBudgetTests(unittest.TestCase):
                 {"appSizeBytes": 802190, "dmgSizeBytes": 520488, "executableSizeBytes": 499984},
                 {"appSizeBytes": 536576, "dmgSizeBytes": 434176, "executableSizeBytes": 237568},
             ),
+            (
+                "m6-6-physical-acceptance-repair-size-budget.json",
+                "m6.6-physical-acceptance-repair",
+                "d8fb784eb9eb47c7af34dbd689b6fcfa5aadef12",
+                31617785894,
+                9150099248,
+                {"appSizeBytes": 825406, "dmgSizeBytes": 527113, "executableSizeBytes": 523200},
+                {"appSizeBytes": 556032, "dmgSizeBytes": 437248, "executableSizeBytes": 257024},
+            ),
         )
         for filename, feature_id, source_commit, run_id, artifact_id, summary, allowance in historical:
             with self.subTest(filename=filename):
@@ -400,26 +409,26 @@ class FeatureSizeBudgetTests(unittest.TestCase):
                     allowance=allowance,
                 )
 
-    def test_repository_physical_acceptance_repair_budget_is_provenanced_tight_and_self_validating(self):
+    def test_repository_hover_peek_budget_is_provenanced_tight_and_self_validating(self):
         self.assert_repository_budget(
-            filename="m6-6-physical-acceptance-repair-size-budget.json",
-            feature_id="m6.6-physical-acceptance-repair",
-            source_commit="d8fb784eb9eb47c7af34dbd689b6fcfa5aadef12",
-            workflow_run_id=31617785894,
-            artifact_id=9150099248,
+            filename="m6-6-hover-peek-size-budget.json",
+            feature_id="m6.6-hover-peek",
+            source_commit="7daffde9b7c2a734e2ddfa234b1ee744b0d96d9e",
+            workflow_run_id=31636748859,
+            artifact_id=9157392052,
             summary={
-                "appSizeBytes": 825406,
-                "dmgSizeBytes": 527113,
-                "executableSizeBytes": 523200,
+                "appSizeBytes": 864574,
+                "dmgSizeBytes": 555272,
+                "executableSizeBytes": 562368,
             },
             allowance={
-                "appSizeBytes": 556032,
-                "dmgSizeBytes": 437248,
-                "executableSizeBytes": 257024,
+                "appSizeBytes": 594944,
+                "dmgSizeBytes": 465920,
+                "executableSizeBytes": 296960,
             },
         )
 
-    def test_ci_uses_physical_acceptance_repair_budget_over_immutable_baseline(self):
+    def test_ci_uses_hover_peek_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -427,10 +436,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-physical-acceptance-repair-size-budget.json",
+            "--feature-budget performance/m6-6-hover-peek-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-6-physical-acceptance-repair-size-budget.json",
             "m6-6-media-seek-size-budget.json",
             "m6-6-source-app-icon-size-budget.json",
             "m6-6-app-gesture-session-size-budget.json",
