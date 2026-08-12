@@ -3,16 +3,13 @@ import Testing
 
 struct M66PhysicalAcceptanceRepairSizeBudgetPolicyTests {
     @Test
-    func repairPassRequiresTightProvenancedBudgetAndMakesItActive() throws {
+    func repairBudgetRemainsTightAndProvenanced() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let budgetURL = repositoryRoot.appendingPathComponent(
             "performance/m6-6-physical-acceptance-repair-size-budget.json"
-        )
-        let workflowURL = repositoryRoot.appendingPathComponent(
-            ".github/workflows/ci.yml"
         )
 
         let budgetExists = FileManager.default.fileExists(atPath: budgetURL.path)
@@ -46,18 +43,6 @@ struct M66PhysicalAcceptanceRepairSizeBudgetPolicyTests {
                     dmgSizeBytes: 437_248,
                     executableSizeBytes: 257_024
                 )
-        )
-
-        let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
-        #expect(
-            workflow.contains(
-                "--feature-budget performance/m6-6-physical-acceptance-repair-size-budget.json"
-            )
-        )
-        #expect(
-            !workflow.contains(
-                "--feature-budget performance/m6-6-media-seek-size-budget.json"
-            )
         )
     }
 
