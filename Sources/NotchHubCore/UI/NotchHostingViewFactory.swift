@@ -1,9 +1,45 @@
+import AppKit
 import SwiftUI
+
+public typealias NotchLocalScrollHandler = @MainActor (NSEvent) -> Void
+
+@MainActor
+private final class NotchLocalScrollHostingView<Content: View>: NSHostingView<Content> {
+    private let onScrollWheel: NotchLocalScrollHandler?
+
+    init(
+        rootView: Content,
+        onScrollWheel: NotchLocalScrollHandler?
+    ) {
+        self.onScrollWheel = onScrollWheel
+        super.init(rootView: rootView)
+    }
+
+    @available(*, unavailable)
+    required dynamic init?(coder: NSCoder) {
+        fatalError("init(coder:) is unavailable")
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        guard let onScrollWheel else {
+            super.scrollWheel(with: event)
+            return
+        }
+
+        onScrollWheel(event)
+    }
+}
 
 @MainActor
 public enum NotchHostingViewFactory {
-    public static func make<Content: View>(rootView: Content) -> NSHostingView<Content> {
-        let hostingView = NSHostingView(rootView: rootView)
+    public static func make<Content: View>(
+        rootView: Content,
+        onScrollWheel: NotchLocalScrollHandler? = nil
+    ) -> NSHostingView<Content> {
+        let hostingView = NotchLocalScrollHostingView(
+            rootView: rootView,
+            onScrollWheel: onScrollWheel
+        )
         hostingView.sizingOptions = []
         hostingView.autoresizingMask = [.width, .height]
         hostingView.wantsLayer = true
