@@ -8,7 +8,7 @@ struct MediaGestureCoordinatorTests {
         let cases: [(width: Double, before: Double, crossing: Double)] = [
             (100, -69, -1),
             (300, -83, -1),
-            (1_000, -119, -1),
+            (1_000, -119, -1)
         ]
 
         for testCase in cases {
@@ -301,7 +301,7 @@ struct MediaGestureCoordinatorTests {
     }
 
     @Test
-    func horizontalCapturePreventsVerticalPanelIntentInSameGesture() {
+    func horizontalCapturePreventsVerticalPanelIntentInSameGesture() throws {
         let coordinator = MediaGestureCoordinator()
         _ = coordinator.handle(
             sample(.began, width: 300),
@@ -317,14 +317,12 @@ struct MediaGestureCoordinatorTests {
             next: .pending,
             seekActive: false
         )
-        let request = try? #require(compactRequests(captured).first)
-        if let request {
-            _ = coordinator.resolveCompactCapability(
-                gestureID: request.id,
-                direction: request.direction,
-                supported: true
-            )
-        }
+        let request = try #require(compactRequests(captured).first)
+        _ = coordinator.resolveCompactCapability(
+            gestureID: request.id,
+            direction: request.direction,
+            supported: true
+        )
 
         _ = coordinator.handle(
             sample(.changed, x: -60, y: 120, width: 300),
