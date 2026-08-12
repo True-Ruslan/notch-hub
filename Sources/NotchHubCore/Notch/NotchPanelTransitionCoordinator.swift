@@ -3,6 +3,7 @@ import Foundation
 
 enum NotchPanelTransitionPhase {
     case compact
+    case peek
     case expanding
     case interactiveExpanding(progress: CGFloat)
     case expanded
@@ -13,6 +14,7 @@ enum NotchPanelTransitionPhase {
 @MainActor
 final class NotchPanelTransitionCoordinator {
     static let compactCornerRadius: CGFloat = 12
+    static let peekCornerRadius: CGFloat = 18
     static let expandedCornerRadius: CGFloat = 22
 
     private let model: NotchPanelModel
@@ -47,7 +49,14 @@ final class NotchPanelTransitionCoordinator {
         self.performExpansionHaptic = performExpansionHaptic
         self.applyInteractivePresentation = applyInteractivePresentation
         self.desiredPresentation = initialPresentation
-        self.phase = initialPresentation == .compact ? .compact : .expanded
+        switch initialPresentation {
+        case .compact:
+            self.phase = .compact
+        case .peek:
+            self.phase = .peek
+        case .expanded:
+            self.phase = .expanded
+        }
     }
 
     func accept(_ intent: NotchInteractionIntent, layout: NotchLayout) {
@@ -75,6 +84,22 @@ final class NotchPanelTransitionCoordinator {
             to: presentation,
             layout: layout,
             hapticEligible: hapticEligible
+        )
+    }
+
+    func requestPeek(layout: NotchLayout) {
+        guard
+            !isInvalidated,
+            !isInteractiveTransitionActive,
+            desiredPresentation != .peek
+        else {
+            return
+        }
+
+        beginTransition(
+            to: .peek,
+            layout: layout,
+            hapticEligible: true
         )
     }
 
@@ -122,7 +147,7 @@ final class NotchPanelTransitionCoordinator {
         switch (origin, phase) {
         case (.compact, .compact), (.expanded, .expanded):
             break
-        default:
+        case (.compact, _), (.peek, _), (.expanded, _):
             return false
         }
 
@@ -134,6 +159,8 @@ final class NotchPanelTransitionCoordinator {
             desiredPresentation = .expanded
             model.setContentPresentation(.expanded)
             phase = .interactiveExpanding(progress: 0)
+        case .peek:
+            return false
         case .expanded:
             desiredPresentation = .compact
             phase = .interactiveCollapsing(progress: 0)
@@ -169,7 +196,7 @@ final class NotchPanelTransitionCoordinator {
                 origin: .expanded,
                 layout: layout
             )
-        case .compact, .expanding, .expanded, .collapsing:
+        case .compact, .peek, .expanding, .expanded, .collapsing:
             break
         }
     }
@@ -191,7 +218,7 @@ final class NotchPanelTransitionCoordinator {
         case .interactiveCollapsing:
             origin = .expanded
             destination = .compact
-        case .compact, .expanding, .expanded, .collapsing:
+        case .compact, .peek, .expanding, .expanded, .collapsing:
             return
         }
 
@@ -227,7 +254,7 @@ final class NotchPanelTransitionCoordinator {
                 origin: .expanded,
                 layout: layout
             )
-        case .compact, .expanded:
+        case .compact, .peek, .expanded:
             break
         }
     }
@@ -247,7 +274,7 @@ final class NotchPanelTransitionCoordinator {
         switch phase {
         case .interactiveExpanding, .interactiveCollapsing:
             return true
-        case .compact, .expanding, .expanded, .collapsing:
+        case .compact, .peek, .expanding, .expanded, .collapsing:
             return false
         }
     }
@@ -269,6 +296,8 @@ final class NotchPanelTransitionCoordinator {
             endFrame = layout.expandedFrame
             startRadius = Self.compactCornerRadius
             endRadius = Self.expandedCornerRadius
+        case .peek:
+            return
         case .expanded:
             startFrame = layout.expandedFrame
             endFrame = layout.compactFrame
@@ -313,6 +342,12 @@ final class NotchPanelTransitionCoordinator {
             frame = layout.compactFrame
             cornerRadius = Self.compactCornerRadius
 
+        case .peek:
+            phase = .expanding
+            model.setContentPresentation(.peek)
+            frame = layout.peekFrame
+            cornerRadius = Self.peekCornerRadius
+
         case .expanded:
             phase = .expanding
             model.setContentPresentation(.expanded)
@@ -332,7 +367,7 @@ final class NotchPanelTransitionCoordinator {
             )
         }
 
-        if hapticEligible, presentation == .expanded {
+        if hapticEligible {
             performExpansionHaptic()
         }
     }
@@ -364,6 +399,9 @@ final class NotchPanelTransitionCoordinator {
         case .compact:
             model.setContentPresentation(.compact)
             phase = .compact
+        case .peek:
+            model.setContentPresentation(.peek)
+            phase = .peek
         case .expanded:
             phase = .expanded
         }
