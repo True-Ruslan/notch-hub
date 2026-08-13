@@ -109,7 +109,11 @@ final class MediaGestureSession {
             next: capabilities.next,
             seekActive: activeSeekTransaction != nil
         )
-        let panelCommit = handleEffects(effects, surface: surface)
+        let panelCommit = handleEffects(
+            effects,
+            surface: surface,
+            pointer: NSEvent.mouseLocation
+        )
 
         switch phase {
         case .ended:
@@ -286,7 +290,8 @@ final class MediaGestureSession {
 
     private func handleEffects(
         _ effects: [MediaGestureEffect],
-        surface: MediaGestureSurface
+        surface: MediaGestureSurface,
+        pointer: CGPoint? = nil
     ) -> Bool {
         var panelCommit = false
 
@@ -324,9 +329,13 @@ final class MediaGestureSession {
                 visualModel.setHorizontalOffset(CGFloat(value), surface: surface)
 
             case .panelVisualOffset(let value):
+                guard let pointer else {
+                    break
+                }
                 updatePanelInteraction(
                     verticalOffset: CGFloat(value),
-                    surface: surface
+                    surface: surface,
+                    pointer: pointer
                 )
 
             case .resetVisualOffset:
@@ -391,7 +400,8 @@ final class MediaGestureSession {
 
     private func updatePanelInteraction(
         verticalOffset: CGFloat,
-        surface: MediaGestureSurface
+        surface: MediaGestureSurface,
+        pointer: CGPoint
     ) {
         guard let panelController else {
             return
@@ -412,7 +422,8 @@ final class MediaGestureSession {
                 return
             }
             panelController.updateInteractiveTransition(
-                verticalDistance: max(0, verticalOffset)
+                verticalDistance: max(0, verticalOffset),
+                pointer: pointer
             )
 
         case .peek:
@@ -432,7 +443,8 @@ final class MediaGestureSession {
                 return
             }
             panelController.updateInteractiveTransition(
-                verticalDistance: max(0, -verticalOffset)
+                verticalDistance: max(0, -verticalOffset),
+                pointer: pointer
             )
         }
     }

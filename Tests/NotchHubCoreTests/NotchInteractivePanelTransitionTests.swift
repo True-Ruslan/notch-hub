@@ -247,7 +247,7 @@ struct NotchInteractivePanelTransitionTests {
     }
 
     @Test
-    func pointerIntentCannotReplaceOwnedInteractiveTransition() {
+    func pointerExitCollapseMayRetargetOwnedInteractiveTransitionToCompact() {
         let fixture = makeFixture()
 
         #expect(
@@ -263,10 +263,12 @@ struct NotchInteractivePanelTransitionTests {
 
         fixture.coordinator.accept(.pointerExitCollapse, layout: layout)
 
-        #expect(fixture.coordinator.phase.isInteractiveExpanding)
-        #expect(fixture.coordinator.desiredPresentation == .expanded)
-        #expect(fixture.animationDriver.requests.isEmpty)
+        #expect(fixture.coordinator.phase.isCollapsing)
+        #expect(fixture.coordinator.desiredPresentation == .compact)
+        #expect(fixture.animationDriver.requests.count == 1)
+        #expect(fixture.animationDriver.requests[0].frame == layout.compactFrame)
         #expect(fixture.interactiveDriver.requests.count == 1)
+        #expect(fixture.haptics.requestCount == 0)
     }
 
     private func makeFixture(

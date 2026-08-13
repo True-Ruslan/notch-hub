@@ -227,11 +227,15 @@ public final class NotchPanelController: NSObject {
         return didBegin
     }
 
-    public func updateInteractiveTransition(verticalDistance: CGFloat) {
+    public func updateInteractiveTransition(
+        verticalDistance: CGFloat,
+        pointer: CGPoint
+    ) {
         transitionCoordinator.updateInteractiveTransition(
             verticalDistance: verticalDistance,
             layout: layoutState.currentLayout
         )
+        collapseInteractiveTransitionIfPointerExited(pointer)
     }
 
     public func finishInteractiveTransition(commit: Bool) {
@@ -299,10 +303,27 @@ public final class NotchPanelController: NSObject {
     }
 
     private func updateInteraction(for pointer: CGPoint) {
+        if transitionCoordinator.isInteractiveTransitionActive {
+            collapseInteractiveTransitionIfPointerExited(pointer)
+            return
+        }
+
         interactionCoordinator.pointerMoved(
             to: pointer,
             layout: layoutState.currentLayout,
             currentPresentation: transitionCoordinator.desiredPresentation
         )
+    }
+
+    private func collapseInteractiveTransitionIfPointerExited(_ pointer: CGPoint) {
+        guard
+            transitionCoordinator.isInteractiveTransitionActive,
+            !panel.frame.contains(pointer)
+        else {
+            return
+        }
+
+        interactionCoordinator.cancelPendingActivationForInteractiveTransition()
+        transitionCoordinator.accept(.pointerExitCollapse, layout: layoutState.currentLayout)
     }
 }

@@ -287,7 +287,7 @@ struct NotchInteractionCoordinatorTests {
     }
 
     @Test
-    func expandedPointerExitEmitsNoCollapseIntent() {
+    func expandedPointerExitEmitsNonHapticCollapseIntent() {
         let fixture = makeFixture()
 
         fixture.coordinator.pointerMoved(
@@ -295,9 +295,9 @@ struct NotchInteractionCoordinatorTests {
             layout: layout,
             currentPresentation: .expanded
         )
-        fixture.scheduler.advance(by: 1)
 
-        #expect(fixture.intents.isEmpty)
+        #expect(fixture.intents.count == 1)
+        #expect(fixture.intents.first?.isPointerExitCollapse == true)
         #expect(fixture.scheduler.pendingCount == 0)
     }
 

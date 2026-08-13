@@ -60,7 +60,19 @@ final class NotchPanelTransitionCoordinator {
     }
 
     func accept(_ intent: NotchInteractionIntent, layout: NotchLayout) {
-        guard !isInvalidated, !isInteractiveTransitionActive else {
+        guard !isInvalidated else {
+            return
+        }
+
+        if isInteractiveTransitionActive {
+            guard case .pointerExitCollapse = intent else {
+                return
+            }
+            beginTransition(
+                to: .compact,
+                layout: layout,
+                hapticEligible: false
+            )
             return
         }
 
@@ -270,7 +282,7 @@ final class NotchPanelTransitionCoordinator {
         settledPresentationHandler = nil
     }
 
-    private var isInteractiveTransitionActive: Bool {
+    var isInteractiveTransitionActive: Bool {
         switch phase {
         case .interactiveExpanding, .interactiveCollapsing:
             return true

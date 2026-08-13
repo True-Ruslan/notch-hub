@@ -27,7 +27,11 @@ public enum NotchPointerPolicy {
             return activeFrame.contains(pointer) ? .peek : .compact
 
         case .expanded:
-            return .expanded
+            let activeFrame = layout.expandedFrame.insetBy(
+                dx: -retentionPadding,
+                dy: -retentionPadding
+            )
+            return activeFrame.contains(pointer) ? .expanded : .compact
         }
     }
 

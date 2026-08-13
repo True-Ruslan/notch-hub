@@ -94,6 +94,14 @@ final class NotchInteractionCoordinator {
         case .expanded:
             invalidateHoverActivation()
             cancelPendingCollapse()
+            let target = NotchPointerPolicy.presentation(
+                current: .expanded,
+                pointer: pointer,
+                layout: layout
+            )
+            if target == .compact {
+                emitIntent(.pointerExitCollapse)
+            }
         }
     }
 

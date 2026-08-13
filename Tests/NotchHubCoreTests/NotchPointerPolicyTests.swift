@@ -165,13 +165,13 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
-    func expandedPointerOutsideExpandedRegionStillStaysExpanded() {
+    func expandedPointerOutsideRetentionRegionTargetsCompact() {
         let result = NotchPointerPolicy.presentation(
             current: .expanded,
             pointer: CGPoint(x: 100, y: 500),
             layout: layout
         )
 
-        #expect(result == .expanded)
+        #expect(result == .compact)
     }
 }
