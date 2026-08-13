@@ -41,7 +41,7 @@ struct M66PhysicalPointerExitRegressionTests {
         )
 
         #expect(recorder.intents.count == 1)
-        #expect(recorder.intents[0].isPointerExitCollapse)
+        #expect(recorder.intents.first?.isPointerExitCollapse == true)
     }
 
     @Test
