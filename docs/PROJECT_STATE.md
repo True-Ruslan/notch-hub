@@ -9,7 +9,7 @@ Protected branch: `main`
 
 NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance and energy use are first-class constraints; runtime behavior is event-driven unless a separate measured decision proves otherwise.
 
-Published state remains immutable `v0.1.0`. M1/P0.1/M6 source work is not released yet.
+Published state remains immutable `v0.1.0`. M1/P0.1/M6 source work below is unreleased.
 
 ### Merged foundations
 
@@ -17,72 +17,74 @@ Published state remains immutable `v0.1.0`. M1/P0.1/M6 source work is not releas
 - R0.1 Personal Release `v0.1.0` — accepted/released.
 - P0 Performance Foundation — accepted/merged; immutable baseline preserved.
 - P0.1 Public repository readiness — accepted.
-- M1 primary interaction/transition foundation — accepted/merged; multi-display/fullscreen/Spaces hardening remains deferred.
-- M6.1 transport feasibility — accepted (`ACCEPT_TRANSPORT`).
+- M1 primary interaction/transition foundation — accepted/merged; active-display/fullscreen/Spaces/notchless/multi-monitor hardening remains deferred.
+- M6.1 transport feasibility — accepted.
 - M6.2 normalized media boundary — accepted/merged.
 - M6.3 production system transport — accepted/merged.
 - M6.4 shipping media composition/lazy lifecycle — accepted/merged.
 - M6.5 Media-first UI — accepted/merged.
-- M6.6 Tasks 0-4 prerequisites, including deterministic gesture engine, local input seam, compact dispatcher, interactive transition authority and vertical visual tracking — merged into `main`.
+- M6.6 prerequisite tasks through vertical visual tracking — merged into `main`.
 
-Current `main` head before PR #33 remains `172805f8cd63dab664d0dbc6747576fb51b13e7a`; post-merge main CI #836 passed.
+Current `main` head before PR #33 remains `172805f8cd63dab664d0dbc6747576fb51b13e7a`; main CI #836 passed.
 
 ## Active work — M6.6 PR #33
 
-PR #33 `M6.6: app media gesture session TDD` remains **implemented / automated-tested / physical acceptance pending / draft / not merged / not released**.
+PR #33 `M6.6: app media gesture session TDD` is **implemented / automated repair tested / physical acceptance failed and retest pending / draft / not merged / not released**.
 
-The consolidated user-visible slice uses stable `compact <-> peek <-> expanded` presentation states under one transition authority. Hover previews Peek after 120 ms; click or physical DOWN explicitly expands; Peek exit grace is 140 ms. Compact and settled Peek own zero persistent media observer; only settled expanded owns the presentation-scoped shipping runtime.
+The branch owns stable `compact <-> peek <-> expanded`, media-only 120 ms Hover Peek with 140 ms grace, explicit click/DOWN expansion, local previous/next gestures and haptics, follow-finger transitions, bounded compact/Peek media work, expanded-only persistent runtime, source icon, seek/cursor isolation and event-driven continuity.
 
-### Hover Peek physical result
+## Physical acceptance history
 
-The docs-synchronized candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 was **physically rejected** on Mac16,8/macOS 26.6.
+### Stationary-startup hover failure
 
-Observed during the first test block:
+Candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 was rejected. Relaunch with the pointer already stationary on the notch could never arm the normal dwell because `show()` passed the initial mouse location with hover activation disabled.
 
-- an unexpected full expanded Home/foundation surface appeared and looked stuck during the initial interaction sequence;
-- after restarting while the pointer was already stationary on the physical notch, compact did not enter Peek despite the pointer remaining in the hover region.
+RED `553cf973722dfb214f0fcb741ddb6c9b0b44ff02` / CI #947 reproduced it; GREEN `d17bd27be72c8c3bd022fb2c3613050c398c622e` / CI #948 removed only that startup suppression.
 
-The restart/stationary symptom has a proven code cause: `NotchPanelController.show()` passed the current `NSEvent.mouseLocation` into the interaction coordinator with `allowActivation: false`. With a stationary pointer, no subsequent `mouseMoved` existed to schedule the normal 120 ms dwell.
+### Expanded pointer-exit / interactive lost-terminal failure
 
-The unexpected full-expanded observation is not assigned that root cause. The hover success path routes only to Peek; full expansion is owned by explicit click/DOWN. The next target retest must therefore explicitly prove that hover alone never expands. A repeat without click/DOWN is a separate defect requiring its own RED -> GREEN cycle.
+The next exact candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 also passed automation but was rejected on Mac16,8/macOS 26.6.
 
-### Stationary startup repair TDD
+Target observations:
 
-- RED `553cf973722dfb214f0fcb741ddb6c9b0b44ff02` / CI #947: 328 tests / 68 suites, exactly the new `showKeepsStationaryPointerEligibleForHoverDwell` regression test failed; warnings-as-errors build passed;
-- GREEN `d17bd27be72c8c3bd022fb2c3613050c398c622e`: removed only the startup activation suppression from `show()`;
-- CI #948 / run `31645020620`: both required jobs PASS with 328 Swift tests, policy/security checks, Sandbox/Hardened Runtime/signing, shipping preflight, active Hover Peek size enforcement and performance smoke;
-- CI #948 artifact sizes remain inside the active envelope: `562,368 / 864,574 / 555,281 B` executable/app/DMG;
-- shipping artifact `9160475207`, digest `sha256:77b8d08df15f698068ecf45ca13e1b811ff3c3db5b82f74e183ac46299dfcab0`;
-- standalone DMG artifact `9160479006`, digest `sha256:d36f5f1cd4d9ed71328900338d069838f6fbe3905c182136df3372395467e667`;
-- contained DMG SHA-256 `51b6b7b947153edd722ba92cc87080e02afc57cb553b96c07cb28423060ff587`.
+- clean hover/haptic/Peek did not fire in the observed broken session;
+- DOWN expanded successfully, but moving the pointer away left expanded open;
+- UP collapse could leave a clipped intermediate panel if the shrinking window moved out from under the pointer before local scroll delivered its terminal phase.
 
-CI #948 is pre-docs repair evidence. This documentation sync must itself pass both required jobs; that exact docs-synchronized head/artifact becomes the next physical candidate.
+The pointer-exit failure was a regression of accepted M1 behavior: PR #33 had changed expanded pointer policy to retain `.expanded` outside the retention region. The stuck intermediate frame came from relying on local `.ended`/`.cancelled` to finish an interactive transition even when shrinking geometry could stop further local delivery.
+
+Focused repair:
+
+- clean RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959: 333 tests / 69 suites; exactly five new regression tests failed while the previous suite passed;
+- production GREEN `64d3e6c2beadacaeda69c8ac06f173ac26aace3e`: restored accepted expanded pointer-exit collapse, allowed only pointer-exit collapse to retarget an owned interactive transition, and routed current local pointer position through interactive updates so actual `panel.frame` can settle immediately when geometry leaves the pointer;
+- format-only `de5624b7d344e15772fdf0759fbe4b5027a5b1d4` / CI #961: both required jobs PASS, 333 tests / 69 suites PASS, strict formatting/security/performance/media/signing/preflight/size/performance-smoke PASS.
+
+The hover/haptic symptom is not silently assigned to the transition repair. It must be retested from a clean stable compact state on the next exact candidate; if it persists independently, it becomes a separate focused RED -> GREEN defect.
 
 ## Security/resource invariants
 
 - App Sandbox-only entitlement and Hardened Runtime remain mandatory.
 - No Accessibility, Input Monitoring, Automation, Screen Recording, network, telemetry, history persistence or arbitrary command authority was added.
-- Universal Media retains the fixed reviewed `/usr/bin/perl` + pinned adapter/framework boundary.
+- Universal Media retains the reviewed fixed `/usr/bin/perl` + pinned adapter/framework boundary.
 - Settled compact and Peek own zero persistent adapter; settled expanded owns the expected presentation-scoped runtime; normal Quit must leave no orphan.
-- Source icon lookup is public local `NSWorkspace` with bounded in-memory cache.
-- Gesture/Peek hot paths add no polling, timer/display-link, broad global scroll capture, per-event process creation or logging.
-- The stationary-startup fix adds no monitor or periodic work; it only allows the existing one-shot dwell policy to evaluate the already-known cursor location on `show()`.
+- Gesture/Peek/transition hot paths add no polling, repeating timer, display link, global scroll monitor, event tap, per-event process creation or logging.
+- The lost-terminal repair reuses existing local scroll delivery and existing mouse-move observation; it adds no new input authority.
 
 ## Performance state
 
-`performance/baseline-v0.1.0.json` remains immutable. All prior M6 feature budgets remain immutable provenance records.
+`performance/baseline-v0.1.0.json` and prior feature budgets remain immutable provenance records. The active cumulative deterministic size envelope remains `performance/m6-6-hover-peek-size-budget.json`. CI #961 proves the repair still satisfies the active policy and performance smoke.
 
-The active cumulative deterministic artifact-size envelope remains `performance/m6-6-hover-peek-size-budget.json`. CI #948 proves the repair remains within it. Target-Mac CPU/RSS/threads/wakeups/energy acceptance remains separate from shared-runner CI.
+Target-Mac CPU/RSS/threads/wakeups/energy acceptance remains separate. P1 does not begin before M6.6 is physically accepted and merged.
 
 ## Not yet accepted
 
-- `NH-MEDIA-PEEK-001` failed on `bbba...` and requires retest on the new exact docs-synchronized candidate, including restart while the cursor is already stationary on the notch.
-- Hover alone must be shown not to open full expanded UI; a repeat without click/DOWN is a separate blocker.
-- `NH-MEDIA-PEEK-002...013` and affected `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`, `NH-MEDIA-SOURCE-ICON-*` remain physically pending.
-- Process ownership and sensitive-permission checks remain pending.
-- P1 whole-app performance/resource review remains blocked until M6.6 is physically accepted and merged.
-- Active-display migration, fullscreen/Spaces, screen configuration, notchless mode and broader multi-monitor hardening remain later M1 work.
+- stable compact hover/haptic/Peek must be retested, including stationary relaunch;
+- expanded pointer exit must return non-haptically to exact compact;
+- UP/DOWN interactive transitions must never remain at an intermediate frame when pointer/panel separation occurs before terminal local scroll delivery;
+- remaining `NH-MEDIA-PEEK-*`, affected `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`, `NH-MEDIA-SOURCE-ICON-*`, process ownership and permission checks remain physically pending;
+- PR #33 stays draft and unmerged;
+- P1 and later multi-display hardening remain blocked by the current M6.6 acceptance stage.
 
 ## Next optimal step
 
-Pass both required CI jobs on this docs-synchronized repair head, freeze its exact DMG/provenance, then retest the narrow startup/hover regression first on Mac16,8/macOS 26.6. Only if that passes should the remaining M6.6 physical matrix continue. PR #33 remains draft; P1 remains blocked.
+Run both required CI jobs on this docs-synchronized repair head. If green, freeze that exact source and DMG provenance in PR #33 without another repository commit, then perform the focused target-Mac retest for hover, expanded pointer exit and lost-terminal interactive settlement. Only after that block passes should the rest of M6.6 acceptance continue.

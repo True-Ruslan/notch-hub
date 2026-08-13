@@ -1,80 +1,61 @@
 # M6.6 Interactive Notch Acceptance
 
-Status: AUTOMATED-TESTED / PHYSICAL RETEST PENDING
-Date: 2026-08-12
+Status: AUTOMATED POINTER-EXIT REPAIR GREEN / PHYSICAL RETEST PENDING
+Date: 2026-08-13
 Primary target: macOS 26.6 / Mac16,8
 Design: `docs/superpowers/specs/2026-08-12-interactive-notch-media-ux-design.md`
 
-This ledger extends the frozen `NH-MEDIA-GESTURE-001...018` contract without renumbering it. PR #33 must remain draft until the exact repair candidate passes the target-Mac matrix.
+This ledger extends the frozen `NH-MEDIA-GESTURE-001...018` contract without renumbering it. PR #33 remains draft until one exact CI-produced candidate passes the target-Mac matrix.
 
 ## Stable gates
 
 | ID | Gate | Required result |
 |---|---|---|
-| `NH-NOTCH-INTERACTIVE-001` | Compact downward tracking | Physical local downward gesture follows the finger from the current compact layout before release. |
+| `NH-NOTCH-INTERACTIVE-001` | Compact downward tracking | Physical local downward gesture follows the finger from current compact layout before release. If pointer/panel separation loses terminal local scroll delivery, transition settles safely to compact rather than remaining intermediate. |
 | `NH-NOTCH-INTERACTIVE-002` | Compact cancellation | Short/reversed/cancelled downward gesture returns to exact compact and never starts persistent media observation. |
 | `NH-NOTCH-INTERACTIVE-003` | Compact commit | Qualifying downward release settles through transition authority to exact expanded. |
 | `NH-NOTCH-INTERACTIVE-004` | Expanded upward tracking | Physical local upward gesture follows the finger toward compact while expanded runtime remains authoritative until settlement. |
-| `NH-NOTCH-INTERACTIVE-005` | Expanded cancel/commit | Cancel returns to exact expanded; qualifying release settles to compact and then releases runtime. |
-| `NH-NOTCH-INTERACTIVE-006` | Arbitration + stale safety | Horizontal/seek capture cannot move the panel; momentum cannot drive it; stale layout/generation cannot restore obsolete geometry. |
-| `NH-NOTCH-INTERACTIVE-007` | Hover parity | Existing 120 ms hover remains correct and does not steal a local compact gesture or duplicate haptics. |
+| `NH-NOTCH-INTERACTIVE-005` | Expanded cancel/commit + lost-terminal safety | Cancel returns to exact expanded; qualifying release settles to compact. Leaving expanded retention collapses non-haptically. If the shrinking panel moves out from under the pointer before `.ended`/`.cancelled`, the transition must retarget/settle to exact compact and never remain intermediate. |
+| `NH-NOTCH-INTERACTIVE-006` | Arbitration + stale safety | Horizontal/seek capture cannot move the panel; momentum cannot drive it; stale layout/generation cannot restore obsolete geometry. Pointer-exit collapse is the sole fail-safe allowed to retarget an owned interactive transition. |
+| `NH-NOTCH-INTERACTIVE-007` | Hover parity | Existing 120 ms media Hover Peek remains correct from stable compact and does not steal a local compact gesture or duplicate haptics. |
 | `NH-NOTCH-INTERACTIVE-008` | Reduce Motion | Physical tracking remains usable; endpoint settle follows Reduce Motion and lands exactly. |
-| `NH-NOTCH-INTERACTIVE-009` | Resource lifecycle | Settled compact/cancelled expansion own zero persistent adapter; settled expanded owns the expected adapter; Quit leaves no orphan. |
+| `NH-NOTCH-INTERACTIVE-009` | Resource lifecycle | Settled compact/cancelled or pointer-exit-retargeted expansion own zero persistent adapter; settled expanded owns the expected adapter; Quit leaves no orphan. |
 | `NH-MEDIA-SOURCE-ICON-001` | Authoritative identity | Badge derives only from authoritative source bundle identifier. |
 | `NH-MEDIA-SOURCE-ICON-002` | Correct/fallback rendering | Resolvable source shows its app icon; unresolved source shows a neutral app glyph. |
 | `NH-MEDIA-SOURCE-ICON-003` | Text removal + accessibility | Persistent visual source text is absent while source identity remains available to accessibility/help semantics. |
 | `NH-MEDIA-SOURCE-ICON-004` | Local bounded lookup | Public `NSWorkspace` only; no network/persistence/crawl; in-memory cache capped at 8 bundle identifiers. |
 
-## First physical candidate result
+## Latest physical rejection
 
-Candidate `d008f698b323963f084eedce601620ee957ef442` / CI #872 was **not accepted**. Target testing found:
+Exact candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 passed automation but failed target testing.
 
-- compact horizontal/vertical input losing to pending hover expansion;
-- physical vertical direction inverted relative to the approved down=open / up=close contract;
-- seek transaction could survive a track/source change and seek the new track;
-- horizontal media release and transient media/Home changes felt abrupt or flashed;
-- lifecycle checks `NH-MEDIA-GESTURE-012` and `016` still needed explicit target execution.
+Observed:
 
-The candidate is superseded. Its passing automated CI is historical evidence only.
+- expanded did not auto-collapse after pointer exit, regressing the previously accepted M1 contract;
+- physical UP could leave the panel at a clipped intermediate frame when geometry moved away from the pointer before the local hosting view received the terminal scroll phase;
+- hover/haptic/Peek was also absent in the observed broken session and must be retested after the ownership repair from clean stable compact.
 
-## Repair implementation evidence
+Code inspection confirmed that PR #33 had changed expanded pointer policy to retain `.expanded` unconditionally. It also confirmed that interactive settlement depended on local `.ended`/`.cancelled`, which can be lost after the shrinking panel leaves the pointer.
 
-Strict RED -> GREEN cycles in PR #33:
+## Focused TDD repair
 
-- physical-axis/hover RED `0fd1f8de00ceb1d470c8e83d910356853dd72844`, CI #873;
-- axis normalization `1f4bc0491b3f8a00d8d48b3763ec308f7b39a91b`, CI #874, leaving the independent hover RED;
-- hover/gesture arbitration GREEN `1d4937b0467e290eb83033e4762a0bc406d00345`, CI #875;
-- seek identity RED `3590640bfa73dfa3b672178111fe3d28e64e6705`, CI #876;
-- seek identity GREEN `4c716880dc1e94ce7e1e168d3205d20bc2bfa7e4`, CI #877, with only the previous size envelope failing;
-- continuity RED `812230ba8c73dd8b85e61ed0030be747ba5cef12`, CI #878;
-- continuity implementation `d9fe5887c06d6e87402d25f403cb42a7b7102e75` plus Hashable/test-only follow-ups; final functional source `d8fb784eb9eb47c7af34dbd689b6fcfa5aadef12`, CI #881: 277 Swift tests and all functional/security/signing/preflight checks PASS, old size budget only RED;
-- size-policy RED `38f73eaa3d13f25743ddaf831a5c66c3aba9fb78`, CI #882: 278 tests / 60 suites with exactly the missing repair budget failing;
-- size-policy GREEN `6403dae0e33281f6dcd5bcbd79ec5147b6580c0a`, CI #883: both required jobs PASS.
+- RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959: 333 tests / 69 suites with exactly five new pointer-exit/lost-terminal regression tests failing; pre-existing suite passed;
+- GREEN `64d3e6c2beadacaeda69c8ac06f173ac26aace3e`: restored expanded retention collapse, made `.pointerExitCollapse` the sole interactive-retarget exception, passed the current `NSEvent.mouseLocation` through the local scroll path, and used actual `panel.frame` to settle when geometry leaves the pointer;
+- format-only `de5624b7d344e15772fdf0759fbe4b5027a5b1d4` / CI #961: both required jobs PASS, 333 tests / 69 suites PASS and all strict security/performance/media/signing/preflight/size/performance-smoke gates PASS.
 
-Repair behavior is automated-tested, not physically accepted.
+The repair adds no global scroll monitor, event tap, watchdog timer, polling loop, display link or sensitive input permission.
 
 ## Focused physical retest
 
-Use only the final docs-sync exact candidate produced after this ledger update. At minimum retest:
+Use only the final docs-synchronized candidate frozen in PR #33 after its exact head passes CI.
 
-1. Short horizontal swipe/reversal: no command/haptic, no stuck visual state.
-2. Compact RIGHT -> previous; compact LEFT -> next; hover must not pre-empt the gesture.
-3. Expanded RIGHT -> previous; LEFT -> next; visual offset settles smoothly.
-4. Physical compact DOWN -> follow-finger expand; physical expanded UP -> follow-finger collapse.
-5. Seek drag -> change track/source -> release: drag must cancel and must not seek the new track.
-6. Hover regression: ordinary deliberate hover still opens normally.
-7. Source icon regression for Yandex Music and Yandex Browser/Chromium.
-8. No Accessibility/Input Monitoring/Automation/Screen Recording prompts.
-9. After compact gesture work and after normal Quit:
-
-```bash
-pgrep -lf 'mediaremote-adapter\.pl' || true
-```
-
-Expected: empty output.
-
-One explicit target-Mac tuning pass may adjust only visual travel/damping. Frozen semantic thresholds and direction mapping are not silently changed.
+1. Stable compact + usable media: hover must open Peek with expected haptic; hover alone must not open full Home.
+2. DOWN -> exact expanded; then simply leave expanded retention with the pointer. It must auto-collapse non-haptically to exact compact.
+3. DOWN -> expanded, then perform UP while keeping the pointer relatively stationary so the shrinking panel moves away from it before the gesture terminates. No intermediate frame may remain.
+4. Repeat UP while deliberately moving the pointer outside during the owned gesture. Require exact compact.
+5. Begin compact DOWN and separate pointer/panel before terminal delivery. Require safe return to compact, not a stuck partial expansion.
+6. Repeat these transition cycles several times before continuing horizontal gestures, seek, source icon and lifecycle checks.
 
 ## Acceptance rule
 
-Do not mark M6.6 accepted, merge PR #33, start P1, or publish a release until all applicable `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`, and `NH-MEDIA-SOURCE-ICON-*` gates pass on one exact CI-produced candidate.
+Do not mark M6.6 accepted, merge PR #33, start P1, or publish a release until all applicable `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`, `NH-MEDIA-PEEK-*`, and `NH-MEDIA-SOURCE-ICON-*` gates pass on one exact CI-produced candidate.

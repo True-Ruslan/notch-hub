@@ -22,25 +22,27 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 
 ### M6.6 — gestures, haptics, interactive notch, seek and Hover Peek
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED REPAIR GREEN / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
-Draft PR #33 contains stable `compact`, `peek`, `expanded` presentation ownership, 120 ms media-only hover Peek, 140 ms exit grace, explicit click/DOWN expansion, local media gestures/haptics, interactive panel motion, bounded compact/Peek one-shot media work, expanded-only persistent runtime, source icon, seek/cursor isolation and event-driven continuity.
+Draft PR #33 contains stable `compact`, `peek`, `expanded` presentation ownership, 120 ms media-only Hover Peek, 140 ms Peek grace, explicit click/DOWN expansion, local media gestures/haptics, interactive panel motion, bounded compact/Peek media work, expanded-only persistent runtime, source icon, seek/cursor isolation and event-driven continuity.
 
-Hover Peek deterministic size policy is active through `performance/m6-6-hover-peek-size-budget.json`; immutable P0 and older feature budgets remain unchanged.
+Hover Peek deterministic size policy remains active through `performance/m6-6-hover-peek-size-budget.json`; immutable P0 and older feature budgets remain unchanged.
 
 #### Current acceptance blocker
 
-The first docs-synchronized Hover Peek physical candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 was rejected on target hardware.
+Exact candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 was rejected on target hardware even though automation was green.
 
-A reproducible restart/stationary-pointer defect was identified: `show()` synchronized the current mouse location with hover activation disabled, so relaunching while the pointer was already on the notch could never arm the 120 ms dwell without a further `mouseMoved` event.
+Physical failures:
 
-Focused TDD repair:
+- stable hover/haptic/Peek did not fire in the observed broken session;
+- moving the pointer out of expanded did not auto-collapse, regressing the accepted M1 contract;
+- physical UP could leave a partially collapsed intermediate frame when shrinking geometry moved away from the pointer before local scroll delivered a terminal phase.
 
-- RED `553cf973722dfb214f0fcb741ddb6c9b0b44ff02` / CI #947: exactly the new stationary-startup regression test failed among 328 tests;
-- GREEN `d17bd27be72c8c3bd022fb2c3613050c398c622e` / CI #948: both required jobs PASS, 328 tests PASS, security/signing/preflight/size/performance gates PASS;
-- production change is limited to allowing the existing hover policy to evaluate `NSEvent.mouseLocation` normally during `show()`; no new polling, monitor or authority.
+The latter two failures have a focused repair. Clean RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959 failed exactly five new regression tests among 333 tests / 69 suites. Production GREEN `64d3e6c2beadacaeda69c8ac06f173ac26aace3e` restored expanded pointer-exit collapse and added local synchronous settlement based on actual panel geometry. Format-only `de5624b7d344e15772fdf0759fbe4b5027a5b1d4` / CI #961 passed both required jobs with all 333 tests and release/security/performance/media/signing/preflight/size/performance-smoke gates green.
 
-An unexpected full-expanded Home surface was also observed during the rejected physical run. Code inspection does not prove it shares the restart root cause because hover resolution routes only to Peek. The next physical candidate must explicitly prove that hover alone never expands; a repeat without click/DOWN becomes a separate TDD defect.
+The repair introduces no global scroll monitor, event tap, watchdog timer, polling or new sensitive input authority.
+
+The hover/haptic symptom remains an explicit retest condition. If it reproduces from clean stable compact after the transition repair, it becomes a separate TDD defect instead of being guessed into this fix.
 
 Acceptance ledgers:
 
@@ -67,9 +69,9 @@ Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, global `.m
 
 ## Current priority
 
-1. Pass CI on the docs-synchronized stationary-hover repair head and freeze its exact source/artifacts.
-2. Retest `NH-MEDIA-PEEK-001` first: normal hover, restart with pointer already stationary on the notch, and proof that hover alone never opens full expanded UI.
-3. If that focused retest passes, continue `NH-MEDIA-PEEK-002...013` plus affected gesture/interactive/source-icon gates.
-4. Any repeatable failure gets an independent RED -> GREEN cycle and a new exact candidate.
-5. Only after full physical PASS: record evidence, mark PR #33 ready, merge and verify post-merge `main` CI.
-6. Then start P1.
+1. Pass both required CI jobs on this final docs-synchronized pointer-exit/lost-terminal repair head.
+2. Freeze exact source/artifact provenance in PR #33 without another repository commit.
+3. Retest clean stable hover/haptic/Peek, expanded pointer-exit auto-collapse, and UP/DOWN pointer/panel-separation settlement first.
+4. Any independent repeatable hover or transition failure gets its own RED -> GREEN cycle and new exact candidate.
+5. Only after the focused block passes continue remaining Peek/gesture/seek/source-icon/lifecycle/permission gates.
+6. Only after full physical PASS: mark PR #33 ready, merge, verify post-merge `main` CI, then begin P1.
