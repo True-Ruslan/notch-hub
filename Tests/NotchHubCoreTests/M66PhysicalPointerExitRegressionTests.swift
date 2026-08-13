@@ -28,7 +28,7 @@ struct M66PhysicalPointerExitRegressionTests {
     func expandedPointerExitRestoresAcceptedNonHapticCollapseIntent() {
         let recorder = PointerExitIntentRecorder()
         let coordinator = NotchInteractionCoordinator(
-            scheduleActivation: { _, _ in { } },
+            scheduleActivation: { _, _ in {} },
             emitIntent: { intent in
                 recorder.intents.append(intent)
             }
@@ -123,7 +123,7 @@ struct M66PhysicalPointerExitRegressionTests {
             animate: { frame, _, _, _ in
                 endpoint.frames.append(frame)
             },
-            cancelAnimation: { },
+            cancelAnimation: {},
             performExpansionHaptic: {
                 haptics.requestCount += 1
             },
