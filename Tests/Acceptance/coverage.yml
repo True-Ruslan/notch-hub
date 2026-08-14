@@ -300,6 +300,145 @@
       "physicalOnlyReason": "Automated evidence proves the probe executable product, fixed process invocation and exact candidate publication; historical target-Mac evidence confirms the runtime process boundary."
     },
     {
+      "id": "NH-MEDIA-PROD-001",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "policy", "test": "scripts.ProductionMediaTransportCandidateCITests.test_candidate_has_exact_sandbox_only_entitlement"},
+        {"layer": "shipping", "test": "scripts.ProductionMediaTransportCandidateCITests.test_candidate_build_and_verify_scripts_lock_provenance_and_runtime_boundary"},
+        {"layer": "shipping", "test": "scripts.ProductionMediaTransportCandidateCITests.test_ci_builds_executes_validates_and_uploads_production_candidate"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Automated policy and shipping checks prove the candidate entitlement, provenance and Hardened Runtime verification path; target-Mac preflight on exact M6.3 candidate c63f39c40b90d647e48271b9dc1d5ffd6e612c0b proves the effective runtime gate."
+    },
+    {
+      "id": "NH-MEDIA-PROD-002",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaRemoteSystemTransportTests.noSessionEmitsStrictlyNewerSequenceAndInvalidatesCapabilities"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaSessionControllerTests.invalidSeekAndCommandsWithoutSessionFailClosed"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Deterministic tests prove fail-closed no-session state and command behavior; exact-candidate target preflight physically confirmed previous/next/seek = unknown/unknown/unknown."
+    },
+    {
+      "id": "NH-MEDIA-PROD-003",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [{"layer": "physical", "test": null}],
+      "physicalOnlyReason": "Yandex Music production observation was accepted against the real player on the exact M6.3 target-Mac candidate and is not reproducible deterministically in public CI."
+    },
+    {
+      "id": "NH-MEDIA-PROD-004",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [{"layer": "physical", "test": null}],
+      "physicalOnlyReason": "Browser production observation was accepted against real Yandex Browser playback on the exact M6.3 target-Mac candidate and is not reproducible deterministically in public CI."
+    },
+    {
+      "id": "NH-MEDIA-PROD-005",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaRemoteSystemTransportTests.sourceSwitchClearsArtworkAndNeverReusesPriorMetadata"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaRemoteSystemTransportTests.noSessionEmitsStrictlyNewerSequenceAndInvalidatesCapabilities"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.ProductionMediaTransportCandidateTests.collectorRecordsOnlyPrivacySafeTransitionEvidence"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Deterministic evidence proves source-switch replacement, disappearance and privacy-safe transition accounting; target-Mac source-cycle physically confirmed real source switching and clean teardown."
+    },
+    {
+      "id": "NH-MEDIA-PROD-006",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "unit", "test": "NotchHubMediaCoreTests.MediaRemoteProcessClientTests.capabilitiesUseExactInvocationAndStrictDecoder"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.ProductionMediaTransportCandidateRunnerTests.capabilitiesUseProductionRuntimeAndNormalizeTriState"},
+        {"layer": "unit", "test": "NotchHubMediaCoreTests.ProductionMediaTransportCandidateTests.candidateCapabilityEncodingUsesExactTriStateStrings"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Deterministic tests prove strict authoritative tri-state capability transport and encoding; target-Mac evidence confirmed real per-source capabilities without fabrication."
+    },
+    {
+      "id": "NH-MEDIA-PROD-007",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "unit", "test": "NotchHubMediaCoreTests.ProductionMediaTransportCandidateInvocationTests.parsesOnlyClosedCandidateCommands"},
+        {"layer": "unit", "test": "NotchHubMediaCoreTests.MediaRemoteProcessClientTests.typedCommandsUseOnlyFixedAllowlistArguments"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaRemoteSystemTransportTests.typedCommandsForwardWithoutPlayerSpecificFallback"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Deterministic tests prove the closed typed toggle/previous/next/seek command surface and fixed process arguments; the user physically confirmed all supported commands on the exact target-Mac candidate."
+    },
+    {
+      "id": "NH-MEDIA-PROD-008",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaRemoteSystemTransportTests.sourceSwitchClearsArtworkAndNeverReusesPriorMetadata"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaRemoteSystemTransportTests.staleCapabilityCompletionAfterRapidSourceSwitchIsIgnored"},
+        {"layer": "unit", "test": "NotchHubMediaCoreTests.ProductionMediaTransportCandidateTests.collectorRecordsOnlyPrivacySafeTransitionEvidence"}
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-MEDIA-PROD-009",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "unit", "test": "NotchHubMediaCoreTests.MediaRemoteProcessClientTests.stopIsIdempotentAndOwnsCleanTeardown"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.ProductionMediaTransportCandidateRunnerTests.observeUsesProductionStateStackAndStopsCleanly"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Deterministic tests prove owned idempotent teardown and clean candidate stop; target source-cycle, steady and stability evidence physically confirmed clean teardown with no orphan adapter process."
+    },
+    {
+      "id": "NH-MEDIA-PROD-010",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "unit", "test": "NotchHubMediaCoreTests.MediaRemoteProcessTeardownTests.stopEscalatesFromGracefulToForcedTerminationWithinFixedBounds"},
+        {"layer": "unit", "test": "NotchHubMediaCoreTests.MediaRemoteProcessTeardownTests.stopFailsClosedWhenForcedTerminationCannotBeConfirmed"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.ProductionMediaTransportCandidateTeardownTests.observationReportsUncleanTeardownWhenOwnedProcessCannotBeConfirmedStopped"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaSessionControllerTests.firstUnexpectedFailureRestartsExactlyOnceAndRejectsOldHandlerEvents"},
+        {"layer": "integration", "test": "NotchHubMediaCoreTests.MediaSessionControllerTests.secondUnexpectedFailureStopsAndLocksUnavailableWithoutRestartLoop"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Deterministic tests prove bounded graceful/forced teardown, fail-closed unconfirmed exit, stale callback rejection and one-restart/no-loop controller semantics; target stability evidence physically confirmed normal clean teardown without orphan processes."
+    },
+    {
+      "id": "NH-MEDIA-PROD-011",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [{"layer": "physical", "test": null}],
+      "physicalOnlyReason": "Absence of Accessibility, Input Monitoring, Automation and Screen Recording prompts was physically confirmed during the complete exact M6.3 target-Mac source/command cycle; OS prompt behavior cannot be proven by public CI alone."
+    },
+    {
+      "id": "NH-MEDIA-PROD-012",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "policy", "test": "scripts.ProductionMediaTransportAcceptanceTests.test_resource_sampler_uses_numeric_cpu_rss_and_darwin_thread_rows"},
+        {"layer": "policy", "test": "scripts.ProductionMediaTransportAcceptanceTests.test_owned_adapter_pid_requires_exact_parent_and_adapter_command"},
+        {"layer": "policy", "test": "scripts.ProductionMediaTransportAcceptanceTests.test_combined_resource_summary_is_conservative_and_stable"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Automated tests prove resource-sampling and owned-adapter accounting semantics; accepted 60-second CPU/RSS/thread evidence was measured on the exact M6.3 target-Mac candidate and cannot be reproduced meaningfully on shared CI."
+    },
+    {
+      "id": "NH-MEDIA-PROD-013",
+      "source": "docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer": "policy", "test": "scripts.ProductionMediaTransportAcceptanceTests.test_resource_observer_completion_timeout_uses_absolute_deadline_and_bounded_grace"},
+        {"layer": "policy", "test": "scripts.ProductionMediaTransportAcceptanceTests.test_combined_resource_summary_is_conservative_and_stable"},
+        {"layer": "physical", "test": null}
+      ],
+      "physicalOnlyReason": "Automated tests prove bounded observer completion and conservative summary semantics; accepted 10-minute stability evidence was measured on the exact M6.3 target Mac and cannot be substituted by shared-runner measurements."
+    },
+    {
       "id": "NH-MOTION-001",
       "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
       "status": "accepted",
