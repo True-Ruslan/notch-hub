@@ -21,6 +21,32 @@ ALLOWED_LAYERS = AUTOMATED_LAYERS | {"physical"}
 ENTRY_KEYS = {"id", "source", "status", "coverage", "physicalOnlyReason"}
 COVERAGE_KEYS = {"layer", "test"}
 
+# These IDs already exist in accepted M1 project/spec/testing history. Plan 2 makes
+# them canonical under docs/testing so the machine-readable inventory cannot silently
+# omit the interaction baseline just because it predates the acceptance-ledger layout.
+REQUIRED_M1_IDS = {
+    "NH-NOTCH-001",
+    "NH-HOVER-001",
+    "NH-HOVER-002",
+    "NH-HOVER-003",
+    "NH-HOVER-DELAY-001",
+    "NH-HOVER-DELAY-002",
+    "NH-HOVER-TOP-001",
+    "NH-HAPTIC-001",
+    "NH-HAPTIC-002",
+    "NH-VISUAL-001",
+    "NH-VISUAL-002",
+    "NH-VISUAL-003",
+    "NH-ANIM-001",
+    "NH-ANIM-002",
+    "NH-ANIM-003",
+    "NH-ANIM-004",
+    "NH-MOTION-001",
+    "NH-MOTION-002",
+    "NH-SPACE-001",
+    "NH-DISPLAY-001",
+}
+
 
 class CoverageError(ValueError):
     pass
@@ -96,6 +122,23 @@ def _infer_status(identifier: str, text: str) -> str:
 
 def _short_status(status_text: str) -> str:
     return repr(status_text[:120] if status_text else "<missing Status: line>")
+
+
+def validate_repository_inventory(
+    contracts: dict[str, Contract],
+    docs_root: pathlib.Path,
+) -> None:
+    # Temporary docs roots used by focused validator tests remain generic. The frozen
+    # M1 requirement applies only to the real repository acceptance inventory.
+    if docs_root.resolve() != DEFAULT_DOCS_ROOT.resolve():
+        return
+
+    missing = sorted(REQUIRED_M1_IDS - set(contracts))
+    if missing:
+        raise CoverageError(
+            "repository acceptance inventory is missing frozen M1 ids: "
+            + ", ".join(missing)
+        )
 
 
 def load_manifest(path: pathlib.Path) -> list[dict[str, Any]]:
@@ -277,9 +320,7 @@ def build_report(
     for identifier, contract in sorted(contracts.items()):
         entry = mapped.get(identifier)
         evidence = list(entry["coverage"]) if entry else []
-        automated = any(
-            item.get("layer") in AUTOMATED_LAYERS for item in evidence
-        )
+        automated = any(item.get("layer") in AUTOMATED_LAYERS for item in evidence)
         rows.append(
             {
                 "id": identifier,
@@ -290,6 +331,19 @@ def build_report(
             }
         )
     return {"schemaVersion": 1, "mode": mode, "contracts": rows}
+
+
+def validate_report(report: dict[str, Any]) -> None:
+    rows = report.get("contracts")
+    if not isinstance(rows, list):
+        raise CoverageError("acceptance report contracts must be a list")
+    identifiers = [row.get("id") for row in rows if isinstance(row, dict)]
+    if len(identifiers) != len(rows):
+        raise CoverageError("acceptance report contains a non-object contract row")
+    if identifiers != sorted(identifiers):
+        raise CoverageError("acceptance report contract ids must be sorted")
+    if len(identifiers) != len(set(identifiers)):
+        raise CoverageError("acceptance report contract ids must be unique")
 
 
 def write_report(report: dict[str, Any], path: pathlib.Path) -> None:
@@ -307,9 +361,11 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         contracts = discover_contracts(args.docs_root)
+        validate_repository_inventory(contracts, args.docs_root)
         entries = load_manifest(args.manifest)
         mapped = validate_manifest(entries, contracts, mode=args.mode)
         report = build_report(contracts, mapped, mode=args.mode)
+        validate_report(report)
         if args.report:
             write_report(report, args.report)
     except (CoverageError, OSError) as error:
