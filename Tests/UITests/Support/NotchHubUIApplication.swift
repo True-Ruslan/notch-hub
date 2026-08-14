@@ -90,13 +90,13 @@ struct NotchHubUIApplication {
         return surface("notch.surface.expanded").waitForNonExistence(timeout: timeout)
     }
 
-    func openExpandedViaAcceptedHover(timeout: TimeInterval = 2) -> Bool {
+    func openExpandedExplicitly(timeout: TimeInterval = 2) -> Bool {
         let compact = surface("notch.surface.compact")
         guard NotchHubUIAssertions.waitUntilExists(compact, timeout: timeout) else {
             return false
         }
 
-        compact.hover()
+        compact.click()
         return NotchHubUIAssertions.waitUntilExists(
             surface("notch.surface.expanded"),
             timeout: timeout
