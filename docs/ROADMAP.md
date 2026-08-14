@@ -100,15 +100,13 @@ The consolidated draft PR #33 is implemented and automated-tested. Frozen curren
 
 A previous physical candidate exposed pointer-exit/lost-terminal defects and an independently unproven hover/haptic symptom. The repaired candidate must pass the focused physical retest first and then the remaining gesture/Peek/seek/source-icon/lifecycle/permission matrix. Until that happens, PR #33 stays draft, unmerged and unreleased.
 
-**M6.6 work is currently frozen while the regression foundation/backfill gate below is completed.** PR #33 is not used as the branch for that foundation work.
+**M6.6 work remains frozen while the regression foundation/backfill gate below is completed.**
 
 ## T1 — Regression and UI Automation Foundation
 
-Status: **PLAN 1 TASKS 1-8 IMPLEMENTED AND AUTOMATED-TESTED / TASK 9 FINALIZATION IN PROGRESS / PR #34 DRAFT**
+Status: **PLAN 1 COMPLETE / AUTOMATED-TESTED / PR #34 STILL DRAFT**
 
-Purpose: establish a reliable native macOS regression layer before further M6.6 repair work.
-
-Delivered in Plan 1:
+Delivered:
 
 - native XCTest + XCUIAutomation harness in a checked-in test-only Xcode project;
 - exact SwiftPM-built external `NotchHub.app` launch by URL;
@@ -122,17 +120,13 @@ Delivered in Plan 1:
 - canonical `macOS UI regression` job on `macos-26` inside `.github/workflows/ci.yml`;
 - separate provenance-backed foundation size envelope; historical budgets remain immutable.
 
-Exact fully verified implementation candidate before Task-9 docs reconciliation: `7654775b3ae0416d115f8f2ca7118e947cf97e13`, canonical CI run `31811958254`, all three jobs PASS.
+Task-9 exact verification source `5e9341b4d957a967ec82166e18e009455119fd0b` passed CI #1007 / run `31817097807` with `macOS 26 compatibility`, `macOS UI regression`, and `Build, test and package` all SUCCESS. Production-diff review found no accidental product-feature or shipping trust-boundary change.
 
-Plan 1 exit gate:
-
-1. source-of-truth docs synchronized;
-2. PR diff reviewed for accidental shipping/product semantics changes;
-3. fresh exact-head canonical CI passes `macOS 26 compatibility`, `macOS UI regression`, and `Build, test and package`.
+Plan 1 completion does **not** unblock M6.6. PR #34 remains draft because the accepted historical baseline still needs strict machine-readable traceability.
 
 ## T2 — Legacy Regression Baseline Backfill
 
-Status: **NEXT / BLOCKING FEATURE WORK**
+Status: **ACTIVE / BLOCKING FEATURE WORK**
 
 Authoritative plan: `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md`.
 
@@ -148,7 +142,7 @@ Plan 2 must:
 - keep M6.6 pending/rejected IDs out of accepted legacy backfill;
 - switch canonical CI from `audit` to fail-closed `strict` only when the backfill is complete.
 
-Exit criterion: `python3 scripts/test_acceptance_coverage.py --mode strict` passes in canonical CI and the PR review finds no unsupported acceptance claims or product-feature changes.
+Exit criterion: `python3 scripts/test_acceptance_coverage.py --mode strict` passes in canonical CI and PR review finds no unsupported acceptance claims or product-feature changes.
 
 Only after T2 strict PASS may PR #34 become merge-ready. Post-merge `main` CI is required before M6.6 resumes.
 
@@ -176,10 +170,11 @@ Planned:
 
 ## Current priority order — 2026-08-14
 
-1. Finish T1 / Foundation Plan 1 Task 9 and obtain fresh exact-head three-job canonical CI.
-2. Execute T2 / Legacy Regression Baseline Backfill on the isolated foundation branch until every accepted stable ID is represented and every deterministic accepted behavior has executable evidence.
-3. Switch acceptance validation to `strict`; require strict PASS, review PR #34, merge only after all gates are green, then verify post-merge `main` CI.
-4. Rebase/resume draft PR #33 only after the foundation is merged. Obtain a fresh exact-head M6.6 candidate and run the focused target-Mac repair retest plus the complete remaining physical matrix.
-5. Only full M6.6 physical PASS may advance PR #33 to merge; verify post-merge `main` CI.
-6. Run P1 whole-app resource/performance review, including the local-pointer/multi-monitor concerns.
-7. Resume remaining product modules after the testing/media/performance foundations are stable.
+1. Execute T2 / Plan 2 Task 1: build the complete machine-readable acceptance inventory/report and classify every stable accepted ID by deterministic/integration/UI/physical-only evidence needs.
+2. Backfill M1 deterministic mappings and user-level XCUI journeys, then M6.1-M6.5 in plan order, reusing valid existing tests first.
+3. Complete the manifest for all stable accepted IDs and switch acceptance validation to `strict` only when the debt reaches zero with justified physical-only cases.
+4. Require strict PASS, review PR #34, merge only after all gates are green, then verify post-merge `main` CI.
+5. Rebase/resume draft PR #33 only after the foundation is merged. Obtain a fresh exact-head M6.6 candidate and run the focused target-Mac repair retest plus complete remaining physical matrix.
+6. Only full M6.6 physical PASS may advance PR #33 to merge; verify post-merge `main` CI.
+7. Run P1 whole-app resource/performance review, including local-pointer and multi-monitor concerns.
+8. Resume remaining product modules after the testing/media/performance foundations are stable.
