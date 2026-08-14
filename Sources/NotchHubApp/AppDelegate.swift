@@ -17,11 +17,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
     }()
 
+    #if NOTCHHUB_UI_TESTING
+        private let uiTestHapticRecorder = UITestHapticRecorder()
+    #endif
+
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
         let mediaPresentationModel = mediaPresentationModel
-        let panelController = NotchPanelController(contentFactory: { [weak self] model, layout in
+        let contentFactory: NotchPanelContentFactory = { [weak self] model, layout in
             NotchHostingViewFactory.make(
                 rootView: MediaNotchRootView(
                     panelModel: model,
@@ -40,7 +44,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 )
             )
-        })
+        }
+
+        let panelController: NotchPanelController
+        #if NOTCHHUB_UI_TESTING
+            let uiTestHapticRecorder = uiTestHapticRecorder
+            panelController = NotchPanelController(
+                contentFactory: contentFactory,
+                performExpansionHaptic: {
+                    uiTestHapticRecorder.performExpansionHaptic()
+                }
+            )
+        #else
+            panelController = NotchPanelController(contentFactory: contentFactory)
+        #endif
         self.panelController = panelController
 
         mediaPresentationModel.presentationDidChange = { [weak panelController] presentation in

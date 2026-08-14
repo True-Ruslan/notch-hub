@@ -38,7 +38,20 @@ public final class NotchPanelController: NSObject {
         }
     }
 
-    public init(contentFactory: @escaping NotchPanelContentFactory) {
+    public convenience init(contentFactory: @escaping NotchPanelContentFactory) {
+        let haptics = AppKitNotchHapticPerformer()
+        self.init(
+            contentFactory: contentFactory,
+            performExpansionHaptic: {
+                haptics.performExpansionHaptic()
+            }
+        )
+    }
+
+    public init(
+        contentFactory: @escaping NotchPanelContentFactory,
+        performExpansionHaptic: @escaping @MainActor () -> Void
+    ) {
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let resolvedLayout = NotchGeometry.layout(
             for: ScreenGeometryInput(screen: screen)
@@ -56,7 +69,6 @@ public final class NotchPanelController: NSObject {
 
         let workspace = NSWorkspace.shared
         let initialReduceMotion = workspace.accessibilityDisplayShouldReduceMotion
-        let haptics = AppKitNotchHapticPerformer()
         let transitionCoordinator = NotchPanelTransitionCoordinator(
             model: model,
             animationDuration: {
@@ -77,9 +89,7 @@ public final class NotchPanelController: NSObject {
             cancelAnimation: {
                 cancelNotchPanelAnimation(chromeView: hostingView)
             },
-            performExpansionHaptic: {
-                haptics.performExpansionHaptic()
-            },
+            performExpansionHaptic: performExpansionHaptic,
             applyInteractivePresentation: { frame, cornerRadius in
                 applyInteractiveNotchPanelPresentation(
                     panel: panel,
