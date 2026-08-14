@@ -2,18 +2,18 @@
   "allowanceBytes": {
     "appSizeBytes": 479232,
     "dmgSizeBytes": 397312,
-    "executableSizeBytes": 180224
+    "executableSizeBytes": 184320
   },
   "baselineId": "v0.1.0",
   "evidence": {
-    "artifactId": 9220849442,
-    "sourceCommit": "fabbecb4d97a0bf9fc059d010fdf7401ddf97bba",
+    "artifactId": 9235015770,
+    "sourceCommit": "e9d414e094ee2ea5f72815078210e4dda9163aec",
     "summary": {
-      "appSizeBytes": 747934,
-      "dmgSizeBytes": 483314,
-      "executableSizeBytes": 445728
+      "appSizeBytes": 748863,
+      "dmgSizeBytes": 483851,
+      "executableSizeBytes": 446656
     },
-    "workflowRunId": 31804886824
+    "workflowRunId": 31842940616
   },
   "featureId": "regression-ui-automation-foundation",
   "schemaVersion": 1
