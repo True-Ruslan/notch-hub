@@ -11,6 +11,7 @@ DIAGNOSTICS = UI_ROOT / "Support/NotchHubUIDiagnostics.swift"
 CANONICAL_WORKFLOW = ROOT / ".github/workflows/ci.yml"
 LEGACY_UI_WORKFLOW = ROOT / ".github/workflows/ui-regression.yml"
 EXACT_SOURCE_EXPRESSION = "${{ github.event.pull_request.head.sha || github.sha }}"
+STRICT_ACCEPTANCE_COMMAND = "python3 scripts/test_acceptance_coverage.py --mode strict"
 
 
 class UIProjectPolicyTests(unittest.TestCase):
@@ -50,7 +51,7 @@ class UIProjectPolicyTests(unittest.TestCase):
         self.assertIn("XCTAttachment(screenshot:", diagnostics)
         self.assertIn(".lifetime = .keepAlways", diagnostics)
 
-    def test_canonical_ci_owns_mandatory_ui_regression_and_acceptance_audit(self):
+    def test_canonical_ci_owns_mandatory_ui_regression_and_strict_acceptance_traceability(self):
         workflow = CANONICAL_WORKFLOW.read_text(encoding="utf-8")
 
         self.assertFalse(
@@ -65,8 +66,6 @@ class UIProjectPolicyTests(unittest.TestCase):
             "python3 scripts/test_ui_project_policy.py -v",
             "Validate UI fixture isolation policy",
             "python3 scripts/test_ui_automation_policy.py -v",
-            "Audit acceptance coverage",
-            "python3 scripts/test_acceptance_coverage.py --mode audit",
             "xcodebuild -list -project NotchHubUITests.xcodeproj",
             "bash scripts/build-ui-test-app.sh",
             "--verify-shipping-app build/NotchHub.app",
@@ -78,6 +77,17 @@ class UIProjectPolicyTests(unittest.TestCase):
         ):
             with self.subTest(required=required):
                 self.assertIn(required, workflow)
+
+        self.assertNotIn(
+            "python3 scripts/test_acceptance_coverage.py --mode audit",
+            workflow,
+            "legacy acceptance audit must be replaced by fail-closed strict validation",
+        )
+        self.assertGreaterEqual(
+            workflow.count(STRICT_ACCEPTANCE_COMMAND),
+            2,
+            "strict acceptance traceability must run in macOS UI regression and a normal required job",
+        )
 
         exact_source = EXACT_SOURCE_EXPRESSION
         self.assertGreaterEqual(
