@@ -1,0 +1,61 @@
+name: UI Regression
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos-ui-regression:
+    name: macOS UI regression
+    runs-on: macos-26
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Report platform
+        run: |
+          sw_vers
+          xcode-select -p
+          xcodebuild -version
+          swift --version
+
+      - name: Validate UI test project policy
+        run: python3 scripts/test_ui_project_policy.py -v
+
+      - name: List UI test project
+        run: xcodebuild -list -project NotchHubUITests.xcodeproj
+
+      - name: Build exact UI test application
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/build-ui-test-app.sh
+
+      - name: Run external application UI smoke
+        env:
+          NOTCHHUB_UI_APP_PATH: ${{ github.workspace }}/build/ui-test/NotchHub.app
+        run: |
+          rm -rf build/NotchHubUITests-smoke.xcresult
+          xcodebuild test \
+            -project NotchHubUITests.xcodeproj \
+            -scheme NotchHubUITests \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/ui-derived \
+            -resultBundlePath build/NotchHubUITests-smoke.xcresult
+
+      - name: Upload UI diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NotchHub-UI-smoke-xcresult
+          path: build/NotchHubUITests-smoke.xcresult
+          if-no-files-found: warn
