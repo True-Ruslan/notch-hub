@@ -8,7 +8,9 @@ UI_ROOT = ROOT / "Tests/UITests"
 APPLICATION = UI_ROOT / "Support/NotchHubUIApplication.swift"
 ASSERTIONS = UI_ROOT / "Support/NotchHubUIAssertions.swift"
 DIAGNOSTICS = UI_ROOT / "Support/NotchHubUIDiagnostics.swift"
-WORKFLOW = ROOT / ".github/workflows/ui-regression.yml"
+CANONICAL_WORKFLOW = ROOT / ".github/workflows/ci.yml"
+LEGACY_UI_WORKFLOW = ROOT / ".github/workflows/ui-regression.yml"
+EXACT_SOURCE_EXPRESSION = "${{ github.event.pull_request.head.sha || github.sha }}"
 
 
 class UIProjectPolicyTests(unittest.TestCase):
@@ -48,23 +50,62 @@ class UIProjectPolicyTests(unittest.TestCase):
         self.assertIn("XCTAttachment(screenshot:", diagnostics)
         self.assertIn(".lifetime = .keepAlways", diagnostics)
 
+    def test_canonical_ci_owns_mandatory_ui_regression_and_acceptance_audit(self):
+        workflow = CANONICAL_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertFalse(
+            LEGACY_UI_WORKFLOW.exists(),
+            "UI regression must not live in a second workflow with its own trigger surface",
+        )
+        for required in (
+            "macos-ui-regression:",
+            "name: macOS UI regression",
+            "runs-on: macos-26",
+            "Validate UI test project policy",
+            "python3 scripts/test_ui_project_policy.py -v",
+            "Validate UI fixture isolation policy",
+            "python3 scripts/test_ui_automation_policy.py -v",
+            "Audit acceptance coverage",
+            "python3 scripts/test_acceptance_coverage.py --mode audit",
+            "xcodebuild -list -project NotchHubUITests.xcodeproj",
+            "bash scripts/build-ui-test-app.sh",
+            "--verify-shipping-app build/NotchHub.app",
+            "NOTCHHUB_UI_APP_PATH:",
+            "NOTCHHUB_UI_SOURCE_COMMIT:",
+            "xcodebuild test",
+            "build/NotchHubUITests-smoke.xcresult",
+            "if: always()",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, workflow)
+
+        exact_source = EXACT_SOURCE_EXPRESSION
+        self.assertGreaterEqual(
+            workflow.count(exact_source),
+            3,
+            "UI build, shipping verification and XCUI provenance must use exact PR-head SHA",
+        )
+
     def test_ui_diagnostics_are_exact_sha_aware_and_fail_closed(self):
         application = APPLICATION.read_text(encoding="utf-8")
         diagnostics = DIAGNOSTICS.read_text(encoding="utf-8")
-        workflow = WORKFLOW.read_text(encoding="utf-8")
+        workflow = CANONICAL_WORKFLOW.read_text(encoding="utf-8")
 
         self.assertIn("NOTCHHUB_UI_SOURCE_COMMIT", application)
         self.assertIn("NHSourceCommit", application)
         self.assertIn("sourceCommit", diagnostics)
         self.assertIn("XCTAttachment(string: sourceCommit)", diagnostics)
-        self.assertIn("NOTCHHUB_UI_SOURCE_COMMIT: ${{ github.sha }}", workflow)
+        self.assertIn(
+            f"NOTCHHUB_UI_SOURCE_COMMIT: {EXACT_SOURCE_EXPRESSION}",
+            workflow,
+        )
 
     def test_ui_layer_rejects_fixed_sleeps_and_automatic_retries(self):
         sources = "\n".join(
             path.read_text(encoding="utf-8")
             for path in sorted(UI_ROOT.rglob("*.swift"))
         )
-        workflow = WORKFLOW.read_text(encoding="utf-8")
+        workflow = CANONICAL_WORKFLOW.read_text(encoding="utf-8")
         combined = sources + "\n" + workflow
 
         for forbidden in (
