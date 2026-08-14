@@ -56,6 +56,17 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
+    func compactPointerAtExactTopScreenEdgeActivatesWithoutTopInset() {
+        let result = NotchPointerPolicy.presentation(
+            current: .compact,
+            pointer: CGPoint(x: 500, y: layout.compactFrame.maxY),
+            layout: layout
+        )
+
+        #expect(result == .peek)
+    }
+
+    @Test
     func compactPointerJustInsideLeftEdgeStillDoesNotActivate() {
         let result = NotchPointerPolicy.presentation(
             current: .compact,
@@ -165,7 +176,29 @@ struct NotchPointerPolicyTests {
     }
 
     @Test
+    func expandedPointerInsideExpandedRetentionRegionStaysExpanded() {
+        let result = NotchPointerPolicy.presentation(
+            current: .expanded,
+            pointer: CGPoint(x: 300, y: 760),
+            layout: layout
+        )
+
+        #expect(result == .expanded)
+    }
+
+    @Test
     func expandedPointerOutsideRetentionRegionTargetsCompact() {
+        let result = NotchPointerPolicy.presentation(
+            current: .expanded,
+            pointer: CGPoint(x: 100, y: 500),
+            layout: layout
+        )
+
+        #expect(result == .compact)
+    }
+
+    @Test
+    func expandedPointerOutsideRetentionRegionCollapses() {
         let result = NotchPointerPolicy.presentation(
             current: .expanded,
             pointer: CGPoint(x: 100, y: 500),
