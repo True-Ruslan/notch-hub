@@ -48,6 +48,19 @@ class UIAutomationPolicyTests(unittest.TestCase):
             _infer_status("NH-MEDIA-GESTURE-013", ledger),
         )
 
+    def test_acceptance_status_parser_does_not_treat_failed_behavior_as_rejection(self):
+        ledger = """Status: CONTRACT FROZEN / IMPLEMENTATION PENDING
+
+| ID | Gate | Required result |
+|---|---|---|
+| `NH-MEDIA-GESTURE-011` | Unsupported/unknown commands | Previous/next that is unsupported, unknown, failed or not confirmed in time cannot arm, haptic or commit. |
+"""
+
+        self.assertEqual(
+            "pending",
+            _infer_status("NH-MEDIA-GESTURE-011", ledger),
+        )
+
     def test_acceptance_status_parser_still_recognizes_explicit_pass_and_fail_tokens(self):
         passed = """Status: PHYSICAL RETEST PENDING
 | `NH-TEST-001` | Gate | PASS |
