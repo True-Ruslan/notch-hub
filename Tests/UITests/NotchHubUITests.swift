@@ -68,7 +68,7 @@ final class NotchHubUITests: XCTestCase {
         compact.hover()
 
         let expanded = subject.surface("notch.surface.expanded")
-        let title = subject.app.staticTexts["media.title"]
+        let title = subject.titleElement()
         let artist = subject.app.staticTexts["media.artist"]
         let source = subject.app.staticTexts["media.source"]
 
@@ -101,6 +101,9 @@ final class NotchHubUITests: XCTestCase {
         XCTAssertTrue(titleMatches, "expanded deterministic fixture must expose Track A")
         XCTAssertTrue(artistMatches, "expanded deterministic fixture must expose fixture artist")
         XCTAssertTrue(sourceMatches, "expanded deterministic fixture must expose fixture source")
+        XCTAssertTrue(subject.app.buttons["media.playPause"].exists)
+        XCTAssertTrue(subject.app.buttons["media.previous"].exists)
+        XCTAssertTrue(subject.app.buttons["media.next"].exists)
     }
 
     @MainActor
@@ -109,21 +112,18 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.surface("notch.surface.compact")
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
-        compact.hover()
+        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
 
-        let expanded = subject.surface("notch.surface.expanded")
-        let title = subject.app.staticTexts["media.title"]
+        let title = subject.titleElement()
         let previous = subject.app.buttons["media.previous"]
         let playPause = subject.app.buttons["media.playPause"]
         let next = subject.app.buttons["media.next"]
 
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(expanded, timeout: 2))
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 2))
         XCTAssertTrue(previous.exists && previous.isEnabled)
         XCTAssertTrue(playPause.exists && playPause.isEnabled)
         XCTAssertTrue(next.exists && next.isEnabled)
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(playPause, equals: "playing", timeout: 2))
 
         next.click()
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track B", timeout: 2))
@@ -131,10 +131,53 @@ final class NotchHubUITests: XCTestCase {
         previous.click()
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 2))
 
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(playPause, equals: "Pause", timeout: 2))
         playPause.click()
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(playPause, equals: "Play", timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(playPause, equals: "paused", timeout: 2))
         playPause.click()
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(playPause, equals: "Pause", timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(playPause, equals: "playing", timeout: 2))
+    }
+
+    @MainActor
+    func testUnsupportedCapabilitiesStayDisabledAndDoNotChangeTrack() throws {
+        let subject = try NotchHubUIApplication(mode: .mediaUnsupported)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+
+        let title = subject.titleElement()
+        let previous = subject.app.buttons["media.previous"]
+        let next = subject.app.buttons["media.next"]
+
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 2))
+        XCTAssertTrue(previous.exists)
+        XCTAssertTrue(next.exists)
+        XCTAssertFalse(previous.isEnabled)
+        XCTAssertFalse(next.isEnabled)
+
+        previous.click()
+        next.click()
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 1))
+    }
+
+    @MainActor
+    func testCompactRetainsAuthoritativeMediaContextAfterCollapse() throws {
+        let subject = try NotchHubUIApplication(mode: .deterministicMedia)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilValue(subject.titleElement(), equals: "Track A", timeout: 2)
+        )
+
+        subject.movePointerOutside(subject.surface("notch.surface.expanded"))
+        XCTAssertTrue(subject.waitForStableCompact())
+
+        let retainedArtwork = subject.app.descendants(matching: .any)["media.artwork"]
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(retainedArtwork, timeout: 2),
+            "accepted compact collapse must retain authoritative media context without reopening runtime"
+        )
     }
 }
