@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "NH-HOVER-001",
+      "supersededBy": "NH-MEDIA-PEEK-001",
+      "decisionSource": "docs/superpowers/specs/2026-08-12-hover-peek-media-interaction-design.md"
+    }
+  ]
+}
