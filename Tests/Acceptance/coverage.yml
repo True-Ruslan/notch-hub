@@ -53,6 +53,10 @@
         {
           "layer": "integration",
           "test": "NotchHubCoreTests.NotchPanelTransitionStressTests.tenThousandReversalsKeepOnlyLatestGenerationAuthoritative"
+        },
+        {
+          "layer": "ui",
+          "test": "NotchHubUITests.NotchHubUITests.testTenHoverExitCyclesNeverLeaveStaleSurface"
         }
       ],
       "physicalOnlyReason": null
@@ -104,6 +108,10 @@
         {
           "layer": "unit",
           "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.deliberateHoverEmitsOneEligibleExpansionIntentAtThreshold"
+        },
+        {
+          "layer": "ui",
+          "test": "NotchHubUITests.NotchHubUITests.testShippingHoverDwellExpandsThroughRealPointerDelivery"
         }
       ],
       "physicalOnlyReason": null
@@ -136,6 +144,10 @@
         {
           "layer": "unit",
           "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.expandedPointerExitEmitsNonHapticCollapseIntent"
+        },
+        {
+          "layer": "ui",
+          "test": "NotchHubUITests.NotchHubUITests.testExpandedPointerExitReturnsToStableCompact"
         }
       ],
       "physicalOnlyReason": null
