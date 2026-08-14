@@ -53,8 +53,22 @@ final class NotchHubUITests: XCTestCase {
         let source = subject.app.staticTexts["media.source"]
 
         let expandedExists = NotchHubUIAssertions.waitUntilExists(expanded, timeout: 2)
-        let titleExists = NotchHubUIAssertions.waitUntilExists(title, timeout: 2)
-        if !expandedExists || !titleExists {
+        let titleMatches = NotchHubUIAssertions.waitUntilValue(
+            title,
+            equals: "Track A",
+            timeout: 2
+        )
+        let artistMatches = NotchHubUIAssertions.waitUntilValue(
+            artist,
+            equals: "Fixture Artist",
+            timeout: 2
+        )
+        let sourceMatches = NotchHubUIAssertions.waitUntilValue(
+            source,
+            equals: "NotchHub UI Fixture",
+            timeout: 2
+        )
+        if !expandedExists || !titleMatches || !artistMatches || !sourceMatches {
             NotchHubUIDiagnostics.attachFailureState(
                 application: subject.app,
                 sourceCommit: subject.sourceCommit,
@@ -64,10 +78,9 @@ final class NotchHubUITests: XCTestCase {
         }
 
         XCTAssertTrue(expandedExists, "real hover must expand the deterministic fixture surface")
-        XCTAssertTrue(titleExists, "expanded deterministic fixture must expose media title")
-        XCTAssertEqual(title.label, "Track A")
-        XCTAssertEqual(artist.label, "Artist A")
-        XCTAssertEqual(source.label, "Fixture Player")
+        XCTAssertTrue(titleMatches, "expanded deterministic fixture must expose Track A")
+        XCTAssertTrue(artistMatches, "expanded deterministic fixture must expose fixture artist")
+        XCTAssertTrue(sourceMatches, "expanded deterministic fixture must expose fixture source")
     }
 
     @MainActor
@@ -87,16 +100,16 @@ final class NotchHubUITests: XCTestCase {
         let next = subject.app.buttons["media.next"]
 
         XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(expanded, timeout: 2))
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(title, equals: "Track A", timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 2))
         XCTAssertTrue(previous.exists && previous.isEnabled)
         XCTAssertTrue(playPause.exists && playPause.isEnabled)
         XCTAssertTrue(next.exists && next.isEnabled)
 
         next.click()
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(title, equals: "Track B", timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track B", timeout: 2))
 
         previous.click()
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(title, equals: "Track A", timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 2))
 
         XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(playPause, equals: "Pause", timeout: 2))
         playPause.click()
