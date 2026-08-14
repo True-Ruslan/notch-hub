@@ -47,6 +47,31 @@ struct NotchAccessibilityContractPolicyTests {
         #expect(recorder.contains("ui-test.hapticCount"))
     }
 
+    @Test
+    func hapticInjectionSeamIsCompileTimeIsolatedFromShipping() throws {
+        let controller = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        let uiTestingBranch = try #require(controller.range(of: "#if NOTCHHUB_UI_TESTING"))
+        let injectableInitializer = try #require(
+            controller.range(of: "performExpansionHaptic: @escaping @MainActor () -> Void")
+        )
+        let shippingBranch = try #require(
+            controller.range(of: "#else", range: injectableInitializer.upperBound..<controller.endIndex)
+        )
+        let shippingHaptic = try #require(
+            controller.range(
+                of: "let haptics = AppKitNotchHapticPerformer()",
+                range: shippingBranch.upperBound..<controller.endIndex
+            )
+        )
+
+        #expect(uiTestingBranch.lowerBound < injectableInitializer.lowerBound)
+        #expect(injectableInitializer.lowerBound < shippingBranch.lowerBound)
+        #expect(shippingBranch.lowerBound < shippingHaptic.lowerBound)
+    }
+
     private func sourceText(relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot =
