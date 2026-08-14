@@ -6,10 +6,7 @@
       "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
       "status": "accepted",
       "coverage": [
-        {
-          "layer": "unit",
-          "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.hoverDwellEmitsOnePeekRequestAtExactly120Milliseconds"
-        }
+        {"layer":"unit","test":"NotchHubCoreTests.NotchInteractionCoordinatorTests.hoverDwellEmitsOnePeekRequestAtExactly120Milliseconds"}
       ],
       "physicalOnlyReason": null
     },
@@ -18,14 +15,20 @@
       "source": "docs/testing/SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md",
       "status": "accepted",
       "coverage": [
-        {
-          "layer": "policy",
-          "test": "scripts.FeatureSizeBudgetTests.test_feature_budget_adds_only_reviewed_allowance_to_baseline_absolute_ceiling"
-        },
-        {
-          "layer": "policy",
-          "test": "scripts.FeatureSizeBudgetTests.test_repository_historical_budgets_remain_exact_and_self_validating"
-        }
+        {"layer":"policy","test":"scripts.FeatureSizeBudgetTests.test_feature_budget_adds_only_reviewed_allowance_to_baseline_absolute_ceiling"},
+        {"layer":"policy","test":"scripts.FeatureSizeBudgetTests.test_repository_historical_budgets_remain_exact_and_self_validating"}
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-MEDIA-UI-005",
+      "source": "docs/testing/MEDIA_UI_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer":"unit","test":"NotchHubMediaCoreTests.ShippingMediaPresentationModelTests.unsupportedAndUnknownCapabilitiesRemainDisabled"},
+        {"layer":"integration","test":"NotchHubMediaCoreTests.ShippingMediaRuntimePresentationPolicyTests.runtimeExposesOnlyTypedMediaCommandsIncludingValidatedSeek"},
+        {"layer":"ui","test":"NotchHubUITests.NotchHubUITests.testDeterministicMediaControlsUseRealTypedUICommands"},
+        {"layer":"ui","test":"NotchHubUITests.NotchHubUITests.testUnsupportedCapabilitiesStayDisabledAndDoNotChangeTrack"}
       ],
       "physicalOnlyReason": null
     },
