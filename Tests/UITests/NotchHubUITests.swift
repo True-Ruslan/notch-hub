@@ -24,12 +24,22 @@ final class NotchHubUITests: XCTestCase {
     }
 
     @MainActor
-    func testShippingHoverDwellExpandsThroughRealPointerDelivery() throws {
+    func testShippingHoverDoesNotOpenFullInterface() throws {
         let subject = try NotchHubUIApplication(mode: .shippingSmoke)
         subject.launch()
         defer { subject.app.terminate() }
 
-        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+        let compact = subject.surface("notch.surface.compact")
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
+        compact.hover()
+
+        let expanded = subject.surface("notch.surface.expanded")
+        let appears = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true"),
+            object: expanded
+        )
+        appears.isInverted = true
+        XCTAssertEqual(XCTWaiter().wait(for: [appears], timeout: 0.35), .completed)
     }
 
     @MainActor
@@ -38,7 +48,7 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+        XCTAssertTrue(subject.openExpandedExplicitly())
         subject.movePointerOutside(subject.surface("notch.surface.expanded"))
         XCTAssertTrue(subject.waitForStableCompact())
     }
@@ -50,40 +60,33 @@ final class NotchHubUITests: XCTestCase {
         defer { subject.app.terminate() }
 
         for _ in 0..<10 {
-            XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+            XCTAssertTrue(subject.openExpandedExplicitly())
             subject.movePointerOutside(subject.surface("notch.surface.expanded"))
             XCTAssertTrue(subject.waitForStableCompact())
         }
     }
 
     @MainActor
-    func testDeterministicMediaFixtureExpandsThroughRealHover() throws {
+    func testDeterministicMediaFixtureExpandsThroughExplicitClick() throws {
         let subject = try NotchHubUIApplication(mode: .mediaHappyPath)
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.surface("notch.surface.compact")
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
-
-        compact.hover()
+        XCTAssertTrue(subject.openExpandedExplicitly())
 
         let expanded = subject.surface("notch.surface.expanded")
         let title = subject.titleElement()
         let artist = subject.app.staticTexts["media.artist"]
-        let source = subject.app.staticTexts["media.source"]
+        let source = subject.app.descendants(matching: .any)["media.source"]
 
         let expandedExists = NotchHubUIAssertions.waitUntilExists(expanded, timeout: 2)
-        let titleMatches = NotchHubUIAssertions.waitUntilValue(
-            title,
-            equals: "Track A",
-            timeout: 2
-        )
+        let titleMatches = NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 2)
         let artistMatches = NotchHubUIAssertions.waitUntilValue(
             artist,
             equals: "Fixture Artist",
             timeout: 2
         )
-        let sourceMatches = NotchHubUIAssertions.waitUntilValue(
+        let sourceMatches = NotchHubUIAssertions.waitUntilLabel(
             source,
             equals: "NotchHub UI Fixture",
             timeout: 2
@@ -92,15 +95,15 @@ final class NotchHubUITests: XCTestCase {
             NotchHubUIDiagnostics.attachFailureState(
                 application: subject.app,
                 sourceCommit: subject.sourceCommit,
-                name: "deterministic-media-hover",
+                name: "deterministic-media-explicit-expansion",
                 to: self
             )
         }
 
-        XCTAssertTrue(expandedExists, "real hover must expand the deterministic fixture surface")
-        XCTAssertTrue(titleMatches, "expanded deterministic fixture must expose Track A")
-        XCTAssertTrue(artistMatches, "expanded deterministic fixture must expose fixture artist")
-        XCTAssertTrue(sourceMatches, "expanded deterministic fixture must expose fixture source")
+        XCTAssertTrue(expandedExists)
+        XCTAssertTrue(titleMatches)
+        XCTAssertTrue(artistMatches)
+        XCTAssertTrue(sourceMatches)
         XCTAssertTrue(subject.app.buttons["media.playPause"].exists)
         XCTAssertTrue(subject.app.buttons["media.previous"].exists)
         XCTAssertTrue(subject.app.buttons["media.next"].exists)
@@ -112,7 +115,7 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+        XCTAssertTrue(subject.openExpandedExplicitly())
 
         let title = subject.titleElement()
         let previous = subject.app.buttons["media.previous"]
@@ -145,7 +148,7 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+        XCTAssertTrue(subject.openExpandedExplicitly())
 
         let title = subject.titleElement()
         let previous = subject.app.buttons["media.previous"]
@@ -165,7 +168,7 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+        XCTAssertTrue(subject.openExpandedExplicitly())
         XCTAssertTrue(
             NotchHubUIAssertions.waitUntilValue(subject.titleElement(), equals: "Track A", timeout: 2)
         )
