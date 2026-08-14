@@ -12,6 +12,7 @@ from typing import Any, Iterable
 REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_DOCS_ROOT = REPOSITORY_ROOT / "docs" / "testing"
 DEFAULT_MANIFEST = REPOSITORY_ROOT / "Tests" / "Acceptance" / "coverage.yml"
+DEFAULT_SUPERSESSIONS = REPOSITORY_ROOT / "Tests" / "Acceptance" / "supersessions.json"
 
 ID_PATTERN = re.compile(r"\bNH-[A-Z0-9]+(?:-[A-Z0-9]+)*-\d{3}\b")
 STATUS_PATTERN = re.compile(r"^\s*Status:\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
@@ -20,6 +21,7 @@ AUTOMATED_LAYERS = {"unit", "integration", "ui", "policy", "shipping"}
 ALLOWED_LAYERS = AUTOMATED_LAYERS | {"physical"}
 ENTRY_KEYS = {"id", "source", "status", "coverage", "physicalOnlyReason"}
 COVERAGE_KEYS = {"layer", "test"}
+SUPERSESSION_KEYS = {"id", "supersededBy", "decisionSource"}
 
 # These IDs already exist in accepted M1 project/spec/testing history. Plan 2 makes
 # them canonical under docs/testing so the machine-readable inventory cannot silently
@@ -155,24 +157,104 @@ def validate_repository_inventory(
         )
 
 
-def load_manifest(path: pathlib.Path) -> list[dict[str, Any]]:
+def _load_json_entries(path: pathlib.Path, *, label: str) -> list[dict[str, Any]]:
     if not path.is_file():
-        raise CoverageError(f"acceptance coverage manifest is missing: {path}")
+        raise CoverageError(f"{label} is missing: {path}")
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
-        raise CoverageError(
-            f"{path}: manifest must use JSON-compatible YAML: {error}"
-        ) from error
+        raise CoverageError(f"{path}: {label} must be valid JSON: {error}") from error
 
     if not isinstance(data, dict) or set(data) != {"schemaVersion", "entries"}:
-        raise CoverageError("manifest must contain exactly schemaVersion and entries")
+        raise CoverageError(f"{label} must contain exactly schemaVersion and entries")
     if data["schemaVersion"] != 1:
-        raise CoverageError(f"unsupported manifest schemaVersion: {data['schemaVersion']!r}")
+        raise CoverageError(f"unsupported {label} schemaVersion: {data['schemaVersion']!r}")
     entries = data["entries"]
     if not isinstance(entries, list):
-        raise CoverageError("manifest entries must be a list")
+        raise CoverageError(f"{label} entries must be a list")
     return entries
+
+
+def load_manifest(path: pathlib.Path) -> list[dict[str, Any]]:
+    return _load_json_entries(path, label="acceptance coverage manifest")
+
+
+def load_supersessions(path: pathlib.Path) -> list[dict[str, Any]]:
+    return _load_json_entries(path, label="acceptance supersession ledger")
+
+
+def validate_supersessions(
+    entries: list[dict[str, Any]],
+    contracts: dict[str, Contract],
+    *,
+    repository_root: pathlib.Path = REPOSITORY_ROOT,
+) -> dict[str, dict[str, Any]]:
+    seen: set[str] = set()
+    supersessions: dict[str, dict[str, Any]] = {}
+    specs_root = (repository_root / "docs" / "superpowers" / "specs").resolve()
+
+    for index, raw_entry in enumerate(entries):
+        label = f"supersessions[{index}]"
+        if not isinstance(raw_entry, dict) or set(raw_entry) != SUPERSESSION_KEYS:
+            raise CoverageError(
+                f"{label}: supersession must contain exactly {sorted(SUPERSESSION_KEYS)}"
+            )
+
+        identifier = raw_entry["id"]
+        replacement = raw_entry["supersededBy"]
+        decision_source = raw_entry["decisionSource"]
+        for field_name, value in (("id", identifier), ("supersededBy", replacement)):
+            if not isinstance(value, str) or not ID_PATTERN.fullmatch(value):
+                raise CoverageError(f"{label}: invalid {field_name}: {value!r}")
+        if identifier == replacement:
+            raise CoverageError(f"{identifier}: acceptance contract cannot supersede itself")
+        if identifier in seen:
+            raise CoverageError(f"{identifier}: duplicate supersession entry")
+        seen.add(identifier)
+
+        source_contract = contracts.get(identifier)
+        if source_contract is None:
+            raise CoverageError(f"{identifier}: supersession source is not a discovered acceptance id")
+        if source_contract.status != "accepted":
+            raise CoverageError(
+                f"{identifier}: only a historically accepted contract may be superseded"
+            )
+        if replacement not in contracts:
+            raise CoverageError(
+                f"{identifier}: supersededBy target is not a discovered acceptance id: {replacement}"
+            )
+
+        if not isinstance(decision_source, str) or not decision_source.strip():
+            raise CoverageError(f"{identifier}: decisionSource must be a non-empty path")
+        decision_path = pathlib.Path(decision_source)
+        if not decision_path.is_absolute():
+            decision_path = repository_root / decision_path
+        decision_path = decision_path.resolve()
+        try:
+            decision_path.relative_to(specs_root)
+        except ValueError as error:
+            raise CoverageError(
+                f"{identifier}: decisionSource must be under docs/superpowers/specs"
+            ) from error
+        if not decision_path.is_file():
+            raise CoverageError(f"{identifier}: supersession decision source is missing: {decision_path}")
+        decision_text = decision_path.read_text(encoding="utf-8")
+        if re.search(r"\bsupersed(?:e|es|ed|ing)\b", decision_text, re.IGNORECASE) is None:
+            raise CoverageError(
+                f"{identifier}: decisionSource does not explicitly supersede earlier behavior"
+            )
+
+        supersessions[identifier] = raw_entry
+
+    chained = sorted(set(supersessions).intersection(
+        entry["supersededBy"] for entry in supersessions.values()
+    ))
+    if chained:
+        raise CoverageError(
+            "chained acceptance supersessions are not supported: " + ", ".join(chained)
+        )
+
+    return supersessions
 
 
 def validate_manifest(
@@ -180,9 +262,11 @@ def validate_manifest(
     contracts: dict[str, Contract],
     *,
     mode: str,
+    supersessions: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     seen: set[str] = set()
     mapped: dict[str, dict[str, Any]] = {}
+    supersessions = supersessions or {}
 
     for index, raw_entry in enumerate(entries):
         label = f"entries[{index}]"
@@ -245,9 +329,13 @@ def validate_manifest(
                 f"{identifier}: accepted contract lacks automated coverage or physical-only reason"
             )
 
-        for item in coverage:
-            if item["layer"] in AUTOMATED_LAYERS:
-                _validate_test_reference(identifier, item["test"])
+        # Supersession preserves historical evidence while explicitly declaring that its
+        # old current-source symbol may disappear because an approved product contract
+        # replaced the behavior. Non-superseded accepted contracts remain fail-closed.
+        if identifier not in supersessions:
+            for item in coverage:
+                if item["layer"] in AUTOMATED_LAYERS:
+                    _validate_test_reference(identifier, item["test"])
 
         mapped[identifier] = raw_entry
 
@@ -329,17 +417,22 @@ def build_report(
     mapped: dict[str, dict[str, Any]],
     *,
     mode: str,
+    supersessions: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
+    supersessions = supersessions or {}
     for identifier, contract in sorted(contracts.items()):
         entry = mapped.get(identifier)
         evidence = list(entry["coverage"]) if entry else []
         automated = any(item.get("layer") in AUTOMATED_LAYERS for item in evidence)
+        supersession = supersessions.get(identifier)
         rows.append(
             {
                 "id": identifier,
                 "source": _relative_to_repository(contract.source),
                 "status": contract.status,
+                "currentStatus": "superseded" if supersession else contract.status,
+                "supersededBy": supersession["supersededBy"] if supersession else None,
                 "existingEvidence": evidence,
                 "missingAutomation": not automated,
             }
@@ -370,6 +463,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode", choices=("audit", "strict"), required=True)
     parser.add_argument("--manifest", type=pathlib.Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--docs-root", type=pathlib.Path, default=DEFAULT_DOCS_ROOT)
+    parser.add_argument("--supersessions", type=pathlib.Path)
     parser.add_argument("--report", type=pathlib.Path)
     args = parser.parse_args(argv)
 
@@ -377,8 +471,25 @@ def main(argv: list[str] | None = None) -> int:
         contracts = discover_contracts(args.docs_root)
         validate_repository_inventory(contracts, args.docs_root)
         entries = load_manifest(args.manifest)
-        mapped = validate_manifest(entries, contracts, mode=args.mode)
-        report = build_report(contracts, mapped, mode=args.mode)
+        if args.supersessions is not None:
+            supersession_entries = load_supersessions(args.supersessions)
+        elif args.docs_root.resolve() == DEFAULT_DOCS_ROOT.resolve():
+            supersession_entries = load_supersessions(DEFAULT_SUPERSESSIONS)
+        else:
+            supersession_entries = []
+        supersessions = validate_supersessions(supersession_entries, contracts)
+        mapped = validate_manifest(
+            entries,
+            contracts,
+            mode=args.mode,
+            supersessions=supersessions,
+        )
+        report = build_report(
+            contracts,
+            mapped,
+            mode=args.mode,
+            supersessions=supersessions,
+        )
         validate_report(report)
         if args.report:
             write_report(report, args.report)
@@ -390,10 +501,12 @@ def main(argv: list[str] | None = None) -> int:
     missing_automation = sum(
         1 for row in report["contracts"] if row["missingAutomation"]
     )
+    superseded = sum(1 for row in report["contracts"] if row["currentStatus"] == "superseded")
     print(
         f"Acceptance coverage {args.mode} passed: "
         f"discovered={len(contracts)} mapped={len(mapped)} "
-        f"unmapped={unmapped} missingAutomation={missing_automation}"
+        f"unmapped={unmapped} missingAutomation={missing_automation} "
+        f"superseded={superseded}"
     )
     return 0
 
