@@ -7,10 +7,35 @@ enum NotchHubUIAssertions {
         _ element: XCUIElement,
         timeout: TimeInterval
     ) -> Bool {
-        let predicate = NSPredicate(format: "exists == true")
+        wait(
+            for: NSPredicate(format: "exists == true"),
+            object: element,
+            timeout: timeout
+        )
+    }
+
+    @MainActor
+    static func waitUntilLabel(
+        _ element: XCUIElement,
+        equals expectedLabel: String,
+        timeout: TimeInterval
+    ) -> Bool {
+        wait(
+            for: NSPredicate(format: "label == %@", expectedLabel),
+            object: element,
+            timeout: timeout
+        )
+    }
+
+    @MainActor
+    private static func wait(
+        for predicate: NSPredicate,
+        object: Any,
+        timeout: TimeInterval
+    ) -> Bool {
         let expectation = XCTNSPredicateExpectation(
             predicate: predicate,
-            object: element
+            object: object
         )
         return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
     }
