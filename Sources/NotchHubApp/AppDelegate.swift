@@ -10,11 +10,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mediaRuntime: (any MediaRuntimeSession)?
     private let mediaPresentationModel = ShippingMediaPresentationModel()
     private let composition: AppComposition = {
-#if NOTCHHUB_UI_TESTING
-        AppComposition.uiTesting(configuration: .current())
-#else
-        AppComposition.shipping()
-#endif
+        #if NOTCHHUB_UI_TESTING
+            AppComposition.uiTesting(configuration: .current())
+        #else
+            AppComposition.shipping()
+        #endif
     }()
 
     func applicationDidFinishLaunching(_: Notification) {
