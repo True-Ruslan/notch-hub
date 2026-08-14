@@ -13,6 +13,22 @@
       ],
       "physicalOnlyReason": null
     },
+    {
+      "id": "NH-MEDIA-SHIP-010",
+      "source": "docs/testing/SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "policy",
+          "test": "scripts.FeatureSizeBudgetTests.test_feature_budget_adds_only_reviewed_allowance_to_baseline_absolute_ceiling"
+        },
+        {
+          "layer": "policy",
+          "test": "scripts.FeatureSizeBudgetTests.test_repository_historical_budgets_remain_exact_and_self_validating"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
     {"id":"NH-NOTCH-INTERACTIVE-001","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-NOTCH-INTERACTIVE-002","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-NOTCH-INTERACTIVE-003","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
