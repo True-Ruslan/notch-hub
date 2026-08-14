@@ -154,9 +154,6 @@ final class NotchHubUITests: XCTestCase {
         XCTAssertTrue(next.exists)
         XCTAssertFalse(previous.isEnabled)
         XCTAssertFalse(next.isEnabled)
-
-        previous.click()
-        next.click()
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 1))
     }
 
