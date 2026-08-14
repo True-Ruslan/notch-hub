@@ -3,6 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from test_acceptance_coverage import _infer_status
+
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_APP = (ROOT / "scripts/build-app.sh").read_text(encoding="utf-8")
 CI = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -32,6 +34,26 @@ class UIAutomationPolicyTests(unittest.TestCase):
     def test_build_script_has_explicit_test_compilation_condition(self):
         self.assertIn("NOTCHHUB_UI_TESTING", BUILD_APP)
         self.assertIn("-DNOTCHHUB_UI_TESTING", BUILD_APP)
+
+    def test_acceptance_status_parser_does_not_treat_passive_as_pass(self):
+        ledger = """Status: CONTRACT FROZEN / IMPLEMENTATION PENDING
+
+| ID | Gate | Required result |
+|---|---|---|
+| `NH-MEDIA-GESTURE-013` | Seek visibility/actionability | Progress is draggable only when supported; otherwise it remains a passive indicator. |
+"""
+
+        self.assertEqual(
+            "pending",
+            _infer_status("NH-MEDIA-GESTURE-013", ledger),
+        )
+
+    def test_acceptance_status_parser_still_recognizes_explicit_pass_and_fail_tokens(self):
+        passed = "| `NH-TEST-001` | Gate | PASS |"
+        failed = "| `NH-TEST-002` | Gate | FAIL |"
+
+        self.assertEqual("accepted", _infer_status("NH-TEST-001", passed))
+        self.assertEqual("rejected", _infer_status("NH-TEST-002", failed))
 
     def test_shipping_workflows_never_enable_fixture_build(self):
         self.assertNotIn("NOTCHHUB_UI_TESTING=1", CI)
