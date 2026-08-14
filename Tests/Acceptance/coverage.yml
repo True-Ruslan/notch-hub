@@ -2,6 +2,181 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "NH-ANIM-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchAnimationDurationProviderTests.standardMotionUsesTwoTenthsDuration"
+        },
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionCoordinatorTests.expansionSettlesOnlyAfterMatchingCompletion"
+        },
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionCoordinatorTests.collapseRetainsExpandedContentUntilMatchingCompletion"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-ANIM-002",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionCoordinatorTests.staleExpansionCompletionCannotWinAfterCollapseReversal"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-ANIM-003",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionCoordinatorTests.staleCollapseCompletionCannotWinAfterExpansionReversal"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-ANIM-004",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionStressTests.tenThousandReversalsKeepOnlyLatestGenerationAuthoritative"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-DISPLAY-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "deferred",
+      "coverage": [],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-HAPTIC-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionCoordinatorTests.expansionSettlesOnlyAfterMatchingCompletion"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-HAPTIC-002",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionCoordinatorTests.duplicateDesiredExpansionDoesNotStartSecondTransitionOrHaptic"
+        },
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionCoordinatorTests.collapseRetainsExpandedContentUntilMatchingCompletion"
+        },
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.setupSynchronizationNeverEmitsExpansionIntent"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-HOVER-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.deliberateHoverEmitsOneEligibleExpansionIntentAtThreshold"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-HOVER-002",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchPointerPolicyTests.expandedPointerInsideExpandedRetentionRegionStaysExpanded"
+        },
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.expandedRetentionEmitsNoIntent"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-HOVER-003",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchPointerPolicyTests.expandedPointerOutsideRetentionRegionCollapses"
+        },
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.expandedPointerExitEmitsNonHapticCollapseIntent"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-HOVER-DELAY-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.quickTransitBeforeThresholdDoesNotEmitIntent"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-HOVER-DELAY-002",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.deliberateHoverEmitsOneEligibleExpansionIntentAtThreshold"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-HOVER-TOP-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchPointerPolicyTests.compactPointerAtExactTopScreenEdgeActivatesWithoutTopInset"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
       "id": "NH-MEDIA-BRIDGE-015",
       "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
       "status": "accepted",
@@ -11,6 +186,53 @@
           "test": "MediaBridgeProbeCoreTests.ProbeProcessTests.nonzeroExitTransitionsToFailedWithoutAutomaticLoop"
         }
       ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-MOTION-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchAnimationDurationProviderTests.reduceMotionUsesImmediateDuration"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-MOTION-002",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "integration",
+          "test": "NotchHubCoreTests.NotchPanelTransitionPolicyChangeTests.reduceMotionRetargetsInFlightWithoutSecondFeedback"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-NOTCH-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchGeometryTests.detectsHardwareNotchFromAuxiliaryAreas"
+        },
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchGeometryTests.hardwareNotchWidthIsNotInflatedByFallbackMinimum"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-SPACE-001",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "deferred",
+      "coverage": [],
       "physicalOnlyReason": null
     }
   ]
