@@ -62,7 +62,7 @@ The Xcode host contains no NotchHub production source and is never a shipping ar
 
 ### Task 1: Establish the native Xcode UI-test harness and external-app launch proof
 
-Status: IN PROGRESS — implementation commit `fc50e7525409c539fc0ae523a919c2d466b1b55c`; awaiting macOS 26 CI execution.
+Status: IN PROGRESS — implementation prepared; awaiting macOS 26 CI execution.
 
 **Files:**
 - Create: `scripts/test_ui_project_policy.py`
