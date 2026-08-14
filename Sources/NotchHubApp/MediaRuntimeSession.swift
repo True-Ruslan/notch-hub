@@ -7,6 +7,7 @@ protocol MediaRuntimeSession: AnyObject {
     func togglePlayPause()
     func goPrevious()
     func goNext()
+    func seek(to positionSeconds: Double)
 }
 
 extension ShippingMediaRuntime: MediaRuntimeSession {}
