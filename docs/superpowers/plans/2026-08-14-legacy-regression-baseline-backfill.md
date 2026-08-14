@@ -4,75 +4,67 @@
 
 **Goal:** Convert every previously accepted deterministic M1 and M6.1-M6.5 behavior into executable regression evidence and make strict acceptance traceability a required CI gate before PR #33 or any new feature work resumes.
 
-**Architecture:** Reuse existing Swift Testing, policy, shipping, probe, and new XCUIAutomation layers instead of rewriting tests. First inventory every stable `NH-*` acceptance ID and map existing executable evidence; then add only the missing highest-value unit/integration/UI regressions. Finish by switching acceptance coverage validation from audit to strict and proving all required CI green on the foundation PR.
+**Architecture:** Reuse existing Swift Testing, probe, policy, shipping, and new XCUIAutomation evidence rather than duplicating tests. Inventory every stable `NH-*` ID, map existing executable evidence first, add only missing user-observable XCUI journeys, classify truly physical-only evidence narrowly, then switch acceptance validation from audit to strict. Any unexpected lower-level accepted contract with no executable evidence is a blocking RED: stop that task, add a focused test against the accepted contract, and do not change production behavior merely to satisfy the manifest.
 
-**Tech Stack:** Swift Testing, XCTest/XCUIAutomation foundation from Plan 1, Python acceptance manifest validator, existing Bash/Python shipping acceptance harnesses, GitHub Actions macOS 26.
+**Tech Stack:** Swift Testing, XCTest/XCUIAutomation from Plan 1, Python acceptance validator, existing Bash/Python media acceptance harnesses, GitHub Actions `macos-26`.
 
 ## Global Constraints
 
-- This plan executes only after `2026-08-14-regression-ui-automation-foundation.md` is implemented on the separate foundation branch from `main`.
-- PR #33 remains draft, untouched, physically unaccepted, and is not rebased until this plan is complete and merged.
-- Accepted M1 and M6.1-M6.5 product semantics are authoritative; tests must not be rewritten to match regressions.
-- M6.6 acceptance IDs remain `pending` or `rejected` until PR #33 is later rebased and repaired; they do not need to be green to merge the foundation.
-- Existing valid tests count as evidence; do not duplicate them merely to increase test count.
-- Every accepted deterministic acceptance ID must have at least one automated layer (`unit`, `integration`, `ui`, `policy`, or `shipping`).
-- Physical-only evidence requires an explicit reason and may not be used for behavior XCUIAutomation can reliably observe.
-- No product feature additions and no unrelated refactors.
-- No arbitrary sleeps or automatic retries in UI tests.
-- No weakening of security, performance, immutable baselines, or shipping composition checks.
+- Execute only after `2026-08-14-regression-ui-automation-foundation.md` is implemented on the separate foundation branch from `main`.
+- PR #33 remains draft, untouched, physically unaccepted, and is not rebased until this plan is merged.
+- Accepted M1 and M6.1-M6.5 semantics are authoritative; tests may not be rewritten to match a regression.
+- M6.6 IDs remain `pending` or `rejected`; foundation automation does not make them accepted.
+- Existing valid tests count as evidence; do not duplicate them for test-count optics.
+- Every accepted deterministic ID requires at least one automated layer: `unit`, `integration`, `ui`, `policy`, or `shipping`.
+- `physical` evidence requires a specific reason and cannot replace behavior XCUIAutomation can reliably observe.
+- No product features, unrelated refactors, arbitrary UI sleeps, automatic retries, security weakening, performance-baseline rewrites, or shipping-boundary broadening.
 
 ---
 
 ## Baseline sources
 
-The backfill must inventory all stable IDs under `docs/testing/`, including at minimum:
+Inventory every stable ID discovered under `docs/testing/`. On stable `main` the key accepted ledgers are:
 
 ```text
 docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md
 docs/testing/MEDIA_UI_ACCEPTANCE.md
 docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md
 docs/testing/SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md
-docs/testing/MEDIA_GESTURE_ACCEPTANCE.md      # M6.6: keep pending/rejected
-docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md  # if present after branch updates: M6.6 pending/rejected
-docs/testing/MEDIA_PEEK_ACCEPTANCE.md         # if present after branch updates: M6.6 pending/rejected
 ```
 
-M1 contract source is `docs/specs/M1_NOTCH_INTERACTION.md` plus its accepted evidence recorded in `docs/TESTING.md`, `docs/PROJECT_STATE.md`, and M1 implementation plans. If an accepted M1 behavior has no stable `NH-*` ID yet, this plan adds a stable ID before adding its manifest entry; IDs describe already accepted behavior and do not change semantics.
+`docs/testing/MEDIA_GESTURE_ACCEPTANCE.md` contains M6.6 work and remains pending/rejected. M1 semantics come from `docs/specs/M1_NOTCH_INTERACTION.md`, existing M1 tests, and accepted evidence recorded in project/testing docs. If accepted M1 behavior lacks stable IDs, create `docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md` before mapping it.
 
 ---
 
-### Task 1: Produce a deterministic acceptance inventory and classify every case
+### Task 1: Build a complete machine-readable acceptance inventory
 
 **Files:**
 - Modify: `scripts/test_acceptance_coverage.py`
 - Modify: `Tests/Acceptance/coverage.yml`
-- Create: `build/acceptance-audit.json` at execution time only; do not commit build output.
-- Modify: one M1 acceptance ledger under `docs/testing/` if accepted M1 cases lack stable IDs.
+- Create if needed: `docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md`
+- Runtime-only report: `build/acceptance-audit.json`
 
 **Interfaces:**
-- Produces audit records with fields:
 
 ```json
 {
-  "id": "NH-...",
-  "source": "docs/testing/...",
-  "status": "accepted|pending|rejected",
+  "id": "NH-NOTCH-001",
+  "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+  "status": "accepted",
   "existingEvidence": [],
   "missingAutomation": true
 }
 ```
 
-- [ ] **Step 1: Add machine-readable audit output test**
+- [ ] **Step 1: Add RED coverage-validator test for `--report`**
 
-Extend validator tests so:
+The unit test uses a temporary docs/manifest fixture and asserts that:
 
 ```bash
-python3 scripts/test_acceptance_coverage.py --mode audit --report build/acceptance-audit.json
+python3 scripts/test_acceptance_coverage.py --mode audit --report <path>
 ```
 
-creates valid JSON sorted by acceptance ID and containing every discovered stable ID exactly once.
-
-Write the failing unit test first with a temporary docs/manifest fixture.
+writes sorted valid JSON containing each discovered ID exactly once.
 
 - [ ] **Step 2: Implement `--report` and run the real audit**
 
@@ -83,33 +75,39 @@ python3 scripts/test_acceptance_coverage.py \
 python3 -m json.tool build/acceptance-audit.json >/dev/null
 ```
 
-Expected: PASS command plus a non-empty honest debt list.
+Expected: command PASS plus an honest debt list.
 
-- [ ] **Step 3: Add stable M1 acceptance IDs if missing**
+- [ ] **Step 3: Freeze stable M1 IDs where missing**
 
-Create or extend `docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md` with already accepted semantics only. Minimum stable cases to represent:
+Create/reuse these accepted contracts without changing semantics:
 
 ```text
-NH-NOTCH-001 hardware-notch compact geometry
-NH-HOVER-001 deliberate hover dwell expands according to accepted M1 policy
-NH-HOVER-002 quick pass does not expand
-NH-HOVER-003 pointer exit returns to compact
-NH-HOVER-004 hover expansion emits one semantic expansion haptic
-NH-HOVER-005 no duplicate haptic while remaining inside the activation region
+NH-NOTCH-001 physical-notch compact geometry
+NH-HOVER-001 deliberate hover dwell expands under accepted M1 policy
+NH-HOVER-002 quick pointer pass does not expand
+NH-HOVER-003 expanded pointer exit returns to compact
+NH-HOVER-004 hover expansion emits exactly one semantic expansion-haptic request
+NH-HOVER-005 remaining inside activation region does not duplicate expansion haptic
 NH-NOTCH-TRANSITION-001 expansion settles exact expanded frame
 NH-NOTCH-TRANSITION-002 collapse settles exact compact frame
-NH-NOTCH-TRANSITION-003 stale animation completion cannot restore old geometry
+NH-NOTCH-TRANSITION-003 stale completion cannot restore older geometry
 NH-NOTCH-TRANSITION-004 Reduce Motion settles exact endpoint
-NH-NOTCH-LIFECYCLE-001 invalidate removes monitors/owned callbacks
+NH-NOTCH-LIFECYCLE-001 invalidation releases monitors/callback ownership
 ```
 
-If an ID already exists elsewhere, reuse it rather than creating a duplicate.
+Before adding any ID, run:
 
-- [ ] **Step 4: Populate manifest statuses without claiming coverage yet**
+```bash
+rg -n 'NH-(NOTCH|HOVER)' docs/testing docs/specs/M1_NOTCH_INTERACTION.md
+```
 
-For every discovered ID, set the ledger-derived status. Existing M6.6 IDs stay pending/rejected. Accepted M1/M6.1-M6.5 IDs get `accepted` even if their coverage list is initially incomplete; audit mode records the debt.
+Reuse an existing stable ID when present.
 
-- [ ] **Step 5: Commit the inventory separately**
+- [ ] **Step 4: Seed ledger-derived statuses only**
+
+Accepted M1/M6.1-M6.5 IDs are `accepted`; M6.6 IDs remain their current pending/rejected status. Do not fabricate automated coverage.
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add Tests/Acceptance scripts/test_acceptance_coverage.py docs/testing
@@ -118,11 +116,11 @@ git commit -m "Test: inventory accepted NotchHub regression contracts"
 
 ---
 
-### Task 2: Map existing deterministic M1 Core tests before adding anything new
+### Task 2: Trace accepted M1 deterministic contracts to existing Swift tests
 
 **Files:**
 - Modify: `Tests/Acceptance/coverage.yml`
-- Modify only when a real gap exists:
+- Existing evidence candidates:
   - `Tests/NotchHubCoreTests/NotchGeometryTests.swift`
   - `Tests/NotchHubCoreTests/NotchInteractionCoordinatorTests.swift`
   - `Tests/NotchHubCoreTests/NotchPanelTransitionCoordinatorTests.swift`
@@ -133,55 +131,20 @@ git commit -m "Test: inventory accepted NotchHub regression contracts"
   - `Tests/NotchHubCoreTests/NotchPanelOwnershipTests.swift`
   - `Tests/NotchHubCoreTests/NotchPerformanceInvariantTests.swift`
 
-**Interfaces:**
-- Consumes accepted M1 IDs from Task 1.
-- Produces manifest entries pointing to exact existing/new test symbols.
+**Interfaces:** manifest references exact test symbols as `Module.Suite.testName`.
 
-- [ ] **Step 1: For each M1 ID, search existing tests before writing a test**
-
-Use exact symbol/file search:
+- [ ] **Step 1: Produce a symbol map before editing tests**
 
 ```bash
-rg -n 'hover|pointer|haptic|transition|compact|expanded|stale|Reduce Motion|invalidate' \
-  Tests/NotchHubCoreTests
+rg -n '@Test|func test|hover|pointer|haptic|transition|compact|expanded|stale|reduce|invalidate' \
+  Tests/NotchHubCoreTests > build/m1-test-symbols.txt
 ```
 
-Record an existing test only when its assertion directly proves the acceptance result. A similarly named test is not sufficient.
+For each accepted M1 ID, read the actual assertions. Similar naming is not evidence.
 
-- [ ] **Step 2: Add RED tests only for uncovered deterministic semantics**
+- [ ] **Step 2: Add exact existing evidence to the manifest**
 
-Examples of required tests if no equivalent exists:
-
-```swift
-@Test
-func pointerExitFromExpandedRequestsNonHapticCollapse() {
-    // arrange accepted expanded pointer policy
-    // assert exactly one collapse intent and zero haptic intents
-}
-
-@Test
-func staleExpansionCompletionCannotOverrideNewerCollapse() {
-    // capture generation A completion, request collapse generation B,
-    // invoke A completion, assert compact target remains authoritative
-}
-```
-
-Use existing test harness types in the target rather than introducing a parallel fake architecture.
-
-- [ ] **Step 3: Run focused M1 tests**
-
-```bash
-swift test --filter NotchGeometryTests
-swift test --filter NotchInteractionCoordinatorTests
-swift test --filter NotchPanelTransitionCoordinatorTests
-swift test --filter NotchPointerPolicyTests
-```
-
-Expected: PASS after any necessary RED -> GREEN test-only coverage additions. Production code should not change on stable `main` unless a newly written test exposes an actual accepted-baseline regression.
-
-- [ ] **Step 4: Update manifest with exact test symbols**
-
-Example:
+Example shape:
 
 ```yaml
 - id: NH-NOTCH-TRANSITION-003
@@ -193,63 +156,121 @@ Example:
   physicalOnlyReason: null
 ```
 
+Use the actual existing symbol name discovered in Step 1; the example above is schema illustration and is not committed unless that symbol exists.
+
+- [ ] **Step 3: Turn any unexpected deterministic gap into an explicit blocking RED**
+
+Run:
+
+```bash
+python3 scripts/test_acceptance_coverage.py --mode audit --report build/acceptance-audit.json
+```
+
+If an accepted M1 deterministic ID still has no automated evidence, stop Task 2. Add one focused Swift test in the existing owning test file, run it to RED, then make only the minimum test-support/production correction required by the already accepted contract. Preserve that RED/GREEN evidence in the commit message or PR notes. Do not proceed while the gap remains.
+
+- [ ] **Step 4: Run the M1 deterministic suite**
+
+```bash
+swift test --filter NotchGeometryTests
+swift test --filter NotchInteractionCoordinatorTests
+swift test --filter NotchPanelTransitionCoordinatorTests
+swift test --filter NotchPointerPolicyTests
+swift test --filter NotchPointerMonitorTests
+```
+
+Expected: PASS.
+
 - [ ] **Step 5: Commit**
 
 ```bash
 git add Tests/NotchHubCoreTests Tests/Acceptance/coverage.yml
-git commit -m "Test: trace accepted M1 core behavior to executable evidence"
+git commit -m "Test: trace accepted M1 deterministic behavior"
 ```
 
 ---
 
-### Task 3: Add M1 XCUI end-to-end journeys for behavior synthetic Core tests cannot prove
+### Task 3: Add M1 XCUI user journeys that lower layers cannot honestly prove
 
 **Files:**
-- Modify: `Tests/UITests/NotchHubUITests.swift`
 - Modify: `Tests/UITests/Support/NotchHubUIApplication.swift`
+- Modify: `Tests/UITests/NotchHubUITests.swift`
 - Modify: `Tests/Acceptance/coverage.yml`
 
-**Interfaces:**
-- Uses stable identifiers from Plan 1.
-- Produces UI test methods:
+**Interfaces:** add these helpers:
 
-```text
-testLaunchStartsAtStableCompactSurface
-testHoverDwellExpandsUsingRealPointerDelivery
-testQuickHoverPassDoesNotExpand
-testExpandedPointerExitReturnsToCompact
-testRepeatedOpenCloseNeverLeavesIntermediateSurface
+```swift
+@MainActor
+func openExpandedViaAcceptedHover(timeout: TimeInterval = 2) {
+    let compact = surface("notch.surface.compact")
+    compact.hover()
+    XCTAssertSurface("notch.surface.expanded", in: app, timeout: timeout)
+}
+
+@MainActor
+func waitForStableCompact(timeout: TimeInterval = 2) {
+    XCTAssertSurface("notch.surface.compact", in: app, timeout: timeout)
+    XCTAssertFalse(app.otherElements["notch.surface.expanded"].exists)
+}
 ```
 
-- [ ] **Step 1: Write `testLaunchStartsAtStableCompactSurface`**
+- [ ] **Step 1: Add launch-state regression**
 
 ```swift
 @MainActor
 func testLaunchStartsAtStableCompactSurface() throws {
     let subject = try NotchHubUIApplication(mode: .shippingSmoke)
     subject.launch()
-    XCTAssertSurface("notch.surface.compact", in: subject.app)
-    XCTAssertFalse(subject.app.otherElements["notch.surface.expanded"].exists)
+    subject.waitForStableCompact()
 }
 ```
 
-Run it and keep RED if actual app accessibility/wiring does not expose the state correctly.
+- [ ] **Step 2: Add real hover-dwell expansion regression**
 
-- [ ] **Step 2: Add real hover dwell and quick-pass tests**
+```swift
+@MainActor
+func testHoverDwellExpandsThroughRealPointerDelivery() throws {
+    let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+    subject.launch()
+    subject.openExpandedViaAcceptedHover()
+}
+```
 
-Use `XCUIElement.hover()` / coordinates and predicate waits only. Do not call coordinator methods directly.
+This drives the real AppKit/SwiftUI pointer path; it does not call a coordinator directly.
 
-The quick-pass test must move the pointer away before the accepted dwell completes and assert expanded never appears during a bounded predicate observation window; implement the observation as an XCTest expectation on `exists == false`, not `sleep`.
+- [ ] **Step 3: Add quick-pass non-expansion regression without sleep**
 
-- [ ] **Step 3: Add expanded pointer-exit regression**
+Move pointer to compact, immediately move it outside, then use an inverted predicate expectation:
 
-Drive expansion through the accepted user entry point available on stable `main`, then use `movePointerOutsidePanel()` and assert exact stable compact accessibility state.
+```swift
+let expanded = subject.app.otherElements["notch.surface.expanded"]
+let appears = XCTNSPredicateExpectation(
+    predicate: NSPredicate(format: "exists == true"),
+    object: expanded
+)
+appears.isInverted = true
+XCTAssertEqual(XCTWaiter().wait(for: [appears], timeout: 0.35), .completed)
+```
 
-- [ ] **Step 4: Add repeated-cycle stale-state regression**
+The timeout is a bounded observation window, not a fixed wait before asserting.
 
-Perform 10 open/close cycles. After every cycle assert exactly one stable surface exists and no previous surface remains. Do not assert pixel-perfect intermediate animation frames.
+- [ ] **Step 4: Add pointer-exit auto-collapse regression**
 
-- [ ] **Step 5: Run UI suite repeatedly without retry masking**
+```swift
+@MainActor
+func testExpandedPointerExitReturnsToStableCompact() throws {
+    let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+    subject.launch()
+    subject.openExpandedViaAcceptedHover()
+    subject.movePointerOutside(subject.surface("notch.surface.expanded"))
+    subject.waitForStableCompact()
+}
+```
+
+- [ ] **Step 5: Add repeated-cycle stale-state regression**
+
+Run 10 hover-expand/pointer-exit-collapse cycles. After every cycle call `waitForStableCompact()`. Any intermediate/stale surface is a failure.
+
+- [ ] **Step 6: Run three independent UI executions**
 
 ```bash
 for i in 1 2 3; do
@@ -262,9 +283,9 @@ for i in 1 2 3; do
 done
 ```
 
-Three independent runs must PASS. This loop is validation, not an automatic CI retry.
+Expected: all three PASS. This is validation evidence, not retry masking.
 
-- [ ] **Step 6: Map the corresponding M1 IDs and commit**
+- [ ] **Step 7: Map M1 UI IDs and commit**
 
 ```bash
 git add Tests/UITests Tests/Acceptance/coverage.yml
@@ -273,11 +294,11 @@ git commit -m "Test: cover accepted M1 user journeys with XCUIAutomation"
 
 ---
 
-### Task 4: Trace M6.1 media bridge probe acceptance to existing tests and policy
+### Task 4: Trace M6.1 media bridge probe acceptance to executable evidence
 
 **Files:**
 - Modify: `Tests/Acceptance/coverage.yml`
-- Modify only for genuine gaps:
+- Existing evidence:
   - `Tests/MediaBridgeProbeCoreTests/ProbeInvocationTests.swift`
   - `Tests/MediaBridgeProbeCoreTests/ProbeMediaCapabilitiesTests.swift`
   - `Tests/MediaBridgeProbeCoreTests/ProbeMediaCommandTests.swift`
@@ -288,26 +309,11 @@ git commit -m "Test: cover accepted M1 user journeys with XCUIAutomation"
   - `scripts/test_media_bridge_probe_acceptance.py`
   - `scripts/test_media_bridge_probe_ci.py`
 
-**Interfaces:**
-- Acceptance source: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`.
+- [ ] **Step 1: Map every accepted ID from `MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`**
 
-- [ ] **Step 1: Map every accepted probe ID to existing executable evidence**
+Use unit evidence for payload/command/process semantics and shipping/policy evidence for built-app provenance, Sandbox/Hardened Runtime, and archive verification.
 
-Prefer existing `Probe*Tests` and the existing CI/build/verify scripts. Use `shipping` or `policy` layer for checks that only become true on the built probe application.
-
-- [ ] **Step 2: Add a RED test for any uncovered accepted probe contract**
-
-Typical gaps to check explicitly:
-
-```text
-fixed adapter commit/provenance
-bounded capabilities output schema
-no metadata leakage in observation evidence
-clean process teardown
-Sandbox/Hardened Runtime verification
-```
-
-- [ ] **Step 3: Run all probe evidence**
+- [ ] **Step 2: Run all evidence**
 
 ```bash
 swift test --filter MediaBridgeProbeCoreTests
@@ -319,20 +325,24 @@ bash scripts/verify-media-bridge-probe.sh
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit manifest/test gaps**
+- [ ] **Step 3: Run audit; any uncovered accepted deterministic ID is a blocking RED**
+
+Do not proceed until it has an exact executable reference.
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add Tests/MediaBridgeProbeCoreTests Tests/Acceptance scripts
+git add Tests/Acceptance/coverage.yml Tests/MediaBridgeProbeCoreTests scripts
 git commit -m "Test: trace accepted media bridge probe behavior"
 ```
 
 ---
 
-### Task 5: Trace production media transport acceptance and lifecycle
+### Task 5: Trace production media transport and process lifecycle acceptance
 
 **Files:**
 - Modify: `Tests/Acceptance/coverage.yml`
-- Modify only for gaps:
+- Existing evidence:
   - `Tests/NotchHubMediaCoreTests/ProductionMediaTransportCandidateBundlePathsTests.swift`
   - `Tests/NotchHubMediaCoreTests/ProductionMediaTransportCandidateInvocationTests.swift`
   - `Tests/NotchHubMediaCoreTests/ProductionMediaTransportCandidateRunnerTests.swift`
@@ -343,23 +353,11 @@ git commit -m "Test: trace accepted media bridge probe behavior"
   - `scripts/test_production_media_transport_acceptance.py`
   - `scripts/test_production_media_transport_candidate_ci.py`
 
-**Interfaces:**
-- Acceptance source: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`.
+- [ ] **Step 1: Map every accepted ID from `PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`**
 
-- [ ] **Step 1: Map fixed command/path/provenance/security contracts to existing tests**
+Prefer lower-level unit tests for invocation/teardown and shipping evidence for bundle/provenance/signing contracts.
 
-Do not create UI tests for process-spawn internals when unit/shipping evidence is stronger.
-
-- [ ] **Step 2: Verify one-shot/teardown failure paths are represented**
-
-If missing, add deterministic tests proving:
-
-```swift
-@Test func stopTerminatesOwnedProcessAndClearsCallbacks() { ... }
-@Test func staleProcessCompletionCannotPublishAfterStop() { ... }
-```
-
-- [ ] **Step 3: Run transport evidence**
+- [ ] **Step 2: Run all transport evidence**
 
 ```bash
 swift test --filter ProductionMediaTransportCandidate
@@ -372,20 +370,24 @@ bash scripts/verify-production-media-transport-candidate.sh
 
 Expected: PASS.
 
+- [ ] **Step 3: Run audit and stop on any uncovered accepted deterministic ID**
+
+No production change is allowed solely to satisfy traceability; first prove the accepted behavior with a focused RED test.
+
 - [ ] **Step 4: Commit**
 
 ```bash
-git add Tests/NotchHubMediaCoreTests Tests/Acceptance scripts
+git add Tests/Acceptance/coverage.yml Tests/NotchHubMediaCoreTests scripts
 git commit -m "Test: trace accepted production media transport behavior"
 ```
 
 ---
 
-### Task 6: Trace shipping media composition and expanded-only runtime ownership
+### Task 6: Trace shipping media composition and expanded-only ownership
 
 **Files:**
 - Modify: `Tests/Acceptance/coverage.yml`
-- Modify only for gaps:
+- Existing evidence:
   - `Tests/NotchHubCoreTests/MediaAppCompositionPolicyTests.swift`
   - `Tests/NotchHubMediaCoreTests/ShippingMediaBundlePathsTests.swift`
   - `Tests/NotchHubMediaCoreTests/ShippingMediaRuntimePresentationPolicyTests.swift`
@@ -395,18 +397,11 @@ git commit -m "Test: trace accepted production media transport behavior"
   - `scripts/test_shipping_media_idle_lifecycle.py`
   - `scripts/test_shipping_media_compact_resources.py`
 
-**Interfaces:**
-- Acceptance source: `docs/testing/SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md`.
+- [ ] **Step 1: Map every accepted ID from `SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md`**
 
-- [ ] **Step 1: Map shipping artifact/path/security cases to policy/shipping evidence**
+Explicitly cover the accepted invariant: settled compact owns zero persistent adapter process; settled expanded owns only the reviewed runtime boundary; normal termination releases ownership.
 
-Explicitly include the accepted invariant that settled compact owns zero persistent media adapter process while settled expanded owns only the reviewed runtime path.
-
-- [ ] **Step 2: Add missing lifecycle unit/integration tests before changing any composition**
-
-If existing tests do not directly prove start/stop counts, add injected fake runtime assertions around `AppDelegate` composition seam introduced by Plan 1.
-
-- [ ] **Step 3: Run shipping composition evidence**
+- [ ] **Step 2: Run composition evidence**
 
 ```bash
 swift test --filter MediaAppCompositionPolicyTests
@@ -419,67 +414,74 @@ python3 scripts/test_shipping_media_compact_resources.py -v
 
 Expected: PASS.
 
+- [ ] **Step 3: Run audit and stop on any uncovered accepted deterministic ID**
+
 - [ ] **Step 4: Commit**
 
 ```bash
-git add Tests Tests/Acceptance scripts
+git add Tests/Acceptance/coverage.yml Tests scripts
 git commit -m "Test: trace accepted shipping media lifecycle"
 ```
 
 ---
 
-### Task 7: Backfill M6.5 media-first UI behavior with deterministic XCUI media fixture
+### Task 7: Backfill accepted M6.5 media-first UI journeys with deterministic XCUI media
 
 **Files:**
+- Modify: `Tests/UITests/Support/NotchHubUIApplication.swift`
 - Modify: `Tests/UITests/NotchHubUITests.swift`
 - Modify: `Sources/NotchHubApp/UITestSupport/UITestMediaRuntime.swift`
 - Modify: `Tests/Acceptance/coverage.yml`
-- Modify only for deterministic gaps: `Tests/NotchHubMediaCoreTests/ShippingMediaPresentationModelTests.swift`
+- Existing deterministic support: `Tests/NotchHubMediaCoreTests/ShippingMediaPresentationModelTests.swift`
 
 **Interfaces:**
-- Acceptance source: `docs/testing/MEDIA_UI_ACCEPTANCE.md`.
-- Uses fixture tracks A/B/C and stable media accessibility IDs.
+- Fixture track sequence: `Track A -> Track B -> Track C`.
+- Add helper:
 
-- [ ] **Step 1: Add RED UI test for expanded media presentation**
+```swift
+@MainActor
+func titleElement() -> XCUIElement {
+    app.staticTexts["media.title"]
+}
+```
+
+- [ ] **Step 1: Add RED expanded-media UI test**
 
 ```swift
 @MainActor
 func testExpandedMediaShowsFixtureMetadataAndControls() throws {
     let subject = try NotchHubUIApplication(mode: .deterministicMedia)
     subject.launch()
-    subject.openUsingAcceptedMainInteraction()
-    XCTAssertSurface("notch.surface.expanded", in: subject.app)
-    XCTAssertEqual(subject.app.staticTexts["media.title"].value as? String, "Track A")
+    subject.openExpandedViaAcceptedHover()
+    XCTAssertEqual(subject.titleElement().label, "Track A")
     XCTAssertTrue(subject.app.buttons["media.playPause"].exists)
     XCTAssertTrue(subject.app.buttons["media.previous"].exists)
     XCTAssertTrue(subject.app.buttons["media.next"].exists)
 }
 ```
 
-Use accessible value/label consistently; freeze the exact accessibility contract in the helper rather than relying on localized visible strings.
+If this is RED, fix only test fixture/accessibility wiring on the foundation branch; do not alter accepted media UI semantics.
 
-- [ ] **Step 2: Add previous/play-pause/next control journeys**
+- [ ] **Step 2: Add actual button-control journeys**
 
-Drive actual buttons through XCUIAutomation and assert fixture state changes:
-
-```text
-A --next--> B
-B --previous--> A
-playing --playPause--> paused
-paused --playPause--> playing
+```swift
+subject.app.buttons["media.next"].click()
+XCTAssertEqual(subject.titleElement().label, "Track B")
+subject.app.buttons["media.previous"].click()
+XCTAssertEqual(subject.titleElement().label, "Track A")
 ```
 
-- [ ] **Step 3: Add disabled-capability fixture and regression**
+Add play/pause assertions using a stable accessibility value on `media.playPause` such as `playing` / `paused`; freeze that value in the production view accessibility contract without changing visuals.
 
-Extend `UITestConfiguration.Fixture` with `media-unsupported` and expose previous/next disabled. UI tests assert buttons are not enabled and interaction does not mutate track identity.
+- [ ] **Step 3: Add unsupported-capability mode**
 
-All added fixture code stays under `#if NOTCHHUB_UI_TESTING`.
+Plan 1 already defines `media-unsupported`. Launch it, expand, assert `media.previous` and `media.next` exist but `isEnabled == false`, click attempts do not change `media.title` from `Track A`.
 
-- [ ] **Step 4: Add compact retained-presentation regression where accepted by M6.5**
+- [ ] **Step 4: Add accepted compact retained-state journey**
 
-Launch deterministic media, expand, observe A, return compact, and assert the accepted compact media presentation remains coherent without starting a persistent production media observer. Combine UI evidence with existing runtime lifecycle unit/shipping evidence; do not attempt to inspect subprocess internals through UI.
+Launch deterministic media, expand and verify A, move pointer outside to stable compact, then verify the compact media surface remains coherent. Persistent-process ownership is proven by Task 6 shipping/unit evidence, not by a UI-only guess.
 
-- [ ] **Step 5: Run UI + presentation tests**
+- [ ] **Step 5: Run UI and presentation evidence**
 
 ```bash
 swift test --filter ShippingMediaPresentationModelTests
@@ -491,118 +493,101 @@ NOTCHHUB_UI_APP_PATH="$PWD/build/ui-test/NotchHub.app" \
 
 Expected: PASS.
 
-- [ ] **Step 6: Map all accepted `MEDIA_UI_ACCEPTANCE` IDs and commit**
+- [ ] **Step 6: Map all accepted `MEDIA_UI_ACCEPTANCE.md` IDs and commit**
 
 ```bash
-git add Sources/NotchHubApp/UITestSupport Tests/UITests Tests/NotchHubMediaCoreTests Tests/Acceptance
+git add Sources/NotchHubApp/UITestSupport Tests/UITests \
+  Tests/NotchHubMediaCoreTests Tests/Acceptance/coverage.yml
 git commit -m "Test: cover accepted media UI journeys end to end"
 ```
 
 ---
 
-### Task 8: Mark physical-only accepted cases honestly and keep M6.6 pending/rejected
+### Task 8: Classify physical-only evidence narrowly and honestly
 
 **Files:**
 - Modify: `Tests/Acceptance/coverage.yml`
-- Modify: `docs/testing/*.md` only to clarify evidence classification, never to change accepted results.
+- Modify only for evidence wording: `docs/testing/*.md`
 
-**Interfaces:**
-- Physical-only reasons must be specific strings such as:
+- [ ] **Step 1: Reject generic physical-only reasons**
+
+Forbidden examples:
 
 ```text
-"Requires perception of physical Taptic Engine output on Mac16,8; automation verifies semantic haptic request only."
-"Requires visual alignment against the physical MacBook notch hardware edge; virtual runner geometry cannot prove physical bezel alignment."
+manual test
+hardware
+hard to automate
 ```
 
-- [ ] **Step 1: Review every `physical` manifest layer**
+Accepted examples:
 
-Reject generic reasons such as `manual test`, `hardware`, or `hard to automate`.
-
-- [ ] **Step 2: Split mixed cases when necessary**
-
-If one acceptance ID combines deterministic behavior and physical feel, give it both automated and physical evidence rather than marking the whole case physical-only.
-
-Example:
-
-```yaml
-coverage:
-  - layer: integration
-    test: NotchHubCoreTests.NotchInteractionCoordinatorTests.hoverExpansionRequestsExactlyOneHaptic
-  - layer: physical
-    test: target-mac:M1-hover-haptic-feel
-physicalOnlyReason: "Physical layer verifies perceptibility only; semantic request is automated."
+```text
+Requires perception of physical Taptic Engine output on Mac16,8; automation verifies semantic haptic request only.
+Requires visual alignment against the physical MacBook notch edge; virtual runner geometry cannot prove bezel alignment.
 ```
 
-- [ ] **Step 3: Verify all M6.6 IDs remain pending/rejected**
+- [ ] **Step 2: Give mixed cases both automated and physical evidence**
 
-No M6.6 case becomes `accepted` because of foundation tests. Their new tests may exist later after PR #33 rebases.
+Semantic haptic request is automated; perceptibility/feel remains physical. Geometry math/frame settlement is automated; physical bezel alignment remains physical.
 
-- [ ] **Step 4: Run audit and commit**
+- [ ] **Step 3: Verify M6.6 status remains pending/rejected**
+
+No M6.6 ID is changed to accepted.
+
+- [ ] **Step 4: Run audit**
 
 ```bash
-python3 scripts/test_acceptance_coverage.py --mode audit
+python3 scripts/test_acceptance_coverage.py --mode audit --report build/acceptance-audit.json
 ```
 
-Expected: the remaining accepted deterministic debt list is empty before moving to Task 9.
+Expected: **zero accepted deterministic missing-automation cases**. Any remaining item blocks Task 9.
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add Tests/Acceptance docs/testing
-git commit -m "Test: classify physical-only acceptance evidence honestly"
+git add Tests/Acceptance/coverage.yml docs/testing
+git commit -m "Test: classify physical acceptance evidence honestly"
 ```
 
 ---
 
-### Task 9: Switch acceptance coverage from audit to strict required CI
+### Task 9: Switch acceptance traceability to strict required CI
 
 **Files:**
 - Modify: `.github/workflows/ci.yml`
-- Modify: `scripts/test-ui-automation-policy.py` or the existing CI policy test file.
-- Modify: `Tests/Acceptance/coverage.yml`
+- Modify: `scripts/test_ui_automation_policy.py`
 
-**Interfaces:**
-- Required CI command:
+- [ ] **Step 1: Write RED workflow-policy test requiring strict mode**
 
-```bash
-python3 scripts/test_acceptance_coverage.py --mode strict
-```
-
-- [ ] **Step 1: Write RED CI-policy assertion requiring strict mode**
-
-The policy test must fail while CI still runs audit mode or omits the validator.
-
-- [ ] **Step 2: Run strict mode locally before editing CI**
-
-```bash
-python3 scripts/test_acceptance_coverage.py --mode strict
-```
-
-Expected: PASS. If it fails, return to the owning earlier task; do not weaken strict mode.
-
-- [ ] **Step 3: Add strict validation to required jobs**
-
-Run strict coverage early in both:
+Require:
 
 ```text
-macOS 26 compatibility
-macOS UI regression
+python3 scripts/test_acceptance_coverage.py --mode strict
 ```
 
-It needs to run only once in `Build, test and package` if duplicate runtime is material, but protected branch must have at least one required job whose failure blocks merge. Prefer the `macOS UI regression` job as the primary owner and keep a lightweight schema/unit-policy check in the normal build job.
+in the `macOS UI regression` job and at least one normal required job.
 
-- [ ] **Step 4: Run local policy suite**
+- [ ] **Step 2: Prove strict mode locally before changing CI**
 
 ```bash
-python3 -m unittest scripts/test_acceptance_coverage.py -v
-python3 -m unittest scripts/test-ui-automation-policy.py -v
+python3 scripts/test_acceptance_coverage.py --mode strict
+```
+
+Expected: PASS. If not, return to the owning prior task; do not weaken strict validation.
+
+- [ ] **Step 3: Add strict validation to CI and run policy tests**
+
+```bash
+python3 scripts/test_ui_automation_policy.py -v
 python3 scripts/test_acceptance_coverage.py --mode strict
 ```
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add .github/workflows/ci.yml scripts Tests/Acceptance
+git add .github/workflows/ci.yml scripts/test_ui_automation_policy.py
 git commit -m "CI: require complete acceptance regression traceability"
 ```
 
@@ -615,12 +600,8 @@ git commit -m "CI: require complete acceptance regression traceability"
 - Modify: `docs/PROJECT_STATE.md`
 - Modify: `docs/ROADMAP.md`
 - Modify: `CHANGELOG.md`
-- No production behavior changes.
 
-**Interfaces:**
-- Produces merge-ready testing foundation PR and the only valid next action: merge foundation, then rebase/update PR #33 and run the new suite.
-
-- [ ] **Step 1: Run every deterministic layer locally**
+- [ ] **Step 1: Run every deterministic layer**
 
 ```bash
 swift test --parallel
@@ -632,11 +613,11 @@ NOTCHHUB_UI_APP_PATH="$PWD/build/ui-test/NotchHub.app" \
   -destination 'platform=macOS' -resultBundlePath build/NotchHub-Baseline.xcresult
 unset NOTCHHUB_UI_TESTING
 SOURCE_COMMIT="$(git rev-parse HEAD)" bash scripts/build-app.sh release
-python3 scripts/test-ui-automation-policy.py --verify-shipping-app build/NotchHub.app
+python3 scripts/test_ui_automation_policy.py --verify-shipping-app build/NotchHub.app
 bash scripts/security-audit.sh
 ```
 
-Expected: all commands PASS.
+Expected: all PASS.
 
 - [ ] **Step 2: Run UI suite three independent times as flake evidence**
 
@@ -650,29 +631,22 @@ for i in 1 2 3; do
 done
 ```
 
-Expected: all three PASS without retry logic inside the suite.
+Expected: all three PASS without internal retry logic.
 
-- [ ] **Step 3: Update docs with exact status language**
+- [ ] **Step 3: Update docs with exact state language**
 
-Record:
-
-```text
-implemented -> tested -> accepted -> merged -> released
-```
-
-For the foundation before merge:
+Before merge:
 
 ```text
 Regression/UI foundation: implemented + automated-tested, merge pending.
-Legacy M1/M6.1-M6.5 deterministic baseline: fully traceable + automated-green.
-M6.6 PR #33: still physical FAIL / draft / not merged.
+Accepted M1/M6.1-M6.5 deterministic baseline: fully traceable + automated-green.
+M6.6 PR #33: physical FAIL / draft / not merged.
+Next after merge: rebase/update PR #33 onto foundation and run new regression suite.
 ```
-
-Do not call testing foundation `accepted` until its PR review/CI is complete and it is merged.
 
 - [ ] **Step 4: Push and require all GitHub checks green**
 
-Required checks include at least:
+Required checks:
 
 ```text
 macOS 26 compatibility
@@ -680,9 +654,9 @@ Build, test and package
 macOS UI regression
 ```
 
-Inspect `.xcresult` artifact on any UI failure; do not rerun blindly.
+Any UI failure is investigated from `.xcresult`; do not blindly rerun.
 
-- [ ] **Step 5: Commit final docs**
+- [ ] **Step 5: Commit docs**
 
 ```bash
 git add docs CHANGELOG.md
@@ -691,21 +665,10 @@ git commit -m "Docs: close accepted regression baseline backfill"
 
 - [ ] **Step 6: Merge gate**
 
-Foundation PR may become ready only when:
-
-```text
-strict acceptance coverage PASS
-all Swift/Python tests PASS
-all XCUI tests PASS
-shipping fixture leak check PASS
-security/performance/release gates PASS
-all required GitHub Actions PASS
-```
-
-After merge and green `main` CI, update/rebase PR #33 onto the merged foundation. Its hover/haptic/jump/direction problems must then be captured as new RED UI/integration tests before any M6.6 production repair.
+Foundation PR may become ready only when strict traceability, all Swift/Python/XCUI tests, shipping fixture-exclusion, security/performance/release gates, and all required GitHub checks pass. After merge and green `main`, PR #33 is rebased/updated and its hover/haptic/jump/direction defects become new RED tests before any production repair.
 
 ---
 
 ## Plan completion gate
 
-Plan 2 is complete only when every accepted deterministic M1 and M6.1-M6.5 acceptance ID has executable traceability, strict coverage validation is green and required in CI, the critical user journeys run through real XCUIAutomation, physical-only evidence is narrowly justified, and PR #33 remains unaccepted. No new product feature work is allowed before this foundation is merged into `main` and PR #33 is tested against it.
+Plan 2 is complete only when every accepted deterministic M1 and M6.1-M6.5 ID has executable traceability, strict validation is required and green, critical user journeys run through real XCUIAutomation, physical-only evidence is narrowly justified, and PR #33 remains unaccepted. No product feature work resumes before this foundation is merged into `main`.
