@@ -20,20 +20,61 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.app.groups["notch.surface.compact"]
-        let exists = NotchHubUIAssertions.waitUntilExists(compact, timeout: 2)
-        if !exists {
-            NotchHubUIDiagnostics.attachFailureState(
-                application: subject.app,
-                sourceCommit: subject.sourceCommit,
-                name: "compact-surface",
-                to: self
-            )
-        }
-        XCTAssertTrue(
-            exists,
-            "shipping app must expose the stable compact-surface accessibility contract"
+        XCTAssertTrue(subject.waitForStableCompact())
+    }
+
+    @MainActor
+    func testShippingHoverDwellExpandsThroughRealPointerDelivery() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+    }
+
+    @MainActor
+    func testShippingQuickPassDoesNotExpand() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        let compact = subject.surface("notch.surface.compact")
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
+        compact.hover()
+        subject.movePointerOutside(compact)
+
+        let expanded = subject.surface("notch.surface.expanded")
+        let appears = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true"),
+            object: expanded
         )
+        appears.isInverted = true
+        XCTAssertEqual(XCTWaiter().wait(for: [appears], timeout: 0.35), .completed)
+        XCTAssertTrue(subject.waitForStableCompact())
+    }
+
+    @MainActor
+    func testExpandedPointerExitReturnsToStableCompact() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+        subject.movePointerOutside(subject.surface("notch.surface.expanded"))
+        XCTAssertTrue(subject.waitForStableCompact())
+    }
+
+    @MainActor
+    func testTenHoverExitCyclesNeverLeaveStaleSurface() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        for _ in 0..<10 {
+            XCTAssertTrue(subject.openExpandedViaAcceptedHover())
+            subject.movePointerOutside(subject.surface("notch.surface.expanded"))
+            XCTAssertTrue(subject.waitForStableCompact())
+        }
     }
 
     @MainActor
@@ -42,12 +83,12 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.app.groups["notch.surface.compact"]
+        let compact = subject.surface("notch.surface.compact")
         XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
 
         compact.hover()
 
-        let expanded = subject.app.groups["notch.surface.expanded"]
+        let expanded = subject.surface("notch.surface.expanded")
         let title = subject.app.staticTexts["media.title"]
         let artist = subject.app.staticTexts["media.artist"]
         let source = subject.app.staticTexts["media.source"]
@@ -89,11 +130,11 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.app.groups["notch.surface.compact"]
+        let compact = subject.surface("notch.surface.compact")
         XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
         compact.hover()
 
-        let expanded = subject.app.groups["notch.surface.expanded"]
+        let expanded = subject.surface("notch.surface.expanded")
         let title = subject.app.staticTexts["media.title"]
         let previous = subject.app.buttons["media.previous"]
         let playPause = subject.app.buttons["media.playPause"]
