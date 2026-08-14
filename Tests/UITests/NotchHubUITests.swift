@@ -18,10 +18,19 @@ final class NotchHubUITests: XCTestCase {
     func testShippingAppExposesStableCompactSurfaceIdentifier() throws {
         let subject = try NotchHubUIApplication(mode: .shippingSmoke)
         subject.launch()
+        defer { subject.app.terminate() }
 
         let compact = subject.app.otherElements["notch.surface.compact"]
+        let exists = NotchHubUIAssertions.waitUntilExists(compact, timeout: 2)
+        if !exists {
+            NotchHubUIDiagnostics.attachFailureState(
+                application: subject.app,
+                name: "compact-surface",
+                to: self
+            )
+        }
         XCTAssertTrue(
-            compact.waitForExistence(timeout: 2),
+            exists,
             "shipping app must expose the stable compact-surface accessibility contract"
         )
     }
