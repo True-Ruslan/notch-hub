@@ -3,6 +3,8 @@
 
     @MainActor
     final class UITestMediaRuntime: MediaRuntimeSession {
+        private static let sourceBundleIdentifier = "ru.trueruslan.notchhub.ui-fixture"
+
         private let presentationModel: ShippingMediaPresentationModel
         private let supportsCommands: Bool
         private let tracks = ["Track A", "Track B", "Track C"]
@@ -58,6 +60,7 @@
         }
 
         private func publish() {
+            let sourceBundleIdentifier = Self.sourceBundleIdentifier
             presentationModel.applyUITestPresentation(
                 ShippingMediaPresentation(
                     playbackState: playbackState,
@@ -65,12 +68,17 @@
                     artist: "Fixture Artist",
                     album: "Fixture Album",
                     artworkData: nil,
+                    sourceBundleIdentifier: sourceBundleIdentifier,
                     sourceDisplayName: "NotchHub UI Fixture",
                     canGoPrevious: supportsCommands,
                     canGoNext: supportsCommands,
                     canSeek: supportsCommands,
                     positionSeconds: 42,
-                    durationSeconds: 240
+                    durationSeconds: 240,
+                    sessionIdentity: ShippingMediaSessionIdentity(
+                        generation: 1,
+                        sourceBundleIdentifier: sourceBundleIdentifier
+                    )
                 )
             )
         }
