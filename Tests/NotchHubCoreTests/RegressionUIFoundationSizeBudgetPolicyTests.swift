@@ -41,16 +41,16 @@ struct RegressionUIFoundationSizeBudgetPolicyTests {
         #expect(json["baselineId"] as? String == "v0.1.0")
         #expect(
             evidence["sourceCommit"] as? String
-                == "fabbecb4d97a0bf9fc059d010fdf7401ddf97bba"
+                == "e9d414e094ee2ea5f72815078210e4dda9163aec"
         )
-        #expect(evidence["workflowRunId"] as? Int == 31_804_886_824)
-        #expect(evidence["artifactId"] as? Int == 9_220_849_442)
+        #expect(evidence["workflowRunId"] as? Int == 31_842_940_616)
+        #expect(evidence["artifactId"] as? Int == 9_235_015_770)
         #expect(
             summary
                 == [
-                    "appSizeBytes": 747_934,
-                    "dmgSizeBytes": 483_314,
-                    "executableSizeBytes": 445_728
+                    "appSizeBytes": 748_863,
+                    "dmgSizeBytes": 483_851,
+                    "executableSizeBytes": 446_656
                 ]
         )
         #expect(
@@ -58,7 +58,7 @@ struct RegressionUIFoundationSizeBudgetPolicyTests {
                 == [
                     "appSizeBytes": 479_232,
                     "dmgSizeBytes": 397_312,
-                    "executableSizeBytes": 180_224
+                    "executableSizeBytes": 184_320
                 ]
         )
     }
