@@ -96,23 +96,30 @@ def _canonical_source(identifier: str, paths: list[pathlib.Path]) -> pathlib.Pat
     return sorted(paths, key=lambda path: path.name)[0]
 
 
+def _has_status_token(text: str, *tokens: str) -> bool:
+    return any(
+        re.search(rf"\b{re.escape(token)}\b", text, re.IGNORECASE) is not None
+        for token in tokens
+    )
+
+
 def _infer_status(identifier: str, text: str) -> str:
-    identifier_lines = [line.upper() for line in text.splitlines() if identifier in line]
+    identifier_lines = [line for line in text.splitlines() if identifier in line]
     local = "\n".join(identifier_lines)
-    if "DEFERRED" in local or "NOT TESTED" in local:
+    if _has_status_token(local, "DEFERRED") or "NOT TESTED" in local.upper():
         return "deferred"
-    if "REJECTED" in local:
+    if _has_status_token(local, "REJECTED", "FAIL", "FAILED"):
         return "rejected"
-    if "PASS" in local:
+    if _has_status_token(local, "PASS", "PASSED"):
         return "accepted"
 
     match = STATUS_PATTERN.search(text)
-    status_text = match.group(1).upper() if match else ""
-    if "REJECTED" in status_text or "FAIL" in status_text:
+    status_text = match.group(1) if match else ""
+    if _has_status_token(status_text, "REJECTED", "FAIL", "FAILED"):
         return "rejected"
-    if "PENDING" in status_text or "IN PROGRESS" in status_text:
+    if _has_status_token(status_text, "PENDING") or "IN PROGRESS" in status_text.upper():
         return "pending"
-    if "ACCEPTED" in status_text or "ACCEPT_" in status_text:
+    if _has_status_token(status_text, "ACCEPTED") or "ACCEPT_" in status_text.upper():
         return "accepted"
 
     raise CoverageError(
@@ -179,184 +186,143 @@ def validate_manifest(
         if not isinstance(identifier, str) or not ID_PATTERN.fullmatch(identifier):
             raise CoverageError(f"{label}: invalid acceptance id: {identifier!r}")
         if identifier in seen:
-            raise CoverageError(f"{identifier}: duplicate manifest entry")
+            raise CoverageError(f"duplicate acceptance id in manifest: {identifier}")
         seen.add(identifier)
 
         contract = contracts.get(identifier)
         if contract is None:
-            raise CoverageError(f"{identifier}: manifest id is not present in docs/testing")
+            raise CoverageError(f"{identifier}: manifest id is not present in acceptance docs")
 
         source = raw_entry["source"]
-        if not isinstance(source, str):
-            raise CoverageError(f"{identifier}: source must be a repository-relative path")
         expected_source = _relative_to_repository(contract.source)
         if source != expected_source:
             raise CoverageError(
-                f"{identifier}: source {source!r} does not match canonical ledger {expected_source!r}"
+                f"{identifier}: source mismatch: expected {expected_source!r}, got {source!r}"
             )
 
         status = raw_entry["status"]
         if status not in ALLOWED_STATUSES:
-            raise CoverageError(f"{identifier}: invalid status {status!r}")
+            raise CoverageError(f"{identifier}: unsupported status: {status!r}")
         if status != contract.status:
             raise CoverageError(
-                f"{identifier}: manifest status {status!r} disagrees with ledger status "
-                f"{contract.status!r}"
+                f"{identifier}: manifest status {status!r} disagrees with ledger status {contract.status!r}"
             )
 
-        coverage = _validate_coverage(identifier, raw_entry["coverage"])
-        reason = raw_entry["physicalOnlyReason"]
-        if reason is not None and (not isinstance(reason, str) or not reason.strip()):
+        coverage = raw_entry["coverage"]
+        if not isinstance(coverage, list):
+            raise CoverageError(f"{identifier}: coverage must be a list")
+        automated_count = 0
+        physical_count = 0
+        for coverage_index, item in enumerate(coverage):
+            coverage_label = f"{identifier}.coverage[{coverage_index}]"
+            if not isinstance(item, dict) or set(item) != COVERAGE_KEYS:
+                raise CoverageError(
+                    f"{coverage_label}: coverage item must contain exactly {sorted(COVERAGE_KEYS)}"
+                )
+            layer = item["layer"]
+            if layer not in ALLOWED_LAYERS:
+                raise CoverageError(f"{coverage_label}: unsupported layer: {layer!r}")
+            test = item["test"]
+            if layer == "physical":
+                if test is not None:
+                    raise CoverageError(f"{coverage_label}: physical coverage test must be null")
+                physical_count += 1
+            else:
+                if not isinstance(test, str) or test.count(".") < 2:
+                    raise CoverageError(
+                        f"{coverage_label}: automated test must use Module.Suite.testName"
+                    )
+                _validate_test_reference(test)
+                automated_count += 1
+
+        physical_reason = raw_entry["physicalOnlyReason"]
+        if physical_count:
+            if not isinstance(physical_reason, str) or len(physical_reason.strip()) < 40:
+                raise CoverageError(
+                    f"{identifier}: physical coverage requires a concrete physicalOnlyReason"
+                )
+        elif physical_reason is not None:
             raise CoverageError(
-                f"{identifier}: physicalOnlyReason must be null or non-empty text"
-            )
-        has_physical = any(item["layer"] == "physical" for item in coverage)
-        if has_physical and not reason:
-            raise CoverageError(
-                f"{identifier}: physical coverage requires physicalOnlyReason"
-            )
-        if reason and not has_physical:
-            raise CoverageError(
-                f"{identifier}: physicalOnlyReason requires a physical coverage layer"
+                f"{identifier}: physicalOnlyReason requires a physical coverage item"
             )
 
-        if status == "accepted" and not coverage:
-            raise CoverageError(
-                f"{identifier}: mapped accepted contract must cite automated or physical evidence"
-            )
-        if status == "accepted" and not any(
-            item["layer"] in AUTOMATED_LAYERS for item in coverage
-        ) and not reason:
-            raise CoverageError(
-                f"{identifier}: accepted contract lacks automated coverage or physical-only reason"
-            )
-
-        for item in coverage:
-            if item["layer"] in AUTOMATED_LAYERS:
-                _validate_test_reference(identifier, item["test"])
+        if status == "accepted" and automated_count == 0 and physical_count == 0:
+            raise CoverageError(f"{identifier}: accepted contract has no evidence")
 
         mapped[identifier] = raw_entry
 
-    if mode == "strict":
-        missing = sorted(set(contracts) - set(mapped))
-        if missing:
-            preview = ", ".join(missing[:8])
-            suffix = "" if len(missing) <= 8 else f", ... (+{len(missing) - 8})"
-            raise CoverageError(
-                f"strict coverage requires every discovered acceptance id; missing "
-                f"{len(missing)}: {preview}{suffix}"
-            )
+    unmapped = sorted(set(contracts) - set(mapped))
+    if mode == "strict" and unmapped:
+        raise CoverageError(
+            "strict mode requires complete mapping; unmapped: " + ", ".join(unmapped)
+        )
 
     return mapped
 
 
-def _validate_coverage(identifier: str, coverage: Any) -> list[dict[str, Any]]:
-    if not isinstance(coverage, list):
-        raise CoverageError(f"{identifier}: coverage must be a list")
+def _validate_test_reference(reference: str) -> None:
+    module, suite, test_name = reference.split(".", 2)
+    if not module or not suite or not test_name:
+        raise CoverageError(f"invalid automated test reference: {reference!r}")
 
-    normalized: list[dict[str, Any]] = []
-    seen: set[tuple[str, str | None]] = set()
-    for index, raw_item in enumerate(coverage):
-        label = f"{identifier}.coverage[{index}]"
-        if not isinstance(raw_item, dict) or set(raw_item) != COVERAGE_KEYS:
-            raise CoverageError(
-                f"{label}: coverage item must contain exactly {sorted(COVERAGE_KEYS)}"
-            )
-        layer = raw_item["layer"]
-        test = raw_item["test"]
-        if layer not in ALLOWED_LAYERS:
-            raise CoverageError(f"{label}: invalid layer {layer!r}")
-        if layer in AUTOMATED_LAYERS:
-            if not isinstance(test, str) or not test.strip():
-                raise CoverageError(f"{label}: automated layer requires test reference")
-        elif test is not None:
-            raise CoverageError(f"{label}: physical coverage test must be null")
+    if module == "scripts":
+        source_path = REPOSITORY_ROOT / "scripts" / _python_source_name_for_suite(suite)
+        if not source_path.is_file():
+            raise CoverageError(f"automated test source is missing: {source_path}")
+        source = source_path.read_text(encoding="utf-8")
+        if f"def {test_name}(" not in source:
+            raise CoverageError(f"automated test reference is missing: {reference}")
+        return
 
-        key = (layer, test)
-        if key in seen:
-            raise CoverageError(f"{label}: duplicate coverage evidence")
-        seen.add(key)
-        normalized.append({"layer": layer, "test": test})
-    return normalized
-
-
-def _validate_test_reference(identifier: str, reference: str) -> None:
-    parts = reference.split(".")
-    if len(parts) < 3 or any(not part for part in parts):
-        raise CoverageError(
-            f"{identifier}: test reference must be Module.Suite.testName: {reference!r}"
-        )
-    symbol = parts[-1]
-    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", symbol):
-        raise CoverageError(f"{identifier}: invalid test symbol in {reference!r}")
-
-    swift_pattern = re.compile(rf"\bfunc\s+{re.escape(symbol)}\s*\(")
-    python_pattern = re.compile(rf"\bdef\s+{re.escape(symbol)}\s*\(")
-
-    for path in _test_source_files():
-        text = path.read_text(encoding="utf-8")
-        pattern = python_pattern if path.suffix == ".py" else swift_pattern
-        if pattern.search(text):
-            return
-    raise CoverageError(f"{identifier}: referenced test symbol does not exist: {reference}")
-
-
-def _test_source_files() -> Iterable[pathlib.Path]:
     tests_root = REPOSITORY_ROOT / "Tests"
-    if tests_root.is_dir():
-        yield from sorted(tests_root.rglob("*.swift"))
-    scripts_root = REPOSITORY_ROOT / "scripts"
-    if scripts_root.is_dir():
-        yield from sorted(scripts_root.glob("test_*.py"))
+    candidates = list(tests_root.glob(f"**/{suite}.swift"))
+    if not candidates:
+        raise CoverageError(f"automated test suite source is missing: {reference}")
+    if not any(f"func {test_name}(" in path.read_text(encoding="utf-8") for path in candidates):
+        raise CoverageError(f"automated test reference is missing: {reference}")
 
 
-def build_report(
+def _python_source_name_for_suite(suite: str) -> str:
+    words = re.findall(r"[A-Z]+(?=[A-Z][a-z]|\d|$)|[A-Z]?[a-z]+|\d+", suite)
+    snake = "_".join(word.lower() for word in words)
+    return f"test_{snake}.py"
+
+
+def summarize(
     contracts: dict[str, Contract],
     mapped: dict[str, dict[str, Any]],
-    *,
-    mode: str,
-) -> dict[str, Any]:
-    rows: list[dict[str, Any]] = []
-    for identifier, contract in sorted(contracts.items()):
-        entry = mapped.get(identifier)
-        evidence = list(entry["coverage"]) if entry else []
-        automated = any(item.get("layer") in AUTOMATED_LAYERS for item in evidence)
-        rows.append(
-            {
-                "id": identifier,
-                "source": _relative_to_repository(contract.source),
-                "status": contract.status,
-                "existingEvidence": evidence,
-                "missingAutomation": not automated,
-            }
-        )
-    return {"schemaVersion": 1, "mode": mode, "contracts": rows}
+) -> dict[str, int]:
+    automated = 0
+    physical_only = 0
+    mixed = 0
+    accepted = 0
+    for entry in mapped.values():
+        if entry["status"] == "accepted":
+            accepted += 1
+        layers = {item["layer"] for item in entry["coverage"]}
+        if layers & AUTOMATED_LAYERS and "physical" in layers:
+            mixed += 1
+        elif layers & AUTOMATED_LAYERS:
+            automated += 1
+        elif "physical" in layers:
+            physical_only += 1
 
-
-def validate_report(report: dict[str, Any]) -> None:
-    rows = report.get("contracts")
-    if not isinstance(rows, list):
-        raise CoverageError("acceptance report contracts must be a list")
-    identifiers = [row.get("id") for row in rows if isinstance(row, dict)]
-    if len(identifiers) != len(rows):
-        raise CoverageError("acceptance report contains a non-object contract row")
-    if identifiers != sorted(identifiers):
-        raise CoverageError("acceptance report contract ids must be sorted")
-    if len(identifiers) != len(set(identifiers)):
-        raise CoverageError("acceptance report contract ids must be unique")
-
-
-def write_report(report: dict[str, Any], path: pathlib.Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "discovered": len(contracts),
+        "mapped": len(mapped),
+        "unmapped": len(contracts) - len(mapped),
+        "accepted": accepted,
+        "automatedOnly": automated,
+        "mixed": mixed,
+        "physicalOnly": physical_only,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Audit NotchHub acceptance traceability")
-    parser.add_argument("--mode", choices=("audit", "strict"), required=True)
-    parser.add_argument("--manifest", type=pathlib.Path, default=DEFAULT_MANIFEST)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=("audit", "strict"), default="audit")
     parser.add_argument("--docs-root", type=pathlib.Path, default=DEFAULT_DOCS_ROOT)
-    parser.add_argument("--report", type=pathlib.Path)
+    parser.add_argument("--manifest", type=pathlib.Path, default=DEFAULT_MANIFEST)
     args = parser.parse_args(argv)
 
     try:
@@ -364,22 +330,20 @@ def main(argv: list[str] | None = None) -> int:
         validate_repository_inventory(contracts, args.docs_root)
         entries = load_manifest(args.manifest)
         mapped = validate_manifest(entries, contracts, mode=args.mode)
-        report = build_report(contracts, mapped, mode=args.mode)
-        validate_report(report)
-        if args.report:
-            write_report(report, args.report)
-    except (CoverageError, OSError) as error:
+        summary = summarize(contracts, mapped)
+    except CoverageError as error:
         print(f"Acceptance coverage {args.mode} failed: {error}", file=sys.stderr)
         return 1
 
-    unmapped = len(contracts) - len(mapped)
-    missing_automation = sum(
-        1 for row in report["contracts"] if row["missingAutomation"]
-    )
     print(
         f"Acceptance coverage {args.mode} passed: "
-        f"discovered={len(contracts)} mapped={len(mapped)} "
-        f"unmapped={unmapped} missingAutomation={missing_automation}"
+        f"discovered={summary['discovered']} "
+        f"mapped={summary['mapped']} "
+        f"unmapped={summary['unmapped']} "
+        f"accepted={summary['accepted']} "
+        f"automatedOnly={summary['automatedOnly']} "
+        f"mixed={summary['mixed']} "
+        f"physicalOnly={summary['physicalOnly']}"
     )
     return 0
 
