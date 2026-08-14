@@ -355,18 +355,18 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
             "regression-ui-automation-foundation-size-budget.json": {
                 "featureId": "regression-ui-automation-foundation",
-                "sourceCommit": "fabbecb4d97a0bf9fc059d010fdf7401ddf97bba",
-                "workflowRunId": 31804886824,
-                "artifactId": 9220849442,
+                "sourceCommit": "e9d414e094ee2ea5f72815078210e4dda9163aec",
+                "workflowRunId": 31842940616,
+                "artifactId": 9235015770,
                 "allowanceBytes": {
                     "appSizeBytes": 479232,
                     "dmgSizeBytes": 397312,
-                    "executableSizeBytes": 180224,
+                    "executableSizeBytes": 184320,
                 },
                 "summary": {
-                    "appSizeBytes": 747934,
-                    "dmgSizeBytes": 483314,
-                    "executableSizeBytes": 445728,
+                    "appSizeBytes": 748863,
+                    "dmgSizeBytes": 483851,
+                    "executableSizeBytes": 446656,
                 },
             },
         }
