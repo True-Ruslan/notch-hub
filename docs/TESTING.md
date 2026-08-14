@@ -26,7 +26,7 @@ Current CI validates:
 6. Native XCTest/XCUIAutomation project policy and compile-time fixture isolation.
 7. Exact SwiftPM-built UI-test app creation with `NOTCHHUB_UI_TESTING` only for that build.
 8. Shipping-artifact leak verification proving fixture/test-only markers are absent.
-9. Acceptance coverage audit over stable `NH-*` ledgers.
+9. **Fail-closed strict acceptance traceability** over every stable `NH-*` ledger entry in both the UI job and the normal build/package job.
 10. Real external-app XCUI journeys on `macos-26`, preserving `.xcresult` and diagnostics.
 11. Exact UI app source provenance: `NHSourceCommit` must match the PR-head/source SHA before the test app is launched.
 
@@ -50,11 +50,14 @@ Current deterministic UI coverage proves on `macos-26`:
 
 - exact external app launch/terminate;
 - stable compact accessibility surface;
-- deterministic media fixture expands through the real hover path;
-- expanded fixture exposes media title/artist/source;
+- real hover-dwell expansion through the AppKit/SwiftUI pointer path;
+- pointer-exit return to stable compact;
+- repeated hover/exit cycles do not leave a stale surface;
+- deterministic media fixture exposes authoritative title/artist/source state;
 - real XCUI `Next` changes Track A -> Track B;
 - real XCUI `Previous` returns Track B -> Track A;
 - real XCUI Play/Pause toggles the visible accessibility state;
+- unsupported fixture capabilities remain disabled and do not mutate track state;
 - failures preserve exact source SHA, screenshot, accessibility hierarchy and `.xcresult`.
 
 UI synchronization uses `NSPredicate`, `XCTNSPredicateExpectation` and `XCTWaiter`. Fixed sleeps and automatic retries are rejected by policy.
@@ -69,7 +72,7 @@ Normal Personal/Release artifacts are verified to contain no fixture marker or U
 
 ## Accessibility contract
 
-Stable identifiers currently used by XCUIAutomation include:
+Stable identifiers used by XCUIAutomation include externally meaningful notch/media surfaces and controls such as:
 
 - `notch.surface.compact`;
 - `notch.surface.expanded`;
@@ -87,14 +90,42 @@ These are testability/accessibility seams, not an alternate state-control API.
 
 `Tests/Acceptance/coverage.yml` is the machine-readable mapping layer. `scripts/test_acceptance_coverage.py` discovers stable `NH-*` IDs from `docs/testing/*.md` and validates ID uniqueness, canonical source, ledger-derived status, evidence layer and referenced test symbols.
 
-Two modes exist:
+Two validator modes remain available:
 
-- `--mode audit`: invalid mappings fail, but legacy unmapped contracts remain visible debt;
-- `--mode strict`: every discovered stable acceptance contract must be mapped.
+- `--mode audit` is a development diagnostic that permits unmapped contracts while still rejecting invalid entries;
+- `--mode strict` is the canonical CI gate and requires every discovered stable acceptance contract to be mapped.
 
-At the Regression/UI Automation Foundation checkpoint the validator discovers **70** stable acceptance IDs. **1** verified mapping is present and **69** remain legacy backfill debt. This is deliberate: audit is green without fabricating coverage, while strict remains blocked until `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md` is completed.
+The Legacy Regression Baseline Backfill has completed the strict inventory on the PR #34 branch. Exact pre-documentation candidate `1e9ec7ac322ab4580f4f867e39457db915cfcb77` reports:
 
-The seed mapping is `NH-MEDIA-BRIDGE-015` -> `MediaBridgeProbeCoreTests.ProbeProcessTests.nonzeroExitTransitionsToFailedWithoutAutomaticLoop`.
+```text
+Acceptance coverage strict passed: discovered=90 mapped=90 unmapped=0 missingAutomation=30
+```
+
+Interpretation:
+
+- `mapped=90 / unmapped=0` means the entire discovered acceptance inventory has an explicit status/evidence record;
+- accepted deterministic M1 and M6.1-M6.5 contracts cite executable unit/integration/UI/policy/shipping evidence;
+- genuinely physical properties may include a `physical` layer only with a concrete `physicalOnlyReason`;
+- pending/deferred contracts remain pending/deferred and are not converted into accepted behavior merely to satisfy automation;
+- `missingAutomation=30` is not unmapped debt: it includes pending/deferred or genuinely physical cases that do not currently carry an automated evidence layer.
+
+The status parser also distinguishes explicit acceptance tokens from ordinary behavioral prose: lowercase wording such as a `failed` capability no longer reclassifies a pending ledger entry as rejected. Explicit per-ID `PASS`/`FAIL`/`DEFERRED` and document-level `Status:` remain authoritative.
+
+Canonical CI runs strict traceability in **both** `macOS UI regression` and `Build, test and package`, so losing or corrupting the mapping fails closed even if one testing layer is skipped by a future workflow mistake.
+
+## Regression-foundation verification checkpoint
+
+On exact source `1e9ec7ac322ab4580f4f867e39457db915cfcb77`, CI #1051 / run `31847082833` passed:
+
+- all three required jobs;
+- strict `90/90` acceptance mapping;
+- 250 Swift tests;
+- source/security policy and Sandbox/Hardened Runtime/signing checks;
+- shipping fixture-leak exclusion and shipping media preflight;
+- foundation feature-size gate and performance smoke;
+- one canonical `macOS UI regression` execution plus two additional independent UI executions on the exact same source, for **3/3 successful XCUI runs**.
+
+This evidence validates the pre-documentation candidate. A fresh exact-head CI after documentation synchronization is still required before PR #34 merge readiness.
 
 ## Physical-only boundary
 
@@ -109,6 +140,7 @@ Physical target acceptance remains authoritative where automation cannot establi
 
 Detailed physical evidence remains in the acceptance ledgers under `docs/testing/`. In particular:
 
+- M1: `NOTCH_INTERACTION_ACCEPTANCE.md`;
 - M6.1: `MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`;
 - M6.3: `PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`;
 - M6.4: `SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md`;
@@ -121,10 +153,10 @@ Detailed physical evidence remains in the acceptance ledgers under `docs/testing
 
 `PERFORMANCE.md` and `performance/baseline-v0.1.0.json` are authoritative. The immutable `v0.1.0` artifact baseline remains executable `220,560 B`, app `223,555 B`, DMG `73,955 B`.
 
-Intentional shipping growth uses separate provenance-backed cumulative envelopes; historical budgets are not rewritten. The Regression/UI Automation Foundation has its own reviewed envelope because the compressed DMG exceeded the prior M6.6 envelope while executable/app remained within it. Shared GitHub runners validate deterministic performance policy/schema/package behavior; target runtime magnitudes remain real-hardware evidence.
+Intentional shipping growth uses separate provenance-backed cumulative envelopes; historical budgets are not rewritten. The Regression/UI Automation Foundation has its own reviewed envelope. Shared GitHub runners validate deterministic performance policy/schema/package behavior; target runtime magnitudes remain real-hardware evidence.
 
 ## Current M6.6 boundary
 
-PR #33 remains draft and physically unaccepted. Its exact frozen physical candidate is `423bc5d72a3676d01793f898ed2e8e79845bc8cd` with CI run `31685581542` green, but target-Mac retest remains mandatory.
+PR #33 remains draft and physically unaccepted. Its frozen physical candidate is `423bc5d72a3676d01793f898ed2e8e79845bc8cd` with automated CI green, but target-Mac retest remains mandatory.
 
-The testing foundation does not repair M6.6 behavior and does not convert automated UI evidence into physical acceptance. Product feature work remains frozen until the regression baseline backfill is completed and the appropriate M6.6 physical gates pass.
+The testing foundation does not repair M6.6 behavior and does not convert automated UI evidence into physical acceptance. Product feature work remains frozen until PR #34 is merged and post-merge `main` CI passes; #33 must then be rebased/resumed and revalidated against the merged regression foundation before physical acceptance continues.
