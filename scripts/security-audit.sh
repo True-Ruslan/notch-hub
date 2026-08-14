@@ -221,6 +221,7 @@ SHIPPING_MEDIA_BUILD="scripts/build-app.sh"
 SHIPPING_ADAPTER_COMMIT="3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
 SHIPPING_RUNTIME_SOURCE="Sources/NotchHubMediaCore/ShippingMediaRuntime.swift"
 SHIPPING_APP_DELEGATE="Sources/NotchHubApp/AppDelegate.swift"
+SHIPPING_APP_COMPOSITION="Sources/NotchHubApp/AppComposition.swift"
 
 for required in \
     "$PROBE_DIR/Core/ProbeProcess.swift" \
@@ -229,7 +230,8 @@ for required in \
     "$PROBE_VERIFY" \
     "$SHIPPING_MEDIA_BUILD" \
     "$SHIPPING_RUNTIME_SOURCE" \
-    "$SHIPPING_APP_DELEGATE"; do
+    "$SHIPPING_APP_DELEGATE" \
+    "$SHIPPING_APP_COMPOSITION"; do
     [[ -e "$required" ]] || fail "missing reviewed media boundary file: $required"
 done
 
@@ -304,8 +306,16 @@ for required_provenance in 'NHSourceCommit' 'NHAdapterCommit' 'NHAdapterPatchSHA
         fail "shipping media build is missing provenance key: $required_provenance"
 done
 
-grep -Fq 'ShippingMediaRuntime' "$SHIPPING_APP_DELEGATE" || \
-    fail "shipping app does not own the media runtime lifecycle"
+# AppDelegate remains the lifecycle authority; AppComposition.shipping() remains the
+# only reviewed factory that binds that lifecycle to ShippingMediaRuntime.
+grep -Fq 'composition.makeMediaRuntime(mediaPresentationModel)' "$SHIPPING_APP_DELEGATE" || \
+    fail "shipping app does not create media runtime through the reviewed composition seam"
+grep -Fq 'mediaRuntime.start()' "$SHIPPING_APP_DELEGATE" || \
+    fail "shipping app does not own media runtime start lifecycle"
+grep -Fq 'mediaRuntime?.stop()' "$SHIPPING_APP_DELEGATE" || \
+    fail "shipping app does not own media runtime stop lifecycle"
+grep -Fq 'ShippingMediaRuntime(presentationModel: $0)' "$SHIPPING_APP_COMPOSITION" || \
+    fail "shipping composition does not bind the reviewed ShippingMediaRuntime"
 grep -Fq 'MediaRemoteAdapter.framework' "$SHIPPING_RUNTIME_SOURCE" || \
     fail "shipping runtime does not resolve the allowlisted framework"
 grep -Fq 'mediaremote-adapter.pl' "$SHIPPING_RUNTIME_SOURCE" || \
@@ -320,7 +330,7 @@ fi
 
 # Shipping entrypoints must not invoke development-only probe/test/candidate tooling.
 if grep -InE 'MediaRemoteAdapterTestClient|MediaTransportCandidate|MediaBridgeProbe' \
-    "$SHIPPING_RUNTIME_SOURCE" "$SHIPPING_APP_DELEGATE"; then
+    "$SHIPPING_RUNTIME_SOURCE" "$SHIPPING_APP_DELEGATE" "$SHIPPING_APP_COMPOSITION"; then
     fail "shipping runtime entrypoints reference development-only media tooling"
 fi
 

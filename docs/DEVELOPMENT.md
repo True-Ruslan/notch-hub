@@ -18,6 +18,22 @@ A regression test must fail against the broken behavior before the fix is consid
 
 For performance work, deterministic policy, parser, state, lifecycle, and schema behavior belongs in automated tests. Physical CPU/RSS/thread acceptance belongs to the documented target-Mac scenarios; shared runner resource values are compatibility evidence only and are never substituted for target hardware.
 
+### Native UI regression development
+
+The production build remains SwiftPM-only. Native XCTest/XCUIAutomation uses the checked-in `NotchHubUITests.xcodeproj` only as UI-test plumbing; UI tests launch the exact SwiftPM-built `NotchHub.app` by URL.
+
+Rules for UI regression work:
+
+- deterministic fixtures are available only under the compile-time `NOTCHHUB_UI_TESTING` condition;
+- normal Personal/Release builds must not contain fixture markers, UI-test haptic diagnostics, or development-only composition code;
+- external-app UI tests must verify the app bundle `NHSourceCommit` against the exact PR-head/source SHA before launch;
+- synchronization uses `NSPredicate`/`XCTNSPredicateExpectation`/`XCTWaiter`, never fixed sleeps or automatic retries;
+- screenshots, accessibility hierarchy and `.xcresult` are failure diagnostics, not pixel-snapshot correctness gates;
+- real XCUI hover/click/scroll APIs are preferred over direct state-machine injection;
+- no UI-test convenience may widen shipping input authority, permissions, networking, subprocess surface or runtime polling.
+
+Acceptance traceability is maintained in `Tests/Acceptance/coverage.yml` and validated by `scripts/test_acceptance_coverage.py`. `--mode audit` permits explicitly visible legacy mapping debt; `--mode strict` is the future backfill gate and must not be enabled until every discovered stable `NH-*` contract has evidence.
+
 ### Commits
 
 Use small, intention-revealing commits. Preferred Conventional Commit prefixes:
@@ -34,14 +50,21 @@ Do not mix unrelated refactors with a bug fix. A useful bug-fix history normally
 
 ### Pull requests
 
-`main` is protected. Development happens on branches and lands through pull requests with the required `Build, test and package` check green. Use squash merge for the final integration commit while preserving the branch commit history in the PR discussion.
+`main` is protected. Development happens on branches and lands through pull requests with all required checks green:
+
+- `macOS 26 compatibility`;
+- `macOS UI regression`;
+- `Build, test and package`.
+
+Use squash merge for the final integration commit while preserving the branch commit history in the PR discussion.
 
 Before marking a PR ready:
 
-- required automated checks are green;
-- `CHANGELOG.md` is updated for notable behavior changes;
+- required automated checks are green on the exact head;
+- `CHANGELOG.md` is updated for notable behavior/tooling changes;
 - `docs/PROJECT_STATE.md` reflects the actual state and remaining manual work;
 - unavoidable manual acceptance is explicitly listed rather than silently assumed;
+- acceptance-coverage debt is visible rather than represented as automated coverage that does not exist;
 - performance changes that affect runtime cost are compared against the accepted target-Mac baseline where applicable;
 - noisy shared-runner CPU/RSS/thread measurements are never promoted into tight gates merely to increase automation coverage.
 

@@ -62,6 +62,17 @@ struct MediaNotchRootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(surfaceAccessibilityIdentifier)
+    }
+
+    private var surfaceAccessibilityIdentifier: String {
+        switch panelModel.contentPresentation {
+        case .compact:
+            "notch.surface.compact"
+        case .expanded:
+            "notch.surface.expanded"
+        }
     }
 
     private func compactMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
@@ -94,12 +105,14 @@ struct MediaNotchRootView: View {
                             .font(.headline)
                             .foregroundStyle(.white)
                             .lineLimit(1)
+                            .accessibilityIdentifier("media.title")
                     }
                     if let artist = presentation.artist {
                         Text(artist)
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.75))
                             .lineLimit(1)
+                            .accessibilityIdentifier("media.artist")
                     }
                     if let album = presentation.album {
                         Text(album)
@@ -114,6 +127,7 @@ struct MediaNotchRootView: View {
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.45))
                         .lineLimit(1)
+                        .accessibilityIdentifier("media.source")
                 }
                 .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
             }
@@ -134,6 +148,8 @@ struct MediaNotchRootView: View {
                 .buttonStyle(.plain)
                 .disabled(!presentation.canGoPrevious)
                 .opacity(presentation.canGoPrevious ? 1 : 0.3)
+                .accessibilityIdentifier("media.previous")
+                .accessibilityValue(presentation.canGoPrevious ? "enabled" : "disabled")
 
                 Button(action: onTogglePlayPause) {
                     Image(
@@ -145,6 +161,10 @@ struct MediaNotchRootView: View {
                     .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("media.playPause")
+                .accessibilityValue(
+                    presentation.playbackState == .playing ? "playing" : "paused"
+                )
 
                 Button(action: onNext) {
                     Image(systemName: "forward.fill")
@@ -153,6 +173,8 @@ struct MediaNotchRootView: View {
                 .buttonStyle(.plain)
                 .disabled(!presentation.canGoNext)
                 .opacity(presentation.canGoNext ? 1 : 0.3)
+                .accessibilityIdentifier("media.next")
+                .accessibilityValue(presentation.canGoNext ? "enabled" : "disabled")
             }
             .foregroundStyle(.white)
         }
@@ -189,5 +211,8 @@ struct MediaNotchRootView: View {
                 style: .continuous
             )
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Media artwork")
+        .accessibilityIdentifier("media.artwork")
     }
 }

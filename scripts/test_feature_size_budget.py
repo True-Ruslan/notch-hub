@@ -194,7 +194,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         no_baseline_id = self.baseline()
         del no_baseline_id["baselineId"]
         with self.assertRaises(ValueError):
-            compare_size_summary_to_feature_budget(summary, no_baseline_id, self.feature_budget())
+            compare_size_summary_to_feature_budget(
+                summary,
+                no_baseline_id,
+                self.feature_budget(),
+            )
 
     def test_feature_budget_cli_is_fail_closed(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -262,222 +266,151 @@ class FeatureSizeBudgetTests(unittest.TestCase):
                 )
             self.assertIn("feature-adjusted ceiling", stderr.getvalue())
 
-    def test_repository_m6_4_budget_remains_provenanced_and_self_validating(self):
+    def test_repository_feature_budgets_remain_provenanced_tight_and_self_validating(self):
         baseline = json.loads(
             (REPOSITORY_ROOT / "performance" / "baseline-v0.1.0.json").read_text(
                 encoding="utf-8"
             )
         )
-        feature_budget = json.loads(
-            (
-                REPOSITORY_ROOT
-                / "performance"
-                / "m6-4-shipping-media-size-budget.json"
-            ).read_text(encoding="utf-8")
-        )
-
-        self.assertEqual("m6.4-shipping-media-composition", feature_budget["featureId"])
-        self.assertEqual("v0.1.0", feature_budget["baselineId"])
-        self.assertEqual(31402487785, feature_budget["evidence"]["workflowRunId"])
-        self.assertEqual(9068350685, feature_budget["evidence"]["artifactId"])
-        self.assertEqual(
-            [],
-            compare_size_summary_to_feature_budget(
-                feature_budget["evidence"]["summary"],
-                baseline,
-                feature_budget,
-            ),
-        )
-
-    def test_repository_m6_5_budget_is_provenanced_tight_and_self_validating(self):
-        baseline = json.loads(
-            (REPOSITORY_ROOT / "performance" / "baseline-v0.1.0.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        feature_budget = json.loads(
-            (
-                REPOSITORY_ROOT
-                / "performance"
-                / "m6-5-media-first-ui-size-budget.json"
-            ).read_text(encoding="utf-8")
-        )
-
-        self.assertEqual("m6.5-media-first-ui", feature_budget["featureId"])
-        self.assertEqual("v0.1.0", feature_budget["baselineId"])
-        self.assertEqual(
-            {
-                "appSizeBytes": 430080,
-                "dmgSizeBytes": 376832,
-                "executableSizeBytes": 135168,
+        expected = {
+            "m6-4-shipping-media-size-budget.json": {
+                "featureId": "m6.4-shipping-media-composition",
+                "sourceCommit": "21318c94cfcda45f147d3967ddcd7194034e9812",
+                "workflowRunId": 31402487785,
+                "artifactId": 9068350685,
+                "allowanceBytes": {
+                    "appSizeBytes": 360448,
+                    "dmgSizeBytes": 327680,
+                    "executableSizeBytes": 65536,
+                },
+                "summary": {
+                    "appSizeBytes": 615022,
+                    "dmgSizeBytes": 406615,
+                    "executableSizeBytes": 312816,
+                },
             },
-            feature_budget["allowanceBytes"],
-        )
-        self.assertEqual(
-            "3db9d05619b38198c00b57b3cdd043af0618f714",
-            feature_budget["evidence"]["sourceCommit"],
-        )
-        self.assertEqual(31537964825, feature_budget["evidence"]["workflowRunId"])
-        self.assertEqual(9119647587, feature_budget["evidence"]["artifactId"])
-        self.assertEqual(
-            {
-                "appSizeBytes": 699614,
-                "dmgSizeBytes": 461748,
-                "executableSizeBytes": 397408,
+            "m6-5-media-first-ui-size-budget.json": {
+                "featureId": "m6.5-media-first-ui",
+                "sourceCommit": "3db9d05619b38198c00b57b3cdd043af0618f714",
+                "workflowRunId": 31537964825,
+                "artifactId": 9119647587,
+                "allowanceBytes": {
+                    "appSizeBytes": 430080,
+                    "dmgSizeBytes": 376832,
+                    "executableSizeBytes": 135168,
+                },
+                "summary": {
+                    "appSizeBytes": 699614,
+                    "dmgSizeBytes": 461748,
+                    "executableSizeBytes": 397408,
+                },
             },
-            feature_budget["evidence"]["summary"],
-        )
-        self.assertEqual(
-            [],
-            compare_size_summary_to_feature_budget(
-                feature_budget["evidence"]["summary"],
-                baseline,
-                feature_budget,
-            ),
-        )
-
-    def test_repository_m6_6_one_shot_budget_is_provenanced_tight_and_self_validating(self):
-        baseline = json.loads(
-            (REPOSITORY_ROOT / "performance" / "baseline-v0.1.0.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        feature_budget = json.loads(
-            (
-                REPOSITORY_ROOT
-                / "performance"
-                / "m6-6-one-shot-lifecycle-size-budget.json"
-            ).read_text(encoding="utf-8")
-        )
-
-        self.assertEqual("m6.6-one-shot-lifecycle", feature_budget["featureId"])
-        self.assertEqual("v0.1.0", feature_budget["baselineId"])
-        self.assertEqual(
-            {
-                "appSizeBytes": 450560,
-                "dmgSizeBytes": 376832,
-                "executableSizeBytes": 151552,
+            "m6-6-one-shot-lifecycle-size-budget.json": {
+                "featureId": "m6.6-one-shot-lifecycle",
+                "sourceCommit": "55d08e58ce755a4e5d32a1128bd1a1262fe1ff42",
+                "workflowRunId": 31575348332,
+                "artifactId": 9133032338,
+                "allowanceBytes": {
+                    "appSizeBytes": 450560,
+                    "dmgSizeBytes": 376832,
+                    "executableSizeBytes": 151552,
+                },
+                "summary": {
+                    "appSizeBytes": 717406,
+                    "dmgSizeBytes": 465191,
+                    "executableSizeBytes": 415200,
+                },
             },
-            feature_budget["allowanceBytes"],
-        )
-        self.assertEqual(
-            "55d08e58ce755a4e5d32a1128bd1a1262fe1ff42",
-            feature_budget["evidence"]["sourceCommit"],
-        )
-        self.assertEqual(31575348332, feature_budget["evidence"]["workflowRunId"])
-        self.assertEqual(9133032338, feature_budget["evidence"]["artifactId"])
-        self.assertEqual(
-            {
-                "appSizeBytes": 717406,
-                "dmgSizeBytes": 465191,
-                "executableSizeBytes": 415200,
+            "m6-6-gesture-engine-size-budget.json": {
+                "featureId": "m6.6-gesture-engine",
+                "sourceCommit": "ddad4a3efa579caf818693dece9845059fbcd810",
+                "workflowRunId": 31582412364,
+                "artifactId": 9135807459,
+                "allowanceBytes": {
+                    "appSizeBytes": 458752,
+                    "dmgSizeBytes": 389120,
+                    "executableSizeBytes": 159744,
+                },
+                "summary": {
+                    "appSizeBytes": 724814,
+                    "dmgSizeBytes": 474960,
+                    "executableSizeBytes": 422608,
+                },
             },
-            feature_budget["evidence"]["summary"],
-        )
-        self.assertEqual(
-            [],
-            compare_size_summary_to_feature_budget(
-                feature_budget["evidence"]["summary"],
-                baseline,
-                feature_budget,
-            ),
-        )
-
-    def test_repository_m6_6_gesture_engine_budget_is_provenanced_tight_and_self_validating(self):
-        baseline = json.loads(
-            (REPOSITORY_ROOT / "performance" / "baseline-v0.1.0.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        feature_budget = json.loads(
-            (
-                REPOSITORY_ROOT
-                / "performance"
-                / "m6-6-gesture-engine-size-budget.json"
-            ).read_text(encoding="utf-8")
-        )
-
-        self.assertEqual("m6.6-gesture-engine", feature_budget["featureId"])
-        self.assertEqual("v0.1.0", feature_budget["baselineId"])
-        self.assertEqual(
-            {
-                "appSizeBytes": 458752,
-                "dmgSizeBytes": 389120,
-                "executableSizeBytes": 159744,
+            "m6-6-compact-command-size-budget.json": {
+                "featureId": "m6.6-compact-command",
+                "sourceCommit": "55f2ee429932b68ed7a02c3750cd28a28c9bd3d9",
+                "workflowRunId": 31588206985,
+                "artifactId": 9138085911,
+                "allowanceBytes": {
+                    "appSizeBytes": 479232,
+                    "dmgSizeBytes": 389120,
+                    "executableSizeBytes": 180224,
+                },
+                "summary": {
+                    "appSizeBytes": 745582,
+                    "dmgSizeBytes": 475100,
+                    "executableSizeBytes": 443376,
+                },
             },
-            feature_budget["allowanceBytes"],
-        )
-        self.assertEqual(
-            "ddad4a3efa579caf818693dece9845059fbcd810",
-            feature_budget["evidence"]["sourceCommit"],
-        )
-        self.assertEqual(31582412364, feature_budget["evidence"]["workflowRunId"])
-        self.assertEqual(9135807459, feature_budget["evidence"]["artifactId"])
-        self.assertEqual(
-            {
-                "appSizeBytes": 724814,
-                "dmgSizeBytes": 474960,
-                "executableSizeBytes": 422608,
+            "regression-ui-automation-foundation-size-budget.json": {
+                "featureId": "regression-ui-automation-foundation",
+                "sourceCommit": "e9d414e094ee2ea5f72815078210e4dda9163aec",
+                "workflowRunId": 31842940616,
+                "artifactId": 9235015770,
+                "allowanceBytes": {
+                    "appSizeBytes": 479232,
+                    "dmgSizeBytes": 397312,
+                    "executableSizeBytes": 184320,
+                },
+                "summary": {
+                    "appSizeBytes": 748863,
+                    "dmgSizeBytes": 483851,
+                    "executableSizeBytes": 446656,
+                },
             },
-            feature_budget["evidence"]["summary"],
-        )
-        self.assertEqual(
-            [],
-            compare_size_summary_to_feature_budget(
-                feature_budget["evidence"]["summary"],
-                baseline,
-                feature_budget,
-            ),
-        )
+        }
 
-    def test_repository_m6_6_compact_command_budget_is_provenanced_tight_and_self_validating(self):
-        baseline = json.loads(
-            (REPOSITORY_ROOT / "performance" / "baseline-v0.1.0.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        feature_budget = json.loads(
-            (
-                REPOSITORY_ROOT
-                / "performance"
-                / "m6-6-compact-command-size-budget.json"
-            ).read_text(encoding="utf-8")
-        )
+        for file_name, contract in expected.items():
+            with self.subTest(file_name=file_name):
+                feature_budget = json.loads(
+                    (REPOSITORY_ROOT / "performance" / file_name).read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertEqual(1, feature_budget["schemaVersion"])
+                self.assertEqual("v0.1.0", feature_budget["baselineId"])
+                self.assertEqual(contract["featureId"], feature_budget["featureId"])
+                self.assertEqual(
+                    contract["sourceCommit"],
+                    feature_budget["evidence"]["sourceCommit"],
+                )
+                self.assertEqual(
+                    contract["workflowRunId"],
+                    feature_budget["evidence"]["workflowRunId"],
+                )
+                self.assertEqual(
+                    contract["artifactId"],
+                    feature_budget["evidence"]["artifactId"],
+                )
+                self.assertEqual(
+                    contract["allowanceBytes"],
+                    feature_budget["allowanceBytes"],
+                )
+                self.assertEqual(
+                    contract["summary"],
+                    feature_budget["evidence"]["summary"],
+                )
+                self.assertEqual(
+                    [],
+                    compare_size_summary_to_feature_budget(
+                        feature_budget["evidence"]["summary"],
+                        baseline,
+                        feature_budget,
+                    ),
+                )
 
-        self.assertEqual("m6.6-compact-command", feature_budget["featureId"])
-        self.assertEqual("v0.1.0", feature_budget["baselineId"])
-        self.assertEqual(
-            {
-                "appSizeBytes": 479232,
-                "dmgSizeBytes": 389120,
-                "executableSizeBytes": 180224,
-            },
-            feature_budget["allowanceBytes"],
-        )
-        self.assertEqual(
-            "55f2ee429932b68ed7a02c3750cd28a28c9bd3d9",
-            feature_budget["evidence"]["sourceCommit"],
-        )
-        self.assertEqual(31588206985, feature_budget["evidence"]["workflowRunId"])
-        self.assertEqual(9138085911, feature_budget["evidence"]["artifactId"])
-        self.assertEqual(
-            {
-                "appSizeBytes": 745582,
-                "dmgSizeBytes": 475100,
-                "executableSizeBytes": 443376,
-            },
-            feature_budget["evidence"]["summary"],
-        )
-        self.assertEqual(
-            [],
-            compare_size_summary_to_feature_budget(
-                feature_budget["evidence"]["summary"],
-                baseline,
-                feature_budget,
-            ),
-        )
-
-    def test_ci_uses_m6_6_compact_command_feature_budget_over_immutable_baseline(self):
+    def test_ci_uses_current_foundation_feature_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -485,21 +418,16 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-compact-command-size-budget.json",
+            "--feature-budget performance/regression-ui-automation-foundation-size-budget.json",
             workflow,
         )
-        self.assertNotIn(
-            "--feature-budget performance/m6-6-gesture-engine-size-budget.json",
-            workflow,
-        )
-        self.assertNotIn(
-            "--feature-budget performance/m6-6-one-shot-lifecycle-size-budget.json",
-            workflow,
-        )
-        self.assertNotIn(
-            "--feature-budget performance/m6-5-media-first-ui-size-budget.json",
-            workflow,
-        )
+        for historical in (
+            "m6-6-compact-command-size-budget.json",
+            "m6-6-gesture-engine-size-budget.json",
+            "m6-6-one-shot-lifecycle-size-budget.json",
+            "m6-5-media-first-ui-size-budget.json",
+        ):
+            self.assertNotIn(f"--feature-budget performance/{historical}", workflow)
         self.assertNotIn(
             "check-size-budget \\\n            --summary build/perf-size.json",
             workflow,

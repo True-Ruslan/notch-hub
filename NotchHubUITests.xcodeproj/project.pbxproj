@@ -1,0 +1,187 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		100000000000000000000001 /* UITestHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000001 /* UITestHostApp.swift */; };
+		100000000000000000000002 /* NotchHubUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* NotchHubUITests.swift */; };
+		100000000000000000000003 /* NotchHubUIApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* NotchHubUIApplication.swift */; };
+		100000000000000000000004 /* NotchHubUIAssertions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000006 /* NotchHubUIAssertions.swift */; };
+		100000000000000000000005 /* NotchHubUIDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000007 /* NotchHubUIDiagnostics.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		300000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 400000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 500000000000000000000001;
+			remoteInfo = NotchHubUITestHost;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		200000000000000000000001 /* UITestHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestHostApp.swift; sourceTree = "<group>"; };
+		200000000000000000000002 /* NotchHubUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchHubUITests.swift; sourceTree = "<group>"; };
+		200000000000000000000003 /* NotchHubUIApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchHubUIApplication.swift; sourceTree = "<group>"; };
+		200000000000000000000004 /* NotchHubUITestHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NotchHubUITestHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000005 /* NotchHubUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NotchHubUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000006 /* NotchHubUIAssertions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchHubUIAssertions.swift; sourceTree = "<group>"; };
+		200000000000000000000007 /* NotchHubUIDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchHubUIDiagnostics.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		600000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		600000000000000000000002 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		700000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				700000000000000000000002 /* Tests */,
+				700000000000000000000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		700000000000000000000002 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				700000000000000000000003 /* UITestHost */,
+				700000000000000000000004 /* UITests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		700000000000000000000003 /* UITestHost */ = {
+			isa = PBXGroup;
+			children = (200000000000000000000001 /* UITestHostApp.swift */,);
+			path = UITestHost;
+			sourceTree = "<group>";
+		};
+		700000000000000000000004 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000002 /* NotchHubUITests.swift */,
+				700000000000000000000006 /* Support */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		700000000000000000000006 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000003 /* NotchHubUIApplication.swift */,
+				200000000000000000000006 /* NotchHubUIAssertions.swift */,
+				200000000000000000000007 /* NotchHubUIDiagnostics.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		700000000000000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000004 /* NotchHubUITestHost.app */,
+				200000000000000000000005 /* NotchHubUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		500000000000000000000001 /* NotchHubUITestHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 800000000000000000000002 /* Build configuration list for PBXNativeTarget "NotchHubUITestHost" */;
+			buildPhases = (
+				900000000000000000000001 /* Sources */,
+				600000000000000000000001 /* Frameworks */,
+				900000000000000000000003 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = NotchHubUITestHost;
+			productName = NotchHubUITestHost;
+			productReference = 200000000000000000000004 /* NotchHubUITestHost.app */;
+			productType = "com.apple.product-type.application";
+		};
+		500000000000000000000002 /* NotchHubUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 800000000000000000000003 /* Build configuration list for PBXNativeTarget "NotchHubUITests" */;
+			buildPhases = (
+				900000000000000000000002 /* Sources */,
+				600000000000000000000002 /* Frameworks */,
+				900000000000000000000004 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = (A00000000000000000000001 /* PBXTargetDependency */,);
+			name = NotchHubUITests;
+			productName = NotchHubUITests;
+			productReference = 200000000000000000000005 /* NotchHubUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		400000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					500000000000000000000001 = {CreatedOnToolsVersion = 26.0;};
+					500000000000000000000002 = {CreatedOnToolsVersion = 26.0; TestTargetID = 500000000000000000000001;};
+				};
+			};
+			buildConfigurationList = 800000000000000000000001 /* Build configuration list for PBXProject "NotchHubUITests" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = 700000000000000000000001;
+			productRefGroup = 700000000000000000000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				500000000000000000000001 /* NotchHubUITestHost */,
+				500000000000000000000002 /* NotchHubUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		900000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		900000000000000000000004 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		900000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000001 /* UITestHostApp.swift in Sources */,); runOnlyForDeploymentPostprocessing = 0; };
+		900000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000002 /* NotchHubUITests.swift in Sources */, 100000000000000000000003 /* NotchHubUIApplication.swift in Sources */, 100000000000000000000004 /* NotchHubUIAssertions.swift in Sources */, 100000000000000000000005 /* NotchHubUIDiagnostics.swift in Sources */,); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A00000000000000000000001 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 500000000000000000000001 /* NotchHubUITestHost */; targetProxy = 300000000000000000000001 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		B00000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 6.0;}; name = Debug;};
+		B00000000000000000000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 6.0;}; name = Release;};
+		B00000000000000000000003 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = ru.trueruslan.notchhub.uitesthost; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 6.0;}; name = Debug;};
+		B00000000000000000000004 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = ru.trueruslan.notchhub.uitesthost; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 6.0;}; name = Release;};
+		B00000000000000000000005 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; GENERATE_INFOPLIST_FILE = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks"; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = ru.trueruslan.notchhub.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 6.0; TEST_TARGET_NAME = NotchHubUITestHost;}; name = Debug;};
+		B00000000000000000000006 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; GENERATE_INFOPLIST_FILE = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks"; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = ru.trueruslan.notchhub.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 6.0; TEST_TARGET_NAME = NotchHubUITestHost;}; name = Release;};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		800000000000000000000001 /* Build configuration list for PBXProject "NotchHubUITests" */ = {isa = XCConfigurationList; buildConfigurations = (B00000000000000000000001 /* Debug */, B00000000000000000000002 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+		800000000000000000000002 /* Build configuration list for PBXNativeTarget "NotchHubUITestHost" */ = {isa = XCConfigurationList; buildConfigurations = (B00000000000000000000003 /* Debug */, B00000000000000000000004 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+		800000000000000000000003 /* Build configuration list for PBXNativeTarget "NotchHubUITests" */ = {isa = XCConfigurationList; buildConfigurations = (B00000000000000000000005 /* Debug */, B00000000000000000000006 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+/* End XCConfigurationList section */
+	};
+	rootObject = 400000000000000000000001 /* Project object */;
+}

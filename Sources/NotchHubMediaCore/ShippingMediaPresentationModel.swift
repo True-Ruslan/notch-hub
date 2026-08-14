@@ -97,6 +97,12 @@ public final class ShippingMediaPresentationModel: ObservableObject {
         setPresentation(nil)
     }
 
+    #if NOTCHHUB_UI_TESTING
+        public func applyUITestPresentation(_ presentation: ShippingMediaPresentation?) {
+            setPresentation(presentation)
+        }
+    #endif
+
     private func setPresentation(_ newPresentation: ShippingMediaPresentation?) {
         guard presentation != newPresentation else {
             return

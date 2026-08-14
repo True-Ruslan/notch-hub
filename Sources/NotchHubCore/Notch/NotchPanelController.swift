@@ -38,88 +38,183 @@ public final class NotchPanelController: NSObject {
         }
     }
 
-    public init(contentFactory: @escaping NotchPanelContentFactory) {
-        let screen = NSScreen.main ?? NSScreen.screens[0]
-        let resolvedLayout = NotchGeometry.layout(
-            for: ScreenGeometryInput(screen: screen)
-        )
-        let layoutState = NotchPanelLayoutState(baseLayout: resolvedLayout)
-        let model = NotchPanelModel()
-        let panel = NSPanel(
-            contentRect: resolvedLayout.compactFrame,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        let hostingView = contentFactory(model, resolvedLayout)
-        panel.contentView = hostingView
-
-        let workspace = NSWorkspace.shared
-        let initialReduceMotion = workspace.accessibilityDisplayShouldReduceMotion
-        let haptics = AppKitNotchHapticPerformer()
-        let transitionCoordinator = NotchPanelTransitionCoordinator(
-            model: model,
-            animationDuration: {
-                notchAnimationDuration(
-                    reduceMotion: workspace.accessibilityDisplayShouldReduceMotion
-                )
-            },
-            animate: { frame, cornerRadius, duration, completion in
-                animateNotchPanel(
-                    panel: panel,
-                    chromeView: hostingView,
-                    frame: frame,
-                    cornerRadius: cornerRadius,
-                    duration: duration,
-                    completion: completion
-                )
-            },
-            cancelAnimation: {
-                cancelNotchPanelAnimation(chromeView: hostingView)
-            },
-            performExpansionHaptic: {
-                haptics.performExpansionHaptic()
-            },
-            applyInteractivePresentation: { frame, cornerRadius in
-                applyInteractiveNotchPanelPresentation(
-                    panel: panel,
-                    chromeView: hostingView,
-                    frame: frame,
-                    cornerRadius: cornerRadius
-                )
-            }
-        )
-        let interactionCoordinator = NotchInteractionCoordinator(
-            scheduleActivation: { delaySeconds, action in
-                let workItem = DispatchWorkItem {
-                    MainActor.assumeIsolated {
-                        action()
-                    }
+    #if NOTCHHUB_UI_TESTING
+        public convenience init(contentFactory: @escaping NotchPanelContentFactory) {
+            let haptics = AppKitNotchHapticPerformer()
+            self.init(
+                contentFactory: contentFactory,
+                performExpansionHaptic: {
+                    haptics.performExpansionHaptic()
                 }
-                DispatchQueue.main.asyncAfter(
-                    deadline: .now() + delaySeconds,
-                    execute: workItem
-                )
-                return { workItem.cancel() }
-            },
-            emitIntent: { intent in
-                transitionCoordinator.accept(intent, layout: layoutState.currentLayout)
-            }
-        )
+            )
+        }
 
-        self.panel = panel
-        self.interactionCoordinator = interactionCoordinator
-        self.transitionCoordinator = transitionCoordinator
-        self.pointerMonitor = NotchPointerMonitor()
-        self.layoutState = layoutState
-        self.reduceMotionEnabled = initialReduceMotion
+        public init(
+            contentFactory: @escaping NotchPanelContentFactory,
+            performExpansionHaptic: @escaping @MainActor () -> Void
+        ) {
+            let screen = NSScreen.main ?? NSScreen.screens[0]
+            let resolvedLayout = NotchGeometry.layout(
+                for: ScreenGeometryInput(screen: screen)
+            )
+            let layoutState = NotchPanelLayoutState(baseLayout: resolvedLayout)
+            let model = NotchPanelModel()
+            let panel = NSPanel(
+                contentRect: resolvedLayout.compactFrame,
+                styleMask: [.borderless, .nonactivatingPanel],
+                backing: .buffered,
+                defer: false
+            )
+            let hostingView = contentFactory(model, resolvedLayout)
+            panel.contentView = hostingView
 
-        super.init()
+            let workspace = NSWorkspace.shared
+            let initialReduceMotion = workspace.accessibilityDisplayShouldReduceMotion
+            let transitionCoordinator = NotchPanelTransitionCoordinator(
+                model: model,
+                animationDuration: {
+                    notchAnimationDuration(
+                        reduceMotion: workspace.accessibilityDisplayShouldReduceMotion
+                    )
+                },
+                animate: { frame, cornerRadius, duration, completion in
+                    animateNotchPanel(
+                        panel: panel,
+                        chromeView: hostingView,
+                        frame: frame,
+                        cornerRadius: cornerRadius,
+                        duration: duration,
+                        completion: completion
+                    )
+                },
+                cancelAnimation: {
+                    cancelNotchPanelAnimation(chromeView: hostingView)
+                },
+                performExpansionHaptic: performExpansionHaptic,
+                applyInteractivePresentation: { frame, cornerRadius in
+                    applyInteractiveNotchPanelPresentation(
+                        panel: panel,
+                        chromeView: hostingView,
+                        frame: frame,
+                        cornerRadius: cornerRadius
+                    )
+                }
+            )
+            let interactionCoordinator = NotchInteractionCoordinator(
+                scheduleActivation: { delaySeconds, action in
+                    let workItem = DispatchWorkItem {
+                        MainActor.assumeIsolated {
+                            action()
+                        }
+                    }
+                    DispatchQueue.main.asyncAfter(
+                        deadline: .now() + delaySeconds,
+                        execute: workItem
+                    )
+                    return { workItem.cancel() }
+                },
+                emitIntent: { intent in
+                    transitionCoordinator.accept(intent, layout: layoutState.currentLayout)
+                }
+            )
 
-        configureAccessibilityObservation()
-        configurePanel()
-        configurePointerMonitoring()
-    }
+            self.panel = panel
+            self.interactionCoordinator = interactionCoordinator
+            self.transitionCoordinator = transitionCoordinator
+            self.pointerMonitor = NotchPointerMonitor()
+            self.layoutState = layoutState
+            self.reduceMotionEnabled = initialReduceMotion
+
+            super.init()
+
+            configureAccessibilityObservation()
+            configurePanel()
+            configurePointerMonitoring()
+        }
+    #else
+        public init(contentFactory: @escaping NotchPanelContentFactory) {
+            let screen = NSScreen.main ?? NSScreen.screens[0]
+            let resolvedLayout = NotchGeometry.layout(
+                for: ScreenGeometryInput(screen: screen)
+            )
+            let layoutState = NotchPanelLayoutState(baseLayout: resolvedLayout)
+            let model = NotchPanelModel()
+            let panel = NSPanel(
+                contentRect: resolvedLayout.compactFrame,
+                styleMask: [.borderless, .nonactivatingPanel],
+                backing: .buffered,
+                defer: false
+            )
+            let hostingView = contentFactory(model, resolvedLayout)
+            panel.contentView = hostingView
+
+            let workspace = NSWorkspace.shared
+            let initialReduceMotion = workspace.accessibilityDisplayShouldReduceMotion
+            let haptics = AppKitNotchHapticPerformer()
+            let transitionCoordinator = NotchPanelTransitionCoordinator(
+                model: model,
+                animationDuration: {
+                    notchAnimationDuration(
+                        reduceMotion: workspace.accessibilityDisplayShouldReduceMotion
+                    )
+                },
+                animate: { frame, cornerRadius, duration, completion in
+                    animateNotchPanel(
+                        panel: panel,
+                        chromeView: hostingView,
+                        frame: frame,
+                        cornerRadius: cornerRadius,
+                        duration: duration,
+                        completion: completion
+                    )
+                },
+                cancelAnimation: {
+                    cancelNotchPanelAnimation(chromeView: hostingView)
+                },
+                performExpansionHaptic: {
+                    haptics.performExpansionHaptic()
+                },
+                applyInteractivePresentation: { frame, cornerRadius in
+                    applyInteractiveNotchPanelPresentation(
+                        panel: panel,
+                        chromeView: hostingView,
+                        frame: frame,
+                        cornerRadius: cornerRadius
+                    )
+                }
+            )
+            let interactionCoordinator = NotchInteractionCoordinator(
+                scheduleActivation: { delaySeconds, action in
+                    let workItem = DispatchWorkItem {
+                        MainActor.assumeIsolated {
+                            action()
+                        }
+                    }
+                    DispatchQueue.main.asyncAfter(
+                        deadline: .now() + delaySeconds,
+                        execute: workItem
+                    )
+                    return { workItem.cancel() }
+                },
+                emitIntent: { intent in
+                    transitionCoordinator.accept(intent, layout: layoutState.currentLayout)
+                }
+            )
+
+            self.panel = panel
+            self.interactionCoordinator = interactionCoordinator
+            self.transitionCoordinator = transitionCoordinator
+            self.pointerMonitor = NotchPointerMonitor()
+            self.layoutState = layoutState
+            self.reduceMotionEnabled = initialReduceMotion
+
+            super.init()
+
+            configureAccessibilityObservation()
+            configurePanel()
+            configurePointerMonitoring()
+        }
+    #endif
 
     public func show() {
         panel.orderFrontRegardless()
