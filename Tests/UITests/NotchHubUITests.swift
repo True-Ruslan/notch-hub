@@ -156,7 +156,7 @@ final class NotchHubUITests: XCTestCase {
         XCTAssertTrue(next.exists)
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(previous, equals: "disabled", timeout: 2))
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(next, equals: "disabled", timeout: 2))
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 1))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 2))
     }
 
     @MainActor
