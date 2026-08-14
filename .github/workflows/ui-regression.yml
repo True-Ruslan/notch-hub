@@ -36,6 +36,9 @@ jobs:
       - name: Validate UI fixture isolation policy
         run: python3 scripts/test_ui_automation_policy.py -v
 
+      - name: Audit acceptance coverage
+        run: python3 scripts/test_acceptance_coverage.py --mode audit
+
       - name: List UI test project
         run: xcodebuild -list -project NotchHubUITests.xcodeproj
 
