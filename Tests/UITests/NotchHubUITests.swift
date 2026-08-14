@@ -20,7 +20,7 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.app.otherElements["notch.surface.compact"]
+        let compact = subject.app.groups["notch.surface.compact"]
         let exists = NotchHubUIAssertions.waitUntilExists(compact, timeout: 2)
         if !exists {
             NotchHubUIDiagnostics.attachFailureState(
@@ -42,12 +42,12 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.app.otherElements["notch.surface.compact"]
+        let compact = subject.app.groups["notch.surface.compact"]
         XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
 
         compact.hover()
 
-        let expanded = subject.app.otherElements["notch.surface.expanded"]
+        let expanded = subject.app.groups["notch.surface.expanded"]
         let title = subject.app.staticTexts["media.title"]
         let artist = subject.app.staticTexts["media.artist"]
         let source = subject.app.staticTexts["media.source"]
@@ -76,11 +76,11 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.app.otherElements["notch.surface.compact"]
+        let compact = subject.app.groups["notch.surface.compact"]
         XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
         compact.hover()
 
-        let expanded = subject.app.otherElements["notch.surface.expanded"]
+        let expanded = subject.app.groups["notch.surface.expanded"]
         let title = subject.app.staticTexts["media.title"]
         let previous = subject.app.buttons["media.previous"]
         let playPause = subject.app.buttons["media.playPause"]
