@@ -189,6 +189,223 @@
       "physicalOnlyReason": null
     },
     {
+      "id": "NH-MEDIA-BRIDGE-001",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "policy",
+          "test": "MediaBridgeProbeCITests.test_verifier_rejects_restrictive_mode_without_app_sandbox_and_hardened_runtime"
+        },
+        {
+          "layer": "shipping",
+          "test": "MediaBridgeProbeAcceptanceTests.test_ci_builds_archived_probe_candidate_from_exact_commit"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Historical target-Mac launch and direct preflight evidence on exact M6.1 candidate cda05bb665635ecfee978cb6b7fa0d486e8679ff cannot be reproduced deterministically in public CI."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-002",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "integration",
+          "test": "MediaBridgeProbeCoreTests.ProbeProcessTests.startTwiceCreatesOneStreamProcess"
+        },
+        {
+          "layer": "policy",
+          "test": "MediaBridgeProbeAcceptanceTests.test_probe_process_launch_is_event_driven_not_automatic_polling"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Historical real Now Playing observation on the target Mac proves system integration; deterministic tests cover the event-driven single-process ownership semantics."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-003",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Yandex Music compatibility was accepted against the real player on the exact M6.1 target-Mac candidate and cannot be reproduced deterministically in public CI."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-004",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "deferred",
+      "coverage": [],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-005",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "deferred",
+      "coverage": [],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-006",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Chrome/browser media compatibility was accepted against real browser playback on the exact M6.1 target-Mac candidate and is not deterministic in public CI."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-007",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "deferred",
+      "coverage": [],
+      "physicalOnlyReason": null
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-008",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeObservationEvidenceTests.sourceSwitchCountChangesOnlyForDifferentObservedBundleIdentifier"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Deterministic tests prove source-switch accounting; historical target-Mac evidence proves switching between real media sources."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-009",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaPayloadTests.decodesNoDiffMicrosPayloadWithoutRetainingArtworkBytes"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaPayloadTests.rejectsOversizedArtworkAfterBase64Decode"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Deterministic tests prove bounded artwork payload handling; historical target-Mac evidence proves artwork from a real media session."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-010",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaCommandTests.togglePlayPauseMapsToCommandTwo"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Typed command mapping is deterministic; historical target-Mac evidence proves play/pause against a real media source."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-011",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaCommandTests.nextMapsToCommandFour"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaCommandTests.previousMapsToCommandFive"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Typed previous/next mappings are deterministic; historical target-Mac evidence proves both commands against a real player."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-012",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaCommandTests.seekMapsToPositiveMicroseconds"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaCommandTests.seekRejectsZero"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaCommandTests.seekRejectsValuesBeyondThirtyDays"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Typed bounded seek validation is deterministic; historical target-Mac evidence proves seek against a real media source."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-013",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeObservationEvidenceTests.noSessionCountsAsDisappearanceOnlyAfterObservedSession"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaPayloadTests.emptyPayloadMeansNoActiveSession"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Deterministic tests prove no-session and disappearance semantics; historical target-Mac evidence proves real-session disappearance behavior."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-014",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "integration",
+          "test": "MediaBridgeProbeCoreTests.ProbeProcessTests.stopTerminatesAndWaitsForTheOwnedProcess"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Process teardown ownership is deterministic; historical target-Mac evidence proves clean teardown of the real adapter process."
+    },
+    {
       "id": "NH-MEDIA-BRIDGE-015",
       "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
       "status": "accepted",
@@ -196,9 +413,93 @@
         {
           "layer": "unit",
           "test": "MediaBridgeProbeCoreTests.ProbeProcessTests.nonzeroExitTransitionsToFailedWithoutAutomaticLoop"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeProcessTests.oversizedStdoutLineStopsTheStreamAsProtocolFailure"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeProcessTests.oneShotCommandTimeoutTerminatesAndFailsClosed"
+        },
+        {
+          "layer": "physical",
+          "test": null
         }
       ],
-      "physicalOnlyReason": null
+      "physicalOnlyReason": "Fail-closed process semantics are deterministic; historical target-Mac evidence proves forced real-adapter failure did not create an automatic restart loop."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-016",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaCapabilitiesTests.decodesAuthoritativeTriStateCapabilities"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeMediaCapabilitiesTests.rejectsExpandedOrUnknownCapabilitySurface"
+        },
+        {
+          "layer": "policy",
+          "test": "MediaBridgeProbeAcceptanceTests.test_probe_capability_patch_is_separately_pinned"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Capability parsing and allowlist integrity are deterministic; historical target-Mac evidence proves authoritative capability truth from the real adapter."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-017",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "policy",
+          "test": "MediaBridgeProbeAcceptanceTests.test_probe_has_no_permission_api_surface"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Static policy proves no sensitive permission API surface; absence of actual Accessibility/Input Monitoring/Automation/Screen Recording prompts was confirmed on the target Mac."
+    },
+    {
+      "id": "NH-MEDIA-BRIDGE-018",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "policy",
+          "test": "MediaBridgeProbeAcceptanceTests.test_probe_source_does_not_directly_load_private_framework"
+        },
+        {
+          "layer": "policy",
+          "test": "MediaBridgeProbeAcceptanceTests.test_probe_uses_process_boundary_and_public_parsing"
+        },
+        {
+          "layer": "policy",
+          "test": "MediaBridgeProbeAcceptanceTests.test_probe_process_client_uses_fixed_runtime_assets"
+        },
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeProcessTests.commandProcessUsesFixedPerlExecutableAndAllowlistedArguments"
+        },
+        {
+          "layer": "shipping",
+          "test": "MediaBridgeProbeAcceptanceTests.test_ci_builds_archived_probe_candidate_from_exact_commit"
+        },
+        {
+          "layer": "physical",
+          "test": null
+        }
+      ],
+      "physicalOnlyReason": "Automated evidence proves the fixed external process boundary and exact archived candidate; historical target-Mac evidence confirms the shipping process path at runtime."
     },
     {
       "id": "NH-MOTION-001",
