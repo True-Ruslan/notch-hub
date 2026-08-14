@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from test_acceptance_coverage import _infer_status
+import test_acceptance_coverage as acceptance_coverage
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_APP = (ROOT / "scripts/build-app.sh").read_text(encoding="utf-8")
@@ -45,7 +45,7 @@ class UIAutomationPolicyTests(unittest.TestCase):
 
         self.assertEqual(
             "pending",
-            _infer_status("NH-MEDIA-GESTURE-013", ledger),
+            acceptance_coverage._infer_status("NH-MEDIA-GESTURE-013", ledger),
         )
 
     def test_acceptance_status_parser_does_not_treat_failed_behavior_as_rejection(self):
@@ -58,7 +58,7 @@ class UIAutomationPolicyTests(unittest.TestCase):
 
         self.assertEqual(
             "pending",
-            _infer_status("NH-MEDIA-GESTURE-011", ledger),
+            acceptance_coverage._infer_status("NH-MEDIA-GESTURE-011", ledger),
         )
 
     def test_acceptance_status_parser_still_recognizes_explicit_pass_and_fail_tokens(self):
@@ -69,8 +69,97 @@ class UIAutomationPolicyTests(unittest.TestCase):
 | `NH-TEST-002` | Gate | FAIL |
 """
 
-        self.assertEqual("accepted", _infer_status("NH-TEST-001", passed))
-        self.assertEqual("rejected", _infer_status("NH-TEST-002", failed))
+        self.assertEqual("accepted", acceptance_coverage._infer_status("NH-TEST-001", passed))
+        self.assertEqual("rejected", acceptance_coverage._infer_status("NH-TEST-002", failed))
+
+    def test_acceptance_supersession_requires_accepted_source_existing_target_and_design(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            decision = root / "docs/superpowers/specs/peek-design.md"
+            decision.parent.mkdir(parents=True)
+            decision.write_text(
+                "Approved design. This document supersedes earlier M1 hover behavior.\n",
+                encoding="utf-8",
+            )
+            contracts = {
+                "NH-HOVER-001": acceptance_coverage.Contract(
+                    "NH-HOVER-001", root / "old.md", "accepted"
+                ),
+                "NH-MEDIA-PEEK-001": acceptance_coverage.Contract(
+                    "NH-MEDIA-PEEK-001", root / "new.md", "rejected"
+                ),
+            }
+            entries = [
+                {
+                    "id": "NH-HOVER-001",
+                    "supersededBy": "NH-MEDIA-PEEK-001",
+                    "decisionSource": decision.as_posix(),
+                }
+            ]
+
+            supersessions = acceptance_coverage.validate_supersessions(
+                entries,
+                contracts,
+                repository_root=root,
+            )
+
+            self.assertEqual("NH-MEDIA-PEEK-001", supersessions["NH-HOVER-001"]["supersededBy"])
+
+    def test_acceptance_supersession_rejects_nonaccepted_source(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            decision = root / "docs/superpowers/specs/peek-design.md"
+            decision.parent.mkdir(parents=True)
+            decision.write_text("This supersedes earlier behavior.\n", encoding="utf-8")
+            contracts = {
+                "NH-HOVER-001": acceptance_coverage.Contract(
+                    "NH-HOVER-001", root / "old.md", "pending"
+                ),
+                "NH-MEDIA-PEEK-001": acceptance_coverage.Contract(
+                    "NH-MEDIA-PEEK-001", root / "new.md", "pending"
+                ),
+            }
+
+            with self.assertRaisesRegex(acceptance_coverage.CoverageError, "historically accepted"):
+                acceptance_coverage.validate_supersessions(
+                    [
+                        {
+                            "id": "NH-HOVER-001",
+                            "supersededBy": "NH-MEDIA-PEEK-001",
+                            "decisionSource": decision.as_posix(),
+                        }
+                    ],
+                    contracts,
+                    repository_root=root,
+                )
+
+    def test_acceptance_supersession_rejects_missing_or_non_superseding_decision(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            decision = root / "docs/superpowers/specs/peek-design.md"
+            decision.parent.mkdir(parents=True)
+            decision.write_text("Approved design without replacement language.\n", encoding="utf-8")
+            contracts = {
+                "NH-HOVER-001": acceptance_coverage.Contract(
+                    "NH-HOVER-001", root / "old.md", "accepted"
+                ),
+                "NH-MEDIA-PEEK-001": acceptance_coverage.Contract(
+                    "NH-MEDIA-PEEK-001", root / "new.md", "pending"
+                ),
+            }
+
+            with self.assertRaisesRegex(acceptance_coverage.CoverageError, "supersed"):
+                acceptance_coverage.validate_supersessions(
+                    [
+                        {
+                            "id": "NH-HOVER-001",
+                            "supersededBy": "NH-MEDIA-PEEK-001",
+                            "decisionSource": decision.as_posix(),
+                        }
+                    ],
+                    contracts,
+                    repository_root=root,
+                )
 
     def test_shipping_workflows_never_enable_fixture_build(self):
         self.assertNotIn("NOTCHHUB_UI_TESTING=1", CI)
