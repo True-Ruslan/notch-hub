@@ -24,7 +24,7 @@ struct NotchHubUIApplication {
     init(mode: Mode) throws {
         let environment = ProcessInfo.processInfo.environment
         guard let rawPath = environment["NOTCHHUB_UI_APP_PATH"] else {
-            throw XCTSkip("NOTCHHUB_UI_APP_PATH is required")
+            throw Self.configurationError("NOTCHHUB_UI_APP_PATH is required")
         }
         guard let expectedSourceCommit = environment["NOTCHHUB_UI_SOURCE_COMMIT"] else {
             throw Self.configurationError("NOTCHHUB_UI_SOURCE_COMMIT is required")
