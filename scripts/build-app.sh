@@ -58,7 +58,11 @@ fi
 
 cd "$ROOT_DIR"
 # Build only the shipping product. Explicit dead stripping keeps the executable graph minimal.
-swift build -c "$CONFIGURATION" --product NotchHub -Xlinker -dead_strip
+swift_args=(build -c "$CONFIGURATION" --product NotchHub -Xlinker -dead_strip)
+if [[ "${NOTCHHUB_UI_TESTING:-0}" == "1" ]]; then
+    swift_args+=(-Xswiftc -DNOTCHHUB_UI_TESTING)
+fi
+swift "${swift_args[@]}"
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 
 bash "$ROOT_DIR/scripts/bootstrap-media-bridge-probe.sh"

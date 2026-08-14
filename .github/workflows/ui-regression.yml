@@ -14,7 +14,7 @@ jobs:
   macos-ui-regression:
     name: macOS UI regression
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -42,6 +42,15 @@ jobs:
         env:
           SOURCE_COMMIT: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/build-ui-test-app.sh
+
+      - name: Verify shipping artifact excludes UI fixture markers
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: |
+          unset NOTCHHUB_UI_TESTING
+          bash scripts/build-app.sh release
+          python3 scripts/test_ui_automation_policy.py \
+            --verify-shipping-app build/NotchHub.app
 
       - name: Run external application UI smoke
         env:
