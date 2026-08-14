@@ -31,7 +31,6 @@
                 return
             }
             isStarted = false
-            presentationModel.applyUITestPresentation(nil)
         }
 
         func togglePlayPause() {
