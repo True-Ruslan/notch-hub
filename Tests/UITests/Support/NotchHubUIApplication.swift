@@ -8,6 +8,7 @@ struct NotchHubUIApplication {
         case shippingSmoke
         case deterministicMedia
         case mediaHappyPath
+        case mediaUnsupported
 
         var fixture: String {
             switch self {
@@ -15,6 +16,8 @@ struct NotchHubUIApplication {
                 "shipping-smoke"
             case .deterministicMedia, .mediaHappyPath:
                 "media-standard"
+            case .mediaUnsupported:
+                "media-unsupported"
             }
         }
     }
@@ -72,6 +75,10 @@ struct NotchHubUIApplication {
 
     func surface(_ identifier: String) -> XCUIElement {
         app.groups[identifier]
+    }
+
+    func titleElement() -> XCUIElement {
+        app.staticTexts["media.title"]
     }
 
     func waitForStableCompact(timeout: TimeInterval = 2) -> Bool {
