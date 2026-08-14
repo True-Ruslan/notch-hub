@@ -161,6 +161,9 @@ struct MediaNotchRootView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("media.playPause")
+                .accessibilityValue(
+                    presentation.playbackState == .playing ? "playing" : "paused"
+                )
 
                 Button(action: onNext) {
                     Image(systemName: "forward.fill")
