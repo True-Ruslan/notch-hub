@@ -27,7 +27,7 @@ struct NotchHubUIApplication {
             throw XCTSkip("NOTCHHUB_UI_APP_PATH is required")
         }
         guard let expectedSourceCommit = environment["NOTCHHUB_UI_SOURCE_COMMIT"] else {
-            throw configurationError("NOTCHHUB_UI_SOURCE_COMMIT is required")
+            throw Self.configurationError("NOTCHHUB_UI_SOURCE_COMMIT is required")
         }
         guard
             expectedSourceCommit.range(
@@ -35,7 +35,7 @@ struct NotchHubUIApplication {
                 options: .regularExpression
             ) != nil
         else {
-            throw configurationError(
+            throw Self.configurationError(
                 "NOTCHHUB_UI_SOURCE_COMMIT must be an exact lowercase full Git SHA"
             )
         }
@@ -51,10 +51,10 @@ struct NotchHubUIApplication {
             ) as? [String: Any],
             let actualSourceCommit = info["NHSourceCommit"] as? String
         else {
-            throw configurationError("UI test application is missing NHSourceCommit provenance")
+            throw Self.configurationError("UI test application is missing NHSourceCommit provenance")
         }
         guard actualSourceCommit == expectedSourceCommit else {
-            throw configurationError(
+            throw Self.configurationError(
                 "UI test application source mismatch: expected \(expectedSourceCommit), "
                     + "found \(actualSourceCommit)"
             )
@@ -69,7 +69,7 @@ struct NotchHubUIApplication {
         app.launch()
     }
 
-    private func configurationError(_ message: String) -> NSError {
+    private static func configurationError(_ message: String) -> NSError {
         NSError(
             domain: "NotchHubUITests.Configuration",
             code: 1,
