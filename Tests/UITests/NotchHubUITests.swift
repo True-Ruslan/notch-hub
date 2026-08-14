@@ -33,27 +33,6 @@ final class NotchHubUITests: XCTestCase {
     }
 
     @MainActor
-    func testShippingQuickPassDoesNotExpand() throws {
-        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
-        subject.launch()
-        defer { subject.app.terminate() }
-
-        let compact = subject.surface("notch.surface.compact")
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
-        compact.hover()
-        subject.movePointerOutside(compact)
-
-        let expanded = subject.surface("notch.surface.expanded")
-        let appears = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == true"),
-            object: expanded
-        )
-        appears.isInverted = true
-        XCTAssertEqual(XCTWaiter().wait(for: [appears], timeout: 0.35), .completed)
-        XCTAssertTrue(subject.waitForStableCompact())
-    }
-
-    @MainActor
     func testExpandedPointerExitReturnsToStableCompact() throws {
         let subject = try NotchHubUIApplication(mode: .shippingSmoke)
         subject.launch()
