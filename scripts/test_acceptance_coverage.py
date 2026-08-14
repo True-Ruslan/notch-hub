@@ -103,14 +103,21 @@ def _has_status_token(text: str, *tokens: str) -> bool:
     )
 
 
+def _has_explicit_local_status_token(text: str, *tokens: str) -> bool:
+    # Acceptance ledgers record per-ID outcomes with explicit uppercase tokens such as
+    # PASS / FAIL / DEFERRED. Keep this check case-sensitive so ordinary contract prose
+    # like "failed capability" cannot silently redefine the ledger's document status.
+    return any(re.search(rf"\b{re.escape(token)}\b", text) is not None for token in tokens)
+
+
 def _infer_status(identifier: str, text: str) -> str:
     identifier_lines = [line for line in text.splitlines() if identifier in line]
     local = "\n".join(identifier_lines)
-    if _has_status_token(local, "DEFERRED") or "NOT TESTED" in local.upper():
+    if _has_explicit_local_status_token(local, "DEFERRED") or "NOT TESTED" in local:
         return "deferred"
-    if _has_status_token(local, "REJECTED", "FAIL", "FAILED"):
+    if _has_explicit_local_status_token(local, "REJECTED", "FAIL", "FAILED"):
         return "rejected"
-    if _has_status_token(local, "PASS", "PASSED"):
+    if _has_explicit_local_status_token(local, "PASS", "PASSED"):
         return "accepted"
 
     match = STATUS_PATTERN.search(text)
