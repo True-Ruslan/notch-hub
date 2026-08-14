@@ -56,6 +56,23 @@ struct NotchInteractionCoordinatorTests {
     }
 
     @Test
+    func setupSynchronizationNeverEmitsExpansionIntent() {
+        let fixture = makeFixture()
+
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact,
+            allowActivation: false
+        )
+        fixture.scheduler.advance(by: 1, invokeCancelled: true)
+
+        #expect(fixture.requests.isEmpty)
+        #expect(fixture.intents.isEmpty)
+        #expect(fixture.scheduler.pendingCount == 0)
+    }
+
+    @Test
     func hoverDwellEmitsOnePeekRequestAtExactly120Milliseconds() {
         let fixture = makeFixture()
 
