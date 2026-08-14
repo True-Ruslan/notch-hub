@@ -7,6 +7,9 @@ struct MediaAppCompositionPolicyTests {
         let appDelegate = try sourceText(
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
+        let appComposition = try sourceText(
+            relativePath: "Sources/NotchHubApp/AppComposition.swift"
+        )
 
         #expect(appDelegate.contains("private static let mediaCompactWingWidth: CGFloat = 36"))
         #expect(appDelegate.contains("private let mediaPresentationModel = ShippingMediaPresentationModel()"))
@@ -14,11 +17,40 @@ struct MediaAppCompositionPolicyTests {
         #expect(appDelegate.contains("setCompactHorizontalExtension("))
         #expect(appDelegate.contains("NotchPanelController(contentFactory:"))
         #expect(appDelegate.contains("MediaNotchRootView("))
-        #expect(
-            appDelegate.contains(
-                "ShippingMediaRuntime(presentationModel: mediaPresentationModel)"
-            )
+        #expect(appDelegate.contains("private var mediaRuntime: (any MediaRuntimeSession)?"))
+        #expect(!appDelegate.contains("ShippingMediaRuntime(presentationModel: mediaPresentationModel)"))
+        #expect(appComposition.contains("static func shipping() -> Self"))
+        #expect(appComposition.contains("ShippingMediaRuntime(presentationModel: $0)"))
+    }
+
+    @Test
+    func uiTestCompositionIsCompileTimeGuardedAndShippingIsDefault() throws {
+        let appDelegate = try sourceText(
+            relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
+        let appComposition = try sourceText(
+            relativePath: "Sources/NotchHubApp/AppComposition.swift"
+        )
+        let presentationModel = try sourceText(
+            relativePath: "Sources/NotchHubMediaCore/ShippingMediaPresentationModel.swift"
+        )
+
+        #expect(appDelegate.contains("#if NOTCHHUB_UI_TESTING"))
+        #expect(appDelegate.contains("AppComposition.uiTesting(configuration: .current())"))
+        #expect(appDelegate.contains("AppComposition.shipping()"))
+        #expect(appComposition.contains("#if NOTCHHUB_UI_TESTING"))
+        #expect(appComposition.contains("static func uiTesting(configuration: UITestConfiguration) -> Self"))
+        #expect(presentationModel.contains("#if NOTCHHUB_UI_TESTING"))
+        #expect(presentationModel.contains("applyUITestPresentation"))
+
+        for relativePath in [
+            "Sources/NotchHubApp/UITestSupport/UITestConfiguration.swift",
+            "Sources/NotchHubApp/UITestSupport/UITestMediaRuntime.swift"
+        ] {
+            let source = try sourceText(relativePath: relativePath)
+            #expect(source.contains("#if NOTCHHUB_UI_TESTING"))
+            #expect(source.contains("#endif"))
+        }
     }
 
     @Test

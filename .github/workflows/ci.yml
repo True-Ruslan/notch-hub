@@ -267,6 +267,9 @@ jobs:
           test_media_bridge_probe_acceptance.py
           test_media_bridge_probe_ci.py)
 
+      - name: Verify strict acceptance traceability
+        run: python3 scripts/test_acceptance_coverage.py --mode strict
+
       - name: Performance policy audit
         run: python3 scripts/performance_policy.py audit Sources
 
@@ -418,7 +421,7 @@ jobs:
           python3 scripts/performance_policy.py check-size-feature-budget \
             --summary build/perf-size.json \
             --baseline performance/baseline-v0.1.0.json \
-            --feature-budget performance/m6-6-hover-peek-size-budget.json
+            --feature-budget performance/regression-ui-automation-foundation-size-budget.json
 
       - name: Performance harness compatibility smoke
         run: |
@@ -471,3 +474,68 @@ jobs:
           name: NotchHub-dmg
           path: build/NotchHub.dmg
           if-no-files-found: error
+
+  macos-ui-regression:
+    name: macOS UI regression
+    runs-on: macos-26
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Report platform
+        run: |
+          sw_vers
+          xcode-select -p
+          xcodebuild -version
+          swift --version
+
+      - name: Validate UI test project policy
+        run: python3 scripts/test_ui_project_policy.py -v
+
+      - name: Validate UI fixture isolation policy
+        run: python3 scripts/test_ui_automation_policy.py -v
+
+      - name: Verify strict acceptance traceability
+        run: python3 scripts/test_acceptance_coverage.py --mode strict
+
+      - name: List UI test project
+        run: xcodebuild -list -project NotchHubUITests.xcodeproj
+
+      - name: Build exact UI test application
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/build-ui-test-app.sh
+
+      - name: Verify shipping artifact excludes UI fixture markers
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          unset NOTCHHUB_UI_TESTING
+          bash scripts/build-app.sh release
+          python3 scripts/test_ui_automation_policy.py \
+            --verify-shipping-app build/NotchHub.app
+
+      - name: Run external application UI smoke
+        env:
+          TEST_RUNNER_NOTCHHUB_UI_APP_PATH: ${{ github.workspace }}/build/ui-test/NotchHub.app
+          TEST_RUNNER_NOTCHHUB_UI_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          rm -rf build/NotchHubUITests-smoke.xcresult
+          xcodebuild test \
+            -project NotchHubUITests.xcodeproj \
+            -scheme NotchHubUITests \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/ui-derived \
+            -resultBundlePath build/NotchHubUITests-smoke.xcresult
+
+      - name: Upload UI diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NotchHub-UI-smoke-xcresult
+          path: build/NotchHubUITests-smoke.xcresult
+          if-no-files-found: warn

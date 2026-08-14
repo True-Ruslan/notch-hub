@@ -41,24 +41,32 @@ class ShippingMediaCompositionPolicyTests(unittest.TestCase):
 
     def test_application_composition_root_owns_shell_and_media_lifecycle(self):
         app_delegate = REPOSITORY_ROOT / "Sources" / "NotchHubApp" / "AppDelegate.swift"
+        app_composition = REPOSITORY_ROOT / "Sources" / "NotchHubApp" / "AppComposition.swift"
         legacy_delegate = REPOSITORY_ROOT / "Sources" / "NotchHubCore" / "App" / "AppDelegate.swift"
 
         self.assertTrue(app_delegate.is_file(), "shipping AppDelegate must live in NotchHubApp")
+        self.assertTrue(app_composition.is_file(), "shipping runtime factory must live in NotchHubApp")
         self.assertFalse(legacy_delegate.exists(), "composition root must not remain in NotchHubCore")
 
-        source = app_delegate.read_text(encoding="utf-8")
+        delegate_source = app_delegate.read_text(encoding="utf-8")
+        composition_source = app_composition.read_text(encoding="utf-8")
         for fragment in (
             "import NotchHubCore",
             "import NotchHubMediaCore",
             "NotchPanelController",
-            "ShippingMediaRuntime",
+            "composition.makeMediaRuntime(mediaPresentationModel)",
             "mediaRuntime.start()",
             "mediaRuntime?.stop()",
         ):
             with self.subTest(fragment=fragment):
-                self.assertIn(fragment, source)
+                self.assertIn(fragment, delegate_source)
 
-        self.assertLess(source.index("mediaRuntime?.stop()"), source.index("mediaRuntime = nil"))
+        self.assertIn("static func shipping() -> Self", composition_source)
+        self.assertIn("ShippingMediaRuntime(presentationModel: $0)", composition_source)
+        self.assertLess(
+            delegate_source.index("mediaRuntime?.stop()"),
+            delegate_source.index("mediaRuntime = nil"),
+        )
 
     def test_info_plist_reserves_exact_shipping_provenance_keys(self):
         path = REPOSITORY_ROOT / "Resources" / "Info.plist"
