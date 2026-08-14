@@ -7,65 +7,55 @@ import Testing
 extension NotchInteractionCoordinatorTests {
     @Test
     func quickTransitBeforeThresholdDoesNotEmitIntent() {
-        let scheduler = HistoricalM1ActivationScheduler()
-        var requests: [NotchHoverPeekRequest] = []
-        var intents: [NotchInteractionIntent] = []
-        let coordinator = makeHistoricalM1Coordinator(
-            scheduler: scheduler,
-            requests: &requests,
-            intents: &intents
-        )
+        let fixture = makeHistoricalM1Fixture()
         let layout = historicalM1Layout()
 
-        coordinator.pointerMoved(
+        fixture.coordinator.pointerMoved(
             to: CGPoint(x: 500, y: 884),
             layout: layout,
             currentPresentation: .compact
         )
-        scheduler.advance(by: 0.08)
-        coordinator.pointerMoved(
+        fixture.scheduler.advance(by: 0.08)
+        fixture.coordinator.pointerMoved(
             to: CGPoint(x: 100, y: 500),
             layout: layout,
             currentPresentation: .compact
         )
-        scheduler.advance(by: 1, invokeCancelled: true)
+        fixture.scheduler.advance(by: 1, invokeCancelled: true)
 
-        #expect(requests.isEmpty)
-        #expect(intents.isEmpty)
-        #expect(scheduler.pendingCount == 0)
+        #expect(fixture.recorder.requests.isEmpty)
+        #expect(fixture.recorder.intents.isEmpty)
+        #expect(fixture.scheduler.pendingCount == 0)
     }
 
     @Test
     func expandedRetentionEmitsNoIntent() {
-        let scheduler = HistoricalM1ActivationScheduler()
-        var requests: [NotchHoverPeekRequest] = []
-        var intents: [NotchInteractionIntent] = []
-        let coordinator = makeHistoricalM1Coordinator(
-            scheduler: scheduler,
-            requests: &requests,
-            intents: &intents
-        )
+        let fixture = makeHistoricalM1Fixture()
         let layout = historicalM1Layout()
 
-        coordinator.pointerMoved(
+        fixture.coordinator.pointerMoved(
             to: CGPoint(x: 300, y: 760),
             layout: layout,
             currentPresentation: .expanded
         )
 
-        #expect(requests.isEmpty)
-        #expect(intents.isEmpty)
-        #expect(scheduler.pendingCount == 0)
+        #expect(fixture.recorder.requests.isEmpty)
+        #expect(fixture.recorder.intents.isEmpty)
+        #expect(fixture.scheduler.pendingCount == 0)
     }
 }
 
 @MainActor
-private func makeHistoricalM1Coordinator(
-    scheduler: HistoricalM1ActivationScheduler,
-    requests: inout [NotchHoverPeekRequest],
-    intents: inout [NotchInteractionIntent]
-) -> NotchInteractionCoordinator {
-    let recorder = HistoricalM1InteractionRecorder(requests: requests, intents: intents)
+private struct HistoricalM1Fixture {
+    let scheduler: HistoricalM1ActivationScheduler
+    let recorder: HistoricalM1InteractionRecorder
+    let coordinator: NotchInteractionCoordinator
+}
+
+@MainActor
+private func makeHistoricalM1Fixture() -> HistoricalM1Fixture {
+    let scheduler = HistoricalM1ActivationScheduler()
+    let recorder = HistoricalM1InteractionRecorder()
     let coordinator = NotchInteractionCoordinator(
         scheduleActivation: { delaySeconds, action in
             scheduler.schedule(after: delaySeconds, action: action)
@@ -79,9 +69,11 @@ private func makeHistoricalM1Coordinator(
             recorder.intents.append(intent)
         }
     )
-    requests = recorder.requests
-    intents = recorder.intents
-    return coordinator
+    return HistoricalM1Fixture(
+        scheduler: scheduler,
+        recorder: recorder,
+        coordinator: coordinator
+    )
 }
 
 private func historicalM1Layout() -> NotchLayout {
@@ -96,13 +88,8 @@ private func historicalM1Layout() -> NotchLayout {
 
 @MainActor
 private final class HistoricalM1InteractionRecorder {
-    var requests: [NotchHoverPeekRequest]
-    var intents: [NotchInteractionIntent]
-
-    init(requests: [NotchHoverPeekRequest], intents: [NotchInteractionIntent]) {
-        self.requests = requests
-        self.intents = intents
-    }
+    var requests: [NotchHoverPeekRequest] = []
+    var intents: [NotchInteractionIntent] = []
 }
 
 @MainActor
