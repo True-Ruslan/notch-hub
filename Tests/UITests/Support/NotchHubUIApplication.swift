@@ -19,19 +19,61 @@ struct NotchHubUIApplication {
     }
 
     let app: XCUIApplication
+    let sourceCommit: String
 
     init(mode: Mode) throws {
-        guard let rawPath = ProcessInfo.processInfo.environment["NOTCHHUB_UI_APP_PATH"] else {
+        let environment = ProcessInfo.processInfo.environment
+        guard let rawPath = environment["NOTCHHUB_UI_APP_PATH"] else {
             throw XCTSkip("NOTCHHUB_UI_APP_PATH is required")
         }
+        guard let expectedSourceCommit = environment["NOTCHHUB_UI_SOURCE_COMMIT"] else {
+            throw configurationError("NOTCHHUB_UI_SOURCE_COMMIT is required")
+        }
+        guard
+            expectedSourceCommit.range(
+                of: #"^[0-9a-f]{40}$"#,
+                options: .regularExpression
+            ) != nil
+        else {
+            throw configurationError(
+                "NOTCHHUB_UI_SOURCE_COMMIT must be an exact lowercase full Git SHA"
+            )
+        }
 
-        app = XCUIApplication(
-            url: URL(fileURLWithPath: rawPath, isDirectory: true)
-        )
+        let appURL = URL(fileURLWithPath: rawPath, isDirectory: true)
+        let infoURL = appURL.appendingPathComponent("Contents/Info.plist")
+        let data = try Data(contentsOf: infoURL)
+        guard
+            let info = try PropertyListSerialization.propertyList(
+                from: data,
+                options: [],
+                format: nil
+            ) as? [String: Any],
+            let actualSourceCommit = info["NHSourceCommit"] as? String
+        else {
+            throw configurationError("UI test application is missing NHSourceCommit provenance")
+        }
+        guard actualSourceCommit == expectedSourceCommit else {
+            throw configurationError(
+                "UI test application source mismatch: expected \(expectedSourceCommit), "
+                    + "found \(actualSourceCommit)"
+            )
+        }
+
+        sourceCommit = actualSourceCommit
+        app = XCUIApplication(url: appURL)
         app.launchEnvironment["NOTCHHUB_UI_FIXTURE"] = mode.fixture
     }
 
     func launch() {
         app.launch()
+    }
+
+    private func configurationError(_ message: String) -> NSError {
+        NSError(
+            domain: "NotchHubUITests.Configuration",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
     }
 }

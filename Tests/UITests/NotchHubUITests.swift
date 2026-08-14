@@ -25,6 +25,7 @@ final class NotchHubUITests: XCTestCase {
         if !exists {
             NotchHubUIDiagnostics.attachFailureState(
                 application: subject.app,
+                sourceCommit: subject.sourceCommit,
                 name: "compact-surface",
                 to: self
             )
@@ -56,6 +57,7 @@ final class NotchHubUITests: XCTestCase {
         if !expandedExists || !titleExists {
             NotchHubUIDiagnostics.attachFailureState(
                 application: subject.app,
+                sourceCommit: subject.sourceCommit,
                 name: "deterministic-media-hover",
                 to: self
             )
