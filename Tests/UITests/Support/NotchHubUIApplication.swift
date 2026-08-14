@@ -6,6 +6,16 @@ struct NotchHubUIApplication {
     enum Mode {
         case shippingSmoke
         case deterministicMedia
+        case mediaHappyPath
+
+        var fixture: String {
+            switch self {
+            case .shippingSmoke:
+                "shipping-smoke"
+            case .deterministicMedia, .mediaHappyPath:
+                "media-standard"
+            }
+        }
     }
 
     let app: XCUIApplication
@@ -18,8 +28,7 @@ struct NotchHubUIApplication {
         app = XCUIApplication(
             url: URL(fileURLWithPath: rawPath, isDirectory: true)
         )
-        app.launchEnvironment["NOTCHHUB_UI_FIXTURE"] =
-            mode == .deterministicMedia ? "media-standard" : "shipping-smoke"
+        app.launchEnvironment["NOTCHHUB_UI_FIXTURE"] = mode.fixture
     }
 
     func launch() {
