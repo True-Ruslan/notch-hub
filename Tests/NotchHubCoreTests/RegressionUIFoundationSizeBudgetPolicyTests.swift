@@ -5,10 +5,12 @@ struct RegressionUIFoundationSizeBudgetPolicyTests {
     @Test
     func foundationBudgetIsProvenancedTightAndUsedByCI() throws {
         let repositoryRoot = repositoryRoot()
-        let budgetURL = repositoryRoot
+        let budgetURL =
+            repositoryRoot
             .appendingPathComponent("performance")
             .appendingPathComponent("regression-ui-automation-foundation-size-budget.json")
-        let ciURL = repositoryRoot
+        let ciURL =
+            repositoryRoot
             .appendingPathComponent(".github")
             .appendingPathComponent("workflows")
             .appendingPathComponent("ci.yml")
@@ -48,7 +50,7 @@ struct RegressionUIFoundationSizeBudgetPolicyTests {
                 == [
                     "appSizeBytes": 747_934,
                     "dmgSizeBytes": 483_314,
-                    "executableSizeBytes": 445_728,
+                    "executableSizeBytes": 445_728
                 ]
         )
         #expect(
@@ -56,7 +58,7 @@ struct RegressionUIFoundationSizeBudgetPolicyTests {
                 == [
                     "appSizeBytes": 479_232,
                     "dmgSizeBytes": 397_312,
-                    "executableSizeBytes": 180_224,
+                    "executableSizeBytes": 180_224
                 ]
         )
     }
