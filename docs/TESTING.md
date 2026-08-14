@@ -2,227 +2,129 @@
 
 ## Goal
 
-Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer feel, compositor/window-animation continuity, physical haptic feel, exact macOS trust/permission surfaces, third-party app integration, and target-hardware resource measurements.
+Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer/trackpad feel, compositor/window-animation continuity, physical haptic feel, exact macOS trust/permission surfaces, third-party player integration, and target-hardware resource measurements.
 
 A green pipeline is necessary but is not proof of real-device UX or target-Mac efficiency. Manual success likewise never replaces deterministic automated coverage that can reasonably exist.
 
-## Required CI gate
+## Required CI gates
 
-Protected-branch checks:
+The canonical `.github/workflows/ci.yml` owns all untrusted pull-request execution. Required checks are:
 
 - `macOS 26 compatibility`;
-- `Build, test and package` (dependent on the macOS 26 job).
+- `macOS UI regression`;
+- `Build, test and package`.
+
+The UI job is intentionally part of the same canonical workflow rather than a second PR-triggered workflow. Checkout is read-only and no secrets or privileged write authority are required.
 
 Current CI validates:
 
-1. Swift package structure.
-2. Personal/Trusted release-policy tests.
-3. Performance-policy/parser/budget tests, including explicit M6.5 feature-size policy.
-4. Media bridge/probe policy tests.
-5. Strict Swift formatting.
-6. shell/plist syntax.
-7. executable repository security baseline.
-8. deterministic runtime performance source audit.
-9. macOS 26 compilation with warnings as errors.
-10. complete Swift test suite on macOS 26.
-11. production media probe/candidate build and verification.
-12. package-runner warnings-as-errors compilation.
-13. complete Swift tests with coverage instrumentation.
-14. release app/DMG packaging.
-15. semantic version/build-number and source/media provenance stamping.
-16. nested/top-level code-signature verification.
-17. Hardened Runtime verification.
-18. exact effective App Sandbox entitlement verification.
-19. system-library-only application executable dependency inspection.
-20. shipping media preflight/provenance verification.
-21. deterministic executable/app/DMG size capture.
-22. fail-closed feature-size comparison against immutable P0 baseline plus the active reviewed feature envelope.
-23. short shared-runner performance harness compatibility/schema smoke with no CPU/RSS/thread magnitude gate.
-24. artifact upload.
+1. Swift package structure, warnings-as-errors compilation and complete Swift tests on macOS 26.
+2. Release, security, media-probe and performance policy.
+3. Production media probe/candidate build, archive round-trip and provenance.
+4. App/DMG packaging, signing, Hardened Runtime, exact App Sandbox entitlement and system-library-only application linkage.
+5. Shipping media preflight and deterministic artifact-size enforcement against immutable P0 baseline plus the current reviewed feature envelope.
+6. Native XCTest/XCUIAutomation project policy and compile-time fixture isolation.
+7. Exact SwiftPM-built UI-test app creation with `NOTCHHUB_UI_TESTING` only for that build.
+8. Shipping-artifact leak verification proving fixture/test-only markers are absent.
+9. Acceptance coverage audit over stable `NH-*` ledgers.
+10. Real external-app XCUI journeys on `macos-26`, preserving `.xcresult` and diagnostics.
+11. Exact UI app source provenance: `NHSourceCommit` must match the PR-head/source SHA before the test app is launched.
 
 Do not lower assertions, delete useful tests, weaken security/release/performance policy, widen accepted budgets, or weaken production behavior merely to make CI green.
 
-## Test design
+## Testing pyramid
 
-Tests should:
+### Deterministic unit / policy
 
-- state one behavior in the name;
-- assert externally meaningful results;
-- avoid arbitrary sleeps;
-- include boundary/error/denied/stale-callback cases;
-- reproduce deterministic regressions before fixes where practical;
-- test exact physical-coordinate boundaries when hardware behavior depends on inclusive/exclusive edges;
-- never substitute a nearby interior point for a named physical-edge scenario;
-- never fabricate RED when behavior is already correctly testable;
-- use injected schedulers/output closures around OS boundaries;
-- intentionally invoke cancelled/stale callbacks when race safety is part of the contract;
-- keep shared-runner runtime magnitudes out of tight target-hardware gates.
+Use Swift Testing or Python policy tests for state machines, geometry, lifecycle, stale-callback handling, schemas, source-policy/security invariants, performance policies and artifact contracts.
 
-No arbitrary global coverage percentage is used.
+### Integration / shipping
 
-## Security/release testing boundary
+Use exact production transports and packaged artifacts where the OS/process boundary matters. Validate provenance, teardown, signing, entitlements and the fixed reviewed `/usr/bin/perl` media boundary.
 
-Deterministic checks cover:
+### Native UI / E2E
 
-- strict SemVer/tag derivation and immutable release semantics;
-- mandatory Personal Release trust warning and Gatekeeper-bypass rejection;
-- unprivileged public/fork PR CI;
-- App Sandbox + Hardened Runtime;
-- exact production process allowlist;
-- no arbitrary shell/executable/private-loading surface;
-- system-only application executable linkage;
-- pinned media resource provenance;
-- no unexpected entitlement/permission expansion;
-- release workflow isolation from untrusted PR execution.
+The production build system remains SwiftPM. `NotchHubUITests.xcodeproj` contains only a minimal non-production test host and the UI-test bundle. Tests launch the exact SwiftPM-built `NotchHub.app` with `XCUIApplication(url:)`.
 
-`SECURITY.md` is authoritative.
+Current deterministic UI coverage proves on `macos-26`:
 
-## Performance testing boundary
+- exact external app launch/terminate;
+- stable compact accessibility surface;
+- deterministic media fixture expands through the real hover path;
+- expanded fixture exposes media title/artist/source;
+- real XCUI `Next` changes Track A -> Track B;
+- real XCUI `Previous` returns Track B -> Track A;
+- real XCUI Play/Pause toggles the visible accessibility state;
+- failures preserve exact source SHA, screenshot, accessibility hierarchy and `.xcresult`.
 
-`PERFORMANCE.md` and `performance/baseline-v0.1.0.json` are authoritative.
+UI synchronization uses `NSPredicate`, `XCTNSPredicateExpectation` and `XCTWaiter`. Fixed sleeps and automatic retries are rejected by policy.
 
-The immutable `v0.1.0` artifact baseline remains:
+## Fixture / shipping separation
 
-- executable `220,560 B`;
-- app `223,555 B`;
-- DMG `73,955 B`.
+UI fixtures replace only nondeterministic external media/haptic boundaries and exist only under `#if NOTCHHUB_UI_TESTING`.
 
-Intentional feature growth is handled by separately reviewed provenance-backed envelopes. M6.4 and M6.5 budgets do not rewrite the P0 baseline.
+The deterministic media fixture is local and bounded: fixed tracks/state, no network, subprocess, file I/O, polling, repeating timer or display link. Shipping composition remains the default when the compiler condition is absent.
 
-Shared GitHub runners validate deterministic performance policy/schema/package behavior only. CPU/RSS/thread target acceptance is based on real-hardware evidence and same-session/within-run methodology where required.
+Normal Personal/Release artifacts are verified to contain no fixture marker or UI-test diagnostic marker. UI automation must not add Accessibility, Input Monitoring, Automation, Screen Recording, event taps, global scroll capture, synthetic media keys or any broader input authority.
 
-## M1 interaction/transition contract
+## Accessibility contract
 
-Authoritative specification: `docs/specs/M1_NOTCH_INTERACTION.md`.
+Stable identifiers currently used by XCUIAutomation include:
 
-Deterministic coverage proves:
+- `notch.surface.compact`;
+- `notch.surface.expanded`;
+- `media.artwork`;
+- `media.title`;
+- `media.artist`;
+- `media.playPause`;
+- `media.previous`;
+- `media.next`;
+- `media.source`.
 
-- quick transit shorter than 120 ms does not expand or haptic;
-- deliberate hover emits one eligible expansion intent at threshold;
-- duplicate pointer events keep one pending activation;
-- cancellation/stale callback cannot later win;
-- re-entry receives a fresh dwell;
-- expanded retention/collapse is deterministic;
-- compact activation uses inclusive 4 pt left/right/bottom and 0 pt top boundaries;
-- `NotchPanelTransitionCoordinator` is the sole transition authority;
-- stale/reversed completions cannot win;
-- Reduce Motion retarget creates no duplicate haptic;
-- 10,000 reversal stress retains only latest-generation authority;
-- AppKit owns outer clipping/chrome and exact compact/expanded geometry;
-- pointer monitor owns one local + one global `.mouseMoved` monitor and removes them idempotently;
-- no per-mouse-event Swift concurrency task is allocated;
-- no polling/repeating timer/display-link/sleep loop is introduced.
+These are testability/accessibility seams, not an alternate state-control API.
 
-Accepted physical M1 matrix:
+## Acceptance traceability
 
-| ID | Scenario | Status |
-| --- | --- | --- |
-| `NH-NOTCH-001` | Physical-notch compact geometry | **PASS** |
-| `NH-HOVER-001` | Deliberate hover opens once | **PASS** |
-| `NH-HOVER-002` | Expanded retention | **PASS** |
-| `NH-HOVER-003` | Exit collapses once | **PASS** |
-| `NH-HOVER-DELAY-001` | Quick transit / second-display transit | **PASS** |
-| `NH-HOVER-DELAY-002` | 120 ms deliberate hover | **PASS** |
-| `NH-HOVER-TOP-001` | Exact top screen-edge activation | **PASS** |
-| `NH-HAPTIC-001` | Eligible deliberate expansion | **PASS** |
-| `NH-HAPTIC-002` | Cancel/retain/collapse | **PASS** |
-| `NH-VISUAL-001...003` | Physical chrome and repeated cycles | **PASS** |
-| `NH-ANIM-001...004` | Normal/reversed/rapid transitions | **PASS** |
-| `NH-MOTION-001...002` | Reduce Motion behavior | **PASS** |
-| Startup pointer overlap | No startup-only expansion/haptic | **PASS** |
-| `NH-SPACE-001` | Spaces/fullscreen policy | Planned later M1 |
-| `NH-DISPLAY-001` | Active-display migration | Planned later M1 |
+`Tests/Acceptance/coverage.yml` is the machine-readable mapping layer. `scripts/test_acceptance_coverage.py` discovers stable `NH-*` IDs from `docs/testing/*.md` and validates ID uniqueness, canonical source, ledger-derived status, evidence layer and referenced test symbols.
 
-Historical exact artifacts and RED/GREEN details remain in Git history and `CHANGELOG.md`.
+Two modes exist:
 
-## Universal Media acceptance hierarchy
+- `--mode audit`: invalid mappings fail, but legacy unmapped contracts remain visible debt;
+- `--mode strict`: every discovered stable acceptance contract must be mapped.
 
-Detailed acceptance ledgers:
+At the Regression/UI Automation Foundation checkpoint the validator discovers **70** stable acceptance IDs. **1** verified mapping is present and **69** remain legacy backfill debt. This is deliberate: audit is green without fabricating coverage, while strict remains blocked until `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md` is completed.
 
-- M6.1: `docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`;
-- M6.3: `docs/testing/PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`;
-- M6.4: `docs/testing/SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md`;
-- M6.5: `docs/testing/MEDIA_UI_ACCEPTANCE.md`.
+The seed mapping is `NH-MEDIA-BRIDGE-015` -> `MediaBridgeProbeCoreTests.ProbeProcessTests.nonzeroExitTransitionsToFailedWithoutAutomaticLoop`.
 
-### M6.1
+## Physical-only boundary
 
-Status: **ACCEPTED**.
+Physical target acceptance remains authoritative where automation cannot establish equivalence, including:
 
-Target testing established system Now Playing feasibility under Sandbox + Hardened Runtime, authoritative capability states, real commands, source switch/disappearance behavior, no sensitive permission prompts, clean teardown and bounded resource behavior.
+- exact physical-notch visual geometry and compositor continuity;
+- real trackpad gesture/haptic feel;
+- target-Mac permission/trust prompts;
+- real third-party player behavior;
+- target-hardware CPU/RSS/thread/wakeup/energy measurements;
+- display/Spaces behavior requiring actual multi-display/fullscreen hardware context.
 
-### M6.2
+Detailed physical evidence remains in the acceptance ledgers under `docs/testing/`. In particular:
 
-Status: **ACCEPTED AND MERGED**.
+- M6.1: `MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`;
+- M6.3: `PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`;
+- M6.4: `SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md`;
+- M6.5: `MEDIA_UI_ACCEPTANCE.md`;
+- M6.6 gesture contract: `MEDIA_GESTURE_ACCEPTANCE.md`;
+- M6.6 interactive contract: `INTERACTIVE_NOTCH_ACCEPTANCE.md`;
+- M6.6 Hover Peek contract: `MEDIA_PEEK_ACCEPTANCE.md`.
 
-Deterministic tests cover normalized media state, ordering, provider/controller/bridge lifecycle, typed commands, stale callbacks and bounded restart/fail-closed behavior.
+## Performance boundary
 
-### M6.3
+`PERFORMANCE.md` and `performance/baseline-v0.1.0.json` are authoritative. The immutable `v0.1.0` artifact baseline remains executable `220,560 B`, app `223,555 B`, DMG `73,955 B`.
 
-Status: **ACCEPTED AND MERGED**.
+Intentional shipping growth uses separate provenance-backed cumulative envelopes; historical budgets are not rewritten. The Regression/UI Automation Foundation has its own reviewed envelope because the compressed DMG exceeded the prior M6.6 envelope while executable/app remained within it. Shared GitHub runners validate deterministic performance policy/schema/package behavior; target runtime magnitudes remain real-hardware evidence.
 
-All `NH-MEDIA-PROD-001...013` gates pass, including Yandex Music/Yandex Browser observation, real toggle/previous/next/seek, no sensitive permission prompts, bounded teardown and target resource evidence.
+## Current M6.6 boundary
 
-### M6.4
+PR #33 remains draft and physically unaccepted. Its exact frozen physical candidate is `423bc5d72a3676d01793f898ed2e8e79845bc8cd` with CI run `31685581542` green, but target-Mac retest remains mandatory.
 
-Status: **ACCEPTED AND MERGED**.
-
-All `NH-MEDIA-SHIP-001...010` gates pass. Physical evidence confirms zero adapter throughout compact steady/stability, one expected adapter after settled expansion, clean normal teardown and no sensitive permission prompts.
-
-### M6.5 — Media-first UI
-
-Status: **ACCEPTED ON TARGET MAC — ALL `NH-MEDIA-UI-001...011` PASS**.
-
-Frozen physical candidate:
-
-- source `431d9fbaf1ff5ba98f2ceec09732acafe5f65794`;
-- CI #763 / run `31539442148` — both required jobs PASS on exact source after retrying one external runner TLS failure;
-- 194 Swift tests — PASS;
-- shipping artifact ID `9120231721`;
-- Actions digest `sha256:0d18a0c9ce5305b90808f0937531211094b85947ce96b2afd0a2c4020e4e7007`;
-- DMG SHA-256 `3993330bf57ac86ead949215ba5370a0a33ec6b8f6a17f1d65baa30c41f5f6ad`.
-
-Deterministic/policy coverage proves:
-
-- Core composition seam does not introduce a media dependency into `NotchHubCore`;
-- media presentation maps authoritative state without metadata/capability fabrication;
-- fresh runtime events may replace retained presentation without cross-runtime raw-sequence comparison;
-- runtime attaches/detaches presentation callbacks in lifecycle-safe order;
-- UI exposes only typed click commands in M6.5;
-- compact wings are geometry inputs to the existing transition authority;
-- no polling/timer/display-link/global scroll monitor is introduced;
-- M6.5 size envelope is explicit, provenanced and fail-closed.
-
-Physical target acceptance confirmed:
-
-| ID | Scenario | Status |
-| --- | --- | --- |
-| `NH-MEDIA-UI-001` | Cold exact-notch compact / zero adapter | **PASS** |
-| `NH-MEDIA-UI-002` | Expanded active session -> Media-first UI | **PASS** |
-| `NH-MEDIA-UI-003` | Playing/paused presentation | **PASS** |
-| `NH-MEDIA-UI-004` | Partial metadata/artwork fallback | **PASS** |
-| `NH-MEDIA-UI-005` | Capability-driven previous/next + real clicks | **PASS** |
-| `NH-MEDIA-UI-006` | Trustworthy static progress / no periodic worker | **PASS** |
-| `NH-MEDIA-UI-007` | Media disappears while expanded -> Home, no collapse | **PASS** |
-| `NH-MEDIA-UI-008` | Retained 36 pt compact wings / adapter absent | **PASS** |
-| `NH-MEDIA-UI-009` | Fresh re-expansion replaces retained state | **PASS** |
-| `NH-MEDIA-UI-010` | Typed command/security/transition boundary | **PASS** |
-| `NH-MEDIA-UI-011` | Full Mac16,8/macOS 26.6 Yandex Music + Yandex Browser acceptance | **PASS** |
-
-Physical acceptance also confirmed no Accessibility, Input Monitoring, Automation/Apple Events or Screen Recording prompts and no orphan adapter after normal Quit.
-
-Documentation-only commits after frozen source `431d9fbaf1ff5ba98f2ceec09732acafe5f65794` require fresh exact-head CI but do **not** require another physical run because they do not alter the tested application artifact.
-
-## Next testing contract
-
-The next Universal Media slice must establish `NH-MEDIA-GESTURE-*` IDs before production changes. Coverage must include:
-
-- local-only gesture state machine;
-- no global scroll monitor;
-- gesture cancellation/reversal boundaries;
-- haptic eligibility and no duplicate feedback;
-- seek only when authoritative capability is supported;
-- bounded typed seek values;
-- no periodic progress worker;
-- target-Mac gesture feel, haptic feel, actual seek correctness and regression checks.
-
-The invariant remains unchanged: hardware success does not replace deterministic tests, and green CI does not claim physical behavior it cannot observe.
+The testing foundation does not repair M6.6 behavior and does not convert automated UI evidence into physical acceptance. Product feature work remains frozen until the regression baseline backfill is completed and the appropriate M6.6 physical gates pass.
