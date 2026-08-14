@@ -149,6 +149,7 @@ struct MediaNotchRootView: View {
                 .disabled(!presentation.canGoPrevious)
                 .opacity(presentation.canGoPrevious ? 1 : 0.3)
                 .accessibilityIdentifier("media.previous")
+                .accessibilityValue(presentation.canGoPrevious ? "enabled" : "disabled")
 
                 Button(action: onTogglePlayPause) {
                     Image(
@@ -173,6 +174,7 @@ struct MediaNotchRootView: View {
                 .disabled(!presentation.canGoNext)
                 .opacity(presentation.canGoNext ? 1 : 0.3)
                 .accessibilityIdentifier("media.next")
+                .accessibilityValue(presentation.canGoNext ? "enabled" : "disabled")
             }
             .foregroundStyle(.white)
         }
@@ -209,6 +211,8 @@ struct MediaNotchRootView: View {
                 style: .continuous
             )
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Media artwork")
         .accessibilityIdentifier("media.artwork")
     }
 }
