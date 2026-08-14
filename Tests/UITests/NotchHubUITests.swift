@@ -123,6 +123,8 @@ final class NotchHubUITests: XCTestCase {
         XCTAssertTrue(previous.exists && previous.isEnabled)
         XCTAssertTrue(playPause.exists && playPause.isEnabled)
         XCTAssertTrue(next.exists && next.isEnabled)
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(previous, equals: "enabled", timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(next, equals: "enabled", timeout: 2))
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(playPause, equals: "playing", timeout: 2))
 
         next.click()
@@ -152,8 +154,8 @@ final class NotchHubUITests: XCTestCase {
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 2))
         XCTAssertTrue(previous.exists)
         XCTAssertTrue(next.exists)
-        XCTAssertFalse(previous.isEnabled)
-        XCTAssertFalse(next.isEnabled)
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(previous, equals: "disabled", timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(next, equals: "disabled", timeout: 2))
         XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(title, equals: "Track A", timeout: 1))
     }
 
