@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans task-by-task. Completion claims require fresh exact-head verification evidence.
 
-**Status:** **TASKS 1-8 COMPLETE AND AUTOMATED-TESTED / TASK 9 FINAL EXACT-HEAD CI PENDING**
+**Status:** **COMPLETE / AUTOMATED-TESTED / HAND-OFF TO LEGACY BACKFILL PLAN**
 
 **Goal:** Add a native macOS XCTest/XCUIAutomation regression layer, deterministic UI-test composition, acceptance traceability, and a required CI gate without changing accepted product behavior or shipping trust boundaries.
 
@@ -68,7 +68,7 @@ Status: **COMPLETE / AUTOMATED-TESTED**
 - [x] Add external-app shipping smoke.
 - [x] Verify project policy, `xcodebuild -list`, exact app build and external-app XCUI on macOS 26 CI.
 
-Evidence: the harness was exercised repeatedly on `macos-26`; exact pre-documentation implementation candidate `7654775b3ae0416d115f8f2ca7118e947cf97e13` passed the canonical UI job in run `31811958254`.
+Evidence: exact pre-documentation implementation candidate `7654775b3ae0416d115f8f2ca7118e947cf97e13` passed the canonical UI job in run `31811958254`.
 
 ---
 
@@ -129,7 +129,7 @@ Status: **COMPLETE FOR FOUNDATION / LEGACY BACKFILL DEFERRED TO PLAN 2**
 - [x] Seed one verified real test mapping rather than fabricating legacy coverage.
 - [x] Commit.
 
-Current audit state: 70 stable IDs discovered, 1 verified manifest mapping, 69 explicit legacy gaps. Strict mode is intentionally fail-closed until Plan 2.
+Current audit state at Plan-1 exit: 70 stable IDs discovered, 1 verified manifest mapping, 69 explicit legacy gaps. Strict mode remains fail-closed until Plan 2.
 
 ---
 
@@ -178,15 +178,26 @@ Status: **COMPLETE / AUTOMATED-TESTED**
 
 ### Task 9: Foundation documentation and review gate
 
-Status: **FINAL EXACT-HEAD CI PENDING**
+Status: **COMPLETE / AUTOMATED-TESTED**
 
 - [x] Document testing pyramid and mandatory UI regression in `docs/TESTING.md` / `docs/DEVELOPMENT.md`.
 - [x] Document fixture/shipping separation and physical-only boundaries.
 - [x] Synchronize `docs/PROJECT_STATE.md`, `docs/ROADMAP.md` and `CHANGELOG.md` with actual GitHub/PR state.
 - [x] Record that feature work remains frozen until Plan 2 strict legacy backfill passes.
 - [x] Review the PR production-source diff for accidental product-behavior/trust-boundary changes.
-- [ ] Run fresh exact-head canonical policy + Swift + UI CI after the final documentation commit.
-- [ ] Record the final exact SHA/run and mark Plan 1 complete.
+- [x] Run fresh exact-head canonical policy + Swift + UI CI after the documentation synchronization.
+- [x] Record exact verification and mark Plan 1 complete.
+
+#### Task 9 exact verification
+
+- source: `5e9341b4d957a967ec82166e18e009455119fd0b`;
+- canonical CI: #1007 / run `31817097807`;
+- `macOS 26 compatibility`: **SUCCESS**;
+- `macOS UI regression`: **SUCCESS**;
+- `Build, test and package`: **SUCCESS**;
+- package/security/signing/Sandbox/Hardened Runtime/size/performance smoke gates: **SUCCESS**.
+
+This status-recording commit is documentation-only; it still receives ordinary exact-head CI before the branch advances into Plan 2.
 
 #### Task 9 production-diff review — 2026-08-14
 
@@ -203,14 +214,14 @@ Findings:
 - `scripts/security-audit.sh` is strengthened to verify the new shipping composition seam still binds AppDelegate lifecycle to `ShippingMediaRuntime` and still rejects development-only media tooling.
 - No new entitlement, permission, network path, global scroll capture, event tap, polling/repeating timer/display link or arbitrary executable surface was introduced.
 
-Review verdict: **no accidental product-feature or shipping trust-boundary change identified; final exact-head CI remains the last Plan 1 gate.**
+Review verdict: **no accidental product-feature or shipping trust-boundary change identified.**
 
 ---
 
 ## Plan 1 exit and hand-off to Plan 2
 
-Plan 1 is complete only when the final documentation head passes all three canonical jobs. It is **not** itself permission to resume M6.6.
+Foundation Plan 1 is complete. This does **not** permit M6.6 feature work to resume.
 
-After Plan 1 completion, execute `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md` on the isolated foundation branch. PR #34 remains draft until every stable accepted ID is represented, every deterministic accepted behavior has executable evidence, physical-only reasons are narrowly justified, and `scripts/test_acceptance_coverage.py --mode strict` passes in canonical CI.
+Next execute `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md` on the isolated foundation branch. PR #34 remains draft until every stable accepted ID is represented, every deterministic accepted behavior has executable evidence, physical-only reasons are narrowly justified, and `scripts/test_acceptance_coverage.py --mode strict` passes in canonical CI.
 
 Only after PR #34 is accepted/merged and post-merge `main` CI passes may PR #33 be rebased/resumed for a fresh exact M6.6 candidate and target-Mac physical acceptance.
