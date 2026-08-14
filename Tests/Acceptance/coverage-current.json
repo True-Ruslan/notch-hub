@@ -21,6 +21,17 @@
       "physicalOnlyReason": null
     },
     {
+      "id": "NH-MEDIA-UI-002",
+      "source": "docs/testing/MEDIA_UI_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer":"unit","test":"NotchHubMediaCoreTests.ShippingMediaPresentationModelTests.playingSessionMapsAuthoritativePresentation"},
+        {"layer":"unit","test":"NotchHubCoreTests.MediaAppCompositionPolicyTests.appOwnsMediaPresentationAndInjectsMediaAwareRoot"},
+        {"layer":"ui","test":"NotchHubUITests.NotchHubUITests.testDeterministicMediaFixtureExpandsThroughExplicitClick"}
+      ],
+      "physicalOnlyReason": null
+    },
+    {
       "id": "NH-MEDIA-UI-005",
       "source": "docs/testing/MEDIA_UI_ACCEPTANCE.md",
       "status": "accepted",
