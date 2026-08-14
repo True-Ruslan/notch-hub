@@ -161,6 +161,63 @@ class UIAutomationPolicyTests(unittest.TestCase):
                     repository_root=root,
                 )
 
+    def test_current_acceptance_overlay_can_replace_evidence_without_changing_identity(self):
+        base = [
+            {
+                "id": "NH-HOVER-DELAY-002",
+                "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+                "status": "accepted",
+                "coverage": [{"layer": "unit", "test": "Old.Suite.oldEvidence"}],
+                "physicalOnlyReason": None,
+            }
+        ]
+        overlay = [
+            {
+                "id": "NH-HOVER-DELAY-002",
+                "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+                "status": "accepted",
+                "coverage": [{"layer": "unit", "test": "New.Suite.currentEvidence"}],
+                "physicalOnlyReason": None,
+            },
+            {
+                "id": "NH-MEDIA-PEEK-001",
+                "source": "docs/testing/MEDIA_PEEK_ACCEPTANCE.md",
+                "status": "rejected",
+                "coverage": [],
+                "physicalOnlyReason": None,
+            },
+        ]
+
+        merged = acceptance_coverage.merge_manifest_entries(base, overlay)
+        by_id = {entry["id"]: entry for entry in merged}
+
+        self.assertEqual(
+            "New.Suite.currentEvidence",
+            by_id["NH-HOVER-DELAY-002"]["coverage"][0]["test"],
+        )
+        self.assertEqual("rejected", by_id["NH-MEDIA-PEEK-001"]["status"])
+
+    def test_current_acceptance_overlay_cannot_change_existing_source_or_status(self):
+        base = [
+            {
+                "id": "NH-HOVER-DELAY-002",
+                "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+                "status": "accepted",
+                "coverage": [{"layer": "unit", "test": "Old.Suite.oldEvidence"}],
+                "physicalOnlyReason": None,
+            }
+        ]
+
+        for field, value in (
+            ("source", "docs/testing/MEDIA_PEEK_ACCEPTANCE.md"),
+            ("status", "pending"),
+        ):
+            candidate = dict(base[0])
+            candidate[field] = value
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(acceptance_coverage.CoverageError, field):
+                    acceptance_coverage.merge_manifest_entries(base, [candidate])
+
     def test_shipping_workflows_never_enable_fixture_build(self):
         self.assertNotIn("NOTCHHUB_UI_TESTING=1", CI)
         self.assertNotIn("NOTCHHUB_UI_TESTING=1", PERSONAL_RELEASE)
