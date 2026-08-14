@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "NH-MEDIA-BRIDGE-015",
+      "source": "docs/testing/MEDIA_BRIDGE_PROBE_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "MediaBridgeProbeCoreTests.ProbeProcessTests.nonzeroExitTransitionsToFailedWithoutAutomaticLoop"
+        }
+      ],
+      "physicalOnlyReason": null
+    }
+  ]
+}
