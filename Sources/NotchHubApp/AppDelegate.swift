@@ -7,12 +7,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let mediaCompactWingWidth: CGFloat = 36
 
     private var panelController: NotchPanelController?
-    private var mediaRuntime: ShippingMediaRuntime?
+    private var mediaRuntime: (any MediaRuntimeSession)?
     private let mediaPresentationModel = ShippingMediaPresentationModel()
     private let mediaGestureVisualModel = MediaGestureVisualModel()
     private let sourceApplicationIconResolver = SourceApplicationIconResolver()
     private var mediaGestureSession: MediaGestureSession?
     private var mediaPeekSession: MediaPeekSession?
+    private let composition: AppComposition = {
+        #if NOTCHHUB_UI_TESTING
+            AppComposition.uiTesting(configuration: .current())
+        #else
+            AppComposition.shipping()
+        #endif
+    }()
+
+    #if NOTCHHUB_UI_TESTING
+        private let uiTestHapticRecorder = UITestHapticRecorder()
+    #endif
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -20,20 +31,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let mediaPresentationModel = mediaPresentationModel
         let mediaGestureVisualModel = mediaGestureVisualModel
         let sourceApplicationIconResolver = sourceApplicationIconResolver
-        let mediaGestureSession = MediaGestureSession(
-            compactDispatcher: ShippingMediaCompactCommandDispatcher(),
-            visualModel: mediaGestureVisualModel,
-            performArmHaptic: {
-                NSHapticFeedbackManager.defaultPerformer.perform(
-                    .levelChange,
-                    performanceTime: .now
-                )
-            }
-        )
+
+        let mediaGestureSession: MediaGestureSession
+        #if NOTCHHUB_UI_TESTING
+            let uiTestHapticRecorder = uiTestHapticRecorder
+            mediaGestureSession = MediaGestureSession(
+                compactDispatcher: ShippingMediaCompactCommandDispatcher(),
+                visualModel: mediaGestureVisualModel,
+                performArmHaptic: {
+                    uiTestHapticRecorder.performExpansionHaptic()
+                }
+            )
+        #else
+            mediaGestureSession = MediaGestureSession(
+                compactDispatcher: ShippingMediaCompactCommandDispatcher(),
+                visualModel: mediaGestureVisualModel,
+                performArmHaptic: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(
+                        .levelChange,
+                        performanceTime: .now
+                    )
+                }
+            )
+        #endif
         self.mediaGestureSession = mediaGestureSession
 
         var capturedPanelModel: NotchPanelModel?
-        let panelController = NotchPanelController(contentFactory: { [weak self, weak mediaGestureSession] model, layout in
+        let contentFactory: NotchPanelContentFactory = { [weak self, weak mediaGestureSession] model, layout in
             capturedPanelModel = model
             return NotchHostingViewFactory.make(
                 rootView: MediaNotchRootView(
@@ -70,7 +94,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     mediaGestureSession?.handleScrollWheel(event)
                 }
             )
-        })
+        }
+
+        let panelController: NotchPanelController
+        #if NOTCHHUB_UI_TESTING
+            let uiTestHapticRecorder = uiTestHapticRecorder
+            panelController = NotchPanelController(
+                contentFactory: contentFactory,
+                performExpansionHaptic: {
+                    uiTestHapticRecorder.performExpansionHaptic()
+                }
+            )
+        #else
+            panelController = NotchPanelController(contentFactory: contentFactory)
+        #endif
         self.panelController = panelController
 
         if let capturedPanelModel {
@@ -78,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 panelController: panelController,
                 panelModel: capturedPanelModel,
                 runtimeProvider: { [weak self] in
-                    self?.mediaRuntime
+                    self?.mediaRuntime as? ShippingMediaRuntime
                 },
                 presentationProvider: { [weak mediaPresentationModel] in
                     mediaPresentationModel?.presentation
@@ -146,7 +183,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            let mediaRuntime = ShippingMediaRuntime(presentationModel: mediaPresentationModel)
+            let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)
             self.mediaRuntime = mediaRuntime
             mediaRuntime.start()
 
