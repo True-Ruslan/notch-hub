@@ -4,8 +4,11 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "NotchHubUITests.xcodeproj/project.pbxproj"
 SCHEME = ROOT / "NotchHubUITests.xcodeproj/xcshareddata/xcschemes/NotchHubUITests.xcscheme"
-ASSERTIONS = ROOT / "Tests/UITests/Support/NotchHubUIAssertions.swift"
-DIAGNOSTICS = ROOT / "Tests/UITests/Support/NotchHubUIDiagnostics.swift"
+UI_ROOT = ROOT / "Tests/UITests"
+APPLICATION = UI_ROOT / "Support/NotchHubUIApplication.swift"
+ASSERTIONS = UI_ROOT / "Support/NotchHubUIAssertions.swift"
+DIAGNOSTICS = UI_ROOT / "Support/NotchHubUIDiagnostics.swift"
+WORKFLOW = ROOT / ".github/workflows/ui-regression.yml"
 
 
 class UIProjectPolicyTests(unittest.TestCase):
@@ -45,8 +48,33 @@ class UIProjectPolicyTests(unittest.TestCase):
         self.assertIn("XCTAttachment(screenshot:", diagnostics)
         self.assertIn(".lifetime = .keepAlways", diagnostics)
 
-        combined = assertions + diagnostics
-        for forbidden in ("sleep(", "Task.sleep", "usleep("):
+    def test_ui_diagnostics_are_exact_sha_aware_and_fail_closed(self):
+        application = APPLICATION.read_text(encoding="utf-8")
+        diagnostics = DIAGNOSTICS.read_text(encoding="utf-8")
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("NOTCHHUB_UI_SOURCE_COMMIT", application)
+        self.assertIn("NHSourceCommit", application)
+        self.assertIn("sourceCommit", diagnostics)
+        self.assertIn("XCTAttachment(string: sourceCommit)", diagnostics)
+        self.assertIn("NOTCHHUB_UI_SOURCE_COMMIT: ${{ github.sha }}", workflow)
+
+    def test_ui_layer_rejects_fixed_sleeps_and_automatic_retries(self):
+        sources = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(UI_ROOT.rglob("*.swift"))
+        )
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        combined = sources + "\n" + workflow
+
+        for forbidden in (
+            "sleep(",
+            "Task.sleep",
+            "usleep(",
+            "retry(",
+            "withRetry",
+            "automaticRetry",
+        ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, combined)
 
