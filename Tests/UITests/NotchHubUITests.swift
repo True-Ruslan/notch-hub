@@ -67,4 +67,39 @@ final class NotchHubUITests: XCTestCase {
         XCTAssertEqual(artist.label, "Artist A")
         XCTAssertEqual(source.label, "Fixture Player")
     }
+
+    @MainActor
+    func testDeterministicMediaControlsUseRealTypedUICommands() throws {
+        let subject = try NotchHubUIApplication(mode: .mediaHappyPath)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        let compact = subject.app.otherElements["notch.surface.compact"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
+        compact.hover()
+
+        let expanded = subject.app.otherElements["notch.surface.expanded"]
+        let title = subject.app.staticTexts["media.title"]
+        let previous = subject.app.buttons["media.previous"]
+        let playPause = subject.app.buttons["media.playPause"]
+        let next = subject.app.buttons["media.next"]
+
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(expanded, timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(title, equals: "Track A", timeout: 2))
+        XCTAssertTrue(previous.exists && previous.isEnabled)
+        XCTAssertTrue(playPause.exists && playPause.isEnabled)
+        XCTAssertTrue(next.exists && next.isEnabled)
+
+        next.click()
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(title, equals: "Track B", timeout: 2))
+
+        previous.click()
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(title, equals: "Track A", timeout: 2))
+
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(playPause, equals: "Pause", timeout: 2))
+        playPause.click()
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(playPause, equals: "Play", timeout: 2))
+        playPause.click()
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilLabel(playPause, equals: "Pause", timeout: 2))
+    }
 }
