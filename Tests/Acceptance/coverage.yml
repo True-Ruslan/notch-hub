@@ -195,11 +195,11 @@
       "coverage": [
         {
           "layer": "policy",
-          "test": "MediaBridgeProbeCITests.test_verifier_rejects_restrictive_mode_without_app_sandbox_and_hardened_runtime"
+          "test": "scripts.MediaBridgeProbeCITests.test_verifier_rejects_restrictive_mode_without_app_sandbox_and_hardened_runtime"
         },
         {
           "layer": "shipping",
-          "test": "MediaBridgeProbeAcceptanceTests.test_ci_builds_archived_probe_candidate_from_exact_commit"
+          "test": "scripts.MediaBridgeProbeAcceptanceTests.test_ci_builds_archived_probe_candidate_from_exact_commit"
         },
         {
           "layer": "physical",
@@ -219,7 +219,7 @@
         },
         {
           "layer": "policy",
-          "test": "MediaBridgeProbeAcceptanceTests.test_probe_process_launch_is_event_driven_not_automatic_polling"
+          "test": "scripts.MediaBridgeProbeAcceptanceTests.test_probe_process_launch_is_event_driven_not_automatic_polling"
         },
         {
           "layer": "physical",
@@ -444,7 +444,7 @@
         },
         {
           "layer": "policy",
-          "test": "MediaBridgeProbeAcceptanceTests.test_probe_capability_patch_is_separately_pinned"
+          "test": "scripts.MediaBridgeProbeAcceptanceTests.test_probe_capability_patch_is_separately_pinned"
         },
         {
           "layer": "physical",
@@ -460,7 +460,7 @@
       "coverage": [
         {
           "layer": "policy",
-          "test": "MediaBridgeProbeAcceptanceTests.test_probe_has_no_permission_api_surface"
+          "test": "scripts.MediaBridgeProbeAcceptanceTests.test_probe_has_no_permission_api_surface"
         },
         {
           "layer": "physical",
@@ -476,15 +476,15 @@
       "coverage": [
         {
           "layer": "policy",
-          "test": "MediaBridgeProbeAcceptanceTests.test_probe_source_does_not_directly_load_private_framework"
+          "test": "scripts.MediaBridgeProbeAcceptanceTests.test_probe_source_does_not_directly_load_private_framework"
         },
         {
           "layer": "policy",
-          "test": "MediaBridgeProbeAcceptanceTests.test_probe_uses_process_boundary_and_public_parsing"
+          "test": "scripts.MediaBridgeProbeAcceptanceTests.test_probe_uses_process_boundary_and_public_parsing"
         },
         {
           "layer": "policy",
-          "test": "MediaBridgeProbeAcceptanceTests.test_probe_process_client_uses_fixed_runtime_assets"
+          "test": "scripts.MediaBridgeProbeAcceptanceTests.test_probe_process_client_uses_fixed_runtime_assets"
         },
         {
           "layer": "unit",
@@ -492,7 +492,7 @@
         },
         {
           "layer": "shipping",
-          "test": "MediaBridgeProbeAcceptanceTests.test_ci_builds_archived_probe_candidate_from_exact_commit"
+          "test": "scripts.MediaBridgeProbeAcceptanceTests.test_ci_builds_archived_probe_candidate_from_exact_commit"
         },
         {
           "layer": "physical",
