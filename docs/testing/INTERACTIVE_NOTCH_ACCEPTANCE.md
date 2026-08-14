@@ -5,7 +5,7 @@ Date: 2026-08-13
 Primary target: macOS 26.6 / Mac16,8
 Design: `docs/superpowers/specs/2026-08-12-interactive-notch-media-ux-design.md`
 
-This ledger extends the frozen `NH-MEDIA-GESTURE-001...018` contract without renumbering it. PR #33 remains draft until one exact CI-produced candidate passes the target-Mac matrix.
+This ledger extends the frozen M6.6 media-gesture acceptance contract without renumbering or redefining its existing stable IDs. PR #33 remains draft until one exact CI-produced candidate passes the target-Mac matrix.
 
 ## Stable gates
 
