@@ -32,6 +32,16 @@
       ],
       "physicalOnlyReason": null
     },
+    {
+      "id": "NH-MEDIA-UI-010",
+      "source": "docs/testing/MEDIA_UI_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer":"integration","test":"NotchHubMediaCoreTests.ShippingMediaRuntimePresentationPolicyTests.runtimeExposesOnlyTypedMediaCommandsIncludingValidatedSeek"},
+        {"layer":"integration","test":"NotchHubMediaCoreTests.ShippingMediaRuntimePresentationPolicyTests.runtimePresentationWiringAddsNoPollingOrProcessBoundary"}
+      ],
+      "physicalOnlyReason": null
+    },
     {"id":"NH-NOTCH-INTERACTIVE-001","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-NOTCH-INTERACTIVE-002","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-NOTCH-INTERACTIVE-003","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
