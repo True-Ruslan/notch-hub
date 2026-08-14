@@ -4,12 +4,14 @@
     @MainActor
     final class UITestMediaRuntime: MediaRuntimeSession {
         private static let sourceBundleIdentifier = "ru.trueruslan.notchhub.ui-fixture"
+        private static let durationSeconds = 240.0
 
         private let presentationModel: ShippingMediaPresentationModel
         private let supportsCommands: Bool
         private let tracks = ["Track A", "Track B", "Track C"]
         private var trackIndex = 0
         private var playbackState: ShippingMediaPlaybackState = .playing
+        private var positionSeconds = 42.0
         private var isStarted = false
 
         init(
@@ -48,6 +50,7 @@
                 return
             }
             trackIndex = max(0, trackIndex - 1)
+            positionSeconds = 42
             publish()
         }
 
@@ -56,6 +59,20 @@
                 return
             }
             trackIndex = min(tracks.count - 1, trackIndex + 1)
+            positionSeconds = 42
+            publish()
+        }
+
+        func seek(to positionSeconds: Double) {
+            guard
+                isStarted,
+                supportsCommands,
+                positionSeconds.isFinite,
+                positionSeconds >= 0
+            else {
+                return
+            }
+            self.positionSeconds = min(positionSeconds, Self.durationSeconds)
             publish()
         }
 
@@ -73,8 +90,8 @@
                     canGoPrevious: supportsCommands,
                     canGoNext: supportsCommands,
                     canSeek: supportsCommands,
-                    positionSeconds: 42,
-                    durationSeconds: 240,
+                    positionSeconds: positionSeconds,
+                    durationSeconds: Self.durationSeconds,
                     sessionIdentity: ShippingMediaSessionIdentity(
                         generation: 1,
                         sourceBundleIdentifier: sourceBundleIdentifier
