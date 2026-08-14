@@ -181,11 +181,13 @@ struct MediaNotchRootView: View {
                             .foregroundStyle(.white)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                            .accessibilityIdentifier("media.title")
                         Text(presentation.artist ?? "")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.68))
                             .lineLimit(1)
                             .truncationMode(.tail)
+                            .accessibilityIdentifier("media.artist")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -226,12 +228,14 @@ struct MediaNotchRootView: View {
                             .font(.headline)
                             .foregroundStyle(.white)
                             .lineLimit(1)
+                            .accessibilityIdentifier("media.title")
                     }
                     if let artist = presentation.artist {
                         Text(artist)
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.75))
                             .lineLimit(1)
+                            .accessibilityIdentifier("media.artist")
                     }
                     if let album = presentation.album {
                         Text(album)
@@ -263,6 +267,8 @@ struct MediaNotchRootView: View {
                 .buttonStyle(.plain)
                 .disabled(!presentation.canGoPrevious)
                 .opacity(presentation.canGoPrevious ? 1 : 0.3)
+                .accessibilityIdentifier("media.previous")
+                .accessibilityValue(presentation.canGoPrevious ? "enabled" : "disabled")
 
                 Button(action: onTogglePlayPause) {
                     Image(
@@ -274,6 +280,10 @@ struct MediaNotchRootView: View {
                     .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("media.playPause")
+                .accessibilityValue(
+                    presentation.playbackState == .playing ? "playing" : "paused"
+                )
 
                 Button(action: onNext) {
                     Image(systemName: "forward.fill")
@@ -282,6 +292,8 @@ struct MediaNotchRootView: View {
                 .buttonStyle(.plain)
                 .disabled(!presentation.canGoNext)
                 .opacity(presentation.canGoNext ? 1 : 0.3)
+                .accessibilityIdentifier("media.next")
+                .accessibilityValue(presentation.canGoNext ? "enabled" : "disabled")
             }
             .foregroundStyle(.white)
         }
@@ -405,6 +417,7 @@ struct MediaNotchRootView: View {
                 .fill(Color.black.opacity(0.75))
         }
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .accessibilityIdentifier("media.source")
         .accessibilityLabel(Text(presentation.sourceDisplayName))
     }
 
@@ -436,5 +449,6 @@ struct MediaNotchRootView: View {
                 style: .continuous
             )
         )
+        .accessibilityIdentifier("media.artwork")
     }
 }
