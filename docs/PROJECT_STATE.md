@@ -14,16 +14,16 @@ The currently published release remains immutable `v0.1.0`. It predates the acce
 
 Two draft PRs are intentionally separated:
 
-- **PR #33 — M6.6 consolidated interaction + Hover Peek:** implemented and automated-tested, but **physical acceptance is still pending**. Its frozen target-Mac candidate is `423bc5d72a3676d01793f898ed2e8e79845bc8cd`; CI #962 / run `31685581542` passed the required automation. The PR stays draft, unmerged and unreleased until the focused repair retest and the remaining M6.6 physical matrix pass on `Mac16,8` / macOS 26.6.
-- **PR #34 — Regression and UI Automation Foundation:** separate testing-foundation work from stable `main`. Foundation Plan 1 Tasks 1-8 are implemented and automated-tested. The exact pre-documentation implementation candidate `7654775b3ae0416d115f8f2ca7118e947cf97e13` passed canonical CI run `31811958254` with all three jobs green: `macOS 26 compatibility`, `macOS UI regression`, and `Build, test and package`. Task 9 documentation/review/final exact-head verification is the current work.
+- **PR #33 — M6.6 consolidated interaction + Hover Peek:** implemented and automated-tested, but **physical acceptance is still pending**. Its frozen target-Mac candidate is `423bc5d72a3676d01793f898ed2e8e79845bc8cd`; CI #962 / run `31685581542` passed the required automation. The PR stays draft, unmerged and unreleased until the focused repair retest and remaining M6.6 physical matrix pass on `Mac16,8` / macOS 26.6.
+- **PR #34 — Regression and UI Automation Foundation:** separate testing-foundation work from stable `main`. **Foundation Plan 1 is complete and automated-tested.** Task-9 exact verification source `5e9341b4d957a967ec82166e18e009455119fd0b` passed canonical CI #1007 / run `31817097807` in all three jobs: `macOS 26 compatibility`, `macOS UI regression`, and `Build, test and package`. The active work is now Plan 2 — Legacy Regression Baseline Backfill.
 
-PR #34 does not intentionally repair or tune M6.6 product behavior. PR #33 remains untouched while the regression foundation is established.
+PR #34 does not intentionally repair or tune M6.6 product behavior. PR #33 remains untouched while the regression baseline is backfilled.
 
-## Regression and UI automation foundation
+## Regression and UI automation foundation — Plan 1
 
-Plan 1 adds a native macOS regression layer without replacing SwiftPM as the production build system:
+Plan 1 establishes a native macOS regression layer without replacing SwiftPM as the production build system:
 
-- a small checked-in Xcode project containing only a non-production UI-test host and `NotchHubUITests`;
+- a checked-in Xcode project containing only a non-production UI-test host and `NotchHubUITests`;
 - XCUI tests launch the exact SwiftPM-built `NotchHub.app` by URL rather than linking production source into the UI-test target;
 - deterministic media and haptic fixtures are compiled only under `NOTCHHUB_UI_TESTING`;
 - normal Personal/Release builds are verified to contain none of the fixture markers;
@@ -32,20 +32,22 @@ Plan 1 adds a native macOS regression layer without replacing SwiftPM as the pro
 - failure evidence includes screenshot, accessibility hierarchy, `.xcresult`, and exact `NHSourceCommit` provenance;
 - deterministic media UI journeys exercise real XCUI hover and click input, including hover expansion plus Next / Previous / Play-Pause behavior;
 - acceptance coverage is machine-audited from stable `NH-*` IDs in `docs/testing/*.md`;
-- canonical CI now contains the third job `macOS UI regression` on `macos-26` while preserving the existing package/security/performance gates.
+- canonical CI contains the third job `macOS UI regression` on `macos-26` while preserving package/security/performance gates.
 
-The foundation introduces no new network authority, telemetry, sensitive permission, global scroll monitor, event tap, polling loop, repeating watchdog, display link or synthetic media-key path.
+Production-diff review found no accidental product-feature or shipping trust-boundary change: shipping composition still creates `ShippingMediaRuntime`, AppDelegate retains runtime lifecycle ownership, shipping haptics remain direct `AppKitNotchHapticPerformer`, and all deterministic substitutions are compile-time test-only. No new network authority, telemetry, sensitive permission, global scroll monitor, event tap, polling loop, repeating watchdog, display link or synthetic media-key path was added.
 
-## Acceptance traceability state
+## Acceptance traceability — Plan 2 active
 
-`Tests/Acceptance/coverage.yml` plus `scripts/test_acceptance_coverage.py` implement two modes:
+Authoritative plan: `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md`.
+
+`Tests/Acceptance/coverage.yml` plus `scripts/test_acceptance_coverage.py` implement:
 
 - `audit` — validates manifest correctness while reporting legacy unmapped IDs;
 - `strict` — fails closed until the accepted deterministic baseline is completely mapped and physical-only exceptions are explicitly justified.
 
-Current audit discovers **70 stable acceptance IDs**. The seed manifest contains **1 verified mapping** and therefore reports **69 legacy backfill gaps**. This is intentional debt, not a claim of missing historical acceptance: the accepted physical/manual evidence remains authoritative, but it is not yet completely linked to executable automated evidence.
+Current audit discovers **70 stable acceptance IDs**. The seed manifest contains **1 verified mapping** and therefore reports **69 legacy backfill gaps**. This is traceability debt, not a reversal of historical physical acceptance.
 
-Feature work remains frozen until `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md` completes and strict validation passes.
+Plan 2 must complete the inventory for all stable accepted IDs, reuse existing valid tests where possible, add missing deterministic unit/integration/XCUI coverage, and reserve `physicalOnlyReason` only for genuinely physical properties. Feature work remains frozen until strict validation passes.
 
 ## Status ladder
 
@@ -59,10 +61,10 @@ Feature work remains frozen until `docs/superpowers/plans/2026-08-14-legacy-regr
 - M6.3 production system transport — **physically accepted / merged**.
 - M6.4 shipping composition — **physically accepted / merged**.
 - M6.5 Media-first UI — **physically accepted / merged**.
-- M6.6 merged prerequisites on `main` — **implemented / automated-tested / merged** as recorded in Git history.
+- M6.6 merged prerequisites on `main` — **implemented / automated-tested / merged**.
 - M6.6 consolidated PR #33 — **implemented / automated-tested / physical retest pending / not merged / not released**.
-- Regression foundation PR #34 Plan 1 — **implemented through Task 8 / automated-tested / Task 9 finalization in progress / not merged / not released**.
-- Legacy regression baseline backfill Plan 2 — **next blocking testing stage / not complete**.
+- Regression foundation PR #34 Plan 1 — **implemented / automated-tested / complete / not merged / not released**.
+- Legacy regression baseline backfill Plan 2 — **active blocking testing stage / strict not yet passing**.
 - P1 whole-app performance/resource review — **blocked until M6.6 acceptance and merge**.
 
 ## Security and privacy baseline
@@ -90,7 +92,7 @@ UI fixtures substitute only nondeterministic external boundaries under a compile
 - app `223,555 B`;
 - DMG `73,955 B`.
 
-Historical M6 feature budgets remain immutable. The foundation uses the separate provenance-backed `performance/regression-ui-automation-foundation-size-budget.json`; the current canonical CI enforces that envelope instead of rewriting earlier budgets. Shared-runner CPU/RSS/thread magnitudes remain compatibility evidence only; target-Mac performance acceptance still follows `PERFORMANCE.md`.
+Historical M6 feature budgets remain immutable. The foundation uses the separate provenance-backed `performance/regression-ui-automation-foundation-size-budget.json`; canonical CI enforces that envelope instead of rewriting earlier budgets. Shared-runner CPU/RSS/thread magnitudes remain compatibility evidence only; target-Mac performance acceptance still follows `PERFORMANCE.md`.
 
 ## Known limitations / technical debt
 
@@ -103,8 +105,9 @@ Historical M6 feature budgets remain immutable. The foundation uses the separate
 
 ## Next optimal step
 
-1. Finish Foundation Plan 1 Task 9: documentation sync, product-behavior diff review and fresh exact-head canonical CI with all three jobs green.
-2. Execute `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md` on the same isolated foundation branch. Complete the manifest for every stable accepted ID; every deterministic accepted behavior must point to executable evidence, while genuinely physical-only gates must carry a narrow explicit reason.
-3. Switch canonical CI from acceptance `audit` to `strict` and require strict PASS before considering PR #34 ready to merge. After merge, require post-merge `main` CI.
-4. Only then rebase/resume PR #33, obtain a fresh exact-head CI candidate and complete target-Mac M6.6 physical acceptance. Any physical failure stays in M6.6 under a focused RED -> GREEN cycle.
-5. Only after M6.6 is accepted and merged may P1 resource/performance work or later product milestones advance.
+1. Execute Plan 2 Task 1: produce the complete machine-readable acceptance inventory/report from all stable ledgers, classifying every ID as deterministic, integration, UI/E2E or genuinely physical-only without changing accepted semantics.
+2. Backfill M1 and M6.1-M6.5 executable mappings in plan order, reusing existing valid tests before adding new ones.
+3. Complete the manifest for every stable accepted ID; every deterministic accepted behavior must point to executable evidence while physical-only gates carry a narrow explicit reason.
+4. Switch canonical CI from acceptance `audit` to `strict` and require strict PASS before considering PR #34 ready to merge. After merge, require post-merge `main` CI.
+5. Only then rebase/resume PR #33, obtain a fresh exact-head CI candidate and complete target-Mac M6.6 physical acceptance.
+6. Only after M6.6 is accepted and merged may P1 resource/performance work or later product milestones advance.
