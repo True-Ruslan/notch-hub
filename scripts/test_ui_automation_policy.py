@@ -49,8 +49,12 @@ class UIAutomationPolicyTests(unittest.TestCase):
         )
 
     def test_acceptance_status_parser_still_recognizes_explicit_pass_and_fail_tokens(self):
-        passed = "| `NH-TEST-001` | Gate | PASS |"
-        failed = "| `NH-TEST-002` | Gate | FAIL |"
+        passed = """Status: PHYSICAL RETEST PENDING
+| `NH-TEST-001` | Gate | PASS |
+"""
+        failed = """Status: PHYSICAL RETEST PENDING
+| `NH-TEST-002` | Gate | FAIL |
+"""
 
         self.assertEqual("accepted", _infer_status("NH-TEST-001", passed))
         self.assertEqual("rejected", _infer_status("NH-TEST-002", failed))
