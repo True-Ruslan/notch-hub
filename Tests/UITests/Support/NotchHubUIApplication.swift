@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import XCTest
 
@@ -67,6 +68,41 @@ struct NotchHubUIApplication {
 
     func launch() {
         app.launch()
+    }
+
+    func surface(_ identifier: String) -> XCUIElement {
+        app.groups[identifier]
+    }
+
+    func waitForStableCompact(timeout: TimeInterval = 2) -> Bool {
+        let compact = surface("notch.surface.compact")
+        guard NotchHubUIAssertions.waitUntilExists(compact, timeout: timeout) else {
+            return false
+        }
+
+        return surface("notch.surface.expanded").waitForNonExistence(timeout: timeout)
+    }
+
+    func openExpandedViaAcceptedHover(timeout: TimeInterval = 2) -> Bool {
+        let compact = surface("notch.surface.compact")
+        guard NotchHubUIAssertions.waitUntilExists(compact, timeout: timeout) else {
+            return false
+        }
+
+        compact.hover()
+        return NotchHubUIAssertions.waitUntilExists(
+            surface("notch.surface.expanded"),
+            timeout: timeout
+        )
+    }
+
+    func movePointerOutside(_ element: XCUIElement) {
+        let center = element.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+        )
+        center.withOffset(
+            CGVector(dx: 0, dy: max(element.frame.height, 80))
+        ).hover()
     }
 
     private static func configurationError(_ message: String) -> NSError {
