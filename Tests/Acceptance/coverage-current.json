@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "NH-HOVER-DELAY-002",
+      "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {
+          "layer": "unit",
+          "test": "NotchHubCoreTests.NotchInteractionCoordinatorTests.hoverDwellEmitsOnePeekRequestAtExactly120Milliseconds"
+        }
+      ],
+      "physicalOnlyReason": null
+    },
+    {"id":"NH-NOTCH-INTERACTIVE-001","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-NOTCH-INTERACTIVE-002","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-NOTCH-INTERACTIVE-003","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-NOTCH-INTERACTIVE-004","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-NOTCH-INTERACTIVE-005","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-NOTCH-INTERACTIVE-006","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-NOTCH-INTERACTIVE-007","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-NOTCH-INTERACTIVE-008","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-NOTCH-INTERACTIVE-009","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-SOURCE-ICON-001","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-SOURCE-ICON-002","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-SOURCE-ICON-003","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-SOURCE-ICON-004","source":"docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-001","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"rejected","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-002","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-003","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-004","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-005","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-006","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-007","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-008","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-009","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-010","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-011","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"rejected","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-012","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-013","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null}
+  ]
+}
