@@ -34,12 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let mediaGestureSession: MediaGestureSession
         #if NOTCHHUB_UI_TESTING
-            let uiTestHapticRecorder = uiTestHapticRecorder
+            let gestureHapticRecorder = uiTestHapticRecorder
             mediaGestureSession = MediaGestureSession(
                 compactDispatcher: ShippingMediaCompactCommandDispatcher(),
                 visualModel: mediaGestureVisualModel,
                 performArmHaptic: {
-                    uiTestHapticRecorder.performExpansionHaptic()
+                    gestureHapticRecorder.performExpansionHaptic()
                 }
             )
         #else
@@ -98,11 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let panelController: NotchPanelController
         #if NOTCHHUB_UI_TESTING
-            let uiTestHapticRecorder = uiTestHapticRecorder
+            let panelHapticRecorder = uiTestHapticRecorder
             panelController = NotchPanelController(
                 contentFactory: contentFactory,
                 performExpansionHaptic: {
-                    uiTestHapticRecorder.performExpansionHaptic()
+                    panelHapticRecorder.performExpansionHaptic()
                 }
             )
         #else
