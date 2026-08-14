@@ -70,8 +70,8 @@ class UIProjectPolicyTests(unittest.TestCase):
             "xcodebuild -list -project NotchHubUITests.xcodeproj",
             "bash scripts/build-ui-test-app.sh",
             "--verify-shipping-app build/NotchHub.app",
-            "NOTCHHUB_UI_APP_PATH:",
-            "NOTCHHUB_UI_SOURCE_COMMIT:",
+            "TEST_RUNNER_NOTCHHUB_UI_APP_PATH:",
+            "TEST_RUNNER_NOTCHHUB_UI_SOURCE_COMMIT:",
             "xcodebuild test",
             "build/NotchHubUITests-smoke.xcresult",
             "if: always()",
@@ -86,6 +86,19 @@ class UIProjectPolicyTests(unittest.TestCase):
             "UI build, shipping verification and XCUI provenance must use exact PR-head SHA",
         )
 
+    def test_ui_runner_configuration_is_required_not_skippable(self):
+        application = APPLICATION.read_text(encoding="utf-8")
+
+        self.assertNotIn(
+            'XCTSkip("NOTCHHUB_UI_APP_PATH is required")',
+            application,
+            "missing required UI app provenance must fail the gate rather than skip the test",
+        )
+        self.assertIn(
+            'configurationError("NOTCHHUB_UI_APP_PATH is required")',
+            application,
+        )
+
     def test_ui_diagnostics_are_exact_sha_aware_and_fail_closed(self):
         application = APPLICATION.read_text(encoding="utf-8")
         diagnostics = DIAGNOSTICS.read_text(encoding="utf-8")
@@ -96,7 +109,7 @@ class UIProjectPolicyTests(unittest.TestCase):
         self.assertIn("sourceCommit", diagnostics)
         self.assertIn("XCTAttachment(string: sourceCommit)", diagnostics)
         self.assertIn(
-            f"NOTCHHUB_UI_SOURCE_COMMIT: {EXACT_SOURCE_EXPRESSION}",
+            f"TEST_RUNNER_NOTCHHUB_UI_SOURCE_COMMIT: {EXACT_SOURCE_EXPRESSION}",
             workflow,
         )
 
