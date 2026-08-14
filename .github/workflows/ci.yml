@@ -518,8 +518,8 @@ jobs:
 
       - name: Run external application UI smoke
         env:
-          NOTCHHUB_UI_APP_PATH: ${{ github.workspace }}/build/ui-test/NotchHub.app
-          NOTCHHUB_UI_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          TEST_RUNNER_NOTCHHUB_UI_APP_PATH: ${{ github.workspace }}/build/ui-test/NotchHub.app
+          TEST_RUNNER_NOTCHHUB_UI_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           rm -rf build/NotchHubUITests-smoke.xcresult
           xcodebuild test \
