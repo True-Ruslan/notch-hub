@@ -7,8 +7,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let mediaCompactWingWidth: CGFloat = 36
 
     private var panelController: NotchPanelController?
-    private var mediaRuntime: ShippingMediaRuntime?
+    private var mediaRuntime: (any MediaRuntimeSession)?
     private let mediaPresentationModel = ShippingMediaPresentationModel()
+    private let composition: AppComposition = {
+#if NOTCHHUB_UI_TESTING
+        AppComposition.uiTesting(configuration: .current())
+#else
+        AppComposition.shipping()
+#endif
+    }()
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -70,7 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            let mediaRuntime = ShippingMediaRuntime(presentationModel: mediaPresentationModel)
+            let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)
             self.mediaRuntime = mediaRuntime
             mediaRuntime.start()
 
