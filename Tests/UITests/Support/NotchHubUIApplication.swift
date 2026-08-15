@@ -112,7 +112,20 @@ struct NotchHubUIApplication {
         }
 
         let compactFrame = compact.frame
-        let clickPoint = CGPoint(x: compactFrame.midX, y: compactFrame.midY)
+        let displayBounds = CGDisplayBounds(CGMainDisplayID())
+        guard
+            displayBounds.width.isFinite,
+            displayBounds.height.isFinite,
+            displayBounds.width > 0,
+            displayBounds.height > 0
+        else {
+            return false
+        }
+
+        let clickPoint = CGPoint(
+            x: compactFrame.midX,
+            y: displayBounds.maxY - (compactFrame.midY - displayBounds.minY)
+        )
         guard clickPoint.x.isFinite, clickPoint.y.isFinite else {
             return false
         }
