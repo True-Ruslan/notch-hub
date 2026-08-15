@@ -10,21 +10,11 @@ protocol NotchLocalPointerTracking: AnyObject {
 }
 
 @MainActor
-private final class NotchLocalInputHostingView<Content: View>: NSHostingView<Content>, NotchLocalPointerTracking {
-    private let onScrollWheel: NotchLocalScrollHandler?
+private class NotchLocalPointerHostingView<Content: View>: NSHostingView<Content>, NotchLocalPointerTracking {
     private var pointerTrackingArea: NSTrackingArea?
     var onNotchPointerEvent: NotchLocalPointerHandler?
 
     required init(rootView: Content) {
-        self.onScrollWheel = nil
-        super.init(rootView: rootView)
-    }
-
-    init(
-        rootView: Content,
-        onScrollWheel: NotchLocalScrollHandler?
-    ) {
-        self.onScrollWheel = onScrollWheel
         super.init(rootView: rootView)
     }
 
@@ -70,16 +60,34 @@ private final class NotchLocalInputHostingView<Content: View>: NSHostingView<Con
         emitPointerEvent()
     }
 
-    override func scrollWheel(with event: NSEvent) {
-        if let onScrollWheel {
-            onScrollWheel(event)
-        } else {
-            super.scrollWheel(with: event)
-        }
-    }
-
     private func emitPointerEvent() {
         onNotchPointerEvent?(NSEvent.mouseLocation)
+    }
+}
+
+@MainActor
+private final class NotchLocalScrollHostingView<Content: View>: NotchLocalPointerHostingView<Content> {
+    private let onScrollWheel: NotchLocalScrollHandler
+
+    required init(rootView: Content) {
+        fatalError("Use init(rootView:onScrollWheel:) for local gesture input")
+    }
+
+    init(
+        rootView: Content,
+        onScrollWheel: @escaping NotchLocalScrollHandler
+    ) {
+        self.onScrollWheel = onScrollWheel
+        super.init(rootView: rootView)
+    }
+
+    @available(*, unavailable)
+    required dynamic init?(coder: NSCoder) {
+        fatalError("init(coder:) is unavailable")
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        onScrollWheel(event)
     }
 }
 
@@ -89,10 +97,15 @@ public enum NotchHostingViewFactory {
         rootView: Content,
         onScrollWheel: NotchLocalScrollHandler? = nil
     ) -> NSHostingView<Content> {
-        let hostingView = NotchLocalInputHostingView(
-            rootView: rootView,
-            onScrollWheel: onScrollWheel
-        )
+        let hostingView: NSHostingView<Content>
+        if let onScrollWheel {
+            hostingView = NotchLocalScrollHostingView(
+                rootView: rootView,
+                onScrollWheel: onScrollWheel
+            )
+        } else {
+            hostingView = NotchLocalPointerHostingView(rootView: rootView)
+        }
 
         hostingView.sizingOptions = []
         hostingView.autoresizingMask = [.width, .height]
