@@ -24,24 +24,24 @@ struct NotchLocalPointerTrackingPolicyTests {
     }
 
     @Test
-    func panelMouseDownCancelsPendingHoverBeforeSwiftUIDispatch() throws {
-        let controllerSource = try sourceText(
-            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+    func explicitExpansionTapLivesAboveCompactPeekPresentationSwitches() throws {
+        let shellSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/UI/NotchRootView.swift"
+        )
+        let mediaSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
         )
 
-        #expect(controllerSource.contains("final class NotchEventAwarePanel: NSPanel"))
-        #expect(controllerSource.contains("override func sendEvent(_ event: NSEvent)"))
-        #expect(controllerSource.contains("event.type == .leftMouseDown"))
-        #expect(controllerSource.contains("onLeftMouseDown?()"))
-        #expect(controllerSource.contains("super.sendEvent(event)"))
-        #expect(controllerSource.contains("panel.onLeftMouseDown"))
-        #expect(controllerSource.contains("cancelPendingActivationForInteractiveTransition()"))
-        #expect(!controllerSource.contains("addLocalMonitorForEvents"))
-        #expect(!controllerSource.contains("CGEvent.tapCreate"))
+        #expect(shellSource.contains("private func requestExplicitExpansionFromTap()"))
+        #expect(shellSource.contains(".onTapGesture(perform: requestExplicitExpansionFromTap)"))
+        #expect(mediaSource.contains("private func requestExplicitExpansionFromTap()"))
+        #expect(mediaSource.contains(".onTapGesture(perform: requestExplicitExpansionFromTap)"))
+        #expect(shellSource.components(separatedBy: ".onTapGesture").count - 1 == 1)
+        #expect(mediaSource.components(separatedBy: ".onTapGesture").count - 1 == 1)
     }
 
     @Test
-    func panelControllerBindsLocalTrackingToExistingInteractionPath() throws {
+    func panelControllerBindsLocalTrackingToExistingInteractionPathWithoutMouseButtonAuthority() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
         )
@@ -50,6 +50,9 @@ struct NotchLocalPointerTrackingPolicyTests {
         #expect(source.contains("onNotchPointerEvent"))
         #expect(source.contains("updateInteraction(for: pointer)"))
         #expect(source.contains("pointerMonitor.start"))
+        #expect(!source.contains("leftMouseDown"))
+        #expect(!source.contains("addLocalMonitorForEvents"))
+        #expect(!source.contains("CGEvent.tapCreate"))
     }
 
     private func sourceText(relativePath: String) throws -> String {
