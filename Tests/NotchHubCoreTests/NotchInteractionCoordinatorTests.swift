@@ -131,7 +131,7 @@ struct NotchInteractionCoordinatorTests {
     }
 
     @Test
-    func noMediaResolutionLeavesCompactAndProducesNoActivation() {
+    func noMediaResolutionStillAllowsGenericPeek() {
         let fixture = makeFixture()
         fixture.coordinator.pointerMoved(
             to: insideCompact,
@@ -148,7 +148,7 @@ struct NotchInteractionCoordinatorTests {
             currentPresentation: .compact
         )
 
-        #expect(!accepted)
+        #expect(accepted)
         #expect(fixture.intents.isEmpty)
     }
 
