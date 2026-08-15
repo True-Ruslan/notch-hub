@@ -13,6 +13,9 @@ TRUSTED_RELEASE = (ROOT / ".github/workflows/trusted-release.yml").read_text(enc
 UI_APPLICATION = (
     ROOT / "Tests/UITests/Support/NotchHubUIApplication.swift"
 ).read_text(encoding="utf-8")
+MEDIA_NOTCH_ROOT = (
+    ROOT / "Sources/NotchHubApp/MediaNotchRootView.swift"
+).read_text(encoding="utf-8")
 EXPLICIT_EXPANSION = UI_APPLICATION.split("func openExpandedExplicitly", 1)[1].split(
     "func hoverCompact", 1
 )[0]
@@ -42,20 +45,14 @@ class UIAutomationPolicyTests(unittest.TestCase):
         self.assertIn("NOTCHHUB_UI_TESTING", BUILD_APP)
         self.assertIn("-DNOTCHHUB_UI_TESTING", BUILD_APP)
 
-    def test_explicit_expansion_harness_uses_stable_screen_space_click(self):
-        self.assertNotIn("compact.click()", UI_APPLICATION)
-        self.assertNotIn("app.coordinate(", UI_APPLICATION)
-        self.assertIn("CGEvent(", UI_APPLICATION)
-        self.assertIn("mouseEventSource: nil", UI_APPLICATION)
-        self.assertIn("mouseType: .leftMouseDown", UI_APPLICATION)
-        self.assertIn("mouseType: .leftMouseUp", UI_APPLICATION)
-        self.assertIn(".post(tap: .cghidEventTap)", UI_APPLICATION)
-
-    def test_explicit_expansion_converts_xcui_y_to_quartz_global_coordinates(self):
-        self.assertIn("CGDisplayBounds(CGMainDisplayID())", EXPLICIT_EXPANSION)
-        self.assertIn("displayBounds.maxY", EXPLICIT_EXPANSION)
-        self.assertIn("displayBounds.minY", EXPLICIT_EXPANSION)
-        self.assertIn("compactFrame.midY", EXPLICIT_EXPANSION)
+    def test_explicit_expansion_harness_clicks_persistent_real_hit_target(self):
+        self.assertIn('"notch.surface.hitTarget"', MEDIA_NOTCH_ROOT)
+        self.assertIn('surface("notch.surface.hitTarget")', EXPLICIT_EXPANSION)
+        self.assertIn("hitTarget.click()", EXPLICIT_EXPANSION)
+        self.assertNotIn("compact.click()", EXPLICIT_EXPANSION)
+        self.assertNotIn("CGEvent(", EXPLICIT_EXPANSION)
+        self.assertNotIn("CGWarpMouseCursorPosition", EXPLICIT_EXPANSION)
+        self.assertNotIn("app.coordinate(", EXPLICIT_EXPANSION)
 
     def test_acceptance_status_parser_does_not_treat_passive_as_pass(self):
         ledger = """Status: CONTRACT FROZEN / IMPLEMENTATION PENDING
