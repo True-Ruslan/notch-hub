@@ -35,6 +35,16 @@ public enum NotchPointerPolicy {
         }
     }
 
+    public static func containsInteractivePointer(
+        _ pointer: CGPoint,
+        in panelFrame: CGRect
+    ) -> Bool {
+        pointer.x >= panelFrame.minX
+            && pointer.x <= panelFrame.maxX
+            && pointer.y >= panelFrame.minY
+            && pointer.y <= panelFrame.maxY
+    }
+
     private static func compactActivationFrame(for layout: NotchLayout) -> CGRect {
         guard layout.hasHardwareNotch, layout.hardwareNotchWidth > 0 else {
             return layout.compactFrame
