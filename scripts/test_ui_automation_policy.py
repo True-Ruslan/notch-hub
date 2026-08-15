@@ -39,10 +39,13 @@ class UIAutomationPolicyTests(unittest.TestCase):
         self.assertIn("NOTCHHUB_UI_TESTING", BUILD_APP)
         self.assertIn("-DNOTCHHUB_UI_TESTING", BUILD_APP)
 
-    def test_explicit_expansion_harness_uses_stable_application_coordinate(self):
+    def test_explicit_expansion_harness_uses_stable_screen_space_click(self):
         self.assertNotIn("compact.click()", UI_APPLICATION)
-        self.assertIn("app.coordinate(", UI_APPLICATION)
-        self.assertIn("withNormalizedOffset:", UI_APPLICATION)
+        self.assertNotIn("app.coordinate(", UI_APPLICATION)
+        self.assertIn("CGEvent(mouseEventSource:", UI_APPLICATION)
+        self.assertIn("mouseType: .leftMouseDown", UI_APPLICATION)
+        self.assertIn("mouseType: .leftMouseUp", UI_APPLICATION)
+        self.assertIn(".post(tap: .cghidEventTap)", UI_APPLICATION)
 
     def test_acceptance_status_parser_does_not_treat_passive_as_pass(self):
         ledger = """Status: CONTRACT FROZEN / IMPLEMENTATION PENDING
