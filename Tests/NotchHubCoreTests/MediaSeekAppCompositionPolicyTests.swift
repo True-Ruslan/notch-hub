@@ -70,20 +70,25 @@ struct MediaSeekAppCompositionPolicyTests {
 
     @Test
     func appWiresSeekWhilePersistentRuntimeRemainsExpandedOnly() throws {
-        let source = try sourceText(
+        let appSource = try sourceText(
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
+        let compositionSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/AppComposition.swift"
+        )
 
-        #expect(source.contains("onSeekBegan:"))
-        #expect(source.contains("mediaGestureSession?.beginSeek()"))
-        #expect(source.contains("onSeekCommitted:"))
-        #expect(source.contains("mediaGestureSession?.commitSeek(to:"))
-        #expect(source.contains("onSeekCancelled:"))
-        #expect(source.contains("mediaGestureSession?.cancelSeek()"))
-        #expect(source.contains("case .expanded:"))
-        #expect(source.contains("ShippingMediaRuntime(presentationModel: mediaPresentationModel)"))
-        #expect(source.contains("case .compact, .peek:"))
-        #expect(source.contains("mediaRuntime?.stop()"))
+        #expect(appSource.contains("onSeekBegan:"))
+        #expect(appSource.contains("mediaGestureSession?.beginSeek()"))
+        #expect(appSource.contains("onSeekCommitted:"))
+        #expect(appSource.contains("mediaGestureSession?.commitSeek(to:"))
+        #expect(appSource.contains("onSeekCancelled:"))
+        #expect(appSource.contains("mediaGestureSession?.cancelSeek()"))
+        #expect(appSource.contains("case .expanded:"))
+        #expect(appSource.contains("composition.makeMediaRuntime(mediaPresentationModel)"))
+        #expect(compositionSource.contains("static func shipping() -> Self"))
+        #expect(compositionSource.contains("ShippingMediaRuntime(presentationModel: $0)"))
+        #expect(appSource.contains("case .compact, .peek:"))
+        #expect(appSource.contains("mediaRuntime?.stop()"))
     }
 
     @Test
