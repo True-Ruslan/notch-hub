@@ -123,6 +123,8 @@ struct MediaNotchRootView: View {
         .offset(x: mediaGestureVisualModel.horizontalOffset)
         .background(Color.black)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(surfaceAccessibilityIdentifier)
         .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
             if panelModel.contentPresentation == .expanded {
                 sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
@@ -137,6 +139,17 @@ struct MediaNotchRootView: View {
         }
         .onChange(of: presentation.sessionIdentity) { _, _ in
             cancelSeekPreview()
+        }
+    }
+
+    private var surfaceAccessibilityIdentifier: String {
+        switch panelModel.contentPresentation {
+        case .compact:
+            "notch.surface.compact"
+        case .peek:
+            "notch.surface.peek"
+        case .expanded:
+            "notch.surface.expanded"
         }
     }
 
