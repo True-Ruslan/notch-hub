@@ -34,6 +34,19 @@ public struct NotchRootView: View {
                 : Color.black
         )
         .contentShape(Rectangle())
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(surfaceAccessibilityIdentifier)
+    }
+
+    private var surfaceAccessibilityIdentifier: String {
+        switch model.contentPresentation {
+        case .compact:
+            "notch.surface.compact"
+        case .peek:
+            "notch.surface.peek"
+        case .expanded:
+            "notch.surface.expanded"
+        }
     }
 
     private var compactContent: some View {
