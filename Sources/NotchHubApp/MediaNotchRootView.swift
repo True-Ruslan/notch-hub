@@ -125,6 +125,7 @@ struct MediaNotchRootView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(surfaceAccessibilityIdentifier)
+        .onTapGesture(perform: requestExplicitExpansionFromTap)
         .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
             if panelModel.contentPresentation == .expanded {
                 sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
@@ -153,6 +154,13 @@ struct MediaNotchRootView: View {
         }
     }
 
+    private func requestExplicitExpansionFromTap() {
+        guard panelModel.contentPresentation != .expanded else {
+            return
+        }
+        onExplicitExpansion()
+    }
+
     private func compactMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
         HStack(spacing: 0) {
             artwork(presentation, size: 24)
@@ -171,18 +179,12 @@ struct MediaNotchRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .onTapGesture {
-            onExplicitExpansion()
-        }
     }
 
     private func peekMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
         ZStack {
             Color.clear
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    onExplicitExpansion()
-                }
 
             VStack(spacing: 8) {
                 HStack(spacing: 10) {
