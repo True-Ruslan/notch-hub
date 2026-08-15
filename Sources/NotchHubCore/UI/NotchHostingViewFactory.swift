@@ -23,6 +23,10 @@ private class NotchLocalPointerHostingView<Content: View>: NSHostingView<Content
         fatalError("init(coder:) is unavailable")
     }
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+
     override func updateTrackingAreas() {
         if let pointerTrackingArea {
             removeTrackingArea(pointerTrackingArea)
