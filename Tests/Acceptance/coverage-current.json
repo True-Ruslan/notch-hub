@@ -75,7 +75,7 @@
     {"id":"NH-MEDIA-PEEK-007","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-MEDIA-PEEK-008","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-MEDIA-PEEK-009","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
-    {"id":"NH-MEDIA-PEEK-010","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
+    {"id":"NH-MEDIA-PEEK-010","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"rejected","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-MEDIA-PEEK-011","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"rejected","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-MEDIA-PEEK-012","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null},
     {"id":"NH-MEDIA-PEEK-013","source":"docs/testing/MEDIA_PEEK_ACCEPTANCE.md","status":"pending","coverage":[],"physicalOnlyReason":null}
