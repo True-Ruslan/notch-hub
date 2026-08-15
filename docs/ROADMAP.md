@@ -23,40 +23,41 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 
 ### M6.6 — gestures, haptics, interactive notch, seek and Hover Peek
 
-Status: **IMPLEMENTED / INTEGRATED WITH REGRESSION FOUNDATION / AUTOMATED GREEN / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / REGRESSION-INTEGRATED / FOCUSED REPAIR AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
-Draft PR #33 contains stable `compact`, `peek`, `expanded` presentation ownership, 120 ms media-only Hover Peek, 140 ms Peek grace, explicit click/DOWN expansion, local media gestures/haptics, interactive panel motion, bounded compact/Peek media work, expanded-only persistent runtime, source icon, seek/cursor isolation and event-driven continuity.
+Draft PR #33 currently provides:
 
-Pre-documentation implementation baseline `f49f94d5ab51dcec5dccb97b6c0997ec631b1261` passed PR #33 CI #1100 / run `31870867724` with all three canonical jobs green, **347 tests / 72 suites**, strict acceptance **116/116**, native external-app XCUI **9/9**, production media transport, release/security/signing/Sandbox/Hardened Runtime, combined size gate and performance smoke all PASS.
+- stable `compact`, `peek`, `expanded` ownership under one transition authority;
+- exactly 120 ms hover dwell and 140 ms Peek exit grace;
+- generic Hover Peek even when no usable media session exists, with one hover-haptic request;
+- bounded one-shot media enrichment in compact/Peek and persistent runtime only in expanded;
+- explicit click/DOWN expansion, including a stable parent tap path that survives compact -> Peek during an in-flight click;
+- exact-top-edge inclusive interactive pointer retention;
+- local previous/next gestures and haptics;
+- interactive panel follow-finger motion and exact endpoint settlement;
+- source icon, seek/cursor isolation and event-driven continuity.
 
-This docs sync creates the next exact source candidate and therefore requires its own fresh three-job CI before physical artifact provenance is frozen.
+No new global input authority, polling, repeating timer, display link or sensitive permission was added.
 
-The active cumulative deterministic size policy is `performance/m6-6-regression-foundation-integration-size-budget.json`. Immutable P0 and all historical M6 feature budgets remain unchanged provenance records.
+#### 2026-08-15 physical rejection and repair
 
-#### Regression-foundation integration status
+Candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was rejected on the target Mac:
 
-Temporary draft PR #35 was used as an integration workspace after PR #34 changed the base beneath frozen PR #33. It must not be merged to `main`.
+- with music off, hover produced no Peek/haptic;
+- exact-top-edge DOWN twitched then self-collapsed;
+- expanded pointer exit remained PASS;
+- center-notch DOWN and physical UP were stable.
 
-The integration now provides:
+The repair changed the pending product contract so no-media hover opens generic Peek and requests one hover haptic, replaced half-open interactive containment at the physical boundary, and moved explicit tap recognition above the compact/Peek switch after external XCUI exposed a dwell/click race.
 
-- fail-closed strict traceability for all **116 discovered / 116 mapped** stable acceptance IDs;
-- explicit approved supersession records for historical M1 behavior intentionally replaced by the Hover Peek design, without promoting new M6.6 gates to accepted;
-- native exact-app XCUI with stable compact/Peek/expanded accessibility surfaces and shipping fixture-leak detection;
-- compile-time-only deterministic media/haptic fixtures;
-- protocol-based expanded media gesture/seek runtime injection while concrete `ShippingMediaRuntime` construction remains shipping-composition authority;
-- a provenance-backed cumulative M6.6 + regression-foundation size envelope.
+Automated evidence:
 
-First full combined baseline `e5cdc58776f80f1fc6f57e22959a07704d895fbe` / CI #1095 passed all canonical jobs. A separate testability refactor followed RED `3b79448697d614b7f022009653eca655a31bad4f` / CI #1096 -> GREEN `f49f94d5ab51dcec5dccb97b6c0997ec631b1261` / CI #1099 and was independently reverified after non-force fast-forward into real PR #33 by CI #1100.
+- behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140: 352 Swift tests / 74 suites and 11/11 external XCUI PASS; package failed only on the preceding DMG size ceiling;
+- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147: all three canonical jobs PASS with strict traceability, security/source audit, production transport, shipping/signing/Sandbox/Hardened Runtime/preflight, performance smoke and the revised tight size budget.
 
-#### Physical acceptance blocker
+The active cumulative deterministic size policy is now `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`. It keeps app/executable allowance unchanged from the preceding cumulative envelope and adds one 4096-byte DMG allowance quantum. Immutable P0 and all historical M6 budgets remain unchanged provenance records.
 
-Candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 was rejected on target hardware even though automation was green:
-
-- stable hover/haptic/Peek did not fire in the observed broken session;
-- moving the pointer out of expanded did not auto-collapse, regressing accepted M1 behavior;
-- physical UP could leave a partially collapsed intermediate frame when shrinking geometry moved away from the pointer before local scroll delivered a terminal phase.
-
-The latter two failures have focused deterministic repairs and regression coverage. The hover/haptic symptom remains an explicit physical retest condition; it is not considered accepted by automation.
+The current docs-synchronized head still requires fresh three-job CI. After it passes, its exact source and CI-produced shipping artifact/DMG are frozen without another source commit.
 
 Acceptance ledgers:
 
@@ -64,13 +65,13 @@ Acceptance ledgers:
 - `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`;
 - `docs/testing/MEDIA_PEEK_ACCEPTANCE.md`.
 
-No P1 work, merge or release is allowed before applicable physical gates pass on one exact candidate.
+No P1 work, merge or release is allowed before all applicable physical gates pass on one exact candidate.
 
 ## P1 — whole-app performance/resource review
 
 Status: **BLOCKED UNTIL M6.6 PHYSICAL ACCEPTANCE + MERGE**.
 
-Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, global `.mouseMoved` fallback comparison, repeated-run variance characterization.
+Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, narrow global `.mouseMoved` fallback comparison, repeated-run variance characterization, and real active-display/multi-monitor reality checks.
 
 ## Product modules after media/performance foundation
 
@@ -83,10 +84,9 @@ Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, global `.m
 
 ## Current priority
 
-1. Pass all three canonical CI jobs on this docs-synchronized PR #33 head.
-2. Freeze that exact source SHA and CI-produced shipping artifact/DMG provenance without another source commit.
-3. Retest clean stable hover/haptic/Peek and stationary relaunch first.
-4. Retest DOWN -> expanded -> plain pointer exit and UP/DOWN pointer/panel-separation settlement; require exact stable endpoint every time.
-5. Any independent repeatable failure gets its own RED -> GREEN cycle and a new exact candidate.
-6. Only after the focused block passes continue remaining Peek/gesture/seek/source-icon/lifecycle/permission gates on the same candidate.
-7. Only after full physical PASS: mark PR #33 ready, merge, verify post-merge `main` CI, close the M6.6 milestone and begin P1.
+1. Pass all three canonical CI jobs on the final documentation-synchronized PR #33 head.
+2. Freeze exact source SHA + shipping/DMG artifact provenance without another source commit.
+3. Run the focused target-Mac block: no-media Hover Peek/haptic, stationary relaunch, explicit click under dwell, exact-top-edge DOWN, expanded pointer exit, UP/DOWN lost-terminal safety.
+4. Any independent repeatable failure gets its own focused RED -> GREEN cycle and a new exact candidate.
+5. Only after the focused block passes continue remaining Peek/gesture/seek/source-icon/lifecycle/permission gates on the same candidate.
+6. Only after full physical PASS: mark PR #33 ready, merge, verify post-merge `main` CI, close M6.6 and begin P1.

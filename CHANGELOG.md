@@ -8,20 +8,22 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### M6.6 — current draft PR #33
 
-Status: **IMPLEMENTED / INTEGRATED WITH REGRESSION FOUNDATION / AUTOMATED GREEN / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / REGRESSION-INTEGRATED / FOCUSED REPAIR AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
 Added:
 
 - local App-owned media gesture session with bounded horizontal visuals and public AppKit arm haptic;
 - stable `compact`, `peek`, `expanded` presentation states under the existing Core transition authority;
-- 120 ms media-only Hover Peek plus 140 ms pointer-exit grace;
-- click and physical DOWN as explicit expansion paths;
+- exactly 120 ms Hover Peek activation plus 140 ms pointer-exit grace;
+- generic no-media Peek: usable media is no longer required for hover preview, and a valid dwell requests the normal hover haptic once;
+- click and physical DOWN as explicit expansion paths, with one stable parent SwiftUI tap recognizer across compact/Peek;
 - bounded one-shot media probing/commands in compact and Peek while persistent runtime remains expanded-only;
+- exact-top-edge inclusive pointer retention for interactive DOWN;
 - source-app identity badge through public `NSWorkspace` and bounded in-memory cache;
 - capability-gated draggable seek in Peek and expanded, identity-locked across track/source changes;
 - balanced seek cursor ownership without pointer warp/lock;
 - strict native regression/UI automation integrated with M6.6;
-- cumulative provenance-backed integration size budget over immutable P0.
+- cumulative provenance-backed size budget over immutable P0.
 
 Physical acceptance history:
 
@@ -29,57 +31,51 @@ Physical acceptance history:
 - Hover Peek evidence `7daffde9b7c2a734e2ddfa234b1ee744b0d96d9e` / CI #939 and subsequent size-policy repair completed;
 - docs-synchronized candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 rejected on stationary-startup Hover Peek;
 - startup RED `553cf973722dfb214f0fcb741ddb6c9b0b44ff02` / CI #947 -> GREEN `d17bd27be72c8c3bd022fb2c3613050c398c622e` / CI #948;
-- candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 passed automation but was rejected for expanded pointer-exit and interactive lost-terminal behavior.
+- candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 passed automation but was rejected for expanded pointer-exit and interactive lost-terminal behavior;
+- candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was rejected on 2026-08-15 for no-media Hover Peek/haptic behavior and exact-top-edge DOWN self-collapse, while expanded pointer-exit and normal-center DOWN/UP remained stable.
 
 #### 2026-08-13 expanded pointer-exit / interactive settlement repair
 
 Target testing showed that PR #33 had regressed accepted M1 semantics: after DOWN expansion, moving the pointer out of expanded no longer collapsed the panel. Physical UP could also leave a clipped intermediate panel when shrinking geometry moved out from under the pointer before the local hosting view received `.ended`/`.cancelled`.
 
-The repair is intentionally local and event-driven:
+The repair restored expanded retention collapse, limited interactive retarget to the pointer-exit fail-safe, passed current mouse location through local precise-scroll updates, and synchronously settled from actual panel geometry when pointer/panel separation could lose terminal local scroll delivery. No global scroll monitor, event tap, watchdog timer, polling loop, display link or new permission authority was introduced.
 
-- restored expanded retention policy: outside expanded retention -> non-haptic compact;
-- `.pointerExitCollapse` is the sole intent allowed to retarget an owned interactive transition;
-- local precise-scroll handling passes current `NSEvent.mouseLocation` through the interactive update;
-- after synchronous frame updates, actual `panel.frame` is checked and pointer/panel separation settles to exact compact;
-- existing mouse-move observation provides the same fail-safe for real pointer motion while interaction is owned;
-- no global scroll monitor, event tap, watchdog timer, polling loop, display link or new permission authority was introduced.
-
-TDD evidence:
-
-- RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959: exactly five new regression tests failed while the previous suite passed;
-- GREEN `64d3e6c2beadacaeda69c8ac06f173ac26aace3e`;
-- the hover/haptic symptom remains a physical retest condition and is not falsely attributed to this repair.
+TDD evidence: RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959 -> GREEN `64d3e6c2beadacaeda69c8ac06f173ac26aace3e`.
 
 #### 2026-08-15 regression foundation integration
 
 Regression/UI Automation Foundation PR #34 was merged to `main` as `bd9566f690d314ed40fd6f3723a319291ceb4a58`; post-merge main CI #1053 passed all three canonical jobs.
 
-Because frozen PR #33 then diverged from its updated base, temporary draft PR #35 was used only as a fail-closed integration workspace. It is not intended for merge.
+Integration work added fail-closed acceptance traceability, exact-app native XCUI, compile-time-only deterministic media/haptic fixtures with shipping-marker isolation, stable accessibility identities, and protocol-based expanded runtime injection while concrete `ShippingMediaRuntime` construction remained shipping-composition authority.
 
-Integration work:
+First full combined baseline `e5cdc58776f80f1fc6f57e22959a07704d895fbe` / CI #1095 passed all canonical jobs. Protocol-runtime RED `3b79448697d614b7f022009653eca655a31bad4f` / CI #1096 -> GREEN `f49f94d5ab51dcec5dccb97b6c0997ec631b1261` / CI #1099. PR #33 CI #1100 then independently passed all three jobs with 347 tests / 72 suites, strict 116/116 and native external-app XCUI 9/9.
 
-- expanded strict acceptance traceability to **116 discovered / 116 mapped / 0 unmapped** using a current evidence overlay and explicit approved supersessions;
-- preserved historical accepted M1 evidence while intentionally superseded hover behavior is represented as replacement by Hover Peek rather than restored incorrectly;
-- kept new M6.6 gates pending/rejected until physical acceptance;
-- restored stable `notch.surface.compact`, `notch.surface.peek`, `notch.surface.expanded` accessibility identities and source/media identifiers;
-- aligned native XCUI journeys with current product contract: hover does not open full Home; explicit click opens expanded; pointer-exit/control/retained-context journeys use the exact app;
-- integrated compile-time-only deterministic media/haptic fixtures with shipping-marker isolation checks;
-- adapted deterministic runtime to M6.6 session identity and seek;
-- retained concrete `ShippingMediaRuntime` creation solely in shipping `AppComposition` while `MediaGestureSession` now consumes the `MediaRuntimeSession` protocol for expanded previous/next/seek testability;
-- updated stale historical regression evidence without changing accepted semantics;
-- created `performance/m6-6-regression-foundation-integration-size-budget.json` from exact CI #1089 / run `31869841148`, source `452f78b0e42c5302702393e9c45c563849661ca4`, artifact `9243156724`, with tight 4 KiB-rounded allowance over immutable `v0.1.0`.
+#### 2026-08-15 physical-acceptance repair
 
-TDD/verification evidence:
+Target testing of exact candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 produced two concrete blockers and one later automated race:
 
-- first full combined baseline `e5cdc58776f80f1fc6f57e22959a07704d895fbe` / CI #1095: all three canonical jobs SUCCESS;
-- protocol-runtime RED `3b79448697d614b7f022009653eca655a31bad4f` / CI #1096;
-- protocol-runtime GREEN `f49f94d5ab51dcec5dccb97b6c0997ec631b1261` / CI #1099: all three canonical jobs SUCCESS;
-- verified descendant was non-force fast-forwarded into real PR #33;
-- PR #33 CI #1100 / run `31870867724` on exact `f49f94d5ab51dcec5dccb97b6c0997ec631b1261`: all three jobs SUCCESS, **347 tests / 72 suites PASS**, strict **116/116 PASS**, native external-app XCUI **9/9 PASS**, production transport/archive, release/security/Sandbox/Hardened Runtime/signing/preflight, combined size and performance-smoke gates PASS.
+- no-media hover remained compact and produced no haptic because the pending design still gated Peek on usable media;
+- DOWN starting exactly at the top screen edge used half-open `CGRect.contains` and falsely retargeted to compact;
+- external XCUI later showed that a compact child tap recognizer could be destroyed if the 120 ms hover dwell switched the presentation to Peek while click synthesis was still in flight.
 
-This documentation synchronization creates a new source SHA. That exact docs-synchronized head must pass fresh CI before it becomes the frozen physical candidate.
+Repair:
 
-PR #33 remains draft and unmerged until one exact candidate passes all applicable target-Mac gates.
+- no-media hover now opens generic Peek first and requests the normal hover haptic once; a bounded `.noSession` probe no longer collapses that preview;
+- interactive pointer retention includes the exact physical top/right boundary;
+- local `NSTrackingArea` is the primary event-driven hover path;
+- a proposed mouse-button event interception was rejected by the existing security baseline and removed rather than whitelisted;
+- explicit click expansion now uses one stable SwiftUI tap recognizer above compact/Peek presentation switching;
+- no global scroll/button/keyboard monitor, event tap, polling, repeating timer, display link or new sensitive permission was added.
+
+Verification evidence:
+
+- behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140 / run `31889213155`: 352 Swift tests / 74 suites PASS and external XCUI 11/11 PASS; package failed only because the preceding DMG cumulative ceiling was exceeded by 2172 B;
+- size review created `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`, changing only DMG allowance by one 4096-byte quantum while leaving app/executable allowance unchanged and preserving all historical budgets;
+- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147 / run `31889961194`: all three canonical jobs PASS, including strict acceptance traceability, security/source audit, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, size gate, performance smoke and external XCUI.
+
+CI #1147 shipping evidence: shipping-media artifact `9248335486`, DMG artifact `9248336772`, UI result artifact `9248334093`; executable `580832 B`, app `883039 B`, DMG `555152 B`.
+
+The final documentation-synchronized head must pass fresh three-job CI before its exact source/artifact provenance is frozen for physical testing. PR #33 remains draft and unmerged until one exact candidate passes all applicable target-Mac gates.
 
 ### Earlier M6.6 prerequisites
 
