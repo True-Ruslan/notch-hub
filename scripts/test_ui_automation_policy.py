@@ -13,6 +13,7 @@ TRUSTED_RELEASE = (ROOT / ".github/workflows/trusted-release.yml").read_text(enc
 
 FORBIDDEN_MARKERS = (
     b"NOTCHHUB_UI_FIXTURE",
+    b"no-media-hover",
     b"media-standard",
     b"media-unsupported",
     b"ui-test.hapticCount",
