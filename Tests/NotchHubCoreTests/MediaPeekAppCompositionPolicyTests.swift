@@ -90,7 +90,7 @@ struct MediaPeekAppCompositionPolicyTests {
     }
 
     @Test
-    func rootViewHasRealOneLinePeekAndExplicitExpansionWithoutTransportButtons() throws {
+    func rootViewHasRealOneLinePeekAndStableExplicitExpansionWithoutTransportButtons() throws {
         let source = try sourceText(relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift")
         let peekSection = try sourceSection(
             source,
@@ -101,7 +101,10 @@ struct MediaPeekAppCompositionPolicyTests {
         #expect(source.contains("case .peek:"))
         #expect(source.contains("peekMediaContent(presentation)"))
         #expect(peekSection.contains("artwork(presentation, size: 40)"))
-        #expect(peekSection.contains("onExplicitExpansion"))
+        #expect(source.contains("private func requestExplicitExpansionFromTap()"))
+        #expect(source.contains(".onTapGesture(perform: requestExplicitExpansionFromTap)"))
+        #expect(source.components(separatedBy: ".onTapGesture").count - 1 == 1)
+        #expect(!peekSection.contains(".onTapGesture"))
         #expect(source.contains("panelModel.contentPresentation == .peek"))
         #expect(source.contains("panelModel.contentPresentation == .expanded"))
         #expect(!peekSection.contains("sourceApplicationBadge"))
@@ -118,7 +121,7 @@ struct MediaPeekAppCompositionPolicyTests {
         #expect(appSource.contains("onExplicitExpansion:"))
         #expect(appSource.contains("self?.panelController?.requestExpansion()"))
         #expect(rootSource.contains("onExplicitExpansion"))
-        #expect(rootSource.contains(".onTapGesture"))
+        #expect(rootSource.contains(".onTapGesture(perform: requestExplicitExpansionFromTap)"))
     }
 
     private func sourceSection(
