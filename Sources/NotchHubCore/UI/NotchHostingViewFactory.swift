@@ -2,18 +2,27 @@ import AppKit
 import SwiftUI
 
 public typealias NotchLocalScrollHandler = @MainActor (NSEvent) -> Void
+public typealias NotchLocalPointerHandler = @MainActor (CGPoint) -> Void
 
 @MainActor
-private final class NotchLocalScrollHostingView<Content: View>: NSHostingView<Content> {
-    private let onScrollWheel: NotchLocalScrollHandler
+protocol NotchLocalPointerTracking: AnyObject {
+    var onNotchPointerEvent: NotchLocalPointerHandler? { get set }
+}
+
+@MainActor
+private final class NotchLocalInputHostingView<Content: View>: NSHostingView<Content>, NotchLocalPointerTracking {
+    private let onScrollWheel: NotchLocalScrollHandler?
+    private var pointerTrackingArea: NSTrackingArea?
+    var onNotchPointerEvent: NotchLocalPointerHandler?
 
     required init(rootView: Content) {
-        fatalError("Use init(rootView:onScrollWheel:) for local gesture input")
+        self.onScrollWheel = nil
+        super.init(rootView: rootView)
     }
 
     init(
         rootView: Content,
-        onScrollWheel: @escaping NotchLocalScrollHandler
+        onScrollWheel: NotchLocalScrollHandler?
     ) {
         self.onScrollWheel = onScrollWheel
         super.init(rootView: rootView)
@@ -24,8 +33,53 @@ private final class NotchLocalScrollHostingView<Content: View>: NSHostingView<Co
         fatalError("init(coder:) is unavailable")
     }
 
+    override func updateTrackingAreas() {
+        if let pointerTrackingArea {
+            removeTrackingArea(pointerTrackingArea)
+        }
+
+        super.updateTrackingAreas()
+
+        let trackingArea = NSTrackingArea(
+            rect: .zero,
+            options: [
+                .mouseEnteredAndExited,
+                .mouseMoved,
+                .activeAlways,
+                .inVisibleRect,
+            ],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(trackingArea)
+        pointerTrackingArea = trackingArea
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        super.mouseEntered(with: event)
+        emitPointerEvent()
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        emitPointerEvent()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        emitPointerEvent()
+    }
+
     override func scrollWheel(with event: NSEvent) {
-        onScrollWheel(event)
+        if let onScrollWheel {
+            onScrollWheel(event)
+        } else {
+            super.scrollWheel(with: event)
+        }
+    }
+
+    private func emitPointerEvent() {
+        onNotchPointerEvent?(NSEvent.mouseLocation)
     }
 }
 
@@ -35,15 +89,10 @@ public enum NotchHostingViewFactory {
         rootView: Content,
         onScrollWheel: NotchLocalScrollHandler? = nil
     ) -> NSHostingView<Content> {
-        let hostingView: NSHostingView<Content>
-        if let onScrollWheel {
-            hostingView = NotchLocalScrollHostingView(
-                rootView: rootView,
-                onScrollWheel: onScrollWheel
-            )
-        } else {
-            hostingView = NSHostingView(rootView: rootView)
-        }
+        let hostingView = NotchLocalInputHostingView(
+            rootView: rootView,
+            onScrollWheel: onScrollWheel
+        )
 
         hostingView.sizingOptions = []
         hostingView.autoresizingMask = [.width, .height]
