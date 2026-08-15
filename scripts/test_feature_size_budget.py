@@ -428,7 +428,7 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_hover_peek_budget_over_immutable_baseline(self):
+    def test_ci_uses_cumulative_foundation_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -436,10 +436,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-hover-peek-size-budget.json",
+            "--feature-budget performance/regression-ui-automation-foundation-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-6-hover-peek-size-budget.json",
             "m6-6-physical-acceptance-repair-size-budget.json",
             "m6-6-media-seek-size-budget.json",
             "m6-6-source-app-icon-size-budget.json",
