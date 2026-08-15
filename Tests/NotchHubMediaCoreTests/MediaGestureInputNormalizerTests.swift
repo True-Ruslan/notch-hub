@@ -3,7 +3,7 @@ import Testing
 
 struct MediaGestureInputNormalizerTests {
     @Test
-    func physicalRightDownIsStableAcrossSystemScrollDirectionPreference() {
+    func physicalLeftDownIsStableAcrossSystemScrollDirectionPreference() {
         let regular = MediaGestureInputNormalizer.semanticDeltas(
             scrollingDeltaX: 18,
             scrollingDeltaY: -24,
@@ -15,12 +15,12 @@ struct MediaGestureInputNormalizerTests {
             isDirectionInvertedFromDevice: true
         )
 
-        #expect(regular == MediaGestureInputDeltas(x: 18, y: 24))
+        #expect(regular == MediaGestureInputDeltas(x: -18, y: 24))
         #expect(inverted == regular)
     }
 
     @Test
-    func physicalLeftUpIsStableAcrossSystemScrollDirectionPreference() {
+    func physicalRightUpIsStableAcrossSystemScrollDirectionPreference() {
         let regular = MediaGestureInputNormalizer.semanticDeltas(
             scrollingDeltaX: -18,
             scrollingDeltaY: 24,
@@ -32,7 +32,7 @@ struct MediaGestureInputNormalizerTests {
             isDirectionInvertedFromDevice: true
         )
 
-        #expect(regular == MediaGestureInputDeltas(x: -18, y: -24))
+        #expect(regular == MediaGestureInputDeltas(x: 18, y: -24))
         #expect(inverted == regular)
     }
 }
