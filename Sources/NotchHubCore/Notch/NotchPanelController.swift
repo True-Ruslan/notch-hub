@@ -4,6 +4,18 @@ import SwiftUI
 
 public typealias NotchPanelContentFactory = @MainActor (NotchPanelModel, NotchLayout) -> NSView
 
+@MainActor
+final class NotchEventAwarePanel: NSPanel {
+    var onLeftMouseDown: (@MainActor () -> Void)?
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown {
+            onLeftMouseDown?()
+        }
+        super.sendEvent(event)
+    }
+}
+
 private final class NotchPanelLayoutState {
     let baseLayout: NotchLayout
     var compactHorizontalExtension: CGFloat = 0
@@ -28,7 +40,7 @@ private final class NotchHoverPeekRequestRelay {
 
 @MainActor
 public final class NotchPanelController: NSObject {
-    private let panel: NSPanel
+    private let panel: NotchEventAwarePanel
     private let interactionCoordinator: NotchInteractionCoordinator
     private let transitionCoordinator: NotchPanelTransitionCoordinator
     private let pointerMonitor: NotchPointerMonitor
@@ -92,7 +104,7 @@ public final class NotchPanelController: NSObject {
         )
         let layoutState = NotchPanelLayoutState(baseLayout: resolvedLayout)
         let model = NotchPanelModel()
-        let panel = NSPanel(
+        let panel = NotchEventAwarePanel(
             contentRect: resolvedLayout.compactFrame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -167,6 +179,7 @@ public final class NotchPanelController: NSObject {
 
         configureAccessibilityObservation()
         configurePanel()
+        configurePanelEventBoundary()
         configureLocalPointerTracking(hostingView)
         configurePointerMonitoring()
     }
@@ -274,6 +287,7 @@ public final class NotchPanelController: NSObject {
     public func invalidate() {
         settledPresentationHandler = nil
         hoverPeekRequestHandler = nil
+        panel.onLeftMouseDown = nil
         removeLocalPointerTracking()
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
@@ -323,6 +337,12 @@ public final class NotchPanelController: NSObject {
         panel.acceptsMouseMovedEvents = true
     }
 
+    private func configurePanelEventBoundary() {
+        panel.onLeftMouseDown = { [weak self] in
+            self?.interactionCoordinator.cancelPendingActivationForInteractiveTransition()
+        }
+    }
+
     private func configureLocalPointerTracking(_ hostingView: NSView) {
         guard let trackingView = hostingView as? any NotchLocalPointerTracking else {
             return
@@ -330,9 +350,6 @@ public final class NotchPanelController: NSObject {
 
         trackingView.onNotchPointerEvent = { [weak self] pointer in
             self?.updateInteraction(for: pointer)
-        }
-        trackingView.onNotchMouseDown = { [weak self] in
-            self?.interactionCoordinator.cancelPendingActivationForInteractiveTransition()
         }
     }
 
@@ -342,7 +359,6 @@ public final class NotchPanelController: NSObject {
         }
 
         trackingView.onNotchPointerEvent = nil
-        trackingView.onNotchMouseDown = nil
     }
 
     private func configurePointerMonitoring() {
