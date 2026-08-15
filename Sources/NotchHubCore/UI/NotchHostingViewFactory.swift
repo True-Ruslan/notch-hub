@@ -46,7 +46,7 @@ private final class NotchLocalInputHostingView<Content: View>: NSHostingView<Con
                 .mouseEnteredAndExited,
                 .mouseMoved,
                 .activeAlways,
-                .inVisibleRect,
+                .inVisibleRect
             ],
             owner: self,
             userInfo: nil
