@@ -42,7 +42,8 @@ class UIAutomationPolicyTests(unittest.TestCase):
     def test_explicit_expansion_harness_uses_stable_screen_space_click(self):
         self.assertNotIn("compact.click()", UI_APPLICATION)
         self.assertNotIn("app.coordinate(", UI_APPLICATION)
-        self.assertIn("CGEvent(mouseEventSource:", UI_APPLICATION)
+        self.assertIn("CGEvent(", UI_APPLICATION)
+        self.assertIn("mouseEventSource: nil", UI_APPLICATION)
         self.assertIn("mouseType: .leftMouseDown", UI_APPLICATION)
         self.assertIn("mouseType: .leftMouseUp", UI_APPLICATION)
         self.assertIn(".post(tap: .cghidEventTap)", UI_APPLICATION)
