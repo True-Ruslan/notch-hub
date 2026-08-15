@@ -78,10 +78,13 @@ struct NotchHubUIApplication {
     }
 
     func launch(pointerPolicy: LaunchPointerPolicy = .parkOutsideNotch) {
-        app.launch()
         if pointerPolicy == .parkOutsideNotch {
-            parkPointerOutsideNotch()
+            XCTAssertTrue(
+                parkPointerOutsideNotch(),
+                "UI harness must park the real pointer away from the top-center notch before launch"
+            )
         }
+        app.launch()
     }
 
     func surface(_ identifier: String) -> XCUIElement {
@@ -133,13 +136,22 @@ struct NotchHubUIApplication {
         ).hover()
     }
 
-    private func parkPointerOutsideNotch() {
-        let applicationCenter = app.coordinate(
-            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+    private func parkPointerOutsideNotch() -> Bool {
+        let displayBounds = CGDisplayBounds(CGMainDisplayID())
+        guard
+            displayBounds.width.isFinite,
+            displayBounds.height.isFinite,
+            displayBounds.width > 0,
+            displayBounds.height > 0
+        else {
+            return false
+        }
+
+        let destination = CGPoint(
+            x: displayBounds.midX,
+            y: displayBounds.maxY - min(120, displayBounds.height / 4)
         )
-        applicationCenter.withOffset(
-            CGVector(dx: 0, dy: max(app.frame.height, 240))
-        ).hover()
+        return CGWarpMouseCursorPosition(destination) == .success
     }
 
     private static func configurationError(_ message: String) -> NSError {
