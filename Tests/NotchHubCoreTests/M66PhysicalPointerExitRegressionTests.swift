@@ -102,7 +102,13 @@ struct M66PhysicalPointerExitRegressionTests {
         )
 
         #expect(controllerSource.contains("pointer: CGPoint"))
-        #expect(controllerSource.contains("panel.frame.contains(pointer)"))
+        #expect(
+            controllerSource.contains(
+                "NotchPointerPolicy.containsInteractivePointer(pointer, in: panel.frame)"
+            )
+        )
+        #expect(!controllerSource.contains("panel.frame.contains(pointer)"))
+        #expect(controllerSource.contains("collapseInteractiveTransitionIfPointerExited(pointer)"))
         #expect(controllerSource.contains("transitionCoordinator.accept(.pointerExitCollapse"))
         #expect(gestureSource.contains("pointer: NSEvent.mouseLocation"))
         #expect(!gestureSource.contains("addGlobalMonitorForEvents(matching: .scrollWheel"))
