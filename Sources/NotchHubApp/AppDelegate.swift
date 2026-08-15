@@ -56,44 +56,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
         self.mediaGestureSession = mediaGestureSession
 
+        #if NOTCHHUB_UI_TESTING
+            let hapticDiagnosticsRecorder = uiTestHapticRecorder
+        #endif
+
         var capturedPanelModel: NotchPanelModel?
         let contentFactory: NotchPanelContentFactory = { [weak self, weak mediaGestureSession] model, layout in
             capturedPanelModel = model
-            return NotchHostingViewFactory.make(
-                rootView: MediaNotchRootView(
-                    panelModel: model,
-                    mediaModel: mediaPresentationModel,
-                    mediaGestureVisualModel: mediaGestureVisualModel,
-                    sourceApplicationIconResolver: sourceApplicationIconResolver,
-                    hardwareNotchWidth: layout.hardwareNotchWidth,
-                    compactBackgroundOpacity: layout.compactBackgroundOpacity,
-                    expandedContentTopInset: layout.expandedContentTopInset,
-                    onExplicitExpansion: { [weak self] in
-                        self?.panelController?.requestExpansion()
-                    },
-                    onTogglePlayPause: { [weak self] in
-                        self?.mediaRuntime?.togglePlayPause()
-                    },
-                    onPrevious: { [weak self] in
-                        self?.mediaRuntime?.goPrevious()
-                    },
-                    onNext: { [weak self] in
-                        self?.mediaRuntime?.goNext()
-                    },
-                    onSeekBegan: { [weak mediaGestureSession] in
-                        mediaGestureSession?.beginSeek() ?? false
-                    },
-                    onSeekCommitted: { [weak mediaGestureSession] positionSeconds in
-                        mediaGestureSession?.commitSeek(to: positionSeconds)
-                    },
-                    onSeekCancelled: { [weak mediaGestureSession] in
-                        mediaGestureSession?.cancelSeek()
-                    }
-                ),
-                onScrollWheel: { [weak mediaGestureSession] event in
-                    mediaGestureSession?.handleScrollWheel(event)
+            let mediaRoot = MediaNotchRootView(
+                panelModel: model,
+                mediaModel: mediaPresentationModel,
+                mediaGestureVisualModel: mediaGestureVisualModel,
+                sourceApplicationIconResolver: sourceApplicationIconResolver,
+                hardwareNotchWidth: layout.hardwareNotchWidth,
+                compactBackgroundOpacity: layout.compactBackgroundOpacity,
+                expandedContentTopInset: layout.expandedContentTopInset,
+                onExplicitExpansion: { [weak self] in
+                    self?.panelController?.requestExpansion()
+                },
+                onTogglePlayPause: { [weak self] in
+                    self?.mediaRuntime?.togglePlayPause()
+                },
+                onPrevious: { [weak self] in
+                    self?.mediaRuntime?.goPrevious()
+                },
+                onNext: { [weak self] in
+                    self?.mediaRuntime?.goNext()
+                },
+                onSeekBegan: { [weak mediaGestureSession] in
+                    mediaGestureSession?.beginSeek() ?? false
+                },
+                onSeekCommitted: { [weak mediaGestureSession] positionSeconds in
+                    mediaGestureSession?.commitSeek(to: positionSeconds)
+                },
+                onSeekCancelled: { [weak mediaGestureSession] in
+                    mediaGestureSession?.cancelSeek()
                 }
             )
+
+            #if NOTCHHUB_UI_TESTING
+                return NotchHostingViewFactory.make(
+                    rootView: UITestHapticDiagnosticsView(
+                        recorder: hapticDiagnosticsRecorder
+                    ) {
+                        mediaRoot
+                    },
+                    onScrollWheel: { [weak mediaGestureSession] event in
+                        mediaGestureSession?.handleScrollWheel(event)
+                    }
+                )
+            #else
+                return NotchHostingViewFactory.make(
+                    rootView: mediaRoot,
+                    onScrollWheel: { [weak mediaGestureSession] event in
+                        mediaGestureSession?.handleScrollWheel(event)
+                    }
+                )
+            #endif
         }
 
         let panelController: NotchPanelController
@@ -124,7 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let mediaPeekSession = MediaPeekSession(
-            probe: ShippingMediaPeekProbe(),
+            probe: composition.makeMediaPeekProbe(),
             presentationModel: mediaPresentationModel,
             panelController: panelController
         )
