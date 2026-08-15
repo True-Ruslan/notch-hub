@@ -29,9 +29,7 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.surface("notch.surface.compact")
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
-        compact.hover()
+        XCTAssertTrue(subject.hoverCompact())
 
         let expanded = subject.surface("notch.surface.expanded")
         let appears = XCTNSPredicateExpectation(
@@ -48,30 +46,32 @@ final class NotchHubUITests: XCTestCase {
         subject.launch()
         defer { subject.app.terminate() }
 
-        let compact = subject.surface("notch.surface.compact")
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
-        compact.hover()
+        XCTAssertTrue(subject.waitForStableCompact())
+        XCTAssertTrue(subject.hoverCompact())
+        assertNoMediaPeekAndSingleHaptic(subject)
+    }
 
-        let peek = subject.surface("notch.surface.peek")
-        let expanded = subject.surface("notch.surface.expanded")
-        let hapticCount = subject.app.descendants(matching: .any)["ui-test.hapticCount"]
+    @MainActor
+    func testStationaryPointerRelaunchStillOpensNoMediaPeekAndHaptic() throws {
+        let subject = try NotchHubUIApplication(mode: .noMediaHover)
+        subject.launch()
 
+        XCTAssertTrue(subject.waitForStableCompact())
+        XCTAssertTrue(subject.hoverCompact())
         XCTAssertTrue(
-            NotchHubUIAssertions.waitUntilExists(peek, timeout: 2),
-            "120 ms hover must open lightweight Peek even without media"
+            NotchHubUIAssertions.waitUntilExists(
+                subject.surface("notch.surface.peek"),
+                timeout: 2
+            )
         )
-        XCTAssertTrue(
-            expanded.waitForNonExistence(timeout: 0.5),
-            "hover must never open full expanded interface"
-        )
-        XCTAssertTrue(
-            NotchHubUIAssertions.waitUntilExists(hapticCount, timeout: 2),
-            "UI-test build must expose compile-time-only haptic diagnostics"
-        )
-        XCTAssertTrue(
-            NotchHubUIAssertions.waitUntilValue(hapticCount, equals: "1", timeout: 2),
-            "one hover Peek transition must request exactly one haptic"
-        )
+
+        subject.app.terminate()
+        XCTAssertEqual(subject.app.state, .notRunning)
+
+        subject.launch(pointerPolicy: .preserveCurrentPosition)
+        defer { subject.app.terminate() }
+
+        assertNoMediaPeekAndSingleHaptic(subject)
     }
 
     @MainActor
@@ -212,6 +212,32 @@ final class NotchHubUITests: XCTestCase {
         XCTAssertTrue(
             NotchHubUIAssertions.waitUntilExists(retainedArtwork, timeout: 2),
             "accepted compact collapse must retain authoritative media context without reopening runtime"
+        )
+    }
+
+    @MainActor
+    private func assertNoMediaPeekAndSingleHaptic(
+        _ subject: NotchHubUIApplication
+    ) {
+        let peek = subject.surface("notch.surface.peek")
+        let expanded = subject.surface("notch.surface.expanded")
+        let hapticCount = subject.app.descendants(matching: .any)["ui-test.hapticCount"]
+
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(peek, timeout: 2),
+            "120 ms hover must open lightweight Peek even without media"
+        )
+        XCTAssertTrue(
+            expanded.waitForNonExistence(timeout: 0.5),
+            "hover must never open full expanded interface"
+        )
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(hapticCount, timeout: 2),
+            "UI-test build must expose compile-time-only haptic diagnostics"
+        )
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilValue(hapticCount, equals: "1", timeout: 2),
+            "one hover Peek transition must request exactly one haptic"
         )
     }
 }
