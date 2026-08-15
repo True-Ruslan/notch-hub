@@ -115,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 panelController: panelController,
                 panelModel: capturedPanelModel,
                 runtimeProvider: { [weak self] in
-                    self?.mediaRuntime as? ShippingMediaRuntime
+                    self?.mediaRuntime
                 },
                 presentationProvider: { [weak mediaPresentationModel] in
                     mediaPresentationModel?.presentation
