@@ -106,52 +106,16 @@ struct NotchHubUIApplication {
     }
 
     func openExpandedExplicitly(timeout: TimeInterval = 2) -> Bool {
-        let compact = surface("notch.surface.compact")
-        guard NotchHubUIAssertions.waitUntilExists(compact, timeout: timeout) else {
+        guard waitForStableCompact(timeout: timeout) else {
             return false
         }
 
-        let compactFrame = compact.frame
-        let displayBounds = CGDisplayBounds(CGMainDisplayID())
-        guard
-            displayBounds.width.isFinite,
-            displayBounds.height.isFinite,
-            displayBounds.width > 0,
-            displayBounds.height > 0
-        else {
+        let hitTarget = surface("notch.surface.hitTarget")
+        guard NotchHubUIAssertions.waitUntilExists(hitTarget, timeout: timeout) else {
             return false
         }
 
-        let clickPoint = CGPoint(
-            x: compactFrame.midX,
-            y: displayBounds.maxY - (compactFrame.midY - displayBounds.minY)
-        )
-        guard clickPoint.x.isFinite, clickPoint.y.isFinite else {
-            return false
-        }
-        guard CGWarpMouseCursorPosition(clickPoint) == .success else {
-            return false
-        }
-        guard
-            let mouseDown = CGEvent(
-                mouseEventSource: nil,
-                mouseType: .leftMouseDown,
-                mouseCursorPosition: clickPoint,
-                mouseButton: .left
-            ),
-            let mouseUp = CGEvent(
-                mouseEventSource: nil,
-                mouseType: .leftMouseUp,
-                mouseCursorPosition: clickPoint,
-                mouseButton: .left
-            )
-        else {
-            return false
-        }
-
-        mouseDown.post(tap: .cghidEventTap)
-        mouseUp.post(tap: .cghidEventTap)
-
+        hitTarget.click()
         return NotchHubUIAssertions.waitUntilExists(
             surface("notch.surface.expanded"),
             timeout: timeout
