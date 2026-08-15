@@ -10,6 +10,9 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
         app_delegate = (
             REPOSITORY_ROOT / "Sources" / "NotchHubApp" / "AppDelegate.swift"
         ).read_text(encoding="utf-8")
+        app_composition = (
+            REPOSITORY_ROOT / "Sources" / "NotchHubApp" / "AppComposition.swift"
+        ).read_text(encoding="utf-8")
         panel_controller = (
             REPOSITORY_ROOT
             / "Sources"
@@ -27,12 +30,14 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
 
         required_app_fragments = (
             "private let mediaPresentationModel = ShippingMediaPresentationModel()",
+            "private let composition:",
+            "AppComposition.shipping()",
             "panelController.settledPresentationHandler",
             "updateMediaRuntime(for: presentation)",
             "private func updateMediaRuntime(for presentation: NotchPresentation)",
             "case .expanded:",
             "guard mediaRuntime == nil else",
-            "let mediaRuntime = ShippingMediaRuntime(presentationModel: mediaPresentationModel)",
+            "let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)",
             "mediaRuntime.start()",
             "case .compact, .peek:",
             "mediaRuntime?.stop()",
@@ -41,6 +46,12 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
         for fragment in required_app_fragments:
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, app_delegate)
+
+        self.assertIn("static func shipping() -> Self", app_composition)
+        self.assertIn(
+            "ShippingMediaRuntime(presentationModel: $0)",
+            app_composition,
+        )
 
         update_runtime = app_delegate.split(
             "private func updateMediaRuntime(for presentation: NotchPresentation)", 1
