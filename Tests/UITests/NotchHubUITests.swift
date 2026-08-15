@@ -44,7 +44,7 @@ final class NotchHubUITests: XCTestCase {
 
     @MainActor
     func testNoMediaHoverOpensPeekAndRequestsExactlyOneHaptic() throws {
-        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        let subject = try NotchHubUIApplication(mode: .noMediaHover)
         subject.launch()
         defer { subject.app.terminate() }
 
