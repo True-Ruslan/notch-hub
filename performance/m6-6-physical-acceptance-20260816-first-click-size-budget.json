@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 614400,
+    "dmgSizeBytes": 471040,
+    "executableSizeBytes": 315392
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9254479722,
+    "sourceCommit": "327f5b4180d71a1001fb93285fa25b98abcc088c",
+    "summary": {
+      "appSizeBytes": 883087,
+      "dmgSizeBytes": 557704,
+      "executableSizeBytes": 580880
+    },
+    "workflowRunId": 31914056522
+  },
+  "featureId": "m6.6-physical-acceptance-20260816-first-click",
+  "schemaVersion": 1
+}
