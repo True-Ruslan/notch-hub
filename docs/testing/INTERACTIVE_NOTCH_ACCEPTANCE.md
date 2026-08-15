@@ -1,23 +1,24 @@
 # M6.6 Interactive Notch Acceptance
 
-Status: AUTOMATED POINTER-EXIT REPAIR GREEN / PHYSICAL RETEST PENDING
-Date: 2026-08-13
+Status: AUTOMATED PHYSICAL-REPAIR GREEN / FINAL DOCS-SYNC CI PENDING / PHYSICAL RETEST PENDING
+Date: 2026-08-15
 Primary target: macOS 26.6 / Mac16,8
 Design: `docs/superpowers/specs/2026-08-12-interactive-notch-media-ux-design.md`
+Repair addendum: `docs/superpowers/specs/2026-08-15-no-media-hover-peek-physical-repair.md`
 
-This ledger extends the frozen M6.6 media-gesture acceptance contract without renumbering or redefining its existing stable IDs. PR #33 remains draft until one exact CI-produced candidate passes the target-Mac matrix.
+This ledger extends the frozen M6.6 media-gesture acceptance contract without renumbering existing stable IDs. PR #33 remains draft until one exact CI-produced candidate passes the target-Mac matrix.
 
 ## Stable gates
 
 | ID | Gate | Required result |
 |---|---|---|
-| `NH-NOTCH-INTERACTIVE-001` | Compact downward tracking | Physical local downward gesture follows the finger from current compact layout before release. If pointer/panel separation loses terminal local scroll delivery, transition settles safely to compact rather than remaining intermediate. |
-| `NH-NOTCH-INTERACTIVE-002` | Compact cancellation | Short/reversed/cancelled downward gesture returns to exact compact and never starts persistent media observation. |
+| `NH-NOTCH-INTERACTIVE-001` | Compact downward tracking | Physical local DOWN follows the finger from current compact layout before release. A pointer exactly against the physical top screen/panel `maxY` boundary is valid and must not trigger false pointer-exit self-collapse. If pointer/panel separation loses terminal local scroll delivery, transition settles safely to compact rather than remaining intermediate. |
+| `NH-NOTCH-INTERACTIVE-002` | Compact cancellation | Short/reversed/cancelled DOWN returns to exact compact and never starts persistent media observation. |
 | `NH-NOTCH-INTERACTIVE-003` | Compact commit | Qualifying downward release settles through transition authority to exact expanded. |
-| `NH-NOTCH-INTERACTIVE-004` | Expanded upward tracking | Physical local upward gesture follows the finger toward compact while expanded runtime remains authoritative until settlement. |
-| `NH-NOTCH-INTERACTIVE-005` | Expanded cancel/commit + lost-terminal safety | Cancel returns to exact expanded; qualifying release settles to compact. Leaving expanded retention collapses non-haptically. If the shrinking panel moves out from under the pointer before `.ended`/`.cancelled`, the transition must retarget/settle to exact compact and never remain intermediate. |
+| `NH-NOTCH-INTERACTIVE-004` | Expanded upward tracking | Physical local UP follows the finger toward compact while expanded runtime remains authoritative until settlement. |
+| `NH-NOTCH-INTERACTIVE-005` | Expanded cancel/commit + lost-terminal safety | Cancel returns to exact expanded; qualifying release settles to compact. Leaving expanded retention collapses non-haptically. If shrinking geometry moves away before `.ended`/`.cancelled`, transition retargets/settles to exact compact and never remains intermediate. |
 | `NH-NOTCH-INTERACTIVE-006` | Arbitration + stale safety | Horizontal/seek capture cannot move the panel; momentum cannot drive it; stale layout/generation cannot restore obsolete geometry. Pointer-exit collapse is the sole fail-safe allowed to retarget an owned interactive transition. |
-| `NH-NOTCH-INTERACTIVE-007` | Hover parity | Existing 120 ms media Hover Peek remains correct from stable compact and does not steal a local compact gesture or duplicate haptics. |
+| `NH-NOTCH-INTERACTIVE-007` | Hover parity | Existing 120 ms Hover Peek remains correct from stable compact, including generic no-media Peek, and does not steal a local compact gesture or duplicate haptics. |
 | `NH-NOTCH-INTERACTIVE-008` | Reduce Motion | Physical tracking remains usable; endpoint settle follows Reduce Motion and lands exactly. |
 | `NH-NOTCH-INTERACTIVE-009` | Resource lifecycle | Settled compact/cancelled or pointer-exit-retargeted expansion own zero persistent adapter; settled expanded owns the expected adapter; Quit leaves no orphan. |
 | `NH-MEDIA-SOURCE-ICON-001` | Authoritative identity | Badge derives only from authoritative source bundle identifier. |
@@ -25,36 +26,54 @@ This ledger extends the frozen M6.6 media-gesture acceptance contract without re
 | `NH-MEDIA-SOURCE-ICON-003` | Text removal + accessibility | Persistent visual source text is absent while source identity remains available to accessibility/help semantics. |
 | `NH-MEDIA-SOURCE-ICON-004` | Local bounded lookup | Public `NSWorkspace` only; no network/persistence/crawl; in-memory cache capped at 8 bundle identifiers. |
 
-## Latest physical rejection
+## Physical rejection history
 
-Exact candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 passed automation but failed target testing.
+### Candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951
 
-Observed:
+Rejected on Mac16,8/macOS 26.6:
 
-- expanded did not auto-collapse after pointer exit, regressing the previously accepted M1 contract;
-- physical UP could leave the panel at a clipped intermediate frame when geometry moved away from the pointer before the local hosting view received the terminal scroll phase;
-- hover/haptic/Peek was also absent in the observed broken session and must be retested after the ownership repair from clean stable compact.
+- expanded did not auto-collapse after pointer exit, regressing accepted M1 behavior;
+- physical UP could leave the panel at a clipped intermediate frame when geometry moved away before the local hosting view received the terminal scroll phase;
+- hover/haptic/Peek was absent in the observed broken session.
 
-Code inspection confirmed that PR #33 had changed expanded pointer policy to retain `.expanded` unconditionally. It also confirmed that interactive settlement depended on local `.ended`/`.cancelled`, which can be lost after the shrinking panel leaves the pointer.
+Focused RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959 reproduced pointer-exit/lost-terminal regressions. GREEN restored accepted expanded retention collapse and synchronous actual-frame settlement without global scroll capture.
 
-## Focused TDD repair
+### Candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101
 
-- RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959: 333 tests / 69 suites with exactly five new pointer-exit/lost-terminal regression tests failing; pre-existing suite passed;
-- GREEN `64d3e6c2beadacaeda69c8ac06f173ac26aace3e`: restored expanded retention collapse, made `.pointerExitCollapse` the sole interactive-retarget exception, passed the current `NSEvent.mouseLocation` through the local scroll path, and used actual `panel.frame` to settle when geometry leaves the pointer;
-- format-only `de5624b7d344e15772fdf0759fbe4b5027a5b1d4` / CI #961: both required jobs PASS, 333 tests / 69 suites PASS and all strict security/performance/media/signing/preflight/size/performance-smoke gates PASS.
+Rejected on 2026-08-15 with media off:
 
-The repair adds no global scroll monitor, event tap, watchdog timer, polling loop, display link or sensitive input permission.
+- expanded pointer exit -> compact remained PASS;
+- UP collapse remained stable;
+- DOWN from near the notch center was stable;
+- **DOWN started with the pointer completely against the physical top screen edge twitched downward and immediately returned to compact**;
+- hover produced neither Peek nor a physical haptic.
+
+The exact-edge root cause was half-open raw `CGRect.contains` semantics. Interactive ownership now uses inclusive `NotchPointerPolicy.containsInteractivePointer`, covered by focused regression tests. No normal hover-region expansion or new input authority was added.
+
+## 2026-08-15 automated repair evidence
+
+- exact `maxY` regression coverage proves the physical top boundary remains inside interactive ownership;
+- no-media hover coverage proves Peek activation is not gated by media availability;
+- local `NSTrackingArea` is the primary event-driven hover source;
+- explicit expansion uses a stable parent SwiftUI tap recognizer across compact/Peek, avoiding the hover-dwell click race without adding mouse-button monitoring;
+- `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140 / run `31889213155`: 352 Swift tests / 74 suites PASS and 11/11 external XCUI journeys PASS; package failed only the previous DMG ceiling;
+- `3e617698a503590dbc18958960a5335753734ccc` / CI #1147 / run `31889961194`: all three canonical jobs PASS, including security/source audit and the minimal updated cumulative size budget.
+
+The repair adds no global scroll monitor, mouse-button monitor, event tap, watchdog timer, polling loop, display link or sensitive input permission.
 
 ## Focused physical retest
 
 Use only the final docs-synchronized candidate frozen in PR #33 after its exact head passes CI.
 
-1. Stable compact + usable media: hover must open Peek with expected haptic; hover alone must not open full Home.
-2. DOWN -> exact expanded; then simply leave expanded retention with the pointer. It must auto-collapse non-haptically to exact compact.
-3. DOWN -> expanded, then perform UP while keeping the pointer relatively stationary so the shrinking panel moves away from it before the gesture terminates. No intermediate frame may remain.
-4. Repeat UP while deliberately moving the pointer outside during the owned gesture. Require exact compact.
-5. Begin compact DOWN and separate pointer/panel before terminal delivery. Require safe return to compact, not a stuck partial expansion.
-6. Repeat these transition cycles several times before continuing horizontal gestures, seek, source icon and lifecycle checks.
+1. Music OFF: hover from stable compact -> generic Peek + one physical haptic; hover alone must never open full expanded.
+2. Relaunch with the pointer already stationary over the physical notch -> same Peek/haptic without leave/re-enter.
+3. Normal compact click while hover is eligible -> expanded exactly once; dwell may not swallow the click.
+4. Put the pointer fully against the top screen edge and perform DOWN -> stable follow-finger expansion, no twitch/self-collapse.
+5. Repeat DOWN slightly lower near notch center -> same stable behavior.
+6. From expanded, simply leave retention with the pointer -> non-haptic exact compact.
+7. Expand and perform UP with a relatively stationary pointer -> exact compact even if shrinking geometry moves away before terminal delivery.
+8. Repeat UP while deliberately moving outside -> exact compact.
+9. Repeat cycles several times before continuing horizontal gestures, seek, source icon, lifecycle and permission checks.
 
 ## Acceptance rule
 
