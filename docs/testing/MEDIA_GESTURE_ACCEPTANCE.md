@@ -41,11 +41,28 @@ The stable IDs below remain frozen. Green CI is necessary but does not constitut
 | `NH-MEDIA-GESTURE-017` | Sandbox/Hardened Runtime/security/performance invariants remain intact. |
 | `NH-MEDIA-GESTURE-018` | Real source matrix follows macOS Now Playing; absent capability is recorded honestly. |
 
+## Video evidence — 2026-08-15
+
+The target-Mac recording supplied by the user documents this exact sequence on rejected candidate `6c2109195042759b951217f489a201a82dd044cd`:
+
+1. real music/media playback was already active;
+2. NotchHub was then fully Quit while that playback context existed;
+3. the recording also demonstrates horizontal track-change gestures mapped opposite to the frozen product contract:
+   - physical LEFT selected the previous direction instead of `next`;
+   - physical RIGHT selected the next direction instead of `previous`.
+
+Acceptance interpretation is intentionally narrow:
+
+- this is physical **FAIL** evidence for `NH-MEDIA-GESTURE-003/004` on `6c2109195042759b951217f489a201a82dd044cd`;
+- it confirms that a full application Quit occurred in the recorded sequence after media playback had already started;
+- the recording does **not** by itself prove that every helper/adapter process terminated after Quit; the explicit post-Quit `pgrep` gate remains required;
+- video cannot establish whether the physical arm haptic was felt;
+- Peek-only direction, permissions and all other unobserved M6.6 gates remain unaccepted;
+- the corrected direction implementation is CI-verified but still requires a new physical retest on one exact repaired candidate.
+
 ## 2026-08-15 target-Mac direction rejection and repair
 
-Exact source `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 / run `31892019346` passed all three canonical CI jobs, strict traceability, exact-app XCUI, security/source policy, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, size budget and shared-runner performance smoke. It was nevertheless physically rejected on Mac16,8/macOS 26.6 after a real media playback test showed horizontal track gestures moving to the opposite track from the frozen LEFT/RIGHT contract.
-
-The video demonstrates a real horizontal-direction blocker with media playing. It does not by itself promote physical haptic feedback, Peek-only direction, adapter-process teardown after Quit, permissions or other M6.6 gates to accepted.
+Exact source `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 / run `31892019346` passed all three canonical CI jobs, strict traceability, exact-app XCUI, security/source policy, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, size budget and shared-runner performance smoke. It was nevertheless physically rejected on Mac16,8/macOS 26.6 after the real-media video test above showed horizontal track gestures moving to the opposite track from the frozen LEFT/RIGHT contract.
 
 Root cause was isolated to the AppKit precise-scroll normalization boundary. `MediaGestureCoordinator` already maps semantic negative X to `next` and positive X to `previous`, and the typed command boundary preserves those labels. The normalizer compensated for macOS scroll-direction preference but failed to convert horizontal scroll sign into the physical LEFT/RIGHT semantic sign; vertical normalization was already correct.
 
@@ -54,7 +71,21 @@ Focused TDD evidence:
 - RED `f5cb5e3d1f13c7dc5564ce24068e83007f97bb1b` / CI #1157 / run `31897906228`: build and strict policy passed; the full 354-test / 75-suite run failed only the two new physical-direction assertions. LEFT normalized to positive X instead of negative X and RIGHT normalized to negative X instead of positive X; Y remained correct in both cases.
 - GREEN `50b82dae49f3ce6c6e194b1ab9775bd5cd5dd430` / CI #1158 / run `31898052051`: the only production change is `x: -scrollingDeltaX * preferenceScale`; Y, coordinator direction mapping, thresholds, haptics, lifecycle and transport are unchanged. All 354 Swift tests pass, including both scroll-preference states, and all three canonical CI jobs pass with exact external-app XCUI, strict acceptance traceability, security/source policy, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, size budget and performance smoke.
 
-The final documentation-synchronized descendant of #1158 must independently pass the same three canonical jobs before a new physical candidate is frozen.
+## 2026-08-15 external-XCUI boundary stabilization
+
+The documentation descendant after #1158 exposed a separate automation defect: `openExpandedExplicitly()` addressed `click()` to the transient `notch.surface.compact` accessibility element, which can be replaced between synthetic mouse-down and mouse-up when presentation state changes. This caused product journeys to fail before their actual assertions even though the direction repair itself remained green.
+
+Rejected experiments were kept fail-closed rather than hidden with retries or sleeps:
+
+- application-relative coordinate click did not provide a stable screen coordinate for the borderless notch panel;
+- raw CoreGraphics `CGEvent` click, including a Y-coordinate conversion experiment, did not reliably activate the real notch tap path;
+- an outer SwiftUI accessibility container hid/broke the dynamic `compact`/`peek`/`expanded` state elements and exceeded the active DMG size budget; it was fully reverted and the budget was not relaxed.
+
+Final automated repair uses the already-persistent AppKit `NSHostingView` as a **compile-time UI-test-only** accessibility hit target under `#if NOTCHHUB_UI_TESTING`. Shipping builds do not contain that identifier/seam. XCTest performs one ordinary click on this stable host; dynamic SwiftUI state identifiers remain unchanged; no retry, fixed sleep, event tap, raw synthetic shipping input path or new permission authority was added.
+
+Current automated baseline is exact source `2235c3b3bb7eb69961d76f7b1a5f1afa9307f270` / CI #1177 / run `31904548631`: all three canonical jobs pass, including the complete Swift suite, strict acceptance traceability (`116/116`), exact external-app XCUI, shipping-fixture isolation, source/security validation, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, unchanged size budget and performance smoke.
+
+This source is **automated-green only**. The documentation commit that records this evidence creates a new SHA; that exact descendant must independently pass the same three canonical jobs before a new physical candidate is frozen.
 
 ## Repair-specific deterministic coverage
 
