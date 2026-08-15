@@ -7,6 +7,9 @@ struct MediaGestureAppCompositionPolicyTests {
         let appSource = try sourceText(
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
+        let compositionSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/AppComposition.swift"
+        )
         let sessionSource = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
         )
@@ -15,7 +18,9 @@ struct MediaGestureAppCompositionPolicyTests {
         #expect(appSource.contains("ShippingMediaCompactCommandDispatcher()"))
         #expect(appSource.contains("NSHapticFeedbackManager.defaultPerformer"))
         #expect(appSource.contains(".levelChange"))
-        #expect(appSource.contains("ShippingMediaRuntime(presentationModel: mediaPresentationModel)"))
+        #expect(appSource.contains("composition.makeMediaRuntime(mediaPresentationModel)"))
+        #expect(compositionSource.contains("static func shipping() -> Self"))
+        #expect(compositionSource.contains("ShippingMediaRuntime(presentationModel: $0)"))
 
         #expect(sessionSource.contains("event.hasPreciseScrollingDeltas"))
         #expect(sessionSource.contains("event.momentumPhase.isEmpty"))
