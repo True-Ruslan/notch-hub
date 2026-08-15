@@ -466,7 +466,26 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_physical_acceptance_repair_budget_over_immutable_baseline(self):
+    def test_repository_m6_6_physical_acceptance_20260816_first_click_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-physical-acceptance-20260816-first-click-size-budget.json",
+            feature_id="m6.6-physical-acceptance-20260816-first-click",
+            source_commit="327f5b4180d71a1001fb93285fa25b98abcc088c",
+            workflow_run_id=31914056522,
+            artifact_id=9254479722,
+            summary={
+                "appSizeBytes": 883087,
+                "dmgSizeBytes": 557704,
+                "executableSizeBytes": 580880,
+            },
+            allowance={
+                "appSizeBytes": 614400,
+                "dmgSizeBytes": 471040,
+                "executableSizeBytes": 315392,
+            },
+        )
+
+    def test_ci_uses_first_click_physical_acceptance_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -474,10 +493,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-physical-acceptance-20260815-repair-size-budget.json",
+            "--feature-budget performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-6-physical-acceptance-20260815-repair-size-budget.json",
             "m6-6-regression-foundation-integration-size-budget.json",
             "regression-ui-automation-foundation-size-budget.json",
             "m6-6-hover-peek-size-budget.json",
@@ -492,7 +512,8 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         ):
             self.assertNotIn(f"--feature-budget performance/{historical_budget}", workflow)
         self.assertNotIn(
-            "check-size-budget \\\n            --summary build/perf-size.json",
+            "check-size-budget \\\
+            --summary build/perf-size.json",
             workflow,
         )
 
