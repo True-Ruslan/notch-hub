@@ -20,6 +20,11 @@ struct RegressionUIFoundationSizeBudgetPolicyTests {
         let ci = try String(contentsOf: ciURL, encoding: .utf8)
         #expect(
             ci.contains(
+                "--feature-budget performance/m6-6-regression-foundation-integration-size-budget.json"
+            )
+        )
+        #expect(
+            !ci.contains(
                 "--feature-budget performance/regression-ui-automation-foundation-size-budget.json"
             )
         )
