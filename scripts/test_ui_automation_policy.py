@@ -16,6 +16,9 @@ UI_APPLICATION = (
 MEDIA_NOTCH_ROOT = (
     ROOT / "Sources/NotchHubApp/MediaNotchRootView.swift"
 ).read_text(encoding="utf-8")
+HOSTING_VIEW_FACTORY = (
+    ROOT / "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift"
+).read_text(encoding="utf-8")
 EXPLICIT_EXPANSION = UI_APPLICATION.split("func openExpandedExplicitly", 1)[1].split(
     "func hoverCompact", 1
 )[0]
@@ -45,10 +48,14 @@ class UIAutomationPolicyTests(unittest.TestCase):
         self.assertIn("NOTCHHUB_UI_TESTING", BUILD_APP)
         self.assertIn("-DNOTCHHUB_UI_TESTING", BUILD_APP)
 
-    def test_explicit_expansion_harness_clicks_persistent_real_hit_target(self):
-        self.assertIn('"notch.surface.hitTarget"', MEDIA_NOTCH_ROOT)
-        self.assertIn('surface("notch.surface.hitTarget")', EXPLICIT_EXPANSION)
+    def test_explicit_expansion_harness_clicks_persistent_appkit_hit_target(self):
+        self.assertNotIn('"notch.surface.hitTarget"', MEDIA_NOTCH_ROOT)
+        self.assertIn('setAccessibilityIdentifier("notch.surface.hitTarget")', HOSTING_VIEW_FACTORY)
+        self.assertIn("setAccessibilityElement(true)", HOSTING_VIEW_FACTORY)
+        self.assertIn('descendants(matching: .any)', EXPLICIT_EXPANSION)
+        self.assertIn('matching(identifier: "notch.surface.hitTarget")', EXPLICIT_EXPANSION)
         self.assertIn("hitTarget.click()", EXPLICIT_EXPANSION)
+        self.assertNotIn('surface("notch.surface.hitTarget")', EXPLICIT_EXPANSION)
         self.assertNotIn("compact.click()", EXPLICIT_EXPANSION)
         self.assertNotIn("CGEvent(", EXPLICIT_EXPANSION)
         self.assertNotIn("CGWarpMouseCursorPosition", EXPLICIT_EXPANSION)
