@@ -6,6 +6,7 @@ import XCTest
 struct NotchHubUIApplication {
     enum Mode {
         case shippingSmoke
+        case noMediaHover
         case deterministicMedia
         case mediaHappyPath
         case mediaUnsupported
@@ -14,6 +15,8 @@ struct NotchHubUIApplication {
             switch self {
             case .shippingSmoke:
                 "shipping-smoke"
+            case .noMediaHover:
+                "no-media-hover"
             case .deterministicMedia, .mediaHappyPath:
                 "media-standard"
             case .mediaUnsupported:
