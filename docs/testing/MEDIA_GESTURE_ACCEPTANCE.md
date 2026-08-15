@@ -53,7 +53,7 @@ The target-Mac recording supplied by the user documents this exact sequence on r
 
 Acceptance interpretation is intentionally narrow:
 
-- this is physical **FAIL** evidence for `NH-MEDIA-GESTURE-003/004` on `6c2109195042759b951217f489a201a82dd044cd`;
+- this is physical rejection evidence for `NH-MEDIA-GESTURE-003/004` on historical candidate `6c2109195042759b951217f489a201a82dd044cd`; the current stable IDs remain pending until the repaired candidate is physically retested;
 - it confirms that a full application Quit occurred in the recorded sequence after media playback had already started;
 - the recording does **not** by itself prove that every helper/adapter process terminated after Quit; the explicit post-Quit `pgrep` gate remains required;
 - video cannot establish whether the physical arm haptic was felt;
