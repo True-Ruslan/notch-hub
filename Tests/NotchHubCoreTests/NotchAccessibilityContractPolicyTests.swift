@@ -10,6 +10,9 @@ struct NotchAccessibilityContractPolicyTests {
         let mediaRoot = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"
         )
+        let hostingFactory = try sourceText(
+            relativePath: "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift"
+        )
 
         for identifier in [
             "notch.surface.compact",
@@ -20,7 +23,10 @@ struct NotchAccessibilityContractPolicyTests {
             #expect(mediaRoot.contains(identifier))
         }
 
-        #expect(mediaRoot.contains("notch.surface.hitTarget"))
+        #expect(!mediaRoot.contains("notch.surface.hitTarget"))
+        #expect(hostingFactory.contains("notch.surface.hitTarget"))
+        #expect(hostingFactory.contains("setAccessibilityElement(true)"))
+        #expect(hostingFactory.contains("#if NOTCHHUB_UI_TESTING"))
 
         for identifier in [
             "media.artwork",
