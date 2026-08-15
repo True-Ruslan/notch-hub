@@ -24,6 +24,23 @@ struct NotchLocalPointerTrackingPolicyTests {
     }
 
     @Test
+    func localMouseDownCancelsPendingHoverBeforeSwiftUITapDispatch() throws {
+        let hostingSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift"
+        )
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(hostingSource.contains("onNotchMouseDown"))
+        #expect(hostingSource.contains("override func mouseDown(with event: NSEvent)"))
+        #expect(hostingSource.contains("onNotchMouseDown?()"))
+        #expect(hostingSource.contains("super.mouseDown(with: event)"))
+        #expect(controllerSource.contains("trackingView.onNotchMouseDown"))
+        #expect(controllerSource.contains("cancelPendingActivationForInteractiveTransition()"))
+    }
+
+    @Test
     func panelControllerBindsLocalTrackingToExistingInteractionPath() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
