@@ -331,6 +331,9 @@ public final class NotchPanelController: NSObject {
         trackingView.onNotchPointerEvent = { [weak self] pointer in
             self?.updateInteraction(for: pointer)
         }
+        trackingView.onNotchMouseDown = { [weak self] in
+            self?.interactionCoordinator.cancelPendingActivationForInteractiveTransition()
+        }
     }
 
     private func removeLocalPointerTracking() {
@@ -339,6 +342,7 @@ public final class NotchPanelController: NSObject {
         }
 
         trackingView.onNotchPointerEvent = nil
+        trackingView.onNotchMouseDown = nil
     }
 
     private func configurePointerMonitoring() {
