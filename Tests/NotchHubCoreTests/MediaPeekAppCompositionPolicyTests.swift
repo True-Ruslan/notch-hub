@@ -114,6 +114,28 @@ struct MediaPeekAppCompositionPolicyTests {
     }
 
     @Test
+    func explicitExpansionTapLivesAboveMediaAndGenericBranchReplacement() throws {
+        let mediaRoot = try sourceText(relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift")
+        let genericRoot = try sourceText(relativePath: "Sources/NotchHubCore/UI/NotchRootView.swift")
+        let bodySection = try sourceSection(
+            mediaRoot,
+            from: "var body: some View",
+            to: "private var isSeekSurfaceAvailable"
+        )
+        let mediaContentSection = try sourceSection(
+            mediaRoot,
+            from: "private func mediaContent",
+            to: "private var surfaceAccessibilityIdentifier"
+        )
+
+        #expect(bodySection.contains(".onTapGesture(perform: requestExplicitExpansionFromTap)"))
+        #expect(bodySection.contains("handlesExplicitExpansionTap: false"))
+        #expect(!mediaContentSection.contains(".onTapGesture"))
+        #expect(genericRoot.contains("handlesExplicitExpansionTap: Bool = true"))
+        #expect(genericRoot.contains("if handlesExplicitExpansionTap"))
+    }
+
+    @Test
     func explicitClickExpansionIsWiredForMediaAndNoMediaCompactStates() throws {
         let appSource = try sourceText(relativePath: "Sources/NotchHubApp/AppDelegate.swift")
         let rootSource = try sourceText(relativePath: "Sources/NotchHubCore/UI/NotchRootView.swift")
