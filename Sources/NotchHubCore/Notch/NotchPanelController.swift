@@ -167,6 +167,7 @@ public final class NotchPanelController: NSObject {
 
         configureAccessibilityObservation()
         configurePanel()
+        configureLocalPointerTracking(hostingView)
         configurePointerMonitoring()
     }
 
@@ -273,6 +274,7 @@ public final class NotchPanelController: NSObject {
     public func invalidate() {
         settledPresentationHandler = nil
         hoverPeekRequestHandler = nil
+        removeLocalPointerTracking()
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
         transitionCoordinator.invalidate()
@@ -319,6 +321,24 @@ public final class NotchPanelController: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isMovable = false
         panel.acceptsMouseMovedEvents = true
+    }
+
+    private func configureLocalPointerTracking(_ hostingView: NSView) {
+        guard let trackingView = hostingView as? any NotchLocalPointerTracking else {
+            return
+        }
+
+        trackingView.onNotchPointerEvent = { [weak self] pointer in
+            self?.updateInteraction(for: pointer)
+        }
+    }
+
+    private func removeLocalPointerTracking() {
+        guard let trackingView = panel.contentView as? any NotchLocalPointerTracking else {
+            return
+        }
+
+        trackingView.onNotchPointerEvent = nil
     }
 
     private func configurePointerMonitoring() {
