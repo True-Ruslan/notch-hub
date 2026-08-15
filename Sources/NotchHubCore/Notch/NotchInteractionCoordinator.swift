@@ -107,7 +107,7 @@ final class NotchInteractionCoordinator {
 
     func resolveHoverPeekRequest(
         _ request: NotchHoverPeekRequest,
-        mediaAvailable: Bool,
+        mediaAvailable _: Bool,
         layout: NotchLayout,
         currentPresentation: NotchPresentation
     ) -> Bool {
@@ -121,7 +121,6 @@ final class NotchInteractionCoordinator {
         activeHoverRequest = nil
 
         guard
-            mediaAvailable,
             currentPresentation == .compact,
             !isPeekInteractionHeld,
             let latestPointer,
