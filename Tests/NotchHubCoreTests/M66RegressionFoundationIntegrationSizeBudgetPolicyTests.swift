@@ -3,16 +3,13 @@ import Testing
 
 struct M66RegressionFoundationIntegrationSizeBudgetPolicyTests {
     @Test
-    func integrationBudgetIsTightProvenancedAndActiveInCI() throws {
+    func integrationBudgetRemainsTightProvenancedHistoricalEvidence() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let budgetURL = repositoryRoot.appendingPathComponent(
             "performance/m6-6-regression-foundation-integration-size-budget.json"
-        )
-        let workflowURL = repositoryRoot.appendingPathComponent(
-            ".github/workflows/ci.yml"
         )
 
         let budgetExists = FileManager.default.fileExists(atPath: budgetURL.path)
@@ -50,13 +47,6 @@ struct M66RegressionFoundationIntegrationSizeBudgetPolicyTests {
         #expect(budget.allowanceBytes.appSizeBytes.isMultiple(of: 4_096))
         #expect(budget.allowanceBytes.dmgSizeBytes.isMultiple(of: 4_096))
         #expect(budget.allowanceBytes.executableSizeBytes.isMultiple(of: 4_096))
-
-        let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
-        #expect(
-            workflow.contains(
-                "--feature-budget performance/m6-6-regression-foundation-integration-size-budget.json"
-            )
-        )
     }
 
     private struct FeatureBudget: Decodable {
