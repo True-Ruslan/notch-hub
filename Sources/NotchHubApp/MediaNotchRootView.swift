@@ -66,11 +66,14 @@ struct MediaNotchRootView: View {
                     model: panelModel,
                     compactBackgroundOpacity: compactBackgroundOpacity,
                     expandedContentTopInset: expandedContentTopInset,
+                    handlesExplicitExpansionTap: false,
                     onExplicitExpansion: onExplicitExpansion
                 )
                 .transition(.opacity)
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: requestExplicitExpansionFromTap)
         .animation(
             .easeInOut(duration: 0.12),
             value: mediaModel.presentation?.sessionIdentity
@@ -125,7 +128,6 @@ struct MediaNotchRootView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(surfaceAccessibilityIdentifier)
-        .onTapGesture(perform: requestExplicitExpansionFromTap)
         .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
             if panelModel.contentPresentation == .expanded {
                 sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
