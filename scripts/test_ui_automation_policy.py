@@ -10,6 +10,9 @@ BUILD_APP = (ROOT / "scripts/build-app.sh").read_text(encoding="utf-8")
 CI = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 PERSONAL_RELEASE = (ROOT / ".github/workflows/personal-release.yml").read_text(encoding="utf-8")
 TRUSTED_RELEASE = (ROOT / ".github/workflows/trusted-release.yml").read_text(encoding="utf-8")
+UI_APPLICATION = (
+    ROOT / "Tests/UITests/Support/NotchHubUIApplication.swift"
+).read_text(encoding="utf-8")
 
 FORBIDDEN_MARKERS = (
     b"NOTCHHUB_UI_FIXTURE",
@@ -35,6 +38,10 @@ class UIAutomationPolicyTests(unittest.TestCase):
     def test_build_script_has_explicit_test_compilation_condition(self):
         self.assertIn("NOTCHHUB_UI_TESTING", BUILD_APP)
         self.assertIn("-DNOTCHHUB_UI_TESTING", BUILD_APP)
+
+    def test_explicit_expansion_harness_uses_stable_application_coordinate(self):
+        self.assertNotIn("compact.click()", UI_APPLICATION)
+        self.assertIn("app.coordinate(withNormalizedOffset:", UI_APPLICATION)
 
     def test_acceptance_status_parser_does_not_treat_passive_as_pass(self):
         ledger = """Status: CONTRACT FROZEN / IMPLEMENTATION PENDING
