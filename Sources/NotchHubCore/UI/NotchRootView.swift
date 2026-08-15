@@ -4,21 +4,33 @@ public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
     private let compactBackgroundOpacity: Double
     private let expandedContentTopInset: CGFloat
+    private let handlesExplicitExpansionTap: Bool
     private let onExplicitExpansion: () -> Void
 
     public init(
         model: NotchPanelModel,
         compactBackgroundOpacity: Double,
         expandedContentTopInset: CGFloat,
+        handlesExplicitExpansionTap: Bool = true,
         onExplicitExpansion: @escaping () -> Void = {}
     ) {
         self.model = model
         self.compactBackgroundOpacity = compactBackgroundOpacity
         self.expandedContentTopInset = expandedContentTopInset
+        self.handlesExplicitExpansionTap = handlesExplicitExpansionTap
         self.onExplicitExpansion = onExplicitExpansion
     }
 
     public var body: some View {
+        if handlesExplicitExpansionTap {
+            surfaceContent
+                .onTapGesture(perform: requestExplicitExpansionFromTap)
+        } else {
+            surfaceContent
+        }
+    }
+
+    private var surfaceContent: some View {
         Group {
             switch model.contentPresentation {
             case .compact, .peek:
@@ -36,7 +48,6 @@ public struct NotchRootView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(surfaceAccessibilityIdentifier)
-        .onTapGesture(perform: requestExplicitExpansionFromTap)
     }
 
     private var surfaceAccessibilityIdentifier: String {
