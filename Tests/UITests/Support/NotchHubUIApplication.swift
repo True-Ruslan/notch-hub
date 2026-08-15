@@ -25,6 +25,11 @@ struct NotchHubUIApplication {
         }
     }
 
+    enum LaunchPointerPolicy {
+        case parkOutsideNotch
+        case preserveCurrentPosition
+    }
+
     let app: XCUIApplication
     let sourceCommit: String
 
@@ -72,8 +77,11 @@ struct NotchHubUIApplication {
         app.launchEnvironment["NOTCHHUB_UI_FIXTURE"] = mode.fixture
     }
 
-    func launch() {
+    func launch(pointerPolicy: LaunchPointerPolicy = .parkOutsideNotch) {
         app.launch()
+        if pointerPolicy == .parkOutsideNotch {
+            parkPointerOutsideNotch()
+        }
     }
 
     func surface(_ identifier: String) -> XCUIElement {
@@ -90,7 +98,8 @@ struct NotchHubUIApplication {
             return false
         }
 
-        return surface("notch.surface.expanded").waitForNonExistence(timeout: timeout)
+        return surface("notch.surface.peek").waitForNonExistence(timeout: timeout)
+            && surface("notch.surface.expanded").waitForNonExistence(timeout: timeout)
     }
 
     func openExpandedExplicitly(timeout: TimeInterval = 2) -> Bool {
@@ -106,12 +115,30 @@ struct NotchHubUIApplication {
         )
     }
 
+    func hoverCompact(timeout: TimeInterval = 2) -> Bool {
+        let compact = surface("notch.surface.compact")
+        guard NotchHubUIAssertions.waitUntilExists(compact, timeout: timeout) else {
+            return false
+        }
+        compact.hover()
+        return true
+    }
+
     func movePointerOutside(_ element: XCUIElement) {
         let center = element.coordinate(
             withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
         )
         center.withOffset(
             CGVector(dx: 0, dy: max(element.frame.height, 80))
+        ).hover()
+    }
+
+    private func parkPointerOutsideNotch() {
+        let applicationCenter = app.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+        )
+        applicationCenter.withOffset(
+            CGVector(dx: 0, dy: max(app.frame.height, 240))
         ).hover()
     }
 
