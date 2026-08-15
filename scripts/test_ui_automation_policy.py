@@ -13,6 +13,9 @@ TRUSTED_RELEASE = (ROOT / ".github/workflows/trusted-release.yml").read_text(enc
 UI_APPLICATION = (
     ROOT / "Tests/UITests/Support/NotchHubUIApplication.swift"
 ).read_text(encoding="utf-8")
+EXPLICIT_EXPANSION = UI_APPLICATION.split("func openExpandedExplicitly", 1)[1].split(
+    "func hoverCompact", 1
+)[0]
 
 FORBIDDEN_MARKERS = (
     b"NOTCHHUB_UI_FIXTURE",
@@ -47,6 +50,12 @@ class UIAutomationPolicyTests(unittest.TestCase):
         self.assertIn("mouseType: .leftMouseDown", UI_APPLICATION)
         self.assertIn("mouseType: .leftMouseUp", UI_APPLICATION)
         self.assertIn(".post(tap: .cghidEventTap)", UI_APPLICATION)
+
+    def test_explicit_expansion_converts_xcui_y_to_quartz_global_coordinates(self):
+        self.assertIn("CGDisplayBounds(CGMainDisplayID())", EXPLICIT_EXPANSION)
+        self.assertIn("displayBounds.maxY", EXPLICIT_EXPANSION)
+        self.assertIn("displayBounds.minY", EXPLICIT_EXPANSION)
+        self.assertIn("compactFrame.midY", EXPLICIT_EXPANSION)
 
     def test_acceptance_status_parser_does_not_treat_passive_as_pass(self):
         ledger = """Status: CONTRACT FROZEN / IMPLEMENTATION PENDING
