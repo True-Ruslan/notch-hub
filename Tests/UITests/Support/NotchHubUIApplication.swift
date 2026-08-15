@@ -111,7 +111,27 @@ struct NotchHubUIApplication {
             return false
         }
 
-        compact.click()
+        let compactFrame = compact.frame
+        let applicationFrame = app.frame
+        guard
+            compactFrame.midX.isFinite,
+            compactFrame.midY.isFinite,
+            applicationFrame.minX.isFinite,
+            applicationFrame.minY.isFinite
+        else {
+            return false
+        }
+
+        let applicationOrigin = app.coordinate(
+            withNormalizedOffset: CGVector(dx: 0, dy: 0)
+        )
+        applicationOrigin.withOffset(
+            CGVector(
+                dx: compactFrame.midX - applicationFrame.minX,
+                dy: compactFrame.midY - applicationFrame.minY
+            )
+        ).click()
+
         return NotchHubUIAssertions.waitUntilExists(
             surface("notch.surface.expanded"),
             timeout: timeout
