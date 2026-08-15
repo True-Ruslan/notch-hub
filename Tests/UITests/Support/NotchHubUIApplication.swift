@@ -112,25 +112,32 @@ struct NotchHubUIApplication {
         }
 
         let compactFrame = compact.frame
-        let applicationFrame = app.frame
+        let clickPoint = CGPoint(x: compactFrame.midX, y: compactFrame.midY)
+        guard clickPoint.x.isFinite, clickPoint.y.isFinite else {
+            return false
+        }
+        guard CGWarpMouseCursorPosition(clickPoint) == .success else {
+            return false
+        }
         guard
-            compactFrame.midX.isFinite,
-            compactFrame.midY.isFinite,
-            applicationFrame.minX.isFinite,
-            applicationFrame.minY.isFinite
+            let mouseDown = CGEvent(
+                mouseEventSource: nil,
+                mouseType: .leftMouseDown,
+                mouseCursorPosition: clickPoint,
+                mouseButton: .left
+            ),
+            let mouseUp = CGEvent(
+                mouseEventSource: nil,
+                mouseType: .leftMouseUp,
+                mouseCursorPosition: clickPoint,
+                mouseButton: .left
+            )
         else {
             return false
         }
 
-        let applicationOrigin = app.coordinate(
-            withNormalizedOffset: CGVector(dx: 0, dy: 0)
-        )
-        applicationOrigin.withOffset(
-            CGVector(
-                dx: compactFrame.midX - applicationFrame.minX,
-                dy: compactFrame.midY - applicationFrame.minY
-            )
-        ).click()
+        mouseDown.post(tap: .cghidEventTap)
+        mouseUp.post(tap: .cghidEventTap)
 
         return NotchHubUIAssertions.waitUntilExists(
             surface("notch.surface.expanded"),
