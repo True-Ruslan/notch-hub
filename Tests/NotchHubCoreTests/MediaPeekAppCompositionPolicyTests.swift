@@ -3,14 +3,16 @@ import Testing
 
 struct MediaPeekAppCompositionPolicyTests {
     @Test
-    func peekSessionUsesCachedFirstThenExactlyOneBoundedProbe() throws {
+    func peekSessionOpensGenericPeekThenRunsExactlyOneBoundedProbe() throws {
         let source = try sourceText(relativePath: "Sources/NotchHubApp/MediaPeekSession.swift")
+        let resolve = try #require(
+            source.range(of: "panelController?.resolveHoverPeekRequest(request, mediaAvailable: false)")
+        )
+        let acquire = try #require(source.range(of: "probe.acquire"))
 
         #expect(source.contains("final class MediaPeekSession"))
-        #expect(source.contains("func handleHoverRequest(_ request: NotchHoverPeekRequest)"))
-        #expect(source.contains("presentationModel.presentation != nil"))
-        #expect(source.contains("resolveHoverPeekRequest(request, mediaAvailable: true)"))
-        #expect(source.contains("probe.acquire"))
+        #expect(source.contains("probe: any MediaPeekProbing"))
+        #expect(resolve.lowerBound < acquire.lowerBound)
         #expect(source.contains("activeRequest"))
         #expect(source.contains("generation"))
         #expect(!source.contains("Timer.scheduledTimer"))
@@ -21,17 +23,15 @@ struct MediaPeekAppCompositionPolicyTests {
     }
 
     @Test
-    func positiveNoSessionAndFailureResultsRemainFailClosed() throws {
+    func mediaProbeOnlyEnrichesGenericPeekAndNoSessionDoesNotCollapse() throws {
         let source = try sourceText(relativePath: "Sources/NotchHubApp/MediaPeekSession.swift")
 
         #expect(source.contains("case .presentation(let presentation)"))
         #expect(source.contains("presentationModel.applyOneShotPresentation(presentation)"))
-        #expect(source.contains("resolveHoverPeekRequest(request, mediaAvailable: true)"))
         #expect(source.contains("case .noSession:"))
         #expect(source.contains("presentationModel.clearAuthoritativePresentation()"))
-        #expect(source.contains("resolveHoverPeekRequest(request, mediaAvailable: false)"))
-        #expect(source.contains("panelController.requestCollapse()"))
         #expect(source.contains("case .failed:"))
+        #expect(!source.contains("panelController.requestCollapse()"))
         #expect(!source.contains("case .failed:\n            presentationModel.clearAuthoritativePresentation()"))
     }
 
@@ -47,17 +47,21 @@ struct MediaPeekAppCompositionPolicyTests {
     }
 
     @Test
-    func appComposesPeekSessionWithoutStartingPersistentRuntimeForPeek() throws {
+    func appComposesPeekSessionThroughInjectedBoundedProbeWithoutPersistentPeekRuntime() throws {
         let source = try sourceText(relativePath: "Sources/NotchHubApp/AppDelegate.swift")
+        let composition = try sourceText(relativePath: "Sources/NotchHubApp/AppComposition.swift")
 
         #expect(source.contains("private var mediaPeekSession: MediaPeekSession?"))
         #expect(source.contains("let mediaPeekSession = MediaPeekSession("))
+        #expect(source.contains("probe: composition.makeMediaPeekProbe()"))
         #expect(source.contains("panelController.hoverPeekRequestHandler"))
         #expect(source.contains("mediaPeekSession?.handleHoverRequest(request)"))
         #expect(source.contains("mediaPeekSession.cancel()"))
         #expect(source.contains("mediaPeekSession.invalidate()"))
         #expect(source.contains("case .compact, .peek:"))
         #expect(source.contains("case .expanded:"))
+        #expect(composition.contains("ShippingMediaPeekProbe()"))
+        #expect(composition.contains("UITestMediaPeekProbe(result: .noSession)"))
     }
 
     @Test
