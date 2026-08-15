@@ -20,6 +20,8 @@ struct NotchAccessibilityContractPolicyTests {
             #expect(mediaRoot.contains(identifier))
         }
 
+        #expect(mediaRoot.contains("notch.surface.hitTarget"))
+
         for identifier in [
             "media.artwork",
             "media.title",
