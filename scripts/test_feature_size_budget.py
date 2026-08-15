@@ -428,6 +428,25 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
+    def test_repository_m6_6_regression_foundation_integration_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-regression-foundation-integration-size-budget.json",
+            feature_id="m6.6-regression-foundation-integration",
+            source_commit="452f78b0e42c5302702393e9c45c563849661ca4",
+            workflow_run_id=31869841148,
+            artifact_id=9243156724,
+            summary={
+                "appSizeBytes": 882687,
+                "dmgSizeBytes": 552272,
+                "executableSizeBytes": 580480,
+            },
+            allowance={
+                "appSizeBytes": 614400,
+                "dmgSizeBytes": 462848,
+                "executableSizeBytes": 315392,
+            },
+        )
+
     def test_ci_uses_cumulative_foundation_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
@@ -436,10 +455,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/regression-ui-automation-foundation-size-budget.json",
+            "--feature-budget performance/m6-6-regression-foundation-integration-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "regression-ui-automation-foundation-size-budget.json",
             "m6-6-hover-peek-size-budget.json",
             "m6-6-physical-acceptance-repair-size-budget.json",
             "m6-6-media-seek-size-budget.json",
