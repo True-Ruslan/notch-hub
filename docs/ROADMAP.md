@@ -23,7 +23,7 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 
 ### M6.6 — gestures, haptics, interactive notch, seek and Hover Peek
 
-Status: **IMPLEMENTED / REGRESSION-INTEGRATED / FOCUSED REPAIR AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / REGRESSION-INTEGRATED / DIRECTION REPAIR AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
 Draft PR #33 currently provides:
 
@@ -31,36 +31,35 @@ Draft PR #33 currently provides:
 - exactly 120 ms hover dwell and 140 ms Peek exit grace;
 - generic Hover Peek even when no usable media session exists, with one hover-haptic request;
 - bounded one-shot media enrichment in compact/Peek and persistent runtime only in expanded;
-- explicit click/DOWN expansion with tap ownership above both generic/media and compact/Peek branch replacement;
+- explicit click/DOWN expansion with tap ownership above generic/media and compact/Peek branch replacement;
 - exact-top-edge inclusive interactive pointer retention;
-- local previous/next gestures and haptics;
+- local previous/next gestures with physical LEFT -> `next` and RIGHT -> `previous`, independent of macOS scroll-direction preference;
 - interactive panel follow-finger motion and exact endpoint settlement;
 - source icon, seek/cursor isolation and event-driven continuity.
 
 No new global input authority, polling, repeating timer, display link, retry/sleep masking or sensitive permission was added.
 
-#### 2026-08-15 physical rejection and repair
+#### 2026-08-15 physical rejection and direction repair
 
-Candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was rejected on the target Mac:
+Exact candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 passed all canonical automation but was physically rejected on Mac16,8/macOS 26.6 after a real media playback test showed horizontal track gestures reversed relative to the frozen contract.
 
-- with music off, hover produced no Peek/haptic;
-- exact-top-edge DOWN twitched then self-collapsed;
-- expanded pointer exit remained PASS;
-- center-notch DOWN and physical UP were stable.
+The defect was isolated to physical X normalization, not semantic command mapping. Vertical Y semantics were already correct.
 
-The repair changed the pending product contract so no-media hover opens generic Peek and requests one hover haptic, replaced half-open interactive containment at the physical boundary, and hardened explicit-click ownership across hover/media presentation changes.
+Focused TDD:
 
-Automated evidence:
+- RED `f5cb5e3d1f13c7dc5564ce24068e83007f97bb1b` / CI #1157 / run `31897906228`: 354 tests / 75 suites, with only two new physical-direction assertions failing; LEFT had positive X instead of negative X, RIGHT negative instead of positive, while Y remained correct.
+- GREEN `50b82dae49f3ce6c6e194b1ab9775bd5cd5dd430` / CI #1158 / run `31898052051`: one production-line change, `x: -scrollingDeltaX * preferenceScale`; Y, coordinator, haptic, lifecycle and transport code unchanged.
+- #1158 passed all three canonical jobs, all 354 Swift tests, strict traceability, exact external-app XCUI, security/source policy, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, unchanged size budget and performance smoke.
 
-- behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140: 352 Swift tests / 74 suites and 11/11 external XCUI PASS; package failed only on the preceding DMG size ceiling;
-- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147: all three canonical jobs PASS with strict traceability, security/source audit, production transport, shipping/signing/Sandbox/Hardened Runtime/preflight, performance smoke and the revised tight size budget;
-- docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 was automatically rejected because two first-launch explicit-click XCUI journeys could still lose the gesture when the entire generic/media outer branch changed;
-- focused RED `ac1f004b9a0d2a0fd54c16cb7c0041933d3523df` / CI #1153: 354 tests / 75 suites with only the new root tap-ownership test failing;
-- GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155: tap authority moved to the stable outer media-aware root; all three canonical jobs and the external-app XCUI suite PASS with no retries/sleeps.
+The current docs-synchronized descendant must pass fresh three-job CI. Only then can its exact source and CI-produced shipping/DMG artifacts be frozen for physical direction retesting.
 
-The active cumulative deterministic size policy remains `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`. It keeps app/executable allowance unchanged from the preceding cumulative envelope and adds one 4096-byte DMG allowance quantum. Immutable P0 and all historical M6 budgets remain unchanged provenance records. #1155 passed the same envelope unchanged at app `883119 B`, DMG `555204 B`, executable `580912 B`.
+#### Earlier 2026-08-15 repair history
 
-The current docs-synchronized head still requires fresh three-job CI. After it passes, its exact source and CI-produced shipping artifact/DMG are frozen without another source commit.
+Candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was physically rejected for no-media Hover Peek/haptic and exact-top-edge DOWN self-collapse. Subsequent repair introduced generic no-media Peek, inclusive exact-edge retention and preserved pointer-exit/settlement behavior.
+
+Docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 was automatically rejected because first-launch explicit clicks could be lost during generic/media root replacement. Focused RED #1153 -> GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155 moved tap authority to the stable outer root without retries/sleeps or new input authority.
+
+The active cumulative deterministic size policy remains `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`. Immutable P0 and all historical M6 budgets remain unchanged provenance records; #1158 passed the same active envelope unchanged.
 
 Acceptance ledgers:
 
@@ -87,9 +86,9 @@ Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, narrow glo
 
 ## Current priority
 
-1. Pass all three canonical CI jobs on the final documentation-synchronized PR #33 head.
+1. Pass all three canonical CI jobs on the final direction-repair documentation-synchronized PR #33 head.
 2. Freeze exact source SHA + shipping/DMG artifact provenance without another source commit.
-3. Run the focused target-Mac block: no-media Hover Peek/haptic, stationary relaunch, explicit click under hover/media branch changes, exact-top-edge DOWN, expanded pointer exit, UP/DOWN lost-terminal safety.
+3. With real media playing, retest LEFT -> next and RIGHT -> previous repeatedly in compact and expanded, then Peek; verify one arm haptic per supported armed transition.
 4. Any independent repeatable failure gets its own focused RED -> GREEN cycle and a new exact candidate.
-5. Only after the focused block passes continue remaining Peek/gesture/seek/source-icon/lifecycle/permission gates on the same candidate.
+5. After direction passes, continue remaining Hover Peek, seek, source-icon, interactive, lifecycle/process and permission gates on the same candidate.
 6. Only after full physical PASS: mark PR #33 ready, merge, verify post-merge `main` CI, close M6.6 and begin P1.

@@ -8,17 +8,18 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### M6.6 — current draft PR #33
 
-Status: **IMPLEMENTED / REGRESSION-INTEGRATED / FOCUSED REPAIR AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / REGRESSION-INTEGRATED / DIRECTION REPAIR AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
 Added:
 
 - local App-owned media gesture session with bounded horizontal visuals and public AppKit arm haptic;
 - stable `compact`, `peek`, `expanded` presentation states under the existing Core transition authority;
 - exactly 120 ms Hover Peek activation plus 140 ms pointer-exit grace;
-- generic no-media Peek: usable media is no longer required for hover preview, and a valid dwell requests the normal hover haptic once;
+- generic no-media Peek with one hover-haptic request after a valid dwell;
 - click and physical DOWN as explicit expansion paths, with explicit tap authority on the stable outer media-aware root above generic/media and compact/Peek replacement;
 - bounded one-shot media probing/commands in compact and Peek while persistent runtime remains expanded-only;
 - exact-top-edge inclusive pointer retention for interactive DOWN;
+- physical horizontal gesture normalization independent of macOS scroll-direction preference: LEFT -> `next`, RIGHT -> `previous`;
 - source-app identity badge through public `NSWorkspace` and bounded in-memory cache;
 - capability-gated draggable seek in Peek and expanded, identity-locked across track/source changes;
 - balanced seek cursor ownership without pointer warp/lock;
@@ -28,11 +29,10 @@ Added:
 Physical acceptance history:
 
 - first complete candidate `d008f698b323963f084eedce601620ee957ef442` / CI #872 rejected; focused RED -> GREEN cycles repaired hover arbitration, physical vertical direction, stale seek identity and visual continuity;
-- Hover Peek evidence `7daffde9b7c2a734e2ddfa234b1ee744b0d96d9e` / CI #939 and subsequent size-policy repair completed;
-- docs-synchronized candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 rejected on stationary-startup Hover Peek;
-- startup RED `553cf973722dfb214f0fcb741ddb6c9b0b44ff02` / CI #947 -> GREEN `d17bd27be72c8c3bd022fb2c3613050c398c622e` / CI #948;
+- docs-synchronized candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 rejected on stationary-startup Hover Peek; startup RED #947 -> GREEN #948;
 - candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 passed automation but was rejected for expanded pointer-exit and interactive lost-terminal behavior;
-- candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was rejected on 2026-08-15 for no-media Hover Peek/haptic behavior and exact-top-edge DOWN self-collapse, while expanded pointer-exit and normal-center DOWN/UP remained stable.
+- candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was rejected on 2026-08-15 for no-media Hover Peek/haptic behavior and exact-top-edge DOWN self-collapse, while expanded pointer-exit and normal-center DOWN/UP remained stable;
+- candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 passed all automation but was physically rejected on 2026-08-15 because a real media playback test showed LEFT/RIGHT track gestures reversed relative to the frozen contract.
 
 #### 2026-08-13 expanded pointer-exit / interactive settlement repair
 
@@ -48,11 +48,11 @@ Regression/UI Automation Foundation PR #34 was merged to `main` as `bd9566f690d3
 
 Integration work added fail-closed acceptance traceability, exact-app native XCUI, compile-time-only deterministic media/haptic fixtures with shipping-marker isolation, stable accessibility identities, and protocol-based expanded runtime injection while concrete `ShippingMediaRuntime` construction remained shipping-composition authority.
 
-First full combined baseline `e5cdc58776f80f1fc6f57e22959a07704d895fbe` / CI #1095 passed all canonical jobs. Protocol-runtime RED `3b79448697d614b7f022009653eca655a31bad4f` / CI #1096 -> GREEN `f49f94d5ab51dcec5dccb97b6c0997ec631b1261` / CI #1099. PR #33 CI #1100 then independently passed all three jobs with 347 tests / 72 suites, strict 116/116 and native external-app XCUI 9/9.
+First full combined baseline `e5cdc58776f80f1fc6f57e22959a07704d895fbe` / CI #1095 passed all canonical jobs. Protocol-runtime RED #1096 -> GREEN #1099. PR #33 CI #1100 then independently passed all three jobs with 347 tests / 72 suites, strict 116/116 and native external-app XCUI 9/9.
 
-#### 2026-08-15 physical-acceptance repair
+#### 2026-08-15 Hover Peek / physical-acceptance repair
 
-Target testing of exact candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 produced concrete blockers and later automated click races:
+Target testing of candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 produced concrete blockers and later automated click races:
 
 - no-media hover remained compact and produced no haptic because the pending design still gated Peek on usable media;
 - DOWN starting exactly at the top screen edge used half-open `CGRect.contains` and falsely retargeted to compact;
@@ -60,26 +60,34 @@ Target testing of exact candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / C
 
 Repair:
 
-- no-media hover opens generic Peek first and requests the normal hover haptic once; a bounded `.noSession` probe no longer collapses that preview;
+- no-media hover opens generic Peek first and requests the normal hover haptic once;
 - interactive pointer retention includes the exact physical top/right boundary;
 - local `NSTrackingArea` is the primary event-driven hover path;
-- a proposed mouse-button event interception was rejected by the existing security baseline and removed rather than whitelisted;
-- explicit click expansion ultimately uses one stable SwiftUI tap recognizer on the outer `MediaNotchRootView` root, above both generic/media and compact/Peek branch replacement;
-- nested `NotchRootView` keeps standalone tap behavior by default but disables its child tap when embedded in media-aware composition;
+- a proposed mouse-button interception was rejected by the existing security baseline and removed rather than whitelisted;
+- explicit click expansion uses one stable SwiftUI tap recognizer on the outer `MediaNotchRootView`, above generic/media and compact/Peek replacement;
 - no global scroll/button/keyboard monitor, event tap, polling, repeating timer, display link, UI-test retry/sleep or new sensitive permission was added.
 
 Verification evidence:
 
-- behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140 / run `31889213155`: 352 Swift tests / 74 suites PASS and external XCUI 11/11 PASS; package failed only because the preceding DMG cumulative ceiling was exceeded by 2172 B;
-- size review created `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`, changing only DMG allowance by one 4096-byte quantum while leaving app/executable allowance unchanged and preserving all historical budgets;
-- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147 / run `31889961194`: all three canonical jobs PASS;
-- docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 / run `31890935022` was automatically rejected: compatibility/package remained green, but two first-launch explicit-click external XCUI journeys failed because the entire generic/media branch could be replaced during the click;
-- focused RED `ac1f004b9a0d2a0fd54c16cb7c0041933d3523df` / CI #1153 / run `31891311328`: 354 tests / 75 suites with only the new root-ownership regression test failing;
-- GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155 / run `31891464496`: all three canonical jobs PASS, including the full Swift suite, strict acceptance traceability, security/source audit, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, unchanged size gate, performance smoke and external-app XCUI suite.
+- behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140: 352 Swift tests / 74 suites and external XCUI 11/11 PASS; package failed only because the preceding DMG cumulative ceiling was exceeded by 2172 B;
+- size review created `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`, changing only DMG allowance by one 4096-byte quantum while leaving app/executable allowance unchanged;
+- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147: all three canonical jobs PASS;
+- docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 was automatically rejected because two first-launch explicit-click external XCUI journeys failed;
+- focused RED `ac1f004b9a0d2a0fd54c16cb7c0041933d3523df` / CI #1153 -> GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155; #1155 passed all canonical jobs, strict/security gates and native external-app XCUI without retries/sleeps.
 
-CI #1155 shipping evidence: shipping-media artifact `9248700272` (`sha256:509826b1c36b46d406a87621bbe83b4aa039c2aff40422b9be1ce46ecef99d2f`), DMG artifact `9248701623` (`sha256:860b36a3ae6a740490e177847634e5d76ed9be913afb89ec7cc87a7128e4f050`), UI result artifact `9248698799` (`sha256:83522a4ec996649d5dcc5e0f99332bf921fb322efe1d86f8e9f3f4182ec85730`); executable `580912 B`, app `883119 B`, DMG `555204 B`.
+#### 2026-08-15 horizontal physical-direction repair
 
-The final documentation-synchronized head must pass fresh three-job CI before its exact source/artifact provenance is frozen for physical testing. PR #33 remains draft and unmerged until one exact candidate passes all applicable target-Mac gates.
+Target-Mac video testing of exact automated-green candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 / run `31892019346` used real media playback and showed horizontal track gestures reversed: the physical gesture selected the opposite track from the frozen LEFT -> `next`, RIGHT -> `previous` contract.
+
+Root cause was limited to `MediaGestureInputNormalizer`. The semantic coordinator and typed command mapping were already correct; vertical normalization was also correct. Horizontal normalization compensated for the user's macOS scroll-direction preference but failed to invert AppKit scroll X into the physical LEFT/RIGHT semantic sign.
+
+TDD evidence:
+
+- RED `f5cb5e3d1f13c7dc5564ce24068e83007f97bb1b` / CI #1157 / run `31897906228`: build/policy gates passed; 354 tests / 75 suites ran and only the two new physical-direction assertions failed. LEFT was positive instead of negative X and RIGHT negative instead of positive X; Y remained correct.
+- GREEN `50b82dae49f3ce6c6e194b1ab9775bd5cd5dd430` / CI #1158 / run `31898052051`: exactly one production line changed from `x: scrollingDeltaX * preferenceScale` to `x: -scrollingDeltaX * preferenceScale`; Y, semantic direction mapping, thresholds, haptics, lifecycle and transport are unchanged.
+- #1158 passed all 354 Swift tests and all three canonical jobs, including strict acceptance traceability, exact external-app XCUI, security/source audit, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, unchanged size gate and performance smoke.
+
+A fresh docs-synchronized descendant must independently pass all three canonical jobs before its exact source/artifact provenance is frozen for the next target-Mac retest. The #1156 artifacts remain historical rejection evidence only.
 
 ### Earlier M6.6 prerequisites
 
