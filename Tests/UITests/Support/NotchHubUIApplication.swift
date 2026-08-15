@@ -110,7 +110,10 @@ struct NotchHubUIApplication {
             return false
         }
 
-        let hitTarget = surface("notch.surface.hitTarget")
+        let hitTarget =
+            app.descendants(matching: .any)
+            .matching(identifier: "notch.surface.hitTarget")
+            .firstMatch
         guard NotchHubUIAssertions.waitUntilExists(hitTarget, timeout: timeout) else {
             return false
         }
