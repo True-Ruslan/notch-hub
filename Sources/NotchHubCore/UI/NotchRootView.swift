@@ -36,6 +36,7 @@ public struct NotchRootView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(surfaceAccessibilityIdentifier)
+        .onTapGesture(perform: requestExplicitExpansionFromTap)
     }
 
     private var surfaceAccessibilityIdentifier: String {
@@ -58,10 +59,6 @@ public struct NotchRootView: View {
             Spacer()
         }
         .padding(.top, 3)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onExplicitExpansion()
-        }
     }
 
     private var expandedContent: some View {
@@ -108,5 +105,12 @@ public struct NotchRootView: View {
             .white.opacity(0.08),
             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
         )
+    }
+
+    private func requestExplicitExpansionFromTap() {
+        guard model.contentPresentation != .expanded else {
+            return
+        }
+        onExplicitExpansion()
     }
 }
