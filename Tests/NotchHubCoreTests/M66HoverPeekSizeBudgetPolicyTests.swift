@@ -3,7 +3,7 @@ import Testing
 
 struct M66HoverPeekSizeBudgetPolicyTests {
     @Test
-    func hoverPeekRequiresTightProvenancedBudgetWhileCumulativeFoundationBudgetIsActive() throws {
+    func hoverPeekBudgetRemainsHistoricalWhileLatestPhysicalRepairBudgetIsActive() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -51,6 +51,11 @@ struct M66HoverPeekSizeBudgetPolicyTests {
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
+                "--feature-budget performance/m6-6-physical-acceptance-20260815-repair-size-budget.json"
+            )
+        )
+        #expect(
+            !workflow.contains(
                 "--feature-budget performance/m6-6-regression-foundation-integration-size-budget.json"
             )
         )
