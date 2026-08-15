@@ -447,7 +447,26 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_cumulative_foundation_budget_over_immutable_baseline(self):
+    def test_repository_m6_6_physical_acceptance_20260815_repair_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-physical-acceptance-20260815-repair-size-budget.json",
+            feature_id="m6.6-physical-acceptance-20260815-repair",
+            source_commit="63b0f2f96f879123f3883db7311c90a20d3a4328",
+            workflow_run_id=31889213155,
+            artifact_id=9248133083,
+            summary={
+                "appSizeBytes": 883039,
+                "dmgSizeBytes": 555132,
+                "executableSizeBytes": 580832,
+            },
+            allowance={
+                "appSizeBytes": 614400,
+                "dmgSizeBytes": 466944,
+                "executableSizeBytes": 315392,
+            },
+        )
+
+    def test_ci_uses_physical_acceptance_repair_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -455,10 +474,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-regression-foundation-integration-size-budget.json",
+            "--feature-budget performance/m6-6-physical-acceptance-20260815-repair-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-6-regression-foundation-integration-size-budget.json",
             "regression-ui-automation-foundation-size-budget.json",
             "m6-6-hover-peek-size-budget.json",
             "m6-6-physical-acceptance-repair-size-budget.json",
