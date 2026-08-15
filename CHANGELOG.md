@@ -8,7 +8,7 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### M6.6 — current draft PR #33
 
-Status: **IMPLEMENTED / REGRESSION-INTEGRATED / DIRECTION REPAIR AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / REGRESSION-INTEGRATED / REPAIRED AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
 Added:
 
@@ -32,7 +32,7 @@ Physical acceptance history:
 - docs-synchronized candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 rejected on stationary-startup Hover Peek; startup RED #947 -> GREEN #948;
 - candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 passed automation but was rejected for expanded pointer-exit and interactive lost-terminal behavior;
 - candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was rejected on 2026-08-15 for no-media Hover Peek/haptic behavior and exact-top-edge DOWN self-collapse, while expanded pointer-exit and normal-center DOWN/UP remained stable;
-- candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 passed all automation but was physically rejected on 2026-08-15 because a real media playback test showed LEFT/RIGHT track gestures reversed relative to the frozen contract.
+- candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 passed all automation but was physically rejected on 2026-08-15 because the target-Mac video with real media playback showed LEFT/RIGHT track gestures reversed relative to the frozen contract.
 
 #### 2026-08-13 expanded pointer-exit / interactive settlement repair
 
@@ -75,9 +75,15 @@ Verification evidence:
 - docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 was automatically rejected because two first-launch explicit-click external XCUI journeys failed;
 - focused RED `ac1f004b9a0d2a0fd54c16cb7c0041933d3523df` / CI #1153 -> GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155; #1155 passed all canonical jobs, strict/security gates and native external-app XCUI without retries/sleeps.
 
-#### 2026-08-15 horizontal physical-direction repair
+#### 2026-08-15 horizontal physical-direction video, rejection and repair
 
-Target-Mac video testing of exact automated-green candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 / run `31892019346` used real media playback and showed horizontal track gestures reversed: the physical gesture selected the opposite track from the frozen LEFT -> `next`, RIGHT -> `previous` contract.
+The target-Mac video supplied by the user records an important real-world sequence on exact automated-green candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 / run `31892019346`:
+
+1. real music/media playback was already active;
+2. NotchHub was then fully Quit while that playback context existed;
+3. during the demonstrated horizontal track interactions, physical LEFT selected the previous direction instead of `next`, and physical RIGHT selected the next direction instead of `previous`.
+
+The recording is therefore physical **FAIL** evidence for `NH-MEDIA-GESTURE-003/004` on `6c210919...`. It also confirms that a full NotchHub Quit occurred in the recorded sequence after playback had started, but does not by itself prove helper/adapter-process teardown after Quit; explicit `pgrep` evidence remains required. Video cannot establish felt haptic feedback, and no other unobserved M6.6 gate is promoted to accepted.
 
 Root cause was limited to `MediaGestureInputNormalizer`. The semantic coordinator and typed command mapping were already correct; vertical normalization was also correct. Horizontal normalization compensated for the user's macOS scroll-direction preference but failed to invert AppKit scroll X into the physical LEFT/RIGHT semantic sign.
 
@@ -87,7 +93,23 @@ TDD evidence:
 - GREEN `50b82dae49f3ce6c6e194b1ab9775bd5cd5dd430` / CI #1158 / run `31898052051`: exactly one production line changed from `x: scrollingDeltaX * preferenceScale` to `x: -scrollingDeltaX * preferenceScale`; Y, semantic direction mapping, thresholds, haptics, lifecycle and transport are unchanged.
 - #1158 passed all 354 Swift tests and all three canonical jobs, including strict acceptance traceability, exact external-app XCUI, security/source audit, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, unchanged size gate and performance smoke.
 
-A fresh docs-synchronized descendant must independently pass all three canonical jobs before its exact source/artifact provenance is frozen for the next target-Mac retest. The #1156 artifacts remain historical rejection evidence only.
+The corrected direction remains **physical-retest pending**; CI does not convert `NH-MEDIA-GESTURE-003/004` to accepted.
+
+#### 2026-08-15 external-XCUI explicit-click stabilization
+
+A docs-only descendant after the direction repair exposed nondeterminism in the test harness rather than the repaired LEFT/RIGHT mapping. `openExpandedExplicitly()` was sending `click()` to transient `notch.surface.compact`; if the SwiftUI presentation element was replaced between XCTest mouse-down and mouse-up, multiple product journeys failed before reaching their actual assertions.
+
+Fail-closed investigation rejected three alternatives rather than hiding the issue:
+
+- application-relative coordinate clicking failed the explicit-expansion journeys;
+- raw CoreGraphics `CGEvent` clicking, including a vertical coordinate-conversion attempt, also failed them;
+- placing a persistent AX container on the outer SwiftUI root hid/broke the dynamic state accessibility elements and exceeded the active DMG size ceiling by 171 B. That experiment was fully reverted and the performance budget was **not** relaxed.
+
+Final repair keeps the product tap path unchanged and exposes `notch.surface.hitTarget` only on the already-persistent AppKit hosting view under `#if NOTCHHUB_UI_TESTING`. The XCTest helper makes one ordinary `XCUIElement.click()` on that stable host. Shipping builds do not contain this test identifier/seam; dynamic `compact`/`peek`/`expanded` accessibility state remains intact; no retries, fixed sleeps, event tap, raw synthetic shipping input or sensitive permission authority were added.
+
+Exact source `2235c3b3bb7eb69961d76f7b1a5f1afa9307f270` / CI #1177 / run `31904548631` passed **all three canonical jobs** after the final repair: macOS 26 compatibility, exact external-app UI regression with shipping-fixture isolation, and full build/test/package with source/security validation, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, the unchanged active size budget and performance smoke. Strict acceptance traceability remains 116/116.
+
+This changelog/docs synchronization creates a new source SHA. That exact descendant must independently pass all three canonical jobs before its source/artifact provenance is frozen for target-Mac retest. PR #33 remains draft, unmerged and unreleased.
 
 ### Earlier M6.6 prerequisites
 
