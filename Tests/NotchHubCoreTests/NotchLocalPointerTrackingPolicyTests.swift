@@ -24,20 +24,20 @@ struct NotchLocalPointerTrackingPolicyTests {
     }
 
     @Test
-    func localMouseDownCancelsPendingHoverBeforeSwiftUITapDispatch() throws {
-        let hostingSource = try sourceText(
-            relativePath: "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift"
-        )
+    func panelMouseDownCancelsPendingHoverBeforeSwiftUIDispatch() throws {
         let controllerSource = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
         )
 
-        #expect(hostingSource.contains("onNotchMouseDown"))
-        #expect(hostingSource.contains("override func mouseDown(with event: NSEvent)"))
-        #expect(hostingSource.contains("onNotchMouseDown?()"))
-        #expect(hostingSource.contains("super.mouseDown(with: event)"))
-        #expect(controllerSource.contains("trackingView.onNotchMouseDown"))
+        #expect(controllerSource.contains("final class NotchEventAwarePanel: NSPanel"))
+        #expect(controllerSource.contains("override func sendEvent(_ event: NSEvent)"))
+        #expect(controllerSource.contains("event.type == .leftMouseDown"))
+        #expect(controllerSource.contains("onLeftMouseDown?()"))
+        #expect(controllerSource.contains("super.sendEvent(event)"))
+        #expect(controllerSource.contains("panel.onLeftMouseDown"))
         #expect(controllerSource.contains("cancelPendingActivationForInteractiveTransition()"))
+        #expect(!controllerSource.contains("addLocalMonitorForEvents"))
+        #expect(!controllerSource.contains("CGEvent.tapCreate"))
     }
 
     @Test
