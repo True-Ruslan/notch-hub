@@ -4,6 +4,7 @@
     struct UITestConfiguration: Equatable {
         enum Fixture: String {
             case shippingSmoke = "shipping-smoke"
+            case noMediaHover = "no-media-hover"
             case mediaStandard = "media-standard"
             case mediaUnsupported = "media-unsupported"
         }
