@@ -43,6 +43,38 @@ final class NotchHubUITests: XCTestCase {
     }
 
     @MainActor
+    func testNoMediaHoverOpensPeekAndRequestsExactlyOneHaptic() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        let compact = subject.surface("notch.surface.compact")
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(compact, timeout: 2))
+        compact.hover()
+
+        let peek = subject.surface("notch.surface.peek")
+        let expanded = subject.surface("notch.surface.expanded")
+        let hapticCount = subject.app.descendants(matching: .any)["ui-test.hapticCount"]
+
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(peek, timeout: 2),
+            "120 ms hover must open lightweight Peek even without media"
+        )
+        XCTAssertTrue(
+            expanded.waitForNonExistence(timeout: 0.5),
+            "hover must never open full expanded interface"
+        )
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(hapticCount, timeout: 2),
+            "UI-test build must expose compile-time-only haptic diagnostics"
+        )
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilValue(hapticCount, equals: "1", timeout: 2),
+            "one hover Peek transition must request exactly one haptic"
+        )
+    }
+
+    @MainActor
     func testExpandedPointerExitReturnsToStableCompact() throws {
         let subject = try NotchHubUIApplication(mode: .shippingSmoke)
         subject.launch()
