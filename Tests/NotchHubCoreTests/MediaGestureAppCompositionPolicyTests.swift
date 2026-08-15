@@ -45,6 +45,35 @@ struct MediaGestureAppCompositionPolicyTests {
     }
 
     @Test
+    func expandedGestureRuntimeUsesInjectedSessionProtocolWithoutShippingCast() throws {
+        let appSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/AppDelegate.swift"
+        )
+        let sessionSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
+        )
+        let runtimeSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaRuntimeSession.swift"
+        )
+
+        #expect(runtimeSource.contains("protocol MediaRuntimeSession: AnyObject"))
+        #expect(runtimeSource.contains("func seek(to positionSeconds: Double)"))
+        #expect(
+            sessionSource.contains(
+                "private var runtimeProvider: (@MainActor () -> (any MediaRuntimeSession)?)?"
+            )
+        )
+        #expect(
+            sessionSource.contains(
+                "runtimeProvider: @escaping @MainActor () -> (any MediaRuntimeSession)?"
+            )
+        )
+        #expect(appSource.contains("self?.mediaRuntime"))
+        #expect(!appSource.contains("as? ShippingMediaRuntime"))
+        #expect(!sessionSource.contains("ShippingMediaRuntime?"))
+    }
+
+    @Test
     func gestureSessionOwnsOnlySemanticBoundaryTasksAndNoPerEventWorker() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaGestureSession.swift"
