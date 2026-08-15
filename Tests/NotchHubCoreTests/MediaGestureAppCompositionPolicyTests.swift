@@ -60,7 +60,7 @@ struct MediaGestureAppCompositionPolicyTests {
         #expect(runtimeSource.contains("func seek(to positionSeconds: Double)"))
         #expect(
             sessionSource.contains(
-                "private var runtimeProvider: (@MainActor () -> (any MediaRuntimeSession)?)?"
+                "private var runtimeProvider: @MainActor () -> (any MediaRuntimeSession)? = { nil }"
             )
         )
         #expect(
