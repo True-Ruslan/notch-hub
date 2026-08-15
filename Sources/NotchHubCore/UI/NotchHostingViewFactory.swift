@@ -108,9 +108,9 @@ public enum NotchHostingViewFactory {
         }
 
         #if NOTCHHUB_UI_TESTING
-        hostingView.setAccessibilityElement(true)
-        hostingView.setAccessibilityRole(.group)
-        hostingView.setAccessibilityIdentifier("notch.surface.hitTarget")
+            hostingView.setAccessibilityElement(true)
+            hostingView.setAccessibilityRole(.group)
+            hostingView.setAccessibilityIdentifier("notch.surface.hitTarget")
         #endif
 
         hostingView.sizingOptions = []
