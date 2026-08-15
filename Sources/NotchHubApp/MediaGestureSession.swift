@@ -17,7 +17,7 @@ final class MediaGestureSession {
 
     private weak var panelController: NotchPanelController?
     private weak var panelModel: NotchPanelModel?
-    private var runtimeProvider: @MainActor () -> ShippingMediaRuntime? = { nil }
+    private var runtimeProvider: @MainActor () -> (any MediaRuntimeSession)? = { nil }
     private var presentationProvider: @MainActor () -> ShippingMediaPresentation? = { nil }
 
     private var activeSurface: MediaGestureSurface?
@@ -44,7 +44,7 @@ final class MediaGestureSession {
     func bind(
         panelController: NotchPanelController,
         panelModel: NotchPanelModel,
-        runtimeProvider: @escaping @MainActor () -> ShippingMediaRuntime?,
+        runtimeProvider: @escaping @MainActor () -> (any MediaRuntimeSession)?,
         presentationProvider: @escaping @MainActor () -> ShippingMediaPresentation?
     ) {
         guard !isInvalidated else {
