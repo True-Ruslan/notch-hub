@@ -2,7 +2,15 @@ import Dispatch
 import Foundation
 
 @MainActor
-public final class ShippingMediaPeekProbe {
+public protocol MediaPeekProbing: AnyObject {
+    func acquire(
+        completion: @escaping @MainActor @Sendable (ShippingMediaPeekProbe.Result) -> Void
+    )
+    func cancel()
+}
+
+@MainActor
+public final class ShippingMediaPeekProbe: MediaPeekProbing {
     public enum Result: Sendable, Equatable {
         case presentation(ShippingMediaPresentation)
         case noSession
