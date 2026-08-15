@@ -31,13 +31,13 @@ Draft PR #33 currently provides:
 - exactly 120 ms hover dwell and 140 ms Peek exit grace;
 - generic Hover Peek even when no usable media session exists, with one hover-haptic request;
 - bounded one-shot media enrichment in compact/Peek and persistent runtime only in expanded;
-- explicit click/DOWN expansion, including a stable parent tap path that survives compact -> Peek during an in-flight click;
+- explicit click/DOWN expansion with tap ownership above both generic/media and compact/Peek branch replacement;
 - exact-top-edge inclusive interactive pointer retention;
 - local previous/next gestures and haptics;
 - interactive panel follow-finger motion and exact endpoint settlement;
 - source icon, seek/cursor isolation and event-driven continuity.
 
-No new global input authority, polling, repeating timer, display link or sensitive permission was added.
+No new global input authority, polling, repeating timer, display link, retry/sleep masking or sensitive permission was added.
 
 #### 2026-08-15 physical rejection and repair
 
@@ -48,14 +48,17 @@ Candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was rejected on 
 - expanded pointer exit remained PASS;
 - center-notch DOWN and physical UP were stable.
 
-The repair changed the pending product contract so no-media hover opens generic Peek and requests one hover haptic, replaced half-open interactive containment at the physical boundary, and moved explicit tap recognition above the compact/Peek switch after external XCUI exposed a dwell/click race.
+The repair changed the pending product contract so no-media hover opens generic Peek and requests one hover haptic, replaced half-open interactive containment at the physical boundary, and hardened explicit-click ownership across hover/media presentation changes.
 
 Automated evidence:
 
 - behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140: 352 Swift tests / 74 suites and 11/11 external XCUI PASS; package failed only on the preceding DMG size ceiling;
-- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147: all three canonical jobs PASS with strict traceability, security/source audit, production transport, shipping/signing/Sandbox/Hardened Runtime/preflight, performance smoke and the revised tight size budget.
+- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147: all three canonical jobs PASS with strict traceability, security/source audit, production transport, shipping/signing/Sandbox/Hardened Runtime/preflight, performance smoke and the revised tight size budget;
+- docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 was automatically rejected because two first-launch explicit-click XCUI journeys could still lose the gesture when the entire generic/media outer branch changed;
+- focused RED `ac1f004b9a0d2a0fd54c16cb7c0041933d3523df` / CI #1153: 354 tests / 75 suites with only the new root tap-ownership test failing;
+- GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155: tap authority moved to the stable outer media-aware root; all three canonical jobs and the external-app XCUI suite PASS with no retries/sleeps.
 
-The active cumulative deterministic size policy is now `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`. It keeps app/executable allowance unchanged from the preceding cumulative envelope and adds one 4096-byte DMG allowance quantum. Immutable P0 and all historical M6 budgets remain unchanged provenance records.
+The active cumulative deterministic size policy remains `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`. It keeps app/executable allowance unchanged from the preceding cumulative envelope and adds one 4096-byte DMG allowance quantum. Immutable P0 and all historical M6 budgets remain unchanged provenance records. #1155 passed the same envelope unchanged at app `883119 B`, DMG `555204 B`, executable `580912 B`.
 
 The current docs-synchronized head still requires fresh three-job CI. After it passes, its exact source and CI-produced shipping artifact/DMG are frozen without another source commit.
 
@@ -86,7 +89,7 @@ Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, narrow glo
 
 1. Pass all three canonical CI jobs on the final documentation-synchronized PR #33 head.
 2. Freeze exact source SHA + shipping/DMG artifact provenance without another source commit.
-3. Run the focused target-Mac block: no-media Hover Peek/haptic, stationary relaunch, explicit click under dwell, exact-top-edge DOWN, expanded pointer exit, UP/DOWN lost-terminal safety.
+3. Run the focused target-Mac block: no-media Hover Peek/haptic, stationary relaunch, explicit click under hover/media branch changes, exact-top-edge DOWN, expanded pointer exit, UP/DOWN lost-terminal safety.
 4. Any independent repeatable failure gets its own focused RED -> GREEN cycle and a new exact candidate.
 5. Only after the focused block passes continue remaining Peek/gesture/seek/source-icon/lifecycle/permission gates on the same candidate.
 6. Only after full physical PASS: mark PR #33 ready, merge, verify post-merge `main` CI, close M6.6 and begin P1.

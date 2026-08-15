@@ -16,7 +16,7 @@ Added:
 - stable `compact`, `peek`, `expanded` presentation states under the existing Core transition authority;
 - exactly 120 ms Hover Peek activation plus 140 ms pointer-exit grace;
 - generic no-media Peek: usable media is no longer required for hover preview, and a valid dwell requests the normal hover haptic once;
-- click and physical DOWN as explicit expansion paths, with one stable parent SwiftUI tap recognizer across compact/Peek;
+- click and physical DOWN as explicit expansion paths, with explicit tap authority on the stable outer media-aware root above generic/media and compact/Peek replacement;
 - bounded one-shot media probing/commands in compact and Peek while persistent runtime remains expanded-only;
 - exact-top-edge inclusive pointer retention for interactive DOWN;
 - source-app identity badge through public `NSWorkspace` and bounded in-memory cache;
@@ -52,28 +52,32 @@ First full combined baseline `e5cdc58776f80f1fc6f57e22959a07704d895fbe` / CI #10
 
 #### 2026-08-15 physical-acceptance repair
 
-Target testing of exact candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 produced two concrete blockers and one later automated race:
+Target testing of exact candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 produced concrete blockers and later automated click races:
 
 - no-media hover remained compact and produced no haptic because the pending design still gated Peek on usable media;
 - DOWN starting exactly at the top screen edge used half-open `CGRect.contains` and falsely retargeted to compact;
-- external XCUI later showed that a compact child tap recognizer could be destroyed if the 120 ms hover dwell switched the presentation to Peek while click synthesis was still in flight.
+- external XCUI showed that tap authority below a presentation/root replacement can lose a click while hover/media state changes during synthesis.
 
 Repair:
 
-- no-media hover now opens generic Peek first and requests the normal hover haptic once; a bounded `.noSession` probe no longer collapses that preview;
+- no-media hover opens generic Peek first and requests the normal hover haptic once; a bounded `.noSession` probe no longer collapses that preview;
 - interactive pointer retention includes the exact physical top/right boundary;
 - local `NSTrackingArea` is the primary event-driven hover path;
 - a proposed mouse-button event interception was rejected by the existing security baseline and removed rather than whitelisted;
-- explicit click expansion now uses one stable SwiftUI tap recognizer above compact/Peek presentation switching;
-- no global scroll/button/keyboard monitor, event tap, polling, repeating timer, display link or new sensitive permission was added.
+- explicit click expansion ultimately uses one stable SwiftUI tap recognizer on the outer `MediaNotchRootView` root, above both generic/media and compact/Peek branch replacement;
+- nested `NotchRootView` keeps standalone tap behavior by default but disables its child tap when embedded in media-aware composition;
+- no global scroll/button/keyboard monitor, event tap, polling, repeating timer, display link, UI-test retry/sleep or new sensitive permission was added.
 
 Verification evidence:
 
 - behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140 / run `31889213155`: 352 Swift tests / 74 suites PASS and external XCUI 11/11 PASS; package failed only because the preceding DMG cumulative ceiling was exceeded by 2172 B;
 - size review created `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`, changing only DMG allowance by one 4096-byte quantum while leaving app/executable allowance unchanged and preserving all historical budgets;
-- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147 / run `31889961194`: all three canonical jobs PASS, including strict acceptance traceability, security/source audit, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, size gate, performance smoke and external XCUI.
+- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147 / run `31889961194`: all three canonical jobs PASS;
+- docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 / run `31890935022` was automatically rejected: compatibility/package remained green, but two first-launch explicit-click external XCUI journeys failed because the entire generic/media branch could be replaced during the click;
+- focused RED `ac1f004b9a0d2a0fd54c16cb7c0041933d3523df` / CI #1153 / run `31891311328`: 354 tests / 75 suites with only the new root-ownership regression test failing;
+- GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155 / run `31891464496`: all three canonical jobs PASS, including the full Swift suite, strict acceptance traceability, security/source audit, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, unchanged size gate, performance smoke and external-app XCUI suite.
 
-CI #1147 shipping evidence: shipping-media artifact `9248335486`, DMG artifact `9248336772`, UI result artifact `9248334093`; executable `580832 B`, app `883039 B`, DMG `555152 B`.
+CI #1155 shipping evidence: shipping-media artifact `9248700272` (`sha256:509826b1c36b46d406a87621bbe83b4aa039c2aff40422b9be1ce46ecef99d2f`), DMG artifact `9248701623` (`sha256:860b36a3ae6a740490e177847634e5d76ed9be913afb89ec7cc87a7128e4f050`), UI result artifact `9248698799` (`sha256:83522a4ec996649d5dcc5e0f99332bf921fb322efe1d86f8e9f3f4182ec85730`); executable `580912 B`, app `883119 B`, DMG `555204 B`.
 
 The final documentation-synchronized head must pass fresh three-job CI before its exact source/artifact provenance is frozen for physical testing. PR #33 remains draft and unmerged until one exact candidate passes all applicable target-Mac gates.
 

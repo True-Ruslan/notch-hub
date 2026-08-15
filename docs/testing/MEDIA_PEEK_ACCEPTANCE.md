@@ -19,10 +19,10 @@ This ledger is additive. Existing `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`
 - Leaving expanded retention returns to exact compact non-haptically, preserving accepted M1 behavior.
 - Interactive expansion/collapse always settles to an exact stable endpoint when current geometry moves out from under the pointer; an intermediate frame is never a valid settled state.
 - The exact top screen/panel `maxY` boundary counts as inside the interactive panel. A DOWN gesture started with the pointer physically against the top screen edge must not self-cancel as a false pointer exit.
-- Explicit tap expansion is owned by one stable SwiftUI surface above the compact/Peek presentation switch, so a 120 ms hover transition cannot destroy a click that is already in flight.
+- Explicit tap expansion is owned by one stable SwiftUI surface above **both** the generic/media outer branch and the compact/Peek presentation switch, so hover/media arrival cannot destroy a click already in flight.
 - Seek hides the cursor only while a valid seek interaction owns it; no pointer warp/lock is used in production.
 - Vertical DOWN/UP gestures intentionally add no new haptic. Hover-to-Peek and supported horizontal arm semantics remain the haptic paths.
-- Pointer delivery remains event-driven: local `NSTrackingArea` is the primary hover path; the existing narrow `.mouseMoved` fallback remains unchanged. No global scroll/button/keyboard monitor, event tap, polling loop, repeating timer, display link, or new sensitive permission is introduced.
+- Pointer delivery remains event-driven: local `NSTrackingArea` is the primary hover path; the existing narrow `.mouseMoved` fallback remains unchanged. No global scroll/button/keyboard monitor, event tap, polling loop, repeating timer, display link, retry/sleep masking, or new sensitive permission is introduced.
 
 The superseding no-media decision is documented in `docs/superpowers/specs/2026-08-15-no-media-hover-peek-physical-repair.md`. The 2026-08-12 Hover Peek design remains historical design context where it conflicts with this later physical-acceptance decision.
 
@@ -69,33 +69,35 @@ Root causes and product decision:
 
 - exact top-edge DOWN used half-open `CGRect.contains`, so a pointer exactly on `frame.maxY` was treated as outside and synchronously retargeted to compact;
 - the old pending no-media contract intentionally gated Peek on usable media, so `.noSession` could never satisfy the new physical requirement;
-- external XCUI exposed a second race: `compact.click()` moves the pointer onto the notch and can spend roughly one hover dwell before completing; if the tap recognizer lives inside the compact/Peek branch, the branch can change to Peek mid-click and destroy the gesture;
-- a proposed mouse-button event boundary was rejected by the existing security baseline and removed. The final solution keeps no new mouse-button authority and places one normal SwiftUI tap recognizer above the compact/Peek switch.
+- external XCUI later exposed click races whenever tap ownership lived below a presentation/root branch that could be replaced during click synthesis;
+- a proposed mouse-button event boundary was rejected by the existing security baseline and removed. The final solution keeps no new mouse-button authority and uses one normal SwiftUI tap recognizer on the stable outer media-aware root.
 
 ## Focused TDD repair evidence
 
 The 2026-08-15 repair was developed fail-first and then exercised through the exact external application:
 
 - unit RED reproduced no-media gating and exact `maxY` containment;
-- `NotchPointerPolicy.containsInteractivePointer` now uses inclusive interactive containment for the physical boundary;
+- `NotchPointerPolicy.containsInteractivePointer` uses inclusive interactive containment for the physical boundary;
 - `MediaPeekSession` opens generic Peek before the bounded media probe, so `.noSession` no longer blocks hover activation;
 - compile-time-only UI diagnostics record haptic requests at the same transition-coordinator boundary as the production AppKit haptic performer; shipping-marker verification proves these fixtures do not enter the production binary;
 - a local `NSTrackingArea` supplies primary event-driven hover entry/move/exit without polling;
 - the external UI harness parks the real test pointer deterministically between journeys and separately verifies stationary-pointer relaunch behavior;
-- explicit click expansion is now one stable parent SwiftUI gesture across compact and Peek, with no new `.leftMouseDown` monitor/event authority;
-- exact behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140 / run `31889213155` passed 352 Swift tests / 74 suites and **11/11 external XCUI journeys**. Its package job failed only because the DMG exceeded the previous cumulative ceiling by 2172 B;
-- the new cumulative size envelope changes only the DMG allowance by one 4096-byte review quantum. App and executable allowances are unchanged; immutable `v0.1.0` and all historical budgets remain untouched;
-- pre-docs exact head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147 / run `31889961194` passed **all three canonical jobs**, including the new size budget, strict acceptance traceability, security/source audit, Sandbox/Hardened Runtime/signing/preflight, performance smoke and external XCUI.
+- first behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140 / run `31889213155` passed 352 Swift tests / 74 suites and 11/11 external XCUI journeys; its package job failed only because the DMG exceeded the previous cumulative ceiling by 2172 B;
+- the cumulative size envelope changes only the DMG allowance by one 4096-byte review quantum. App and executable allowances are unchanged; immutable `v0.1.0` and all historical budgets remain untouched;
+- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147 / run `31889961194` passed all three canonical jobs;
+- docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 / run `31890935022` was **automatically rejected before physical use**: compatibility/package stayed green, but two external XCUI journeys lost their first explicit click because media/root replacement could still destroy the recognizer;
+- focused RED `ac1f004b9a0d2a0fd54c16cb7c0041933d3523df` / CI #1153 / run `31891311328`: 354 tests / 75 suites, with only the new root tap-ownership regression test failing;
+- GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155 / run `31891464496`: tap authority moved to the stable outer `MediaNotchRootView` `ZStack`; nested generic `NotchRootView` retains standalone tap behavior by default but disables its child tap in media-aware composition; all three canonical jobs and the native external-app XCUI suite PASS without retries/sleeps.
 
-CI #1147 shipping evidence:
+CI #1155 shipping evidence:
 
-- shipping-media artifact: `9248335486`;
-- DMG artifact: `9248336772`;
-- UI result artifact: `9248334093`;
-- executable: `580832 B`;
-- app: `883039 B`;
-- DMG: `555152 B`;
-- active cumulative budget: `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`.
+- shipping-media artifact `9248700272`, digest `sha256:509826b1c36b46d406a87621bbe83b4aa039c2aff40422b9be1ce46ecef99d2f`;
+- DMG artifact `9248701623`, digest `sha256:860b36a3ae6a740490e177847634e5d76ed9be913afb89ec7cc87a7128e4f050`;
+- UI result artifact `9248698799`, digest `sha256:83522a4ec996649d5dcc5e0f99332bf921fb322efe1d86f8e9f3f4182ec85730`;
+- executable `580912 B`;
+- app `883119 B`;
+- DMG `555204 B`;
+- active cumulative budget `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json` passed unchanged.
 
 This automated evidence does **not** convert physical haptic feedback or real trackpad geometry into a PASS. Those remain target-Mac acceptance requirements.
 
@@ -103,11 +105,11 @@ This automated evidence does **not** convert physical haptic feedback or real tr
 
 | ID | Gate | Required result | Automated | Physical |
 |---|---|---|---|---|
-| `NH-MEDIA-PEEK-001` | Hover destination + stationary restart | With usable media, 120 ms hover opens Peek only and requests the expected Peek haptic exactly once; hover never opens full expanded UI. Relaunch with the pointer already stationary on the notch behaves the same without extra movement. | Unit + external XCUI GREEN on #1140/#1147 | FAIL on prior candidates; RETEST REQUIRED |
-| `NH-MEDIA-PEEK-002` | No-media hover | With no retained/fresh media, the same valid 120 ms dwell opens a generic lightweight Peek, requests one hover haptic, never opens expanded, and does not start persistent media observation. A bounded `.noSession` result may leave the generic Peek visible. | Unit + external XCUI GREEN on #1140/#1147 | PENDING |
+| `NH-MEDIA-PEEK-001` | Hover destination + stationary restart | With usable media, 120 ms hover opens Peek only and requests the expected Peek haptic exactly once; hover never opens full expanded UI. Relaunch with the pointer already stationary on the notch behaves the same without extra movement. | Unit + external XCUI GREEN through #1155 | FAIL on prior candidates; RETEST REQUIRED |
+| `NH-MEDIA-PEEK-002` | No-media hover | With no retained/fresh media, the same valid 120 ms dwell opens a generic lightweight Peek, requests one hover haptic, never opens expanded, and does not start persistent media observation. A bounded `.noSession` result may leave the generic Peek visible. | Unit + external XCUI GREEN through #1155 | PENDING |
 | `NH-MEDIA-PEEK-003` | Fast pointer pass | Pointer transit shorter than dwell does not expand or leave Peek stuck. | Covered | PENDING |
 | `NH-MEDIA-PEEK-004` | 140 ms grace | Exit/re-entry before 140 ms keeps Peek; remaining outside through the deadline returns to compact. | Covered | PENDING |
-| `NH-MEDIA-PEEK-005` | Explicit expansion | Free-surface click and physical DOWN from Peek each open expanded exactly once; compact click also explicitly expands even when hover dwell overlaps the click. | Unit + external XCUI GREEN on #1140/#1147 | PENDING |
+| `NH-MEDIA-PEEK-005` | Explicit expansion | Free-surface click and physical DOWN from Peek each open expanded exactly once; compact click also explicitly expands even while hover/media state changes during the click. | Root-ownership RED #1153 -> GREEN #1155 + external XCUI | PENDING |
 | `NH-MEDIA-PEEK-006` | Peek horizontal gestures | LEFT -> next and RIGHT -> previous use bounded one-shot work; hover cannot steal an owned gesture. | Covered | PENDING |
 | `NH-MEDIA-PEEK-007` | Peek seek | Timeline seek works in Peek without expanding and suppresses notch gestures while active. | Covered | PENDING |
 | `NH-MEDIA-PEEK-008` | Seek cursor | Cursor hides only after valid seek begin and is restored on every commit/cancel/identity/app lifecycle path; no production warp/lock. | Covered | PENDING |
@@ -123,7 +125,7 @@ Use only the exact final docs-synchronized candidate frozen in PR #33 after its 
 
 1. **Music/media OFF.** Start from stable compact, enter the physical notch and hold. After normal dwell, require generic Peek + one physical haptic. Full expanded/Home must not open from hover alone.
 2. With music still off, relaunch while the pointer is already stationary over the physical notch. Without leaving/re-entering, require the same generic Peek + one physical haptic.
-3. From compact, click normally while hover is eligible. Require full expanded exactly once; the 120 ms hover transition must not swallow the click.
+3. From compact, click normally while hover is eligible and, separately, while media presentation is appearing/changing. Require full expanded exactly once; neither 120 ms Peek activation nor generic/media branch replacement may swallow the click.
 4. Return to compact. Put the pointer completely against the physical top screen edge and perform DOWN. Require stable follow-finger expansion with no small downward twitch followed by self-collapse.
 5. Repeat DOWN with the pointer slightly lower near the notch center. Require the same stable behavior.
 6. From expanded, simply move the pointer outside. Require a non-haptic automatic return to exact compact.
