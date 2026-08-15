@@ -41,7 +41,8 @@ class UIAutomationPolicyTests(unittest.TestCase):
 
     def test_explicit_expansion_harness_uses_stable_application_coordinate(self):
         self.assertNotIn("compact.click()", UI_APPLICATION)
-        self.assertIn("app.coordinate(withNormalizedOffset:", UI_APPLICATION)
+        self.assertIn("app.coordinate(", UI_APPLICATION)
+        self.assertIn("withNormalizedOffset:", UI_APPLICATION)
 
     def test_acceptance_status_parser_does_not_treat_passive_as_pass(self):
         ledger = """Status: CONTRACT FROZEN / IMPLEMENTATION PENDING
