@@ -73,6 +73,8 @@ struct MediaNotchRootView: View {
             }
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("notch.surface.hitTarget")
         .onTapGesture(perform: requestExplicitExpansionFromTap)
         .animation(
             .easeInOut(duration: 0.12),
