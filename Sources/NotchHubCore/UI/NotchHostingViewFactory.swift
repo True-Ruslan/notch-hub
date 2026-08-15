@@ -107,6 +107,12 @@ public enum NotchHostingViewFactory {
             hostingView = NotchLocalPointerHostingView(rootView: rootView)
         }
 
+        #if NOTCHHUB_UI_TESTING
+        hostingView.setAccessibilityElement(true)
+        hostingView.setAccessibilityRole(.group)
+        hostingView.setAccessibilityIdentifier("notch.surface.hitTarget")
+        #endif
+
         hostingView.sizingOptions = []
         hostingView.autoresizingMask = [.width, .height]
         hostingView.wantsLayer = true
