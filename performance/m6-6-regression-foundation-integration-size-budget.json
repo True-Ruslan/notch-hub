@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 614400,
+    "dmgSizeBytes": 462848,
+    "executableSizeBytes": 315392
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9243156724,
+    "sourceCommit": "452f78b0e42c5302702393e9c45c563849661ca4",
+    "summary": {
+      "appSizeBytes": 882687,
+      "dmgSizeBytes": 552272,
+      "executableSizeBytes": 580480
+    },
+    "workflowRunId": 31869841148
+  },
+  "featureId": "m6.6-regression-foundation-integration",
+  "schemaVersion": 1
+}
