@@ -52,6 +52,19 @@ struct M66PhysicalAcceptance20260815RegressionTests {
         let exactTopEdge = CGPoint(x: frame.midX, y: frame.maxY)
 
         #expect(!frame.contains(exactTopEdge))
+        #expect(NotchPointerPolicy.containsInteractivePointer(exactTopEdge, in: frame))
+        #expect(
+            !NotchPointerPolicy.containsInteractivePointer(
+                CGPoint(x: frame.maxX + 0.01, y: frame.midY),
+                in: frame
+            )
+        )
+        #expect(
+            !NotchPointerPolicy.containsInteractivePointer(
+                CGPoint(x: frame.midX, y: frame.minY - 0.01),
+                in: frame
+            )
+        )
 
         let controllerSource = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
