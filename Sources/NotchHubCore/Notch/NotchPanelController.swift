@@ -343,7 +343,7 @@ public final class NotchPanelController: NSObject {
     private func collapseInteractiveTransitionIfPointerExited(_ pointer: CGPoint) {
         guard
             transitionCoordinator.isInteractiveTransitionActive,
-            !panel.frame.contains(pointer)
+            !NotchPointerPolicy.containsInteractivePointer(pointer, in: panel.frame)
         else {
             return
         }
