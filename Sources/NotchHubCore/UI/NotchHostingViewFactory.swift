@@ -3,16 +3,19 @@ import SwiftUI
 
 public typealias NotchLocalScrollHandler = @MainActor (NSEvent) -> Void
 public typealias NotchLocalPointerHandler = @MainActor (CGPoint) -> Void
+public typealias NotchLocalPrimaryPressHandler = @MainActor (Bool) -> Void
 
 @MainActor
 protocol NotchLocalPointerTracking: AnyObject {
     var onNotchPointerEvent: NotchLocalPointerHandler? { get set }
+    var onNotchPrimaryPressChanged: NotchLocalPrimaryPressHandler? { get set }
 }
 
 @MainActor
 private class NotchLocalPointerHostingView<Content: View>: NSHostingView<Content>, NotchLocalPointerTracking {
     private var pointerTrackingArea: NSTrackingArea?
     var onNotchPointerEvent: NotchLocalPointerHandler?
+    var onNotchPrimaryPressChanged: NotchLocalPrimaryPressHandler?
 
     required init(rootView: Content) {
         super.init(rootView: rootView)
@@ -47,6 +50,16 @@ private class NotchLocalPointerHostingView<Content: View>: NSHostingView<Content
         )
         addTrackingArea(trackingArea)
         pointerTrackingArea = trackingArea
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onNotchPrimaryPressChanged?(true)
+        super.mouseDown(with: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        super.mouseUp(with: event)
+        onNotchPrimaryPressChanged?(false)
     }
 
     override func mouseEntered(with event: NSEvent) {
