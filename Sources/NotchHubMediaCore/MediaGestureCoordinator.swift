@@ -56,7 +56,7 @@ public enum MediaGestureInputNormalizer {
     ) -> MediaGestureInputDeltas {
         let preferenceScale = isDirectionInvertedFromDevice ? -1.0 : 1.0
         return MediaGestureInputDeltas(
-            x: -scrollingDeltaX * preferenceScale,
+            x: scrollingDeltaX * preferenceScale,
             y: -scrollingDeltaY * preferenceScale
         )
     }
