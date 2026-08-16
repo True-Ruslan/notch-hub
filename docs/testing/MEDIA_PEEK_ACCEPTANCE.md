@@ -89,7 +89,7 @@ After that exact head is 3/3 GREEN, freeze its source SHA, workflow run, CI-prod
 
 | ID | Gate | Required result | Automated | Physical |
 |---|---|---|---|---|
-| `NH-MEDIA-PEEK-001` | Hover destination + stationary restart | With usable media, 120 ms hover opens Peek only and requests the expected Peek haptic exactly once; relaunch with pointer already stationary behaves the same. | Unit + external XCUI GREEN through #1209 | FAIL on prior candidates; RETEST REQUIRED |
+| `NH-MEDIA-PEEK-001` | Hover destination + stationary restart | With usable media, 120 ms hover opens Peek only and requests the expected Peek haptic exactly once; relaunch with pointer already stationary behaves the same. | Unit + external XCUI GREEN through #1209 | Historical candidates were rejected; RETEST REQUIRED |
 | `NH-MEDIA-PEEK-002` | No-media hover | Valid 120 ms no-media dwell opens generic Peek, requests one hover haptic, never expands, and starts no persistent media observation. | Unit + external XCUI GREEN through #1209 | PENDING |
 | `NH-MEDIA-PEEK-003` | Fast pointer pass | Transit shorter than dwell does not expand or leave Peek stuck. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-004` | 140 ms grace | Exit/re-entry before 140 ms keeps Peek; staying outside through deadline returns to compact. | GREEN | PENDING |
@@ -98,8 +98,8 @@ After that exact head is 3/3 GREEN, freeze its source SHA, workflow run, CI-prod
 | `NH-MEDIA-PEEK-007` | Peek seek | Timeline seek works in Peek without expanding and suppresses notch gestures while active. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-008` | Seek cursor | Cursor hides only after valid seek begin and restores on every terminal/isolation path; no warp/lock. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-009` | Track continuity | Track/source changes update active media without obvious Home/interface blink while media stays valid. | GREEN | PENDING |
-| `NH-MEDIA-PEEK-010` | Downward continuity | Compact DOWN follows interactive expansion; exact top edge is valid with no twitch/self-collapse or intermediate settled frame. | Unit + external regression GREEN through #1209 | FAIL on #1101 exact-edge case; RETEST REQUIRED |
-| `NH-MEDIA-PEEK-011` | Expanded collapse + pointer exit | Expanded UP returns to exact compact; leaving retention also collapses non-haptically; no intermediate settled frame. | Prior RED -> GREEN + external XCUI through #1209 | FAIL on older candidate; pointer-exit GREEN on #1101; RETEST REQUIRED |
+| `NH-MEDIA-PEEK-010` | Downward continuity | Compact DOWN follows interactive expansion; exact top edge is valid with no twitch/self-collapse or intermediate settled frame. | Unit + external regression GREEN through #1209 | Historical exact-edge rejection exists; RETEST REQUIRED |
+| `NH-MEDIA-PEEK-011` | Expanded collapse + pointer exit | Expanded UP returns to exact compact; leaving retention also collapses non-haptically; no intermediate settled frame. | Prior RED -> GREEN + external XCUI through #1209 | Historical rejection exists; pointer-exit was later physically green; RETEST REQUIRED |
 | `NH-MEDIA-PEEK-012` | Lifecycle | Compact, Peek, cancelled/retargeted transitions and Quit leave no unexpected persistent adapter. Bounded Peek cancellation is nonblocking for UI while subprocess ownership remains bounded. | Unit/process teardown + package/security GREEN through #1209 | PENDING |
 | `NH-MEDIA-PEEK-013` | Permissions | No Accessibility, Input Monitoring, Automation or Screen Recording prompts are introduced. | Security/policy GREEN through #1209 | PENDING |
 
