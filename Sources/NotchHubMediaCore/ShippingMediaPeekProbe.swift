@@ -31,7 +31,6 @@ public final class ShippingMediaPeekProbe: MediaPeekProbing {
     private var activeTransport: (any SystemMediaTransport)?
     private var timeoutCancellation: Cancellation?
     private var completion: (@MainActor @Sendable (Result) -> Void)?
-    private var latestSnapshot: MediaSessionSnapshot?
 
     public convenience init() {
         let bundle = Bundle.main
@@ -92,7 +91,6 @@ public final class ShippingMediaPeekProbe: MediaPeekProbing {
 
         activeTransport = transport
         self.completion = completion
-        latestSnapshot = nil
 
         transport.eventHandler = { [weak self] event in
             self?.receive(event, generation: acquisitionGeneration)
@@ -124,14 +122,10 @@ public final class ShippingMediaPeekProbe: MediaPeekProbing {
             break
 
         case .session(let snapshot):
-            latestSnapshot = snapshot
-            guard Self.hasResolvedCapabilities(snapshot.capabilities) else {
+            guard let result = Self.result(for: snapshot) else {
                 return
             }
-            finish(
-                Self.result(for: snapshot) ?? .failed,
-                generation: acquisitionGeneration
-            )
+            finish(result, generation: acquisitionGeneration)
 
         case .noSession:
             finish(.noSession, generation: acquisitionGeneration)
@@ -146,8 +140,7 @@ public final class ShippingMediaPeekProbe: MediaPeekProbing {
             return
         }
 
-        let result = latestSnapshot.flatMap(Self.result(for:)) ?? .failed
-        finish(result, generation: acquisitionGeneration)
+        finish(.failed, generation: acquisitionGeneration)
     }
 
     private func finish(
@@ -169,7 +162,6 @@ public final class ShippingMediaPeekProbe: MediaPeekProbing {
         timeoutCancellation?()
         timeoutCancellation = nil
         completion = nil
-        latestSnapshot = nil
 
         guard let activeTransport else {
             return
@@ -178,14 +170,6 @@ public final class ShippingMediaPeekProbe: MediaPeekProbing {
         self.activeTransport = nil
         activeTransport.eventHandler = nil
         activeTransport.stopNonBlocking()
-    }
-
-    private static func hasResolvedCapabilities(
-        _ capabilities: MediaCommandCapabilities
-    ) -> Bool {
-        capabilities.previous != .unknown
-            || capabilities.next != .unknown
-            || capabilities.seek != .unknown
     }
 
     private static func result(
