@@ -66,15 +66,12 @@ struct ShippingMediaPeekProbeTests {
     }
 
     @Test
-    func timeoutReturnsLatestUsableSnapshotWhenCapabilitiesStayUnknown() {
+    func firstUsableSnapshotReturnsImmediatelyWhenCapabilitiesStayUnknown() {
         let fixture = makeFixture()
         var results: [ShippingMediaPeekProbe.Result] = []
 
         fixture.probe.acquire { results.append($0) }
         fixture.transport.emit(.session(snapshot(revision: 1, capabilities: unknownCapabilities)))
-        #expect(results.isEmpty)
-
-        fixture.scheduler.advance(by: 1.0)
 
         #expect(results.count == 1)
         #expect(results[0].presentation?.title == "Track")
@@ -82,6 +79,7 @@ struct ShippingMediaPeekProbeTests {
         #expect(results[0].presentation?.canGoNext == false)
         #expect(results[0].presentation?.canSeek == false)
         #expect(fixture.transport.stopCount == 1)
+        #expect(fixture.scheduler.pendingCount == 0)
     }
 
     @Test
@@ -102,19 +100,22 @@ struct ShippingMediaPeekProbeTests {
     }
 
     @Test
-    func firstUnknownCapabilitySnapshotCanBeReplacedByResolvedRevisionBeforeCompletion() {
+    func lateResolvedCapabilityRevisionAfterMetadataCompletionIsIgnored() {
         let fixture = makeFixture()
         var results: [ShippingMediaPeekProbe.Result] = []
 
         fixture.probe.acquire { results.append($0) }
+        let staleHandler = fixture.transport.eventHandler
         fixture.transport.emit(.session(snapshot(revision: 1, capabilities: unknownCapabilities)))
-        #expect(results.isEmpty)
 
-        fixture.transport.emit(.session(snapshot(revision: 2, capabilities: resolvedCapabilities)))
+        #expect(results.count == 1)
+        #expect(results[0].presentation?.canSeek == false)
+
+        staleHandler?(.session(snapshot(revision: 2, capabilities: resolvedCapabilities)))
 
         #expect(results.count == 1)
         #expect(results[0].presentation?.sessionIdentity?.generation == 1)
-        #expect(results[0].presentation?.canSeek == true)
+        #expect(results[0].presentation?.canSeek == false)
         #expect(fixture.transport.stopCount == 1)
     }
 
