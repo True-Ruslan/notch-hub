@@ -162,9 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let mediaPeekSession {
                 switch presentation {
                 case .peek:
-                    if NSEvent.pressedMouseButtons == 0 {
-                        mediaPeekSession.handleSettledPeek()
-                    }
+                    mediaPeekSession.handleSettledPeek()
                 case .compact, .expanded:
                     mediaPeekSession.cancel()
                 }
