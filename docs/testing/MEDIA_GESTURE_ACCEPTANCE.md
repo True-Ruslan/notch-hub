@@ -27,8 +27,8 @@ The stable IDs below remain frozen. Automated GREEN is necessary but does not co
 |---|---|---|---|
 | `NH-MEDIA-GESTURE-001` | Local-only event surface; no new sensitive authority. | GREEN through #1209 | PENDING |
 | `NH-MEDIA-GESTURE-002` | Short/reverted horizontal gesture commits no command and no haptic. | GREEN | PENDING |
-| `NH-MEDIA-GESTURE-003` | Compact physical LEFT -> one `next` on release after one arm haptic when supported. | Direction RED #1157 -> GREEN #1158; regression GREEN through #1209 | FAIL on historical candidate `6c210919...`; RETEST REQUIRED |
-| `NH-MEDIA-GESTURE-004` | Compact physical RIGHT -> one `previous` on release after one arm haptic when supported. | Direction RED #1157 -> GREEN #1158; regression GREEN through #1209 | FAIL on historical candidate `6c210919...`; RETEST REQUIRED |
+| `NH-MEDIA-GESTURE-003` | Compact physical LEFT -> one `next` on release after one arm haptic when supported. | Direction RED #1157 -> GREEN #1158; regression GREEN through #1209 | Historical candidate `6c210919...` was rejected; RETEST REQUIRED |
+| `NH-MEDIA-GESTURE-004` | Compact physical RIGHT -> one `previous` on release after one arm haptic when supported. | Direction RED #1157 -> GREEN #1158; regression GREEN through #1209 | Historical candidate `6c210919...` was rejected; RETEST REQUIRED |
 | `NH-MEDIA-GESTURE-005` | Expanded direction/threshold/commit parity with follow-finger visual tracking. | GREEN | PENDING |
 | `NH-MEDIA-GESTURE-006` | 28% / 70...120 pt threshold and 20 pt disarm hysteresis; one haptic per armed transition. | GREEN | PENDING |
 | `NH-MEDIA-GESTURE-007` | Momentum cannot capture, arm, re-arm or commit. | GREEN | PENDING |
@@ -46,7 +46,7 @@ The stable IDs below remain frozen. Automated GREEN is necessary but does not co
 
 ## Physical direction rejection and repair
 
-The target-Mac recording supplied on 2026-08-15 documents a real-media sequence on rejected candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 / run `31892019346` in which physical LEFT selected the previous direction and physical RIGHT selected the next direction. This remains physical FAIL evidence for `NH-MEDIA-GESTURE-003/004` on that historical candidate only.
+The target-Mac recording supplied on 2026-08-15 documents a real-media sequence on rejected candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 / run `31892019346` in which physical LEFT selected the previous direction and physical RIGHT selected the next direction. This remains physical rejection evidence for `NH-MEDIA-GESTURE-003/004` on that historical candidate only.
 
 Root cause was isolated to `MediaGestureInputNormalizer`. The semantic coordinator already mapped negative semantic X to `next` and positive X to `previous`; typed command mapping was also correct. Horizontal AppKit scroll sign had not been converted into the frozen physical LEFT/RIGHT semantic sign.
 
