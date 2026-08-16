@@ -161,6 +161,15 @@ final class MediaRemoteSystemTransport: SystemMediaTransport {
                 return
             }
 
+            guard
+                self.isStarted,
+                self.handlerGeneration == expectedHandlerGeneration,
+                self.mediaGeneration == expectedMediaGeneration,
+                self.activeFingerprint == fingerprint
+            else {
+                return
+            }
+
             let capabilities: MediaCommandCapabilities
             do {
                 capabilities = try await self.processClient.capabilities()
