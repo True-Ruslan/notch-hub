@@ -9,6 +9,7 @@ final class MediaPeekSession {
 
     private var generation: UInt64 = 0
     private var activeRequest: NotchHoverPeekRequest?
+    private var probingRequest: NotchHoverPeekRequest?
     private var isInvalidated = false
 
     init(
@@ -28,11 +29,22 @@ final class MediaPeekSession {
 
         cancelActiveProbe()
         generation &+= 1
-        let requestGeneration = generation
         activeRequest = request
 
         panelController?.resolveHoverPeekRequest(request, mediaAvailable: false)
+    }
 
+    func handleSettledPeek() {
+        guard
+            !isInvalidated,
+            let request = activeRequest,
+            probingRequest != request
+        else {
+            return
+        }
+
+        probingRequest = request
+        let requestGeneration = generation
         probe.acquire { [weak self] result in
             self?.finish(
                 result,
@@ -70,12 +82,14 @@ final class MediaPeekSession {
         guard
             !isInvalidated,
             generation == expectedGeneration,
-            activeRequest == request
+            activeRequest == request,
+            probingRequest == request
         else {
             return
         }
 
         activeRequest = nil
+        probingRequest = nil
 
         switch result {
         case .presentation(let presentation):
@@ -91,6 +105,7 @@ final class MediaPeekSession {
 
     private func cancelActiveProbe() {
         activeRequest = nil
+        probingRequest = nil
         probe.cancel()
     }
 }
