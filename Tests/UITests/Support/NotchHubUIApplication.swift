@@ -117,6 +117,9 @@ struct NotchHubUIApplication {
         guard NotchHubUIAssertions.waitUntilExists(hitTarget, timeout: timeout) else {
             return false
         }
+        guard positionPointerForExplicitClick(on: hitTarget) else {
+            return false
+        }
 
         hitTarget.click()
         return NotchHubUIAssertions.waitUntilExists(
@@ -141,6 +144,24 @@ struct NotchHubUIApplication {
         center.withOffset(
             CGVector(dx: 0, dy: max(element.frame.height, 80))
         ).hover()
+    }
+
+    private func positionPointerForExplicitClick(on element: XCUIElement) -> Bool {
+        let frame = element.frame
+        guard
+            frame.origin.x.isFinite,
+            frame.origin.y.isFinite,
+            frame.width.isFinite,
+            frame.height.isFinite,
+            frame.width > 0,
+            frame.height > 0
+        else {
+            return false
+        }
+
+        return CGWarpMouseCursorPosition(
+            CGPoint(x: frame.midX, y: frame.midY)
+        ) == .success
     }
 
     private func parkPointerOutsideNotch() -> Bool {
