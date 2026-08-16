@@ -35,6 +35,7 @@ final class NotchInteractionCoordinator {
     private var latestPointer: CGPoint?
     private var generation: UInt64 = 0
     private var isPeekInteractionHeld = false
+    private var isPrimaryPointerPressed = false
     private var isInvalidated = false
 
     init(
@@ -72,7 +73,7 @@ final class NotchInteractionCoordinator {
                 layout: layout
             )
 
-            if target == .peek, allowActivation, !isPeekInteractionHeld {
+            if target == .peek, allowActivation, !isPeekInteractionHeld, !isPrimaryPointerPressed {
                 scheduleHoverActivationIfNeeded()
             } else {
                 invalidateHoverActivation()
@@ -113,6 +114,7 @@ final class NotchInteractionCoordinator {
     ) -> Bool {
         guard
             !isInvalidated,
+            !isPrimaryPointerPressed,
             activeHoverRequest == request
         else {
             return false
@@ -134,6 +136,31 @@ final class NotchInteractionCoordinator {
         }
 
         return true
+    }
+
+    func setPrimaryPointerPressed(
+        _ pressed: Bool,
+        layout: NotchLayout,
+        currentPresentation: NotchPresentation
+    ) {
+        guard !isInvalidated, pressed != isPrimaryPointerPressed else {
+            return
+        }
+
+        isPrimaryPointerPressed = pressed
+        if pressed {
+            invalidateHoverActivation()
+            return
+        }
+
+        guard currentPresentation == .compact, let latestPointer else {
+            return
+        }
+        pointerMoved(
+            to: latestPointer,
+            layout: layout,
+            currentPresentation: currentPresentation
+        )
     }
 
     func setPeekInteractionHeld(
@@ -182,10 +209,12 @@ final class NotchInteractionCoordinator {
         invalidateHoverActivation()
         cancelPendingCollapse()
         latestPointer = nil
+        isPrimaryPointerPressed = false
     }
 
     private func scheduleHoverActivationIfNeeded() {
         guard
+            !isPrimaryPointerPressed,
             pendingActivationCancellation == nil,
             activeHoverRequest == nil
         else {
@@ -214,6 +243,7 @@ final class NotchInteractionCoordinator {
     private func completeHoverActivation(generation scheduledGeneration: UInt64) {
         guard
             !isInvalidated,
+            !isPrimaryPointerPressed,
             pendingActivationGeneration == scheduledGeneration
         else {
             return
