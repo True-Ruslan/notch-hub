@@ -331,6 +331,9 @@ public final class NotchPanelController: NSObject {
         trackingView.onNotchPointerEvent = { [weak self] pointer in
             self?.updateInteraction(for: pointer)
         }
+        trackingView.onNotchPrimaryPressChanged = { [weak self] pressed in
+            self?.updatePrimaryPointerPress(pressed)
+        }
     }
 
     private func removeLocalPointerTracking() {
@@ -339,12 +342,21 @@ public final class NotchPanelController: NSObject {
         }
 
         trackingView.onNotchPointerEvent = nil
+        trackingView.onNotchPrimaryPressChanged = nil
     }
 
     private func configurePointerMonitoring() {
         pointerMonitor.start { [weak self] pointer in
             self?.updateInteraction(for: pointer)
         }
+    }
+
+    private func updatePrimaryPointerPress(_ pressed: Bool) {
+        interactionCoordinator.setPrimaryPointerPressed(
+            pressed,
+            layout: layoutState.currentLayout,
+            currentPresentation: transitionCoordinator.desiredPresentation
+        )
     }
 
     private func updateInteraction(for pointer: CGPoint) {
