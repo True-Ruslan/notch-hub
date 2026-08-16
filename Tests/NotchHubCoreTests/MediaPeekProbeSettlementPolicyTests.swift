@@ -25,11 +25,35 @@ struct MediaPeekProbeSettlementPolicyTests {
         #expect(!hoverSection.contains("probe.acquire"))
         #expect(settledSection.contains("probe.acquire"))
         #expect(appSource.contains("mediaPeekSession.handleSettledPeek()"))
-        #expect(appSource.contains("NSEvent.pressedMouseButtons == 0"))
+        #expect(!appSource.contains("NSEvent.pressedMouseButtons"))
         #expect(!appSource.contains(".leftMouseDown"))
         #expect(!appSource.contains(".leftMouseUp"))
         #expect(!sessionSource.contains("Task.sleep"))
         #expect(!sessionSource.contains("Timer.scheduledTimer"))
+    }
+
+    @Test
+    func boundedPeekCancellationUsesNonblockingProcessTeardown() throws {
+        let probeSource = try sourceText(
+            relativePath: "Sources/NotchHubMediaCore/ShippingMediaPeekProbe.swift"
+        )
+        let clientSource = try sourceText(
+            relativePath: "Sources/NotchHubMediaCore/MediaRemoteProcessClient.swift"
+        )
+        let protocolSource = try sourceText(
+            relativePath: "Sources/NotchHubMediaCore/MediaRemoteProcessClientProtocol.swift"
+        )
+
+        #expect(probeSource.contains("activeTransport.stopNonBlocking()"))
+        #expect(protocolSource.contains("func stopNonBlocking()"))
+
+        let nonblockingStop = try sourceSection(
+            clientSource,
+            from: "func stopNonBlocking()",
+            to: "func send("
+        )
+        #expect(!nonblockingStop.contains("waitUntilExit"))
+        #expect(clientSource.contains("MediaRemoteDeferredTermination"))
     }
 
     private func sourceSection(
