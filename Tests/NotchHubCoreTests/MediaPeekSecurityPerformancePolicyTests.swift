@@ -48,7 +48,8 @@ struct MediaPeekSecurityPerformancePolicyTests {
         #expect(appSource.contains("mediaRuntime.start()"))
         #expect(probeSource.contains("transport.start()"))
         #expect(probeSource.contains("activeTransport.eventHandler = nil"))
-        #expect(probeSource.contains("activeTransport.stop()"))
+        #expect(probeSource.contains("activeTransport.stopNonBlocking()"))
+        #expect(!probeSource.contains("activeTransport.stop()"))
         #expect(!probeSource.contains("repeat"))
         #expect(!probeSource.contains("while true"))
     }
