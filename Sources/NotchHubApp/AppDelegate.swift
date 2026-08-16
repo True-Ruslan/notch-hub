@@ -159,8 +159,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         panelController.settledPresentationHandler = { [weak self, weak mediaPeekSession] presentation in
-            if presentation != .peek, let mediaPeekSession {
-                mediaPeekSession.cancel()
+            if let mediaPeekSession {
+                switch presentation {
+                case .peek:
+                    mediaPeekSession.handleSettledPeek()
+                case .compact, .expanded:
+                    mediaPeekSession.cancel()
+                }
             }
             self?.updateMediaRuntime(for: presentation)
         }
