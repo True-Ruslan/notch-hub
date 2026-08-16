@@ -8,130 +8,121 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### M6.6 — current draft PR #33
 
-Status: **IMPLEMENTED / REGRESSION-INTEGRATED / AUTOMATED-GREEN BEFORE FINAL DOCS-SYNC CI / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / REGRESSION-INTEGRATED / TECHNICAL AUTOMATED-GREEN / FINAL DOCS-SYNC CI PENDING / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
-Added:
+Added and hardened:
 
 - local App-owned media gesture session with bounded horizontal visuals and public AppKit arm haptic;
 - stable `compact`, `peek`, `expanded` presentation states under the existing Core transition authority;
 - exactly 120 ms Hover Peek activation plus 140 ms pointer-exit grace;
-- generic no-media Peek with one hover-haptic request after a valid dwell;
-- click and physical DOWN as explicit expansion paths, with explicit tap authority on the stable outer media-aware root above generic/media and compact/Peek replacement;
+- generic no-media Peek with one hover-haptic request after valid dwell;
+- click and physical DOWN as explicit expansion paths, with stable outer SwiftUI tap ownership;
+- persistent nonactivating AppKit host first-mouse acceptance without mouse-button authority;
 - bounded one-shot media probing/commands in compact and Peek while persistent runtime remains expanded-only;
+- bounded Peek cancellation that is nonblocking for the UI actor while subprocess ownership is still terminated through finite graceful/forced deadlines;
 - exact-top-edge inclusive pointer retention for interactive DOWN;
-- physical horizontal gesture normalization independent of macOS scroll-direction preference: LEFT -> `next`, RIGHT -> `previous`;
-- source-app identity badge through public `NSWorkspace` and bounded in-memory cache;
+- physical horizontal normalization independent of macOS scroll-direction preference: LEFT -> `next`, RIGHT -> `previous`;
+- source-app identity badge through public `NSWorkspace` with bounded in-memory cache;
 - capability-gated draggable seek in Peek and expanded, identity-locked across track/source changes;
 - balanced seek cursor ownership without pointer warp/lock;
-- strict native regression/UI automation integrated with M6.6;
-- cumulative provenance-backed size budget over immutable P0.
+- strict native regression/UI automation and provenance-backed cumulative size budgets.
 
-Physical acceptance history:
+No global scroll/button/keyboard monitor, mouse-button event authority, event tap, polling loop, repeating timer, display link, UI-test retry/sleep masking, network/telemetry authority or new sensitive permission was added.
 
-- first complete candidate `d008f698b323963f084eedce601620ee957ef442` / CI #872 rejected; focused RED -> GREEN cycles repaired hover arbitration, physical vertical direction, stale seek identity and visual continuity;
-- docs-synchronized candidate `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 rejected on stationary-startup Hover Peek; startup RED #947 -> GREEN #948;
-- candidate `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 passed automation but was rejected for expanded pointer-exit and interactive lost-terminal behavior;
-- candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 was rejected on 2026-08-15 for no-media Hover Peek/haptic behavior and exact-top-edge DOWN self-collapse, while expanded pointer-exit and normal-center DOWN/UP remained stable;
-- candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 passed all automation but was physically rejected on 2026-08-15 because the target-Mac video with real media playback showed LEFT/RIGHT track gestures reversed relative to the frozen contract.
+#### Physical acceptance history
 
-#### 2026-08-13 expanded pointer-exit / interactive settlement repair
+- `d008f698b323963f084eedce601620ee957ef442` / CI #872 — rejected; later RED -> GREEN cycles repaired hover arbitration, vertical direction, stale seek identity and visual continuity.
+- `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 — rejected on stationary-startup Hover Peek; startup RED #947 -> GREEN #948.
+- `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 — rejected for expanded pointer-exit and interactive lost-terminal behavior.
+- `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 — rejected on 2026-08-15 for no-media Hover Peek/haptic and exact-top-edge DOWN self-collapse; expanded pointer-exit and ordinary DOWN/UP remained stable.
+- `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 — automated-green but physically rejected on 2026-08-15 because real-media LEFT/RIGHT track gestures were reversed relative to the frozen contract.
 
-Target testing showed that PR #33 had regressed accepted M1 semantics: after DOWN expansion, moving the pointer out of expanded no longer collapsed the panel. Physical UP could also leave a clipped intermediate panel when shrinking geometry moved out from under the pointer before the local hosting view received `.ended`/`.cancelled`.
+Historical physical failures remain retest requirements; later CI does not promote them to accepted.
 
-The repair restored expanded retention collapse, limited interactive retarget to the pointer-exit fail-safe, passed current mouse location through local precise-scroll updates, and synchronously settled from actual panel geometry when pointer/panel separation could lose terminal local scroll delivery. No global scroll monitor, event tap, watchdog timer, polling loop, display link or new permission authority was introduced.
+#### Expanded pointer-exit / interactive settlement
 
-TDD evidence: RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959 -> GREEN `64d3e6c2beadacaeda69c8ac06f173ac26aace3e`.
+Target testing found that expanded pointer exit no longer collapsed and physical UP could leave an intermediate clipped frame when shrinking geometry moved away before local terminal scroll delivery.
 
-#### 2026-08-15 regression foundation integration
+The repair restored expanded retention collapse and synchronously settles from actual panel geometry when needed, without global input capture. TDD: RED `0a42a701fcf4fa2f59972a68d2a3b9243203a202` / CI #959 -> GREEN `64d3e6c2beadacaeda69c8ac06f173ac26aace3e`.
 
-Regression/UI Automation Foundation PR #34 was merged to `main` as `bd9566f690d314ed40fd6f3723a319291ceb4a58`; post-merge main CI #1053 passed all three canonical jobs.
+#### Regression/UI Automation Foundation integration
 
-Integration work added fail-closed acceptance traceability, exact-app native XCUI, compile-time-only deterministic media/haptic fixtures with shipping-marker isolation, stable accessibility identities, and protocol-based expanded runtime injection while concrete `ShippingMediaRuntime` construction remained shipping-composition authority.
+PR #34 merged to `main` as `bd9566f690d314ed40fd6f3723a319291ceb4a58`; post-merge main CI #1053 was green.
 
-First full combined baseline `e5cdc58776f80f1fc6f57e22959a07704d895fbe` / CI #1095 passed all canonical jobs. Protocol-runtime RED #1096 -> GREEN #1099. PR #33 CI #1100 then independently passed all three jobs with 347 tests / 72 suites, strict 116/116 and native external-app XCUI 9/9.
+M6.6 subsequently integrated fail-closed acceptance traceability, exact-app native XCUI, compile-time-only deterministic media/haptic fixtures, shipping-marker isolation, stable accessibility identities and protocol-based expanded runtime injection while concrete shipping composition remained unchanged.
 
-#### 2026-08-15 Hover Peek / physical-acceptance repair
+#### Hover Peek / exact-edge / tap-ownership repair
 
-Target testing of candidate `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 produced concrete blockers and later automated click races:
-
-- no-media hover remained compact and produced no haptic because the pending design still gated Peek on usable media;
-- DOWN starting exactly at the top screen edge used half-open `CGRect.contains` and falsely retargeted to compact;
-- external XCUI showed that tap authority below a presentation/root replacement can lose a click while hover/media state changes during synthesis.
+Target testing of #1101 established that no-media hover must open generic Peek and that exact top-edge DOWN must be treated as inside the interactive surface. External XCUI additionally proved that click authority below replaceable presentation branches could lose an in-flight click.
 
 Repair:
 
-- no-media hover opens generic Peek first and requests the normal hover haptic once;
-- interactive pointer retention includes the exact physical top/right boundary;
-- local `NSTrackingArea` is the primary event-driven hover path;
-- a proposed mouse-button interception was rejected by the existing security baseline and removed rather than whitelisted;
-- explicit click expansion uses one stable SwiftUI tap recognizer on the outer `MediaNotchRootView`, above generic/media and compact/Peek replacement;
-- no global scroll/button/keyboard monitor, event tap, polling, repeating timer, display link, UI-test retry/sleep or new sensitive permission was added.
+- no-media hover opens generic Peek first;
+- interactive containment includes the exact physical top/right boundary;
+- local `NSTrackingArea` remains the primary event-driven hover path;
+- explicit expansion tap is owned by the stable outer `MediaNotchRootView`;
+- proposed mouse-button interception was rejected rather than whitelisted.
 
-Verification evidence:
+Focused root-ownership RED #1153 -> GREEN #1155. Exact source `2235c3b3bb7eb69961d76f7b1a5f1afa9307f270` / CI #1177 later passed all canonical jobs with the stable UI-test-only AppKit hit target and unchanged shipping tap semantics.
 
-- behavior head `63b0f2f96f879123f3883db7311c90a20d3a4328` / CI #1140: 352 Swift tests / 74 suites and external XCUI 11/11 PASS; package failed only because the preceding DMG cumulative ceiling was exceeded by 2172 B;
-- size review created `performance/m6-6-physical-acceptance-20260815-repair-size-budget.json`, changing only DMG allowance by one 4096-byte quantum while leaving app/executable allowance unchanged;
-- pre-docs head `3e617698a503590dbc18958960a5335753734ccc` / CI #1147: all three canonical jobs PASS;
-- docs head `a91e196d0ed51fb73a49b680eac1321100cdadb5` / CI #1152 was automatically rejected because two first-launch explicit-click external XCUI journeys failed;
-- focused RED `ac1f004b9a0d2a0fd54c16cb7c0041933d3523df` / CI #1153 -> GREEN `16feb0433f7fdfb18d5eacfcce66707959e6211a` / CI #1155; #1155 passed all canonical jobs, strict/security gates and native external-app XCUI without retries/sleeps.
+#### Physical LEFT/RIGHT direction repair
 
-#### 2026-08-15 horizontal physical-direction video, rejection and repair
+The target-Mac video on rejected candidate `6c210919...` showed physical LEFT selecting the previous direction and RIGHT selecting the next direction.
 
-The target-Mac video supplied by the user records an important real-world sequence on exact automated-green candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 / run `31892019346`:
+Root cause was limited to AppKit precise-scroll normalization. The semantic coordinator and typed command mapping were already correct; vertical normalization was also correct.
 
-1. real music/media playback was already active;
-2. NotchHub was then fully Quit while that playback context existed;
-3. during the demonstrated horizontal track interactions, physical LEFT selected the previous direction instead of `next`, and physical RIGHT selected the next direction instead of `previous`.
+- RED `f5cb5e3d1f13c7dc5564ce24068e83007f97bb1b` / CI #1157 failed only the new physical-direction assertions.
+- GREEN `50b82dae49f3ce6c6e194b1ab9775bd5cd5dd430` / CI #1158 changed horizontal normalization to `x: -scrollingDeltaX * preferenceScale`; all 354 tests and canonical jobs were green.
 
-The recording is therefore physical **FAIL** evidence for `NH-MEDIA-GESTURE-003/004` on `6c210919...`. It also confirms that a full NotchHub Quit occurred in the recorded sequence after playback had started, but does not by itself prove helper/adapter-process teardown after Quit; explicit `pgrep` evidence remains required. Video cannot establish felt haptic feedback, and no other unobserved M6.6 gate is promoted to accepted.
+The corrected direction remains physical-retest pending.
 
-Root cause was limited to `MediaGestureInputNormalizer`. The semantic coordinator and typed command mapping were already correct; vertical normalization was also correct. Horizontal normalization compensated for the user's macOS scroll-direction preference but failed to invert AppKit scroll X into the physical LEFT/RIGHT semantic sign.
+#### 2026-08-16 first-click and bounded Peek teardown repair
 
-TDD evidence:
+Two independent product-level click problems were isolated.
 
-- RED `f5cb5e3d1f13c7dc5564ce24068e83007f97bb1b` / CI #1157 / run `31897906228`: build/policy gates passed; 354 tests / 75 suites ran and only the two new physical-direction assertions failed. LEFT was positive instead of negative X and RIGHT negative instead of positive X; Y remained correct.
-- GREEN `50b82dae49f3ce6c6e194b1ab9775bd5cd5dd430` / CI #1158 / run `31898052051`: exactly one production line changed from `x: scrollingDeltaX * preferenceScale` to `x: -scrollingDeltaX * preferenceScale`; Y, semantic direction mapping, thresholds, haptics, lifecycle and transport are unchanged.
-- #1158 passed all 354 Swift tests and all three canonical jobs, including strict acceptance traceability, exact external-app XCUI, security/source audit, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, unchanged size gate and performance smoke.
+First, the persistent nonactivating host did not explicitly accept first mouse. Focused RED `7acd508...` -> GREEN `73dba83...` added only `acceptsFirstMouse(for:) = true`. SwiftUI tap remained click authority.
 
-The corrected direction remains **physical-retest pending**; CI does not convert `NH-MEDIA-GESTURE-003/004` to accepted.
+That production change required one reviewed DMG-size quantum in `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json`; app/executable allowances were unchanged and older budgets remain immutable.
 
-#### 2026-08-15 external-XCUI explicit-click stabilization
+Second, exact source `122019646547b828b18fd4cc1d8776ff929fb588` / CI #1191 exposed a deeper race in `testTenHoverExitCyclesNeverLeaveStaleSurface`: XCUI moves the real pointer into the notch before completing click synthesis, so Hover Peek could settle and start bounded media work while the click was in flight. Cancellation synchronously waited for subprocess teardown on `@MainActor`; the failing click spent about **5.4 s** in event synthesis/idle and never reached expanded.
 
-A docs-only descendant after the direction repair exposed nondeterminism in the test harness rather than the repaired LEFT/RIGHT mapping. `openExpandedExplicitly()` was sending `click()` to transient `notch.surface.compact`; if the SwiftUI presentation element was replaced between XCTest mouse-down and mouse-up, multiple product journeys failed before reaching their actual assertions.
+Fail-first progression:
 
-Fail-closed investigation rejected three alternatives rather than hiding the issue:
+- RED `6072b06f4564b1ef4c90d327e52187f743009705` / CI #1192 required `probe.acquire` only after authoritative Peek settlement.
+- Settlement-only descendant `ab62544...` remained insufficient; its superseded external smoke became abnormally long and was cancelled.
+- A read-only `NSEvent.pressedMouseButtons` guard produced one green run (#1196) but was not deterministic. Docs-synchronized CI #1200 reproduced the same journey with a **5.444 s** click stall, so the timing guard was rejected.
+- RED policy head around `4f48126...` / CI #1201 required a nonblocking bounded teardown seam and removal of the timing guard.
+- `b03b6f0ece0150f2007063ec9c5cc65b35ac8d87` / CI #1208 compiled with warnings-as-errors and ran **359 tests / 77 suites**. The new behavioral nonblocking lifecycle regression was green; the only failure was an obsolete source-policy assertion requiring the old synchronous `activeTransport.stop()` literal.
 
-- application-relative coordinate clicking failed the explicit-expansion journeys;
-- raw CoreGraphics `CGEvent` clicking, including a vertical coordinate-conversion attempt, also failed them;
-- placing a persistent AX container on the outer SwiftUI root hid/broke the dynamic state accessibility elements and exceeded the active DMG size ceiling by 171 B. That experiment was fully reverted and the performance budget was **not** relaxed.
+Final architecture:
 
-Final repair keeps the product tap path unchanged and exposes `notch.surface.hitTarget` only on the already-persistent AppKit hosting view under `#if NOTCHHUB_UI_TESTING`. The XCTest helper makes one ordinary `XCUIElement.click()` on that stable host. Shipping builds do not contain this test identifier/seam; dynamic `compact`/`peek`/`expanded` accessibility state remains intact; no retries, fixed sleeps, event tap, raw synthetic shipping input or sensitive permission authority were added.
+- bounded Peek release calls `stopNonBlocking()` after callback detachment;
+- in-flight bounded one-shot operations cancel immediately without `waitUntilExit` on the UI/caller path;
+- actual process termination remains owned and bounded through one-shot graceful and forced deadlines;
+- existing synchronous `stop()` remains for persistent expanded runtime and explicit Quit lifecycle verification;
+- `NSEvent.pressedMouseButtons` is removed from correctness logic;
+- no polling, repeating timer, sleep loop, event monitor/tap, mouse-button authority or permission expansion is introduced.
 
-Exact source `2235c3b3bb7eb69961d76f7b1a5f1afa9307f270` / CI #1177 / run `31904548631` passed **all three canonical jobs** after the final repair: macOS 26 compatibility, exact external-app UI regression with shipping-fixture isolation, and full build/test/package with source/security validation, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, the then-active size budget and performance smoke. Strict acceptance traceability remained 116/116.
+Exact technical source `45e5e8d863f16ff3416b55a41884af1bc655fb5c` / CI #1209 / run `31941027502` is **3/3 GREEN**:
 
-#### 2026-08-16 nonactivating first-click and bounded Peek-probe race repair
+- warnings-as-errors and **359 Swift tests / 77 suites**;
+- strict acceptance traceability `116/116`;
+- exact external-app native XCUI **11/11**, including the 10-cycle stress journey;
+- repeated stress click synthesis/idle approximately **0.36–0.44 s**, with no recurrence of the historical ~5.44 s stall;
+- probe/production transport archive verification, source/security policy, App Sandbox-only, Hardened Runtime/signing/preflight, active size budget and performance smoke all green.
 
-Later canonical runs exposed that the remaining click nondeterminism was product-level, not merely locator-level.
+#1209 technical artifacts:
 
-First, the persistent hosting view did not explicitly accept first mouse. Focused RED `7acd508...` added `hostingViewAcceptsFirstMouseForNonactivatingPanelInteraction`; GREEN `73dba83...` added only `acceptsFirstMouse(for:) = true`. SwiftUI tap remained the explicit click authority and no mouse-button monitor was added.
+- UI `.xcresult` `9262099134` / `sha256:45cd11b6f5004050ac28247206e8b626d2773bc28c4e6eeb602332db402701aa`;
+- shipping-media candidate `9262076392` / `sha256:f1df7f4c2e6462c98cb80d4bade0789b57b41e0a8c220260ccc95b80a21834f1`;
+- DMG `9262077564` / `sha256:00e28036c06f781f8e6d049dd51014339c26bf1671d3db7d43a316ceb4983e00`;
+- performance metadata `9262077482` / `sha256:2acc92e8072540a383883223d00cd4b41d7442fe34c107f3b50c04debf57bf43`;
+- production transport candidate `9262058205` / `sha256:732a6d0d8d4641d17bf1311cf0e23d5f5715d1b4dc466ecb3948b9343972e832`;
+- MediaBridge probe candidate `9262047374` / `sha256:3cea823cd3fa6410e81bfb1622aed2ede287c6f1af627ffb97593d4064eeb1cd`.
 
-That production change moved the DMG just beyond the prior intentionally tight envelope. A new immutable cumulative envelope, `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json`, increased only the DMG allowance by one 4096-byte review quantum; app/executable allowances remained unchanged and all older budgets stayed historical. The active allowances over immutable `v0.1.0` are app `614400 B`, DMG `471040 B`, executable `315392 B`.
+Measured shipping sizes: app `883119 B`, DMG `560255 B`, executable `580912 B`; the existing first-click cumulative budget passed unchanged.
 
-Exact source `122019646547b828b18fd4cc1d8776ff929fb588` / CI #1191 / run `31914764732` then passed compatibility and the complete package/security/performance path, while external XCUI correctly failed `testTenHoverExitCyclesNeverLeaveStaleSurface`. The failing click spent about 5.4 seconds inside synthesis/idle where normal clicks were sub-second; the separate unsupported-capability journey passed.
-
-Root cause: `XCUIElement.click()` moves the real pointer over the notch before the click completes. That hover could settle Peek and start the real bounded shipping media probe. Retarget/cancellation then synchronously owned process teardown on the main actor, so optional Peek enrichment could block the click path long enough to swallow expansion.
-
-The final repair keeps enrichment outside the transition/click critical path:
-
-- RED `6072b06f4564b1ef4c90d327e52187f743009705` / CI #1192 / run `31937746016`: 357 tests ran and exactly the new settled-probe policy failed;
-- `MediaPeekSession.handleHoverRequest` now opens generic Peek without starting the subprocess probe; `probe.acquire` may start only after authoritative `.peek` settlement;
-- settlement-only head `ab62544...` was insufficient: compatibility/package passed but external smoke became abnormally long and the superseded run was cancelled, so it is not acceptance evidence;
-- final source `8656a0d921252c8ab5847716ad5e3d65a6540301` additionally suppresses optional Peek enrichment when `NSEvent.pressedMouseButtons != 0` at settled Peek. This is read-only side-effect gating, not mouse-button authority: no `.leftMouseDown/.leftMouseUp` handler, monitor, event tap, polling, retry, sleep or new permission was introduced;
-- CI #1196 / run `31938446872` passed all three canonical jobs, all **357 Swift tests** and exact external-app XCUI **11/11**. `testTenHoverExitCyclesNeverLeaveStaleSurface` passed, unsupported-capability behavior passed, and stress click synthesis returned to roughly **0.3–0.4 s** instead of the prior ~5.4 s stall;
-- the existing first-click size envelope passed unchanged on #1196 with app `883087 B`, DMG `557138 B`, executable `580880 B`;
-- #1196 artifacts: UI result `9261436160` / `sha256:b6eab0dd2453a0080bd40734cacb5f07a42eb4b77f5ec7b916b4e03a7ece9944`; shipping-media candidate `9261415381` / `sha256:990b5de2883263c311bff63b2849ba5d521f98b2588200bd68840b4c3c805151`; DMG `9261416876` / `sha256:4ea12ca928cdbf6283608625dea6c7abf0e859007495a0826fca1b24f60eb160`; performance metadata `9261416671` / `sha256:7c37ccbe6f55a5d3aa90c2fede9b8b9e55a5f4da50e5511602abdc5f027d0d27`; production transport candidate `9261398118` / `sha256:0bc1e3d025db44070a98edf65ae5ce88b778c23935de67134f05be2418442a1b`; MediaBridge probe candidate `9261391923` / `sha256:30ddbb1084d7d0e3cc35291e8a3c91ec6a3fdd4235af3a5cd0a8a125586e9a07`.
-
-This changelog/docs synchronization creates a new source SHA. That exact descendant must independently pass all three canonical jobs before its source/artifact provenance is frozen for target-Mac retest. PR #33 remains draft, unmerged and unreleased; no physical gate is promoted by CI evidence.
+This changelog/docs synchronization creates a new source SHA. #1209 is technical evidence, not the frozen target-Mac candidate. The final docs-synchronized head must independently pass all three canonical jobs before source/artifact provenance is frozen in PR #33 without another repository commit.
 
 ### Earlier M6.6 prerequisites
 
@@ -153,7 +144,7 @@ This changelog/docs synchronization creates a new source SHA. That exact descend
 - M0 native Swift 6 / SwiftUI + AppKit foundation, hardware-notch geometry, deterministic hover and strict CI/security/release policy accepted and merged.
 - M1 primary interaction/transition foundation accepted and merged.
 - P0 immutable performance/artifact baseline and target measurement methodology accepted; historical baseline files remain immutable.
-- Regression/UI Automation Foundation merged via PR #34 and is now a mandatory three-job CI product gate.
+- Regression/UI Automation Foundation merged via PR #34 and is a mandatory three-job CI product gate.
 - App Sandbox-only + Hardened Runtime remain mandatory; no telemetry/direct app network/sensitive input permission surface has been added.
 
 ## [0.1.0] - 2026-08-07
