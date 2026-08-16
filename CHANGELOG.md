@@ -8,7 +8,7 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### M6.6 — current draft PR #33
 
-Status: **IMPLEMENTED / REGRESSION-INTEGRATED / REPAIRED AUTOMATED-GREEN BEFORE FINAL DOCS SYNC / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / REGRESSION-INTEGRATED / AUTOMATED-GREEN BEFORE FINAL DOCS-SYNC CI / PHYSICAL RETEST PENDING / NOT MERGED / NOT RELEASED**.
 
 Added:
 
@@ -107,9 +107,31 @@ Fail-closed investigation rejected three alternatives rather than hiding the iss
 
 Final repair keeps the product tap path unchanged and exposes `notch.surface.hitTarget` only on the already-persistent AppKit hosting view under `#if NOTCHHUB_UI_TESTING`. The XCTest helper makes one ordinary `XCUIElement.click()` on that stable host. Shipping builds do not contain this test identifier/seam; dynamic `compact`/`peek`/`expanded` accessibility state remains intact; no retries, fixed sleeps, event tap, raw synthetic shipping input or sensitive permission authority were added.
 
-Exact source `2235c3b3bb7eb69961d76f7b1a5f1afa9307f270` / CI #1177 / run `31904548631` passed **all three canonical jobs** after the final repair: macOS 26 compatibility, exact external-app UI regression with shipping-fixture isolation, and full build/test/package with source/security validation, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, the unchanged active size budget and performance smoke. Strict acceptance traceability remains 116/116.
+Exact source `2235c3b3bb7eb69961d76f7b1a5f1afa9307f270` / CI #1177 / run `31904548631` passed **all three canonical jobs** after the final repair: macOS 26 compatibility, exact external-app UI regression with shipping-fixture isolation, and full build/test/package with source/security validation, production transport/archive, Sandbox/Hardened Runtime/signing/preflight, the then-active size budget and performance smoke. Strict acceptance traceability remained 116/116.
 
-This changelog/docs synchronization creates a new source SHA. That exact descendant must independently pass all three canonical jobs before its source/artifact provenance is frozen for target-Mac retest. PR #33 remains draft, unmerged and unreleased.
+#### 2026-08-16 nonactivating first-click and bounded Peek-probe race repair
+
+Later canonical runs exposed that the remaining click nondeterminism was product-level, not merely locator-level.
+
+First, the persistent hosting view did not explicitly accept first mouse. Focused RED `7acd508...` added `hostingViewAcceptsFirstMouseForNonactivatingPanelInteraction`; GREEN `73dba83...` added only `acceptsFirstMouse(for:) = true`. SwiftUI tap remained the explicit click authority and no mouse-button monitor was added.
+
+That production change moved the DMG just beyond the prior intentionally tight envelope. A new immutable cumulative envelope, `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json`, increased only the DMG allowance by one 4096-byte review quantum; app/executable allowances remained unchanged and all older budgets stayed historical. The active allowances over immutable `v0.1.0` are app `614400 B`, DMG `471040 B`, executable `315392 B`.
+
+Exact source `122019646547b828b18fd4cc1d8776ff929fb588` / CI #1191 / run `31914764732` then passed compatibility and the complete package/security/performance path, while external XCUI correctly failed `testTenHoverExitCyclesNeverLeaveStaleSurface`. The failing click spent about 5.4 seconds inside synthesis/idle where normal clicks were sub-second; the separate unsupported-capability journey passed.
+
+Root cause: `XCUIElement.click()` moves the real pointer over the notch before the click completes. That hover could settle Peek and start the real bounded shipping media probe. Retarget/cancellation then synchronously owned process teardown on the main actor, so optional Peek enrichment could block the click path long enough to swallow expansion.
+
+The final repair keeps enrichment outside the transition/click critical path:
+
+- RED `6072b06f4564b1ef4c90d327e52187f743009705` / CI #1192 / run `31937746016`: 357 tests ran and exactly the new settled-probe policy failed;
+- `MediaPeekSession.handleHoverRequest` now opens generic Peek without starting the subprocess probe; `probe.acquire` may start only after authoritative `.peek` settlement;
+- settlement-only head `ab62544...` was insufficient: compatibility/package passed but external smoke became abnormally long and the superseded run was cancelled, so it is not acceptance evidence;
+- final source `8656a0d921252c8ab5847716ad5e3d65a6540301` additionally suppresses optional Peek enrichment when `NSEvent.pressedMouseButtons != 0` at settled Peek. This is read-only side-effect gating, not mouse-button authority: no `.leftMouseDown/.leftMouseUp` handler, monitor, event tap, polling, retry, sleep or new permission was introduced;
+- CI #1196 / run `31938446872` passed all three canonical jobs, all **357 Swift tests** and exact external-app XCUI **11/11**. `testTenHoverExitCyclesNeverLeaveStaleSurface` passed, unsupported-capability behavior passed, and stress click synthesis returned to roughly **0.3–0.4 s** instead of the prior ~5.4 s stall;
+- the existing first-click size envelope passed unchanged on #1196 with app `883087 B`, DMG `557138 B`, executable `580880 B`;
+- #1196 artifacts: UI result `9261436160` / `sha256:b6eab0dd2453a0080bd40734cacb5f07a42eb4b77f5ec7b916b4e03a7ece9944`; shipping-media candidate `9261415381` / `sha256:990b5de2883263c311bff63b2849ba5d521f98b2588200bd68840b4c3c805151`; DMG `9261416876` / `sha256:4ea12ca928cdbf6283608625dea6c7abf0e859007495a0826fca1b24f60eb160`; performance metadata `9261416671` / `sha256:7c37ccbe6f55a5d3aa90c2fede9b8b9e55a5f4da50e5511602abdc5f027d0d27`; production transport candidate `9261398118` / `sha256:0bc1e3d025db44070a98edf65ae5ce88b778c23935de67134f05be2418442a1b`; MediaBridge probe candidate `9261391923` / `sha256:30ddbb1084d7d0e3cc35291e8a3c91ec6a3fdd4235af3a5cd0a8a125586e9a07`.
+
+This changelog/docs synchronization creates a new source SHA. That exact descendant must independently pass all three canonical jobs before its source/artifact provenance is frozen for target-Mac retest. PR #33 remains draft, unmerged and unreleased; no physical gate is promoted by CI evidence.
 
 ### Earlier M6.6 prerequisites
 
