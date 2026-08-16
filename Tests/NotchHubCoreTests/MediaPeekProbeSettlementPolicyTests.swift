@@ -25,6 +25,9 @@ struct MediaPeekProbeSettlementPolicyTests {
         #expect(!hoverSection.contains("probe.acquire"))
         #expect(settledSection.contains("probe.acquire"))
         #expect(appSource.contains("mediaPeekSession.handleSettledPeek()"))
+        #expect(appSource.contains("NSEvent.pressedMouseButtons == 0"))
+        #expect(!appSource.contains(".leftMouseDown"))
+        #expect(!appSource.contains(".leftMouseUp"))
         #expect(!sessionSource.contains("Task.sleep"))
         #expect(!sessionSource.contains("Timer.scheduledTimer"))
     }
