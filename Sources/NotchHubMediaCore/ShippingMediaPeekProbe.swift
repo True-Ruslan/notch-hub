@@ -177,7 +177,7 @@ public final class ShippingMediaPeekProbe: MediaPeekProbing {
 
         self.activeTransport = nil
         activeTransport.eventHandler = nil
-        activeTransport.stop()
+        activeTransport.stopNonBlocking()
     }
 
     private static func hasResolvedCapabilities(
