@@ -14,7 +14,7 @@ struct MediaGesturePeekTests {
             seekActive: false
         )
         let changed = coordinator.handle(
-            sample(.changed, x: -90),
+            sample(.changed, x: 90),
             surface: .peek,
             previous: .pending,
             next: .pending,
@@ -53,7 +53,7 @@ struct MediaGesturePeekTests {
             seekActive: false
         )
         let changed = coordinator.handle(
-            sample(.changed, x: 90),
+            sample(.changed, x: -90),
             surface: .peek,
             previous: .pending,
             next: .pending,
@@ -79,7 +79,7 @@ struct MediaGesturePeekTests {
     }
 
     @Test
-    func negativeSemanticHorizontalDeltaProducesPositivePresentationOffset() {
+    func negativeSemanticHorizontalDeltaProducesNegativePresentationOffset() {
         let coordinator = MediaGestureCoordinator()
         _ = coordinator.handle(
             sample(.began),
@@ -97,11 +97,11 @@ struct MediaGesturePeekTests {
             seekActive: false
         )
 
-        #expect(visualOffsets(changed) == [40])
+        #expect(visualOffsets(changed) == [-40])
     }
 
     @Test
-    func positiveSemanticHorizontalDeltaProducesNegativePresentationOffset() {
+    func positiveSemanticHorizontalDeltaProducesPositivePresentationOffset() {
         let coordinator = MediaGestureCoordinator()
         _ = coordinator.handle(
             sample(.began),
@@ -119,7 +119,7 @@ struct MediaGesturePeekTests {
             seekActive: false
         )
 
-        #expect(visualOffsets(changed) == [-40])
+        #expect(visualOffsets(changed) == [40])
     }
 
     @Test
