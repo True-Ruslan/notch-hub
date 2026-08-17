@@ -1,11 +1,11 @@
 # M6.6 Media Gesture, Haptic and Seek Acceptance
 
-Status: IMPLEMENTED / AUTOMATED-GREEN THROUGH CI #1238 / FINAL HORIZONTAL PHYSICAL CONTRACT PASS ON `f2e81d993db37af9548799682ad8f03c7d64ae27` / FULL ONE-SHA M6.6 PHYSICAL MATRIX STILL PENDING / NOT MERGED / NOT RELEASED
+Status: IMPLEMENTED / AUTOMATED-GREEN THROUGH CI #1238 / FINAL HORIZONTAL PHYSICAL CONTRACT CONFIRMED ON `f2e81d993db37af9548799682ad8f03c7d64ae27` / FULL ONE-SHA M6.6 PHYSICAL MATRIX STILL PENDING / NOT MERGED / NOT RELEASED
 Date: 2026-08-18
 Primary target: macOS 26.6 / Mac16,8
 PR: #33 — `M6.6: app media gesture session TDD`
 
-The stable IDs below remain frozen. Automated GREEN is necessary but does not substitute for target-Mac physical evidence. Physical acceptance is recorded only for the exact behavior actually exercised on the named candidate.
+The stable IDs below remain frozen. Automated GREEN is necessary but does not substitute for target-Mac physical evidence. Physical evidence from an earlier source candidate is recorded without prematurely promoting a stable ID on the new test/documentation head.
 
 ## Non-negotiable boundaries
 
@@ -28,14 +28,14 @@ The stable IDs below remain frozen. Automated GREEN is necessary but does not su
 |---|---|---|---|
 | `NH-MEDIA-GESTURE-001` | Local-only event surface; no new sensitive authority. | GREEN through #1238 | PENDING full exact-candidate matrix |
 | `NH-MEDIA-GESTURE-002` | Short/reverted horizontal gesture commits no command and no haptic. | GREEN through #1238 | Partial smoke only; full gate PENDING |
-| `NH-MEDIA-GESTURE-003` | Physical LEFT -> exactly one `next` on release after one arm haptic when supported; visual follows LEFT. | GREEN through #1238 | **PASS on `f2e81d993...`** |
-| `NH-MEDIA-GESTURE-004` | Physical RIGHT -> exactly one `previous` on release after one arm haptic when supported; visual follows RIGHT. | GREEN through #1238 | **PASS on `f2e81d993...`** |
+| `NH-MEDIA-GESTURE-003` | Physical LEFT -> exactly one `next` on release after one arm haptic when supported; visual follows LEFT. | GREEN through #1238 | Physically confirmed on `f2e81d993...`; final test/docs-head retest PENDING |
+| `NH-MEDIA-GESTURE-004` | Physical RIGHT -> exactly one `previous` on release after one arm haptic when supported; visual follows RIGHT. | GREEN through #1238 | Physically confirmed on `f2e81d993...`; final test/docs-head retest PENDING |
 | `NH-MEDIA-GESTURE-005` | Compact/Peek/expanded direction, threshold, commit and follow-finger visual parity. | GREEN through #1238 | Horizontal follow-finger confirmed; full surface parity PENDING |
-| `NH-MEDIA-GESTURE-006` | 28% / 70...120 pt threshold and 20 pt disarm hysteresis; one haptic per armed transition. | GREEN through #1238 | Qualifying haptic PASS; complete threshold/hysteresis physical matrix PENDING |
-| `NH-MEDIA-GESTURE-007` | Momentum cannot capture, arm, re-arm or commit. | GREEN through #1238 | No-extra-switch smoke PASS; complete gate PENDING |
+| `NH-MEDIA-GESTURE-006` | 28% / 70...120 pt threshold and 20 pt disarm hysteresis; one haptic per armed transition. | GREEN through #1238 | Qualifying haptic physically confirmed; complete threshold/hysteresis matrix PENDING |
+| `NH-MEDIA-GESTURE-007` | Momentum cannot capture, arm, re-arm or commit. | GREEN through #1238 | No-extra-switch smoke physically confirmed; complete gate PENDING |
 | `NH-MEDIA-GESTURE-008` | Diagonal ambiguity is rejected; captured horizontal gesture cannot expand/collapse. | GREEN | PENDING |
-| `NH-MEDIA-GESTURE-009` | Compact physical DOWN requests expansion only. | GREEN | DOWN smoke PASS; exact-edge/full gate PENDING |
-| `NH-MEDIA-GESTURE-010` | Expanded physical UP requests collapse only. | GREEN | UP smoke PASS; full gate PENDING |
+| `NH-MEDIA-GESTURE-009` | Compact physical DOWN requests expansion only. | GREEN | DOWN smoke physically confirmed; exact-edge/full gate PENDING |
+| `NH-MEDIA-GESTURE-010` | Expanded physical UP requests collapse only. | GREEN | UP smoke physically confirmed; full gate PENDING |
 | `NH-MEDIA-GESTURE-011` | Unsupported/unknown/failed/late previous-next cannot arm, haptic or commit. | GREEN | PENDING |
 | `NH-MEDIA-GESTURE-012` | Compact arming uses bounded fresh one-shot capability validation, not persistent observation or retained capability trust. | GREEN | PENDING |
 | `NH-MEDIA-GESTURE-013` | Progress is draggable only when seek is authoritatively supported with valid timing. | GREEN | PENDING |
@@ -73,7 +73,7 @@ On 2026-08-18 the target Mac16,8/macOS 26.6 physically confirmed on exact `f2e81
 - DOWN/UP smoke remained correct;
 - supported horizontal arm haptic was felt exactly once.
 
-This is explicit PASS evidence for the final horizontal direction/follow-finger contract. It does not automatically promote unrelated Peek, seek, lifecycle, permission or source-icon gates that were not re-exercised on this exact candidate.
+This is explicit physical evidence for the final horizontal direction/follow-finger contract on `f2e81d993...`. Stable IDs remain pending on the new test/documentation head until that exact head passes CI and is physically rechecked, preserving the one-SHA acceptance rule.
 
 ## Regression coverage
 
@@ -81,7 +81,7 @@ The repair is covered at three levels:
 
 1. `MediaGestureInputNormalizerTests` freezes physical LEFT/RIGHT signs across both macOS scroll-direction preference states and independently protects vertical DOWN/UP signs.
 2. `MediaGestureCoordinatorTests` freezes LEFT -> Next, RIGHT -> Previous, thresholds, hysteresis, haptic, momentum, diagonal arbitration, compact capability validation and vertical panel intent.
-3. `MediaGesturePhysicalPipelineTests` is an end-to-end characterization from raw AppKit horizontal delta through normalization, visual offset and typed command for both scroll-direction preference states. It was added after final physical acceptance specifically to prevent another compensating-sign regression.
+3. `MediaGesturePhysicalPipelineTests` is an end-to-end characterization from raw AppKit horizontal delta through normalization, visual offset and typed command for both scroll-direction preference states. It was added after the final physical confirmation specifically to prevent another compensating-sign regression.
 
 No production behavior is changed by the third layer; the new exact head must independently pass canonical CI before becoming the next candidate.
 
@@ -89,7 +89,7 @@ No production behavior is changed by the third layer; the new exact head must in
 
 After the test/documentation head passes all three canonical CI jobs, freeze that SHA and complete the remaining one-SHA physical matrix:
 
-1. Repeat LEFT/RIGHT once to prove the new test-only/docs-only descendant still corresponds to the accepted runtime contract.
+1. Repeat LEFT/RIGHT once to prove the new test-only/docs-only descendant still corresponds to the confirmed runtime contract.
 2. Hover Peek with media and without media, including stationary-pointer relaunch and physical hover haptic.
 3. Click while Hover Peek/media enrichment may overlap; verify prompt single expansion.
 4. Exact-top-edge DOWN, pointer-exit collapse and UP settlement.

@@ -1,6 +1,6 @@
 # M6.6 Interactive Notch Acceptance
 
-Status: AUTOMATED-GREEN THROUGH CI #1238 / FINAL HORIZONTAL PHYSICAL SMOKE PASS ON `f2e81d993...` / FULL INTERACTIVE ONE-SHA PHYSICAL MATRIX PENDING
+Status: AUTOMATED-GREEN THROUGH CI #1238 / FINAL HORIZONTAL PHYSICAL SMOKE CONFIRMED ON `f2e81d993...` / FULL INTERACTIVE ONE-SHA PHYSICAL MATRIX PENDING
 Date: 2026-08-18
 Primary target: macOS 26.6 / Mac16,8
 Design: `docs/superpowers/specs/2026-08-12-interactive-notch-media-ux-design.md`
@@ -12,12 +12,12 @@ This ledger extends the frozen M6.6 media-gesture acceptance contract without re
 
 | ID | Gate | Required result | Current physical status |
 |---|---|---|---|
-| `NH-NOTCH-INTERACTIVE-001` | Compact downward tracking | Physical local DOWN follows the finger from current compact layout before release; exact top-screen/panel `maxY` remains valid; lost terminal delivery cannot leave intermediate geometry. | Basic DOWN smoke PASS on `f2e81d993...`; exact-edge/full gate PENDING |
+| `NH-NOTCH-INTERACTIVE-001` | Compact downward tracking | Physical local DOWN follows the finger from current compact layout before release; exact top-screen/panel `maxY` remains valid; lost terminal delivery cannot leave intermediate geometry. | Basic DOWN smoke physically confirmed on `f2e81d993...`; exact-edge/full gate PENDING |
 | `NH-NOTCH-INTERACTIVE-002` | Compact cancellation | Short/reversed/cancelled DOWN returns to exact compact and never starts persistent media observation. | PENDING |
-| `NH-NOTCH-INTERACTIVE-003` | Compact commit | Qualifying downward release settles through transition authority to exact expanded. | Basic DOWN smoke PASS; full gate PENDING |
-| `NH-NOTCH-INTERACTIVE-004` | Expanded upward tracking | Physical local UP follows the finger toward compact while expanded runtime remains authoritative until settlement. | Basic UP smoke PASS; full tracking gate PENDING |
-| `NH-NOTCH-INTERACTIVE-005` | Expanded cancel/commit + lost-terminal safety | Cancel returns to exact expanded; qualifying release/pointer exit settles to exact compact; moving geometry never remains intermediate. | Basic UP smoke PASS; pointer-exit/lost-terminal matrix PENDING |
-| `NH-NOTCH-INTERACTIVE-006` | Arbitration + stale safety | Horizontal/seek capture cannot move panel; momentum cannot drive it; stale layout/generation cannot restore obsolete geometry. | Horizontal momentum no-extra-switch smoke PASS; full arbitration PENDING |
+| `NH-NOTCH-INTERACTIVE-003` | Compact commit | Qualifying downward release settles through transition authority to exact expanded. | Basic DOWN smoke physically confirmed on `f2e81d993...`; full gate PENDING |
+| `NH-NOTCH-INTERACTIVE-004` | Expanded upward tracking | Physical local UP follows the finger toward compact while expanded runtime remains authoritative until settlement. | Basic UP smoke physically confirmed on `f2e81d993...`; full tracking gate PENDING |
+| `NH-NOTCH-INTERACTIVE-005` | Expanded cancel/commit + lost-terminal safety | Cancel returns to exact expanded; qualifying release/pointer exit settles to exact compact; moving geometry never remains intermediate. | Basic UP smoke physically confirmed on `f2e81d993...`; pointer-exit/lost-terminal matrix PENDING |
+| `NH-NOTCH-INTERACTIVE-006` | Arbitration + stale safety | Horizontal/seek capture cannot move panel; momentum cannot drive it; stale layout/generation cannot restore obsolete geometry. | Horizontal momentum no-extra-switch smoke physically confirmed on `f2e81d993...`; full arbitration PENDING |
 | `NH-NOTCH-INTERACTIVE-007` | Hover parity | Existing 120 ms Hover Peek remains correct from stable compact, including generic no-media Peek, and does not steal a local compact gesture or duplicate haptics. | PENDING final exact-head hover matrix |
 | `NH-NOTCH-INTERACTIVE-008` | Reduce Motion | Physical tracking remains usable; endpoint settle follows Reduce Motion and lands exactly. | PENDING |
 | `NH-NOTCH-INTERACTIVE-009` | Resource lifecycle | Settled compact/cancelled or pointer-exit-retargeted expansion own zero persistent adapter; settled expanded owns expected adapter; Quit leaves no orphan. | PENDING explicit final lifecycle evidence |

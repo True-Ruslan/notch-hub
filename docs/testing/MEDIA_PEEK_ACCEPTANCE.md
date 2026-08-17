@@ -1,6 +1,6 @@
 # Media Peek Acceptance
 
-Status: AUTOMATED-GREEN THROUGH CI #1238 / FINAL HORIZONTAL PHYSICAL CONTRACT PASS ON `f2e81d993...` / FULL PEEK ONE-SHA PHYSICAL MATRIX PENDING
+Status: AUTOMATED-GREEN THROUGH CI #1238 / FINAL HORIZONTAL PHYSICAL CONTRACT CONFIRMED ON `f2e81d993...` / FULL PEEK ONE-SHA PHYSICAL MATRIX PENDING
 Date: 2026-08-18
 Target: macOS 26.6 / Mac16,8
 Scope: M6.6 PR #33 Hover Peek / explicit-click / lifecycle acceptance
@@ -28,7 +28,7 @@ This ledger is additive. Existing `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`
 
 Exact source `f2e81d993db37af9548799682ad8f03c7d64ae27` / CI #1238 / run `32072408370` is 3/3 GREEN with 365 Swift tests / 79 suites and external exact-app XCUI 11/11. Source/security policy, App Sandbox-only, Hardened Runtime/signing/preflight, current cumulative size budget and shared-runner performance smoke are also GREEN.
 
-The final horizontal gesture contract was physically proven on this exact source on 2026-08-18. That evidence is recorded in `MEDIA_GESTURE_ACCEPTANCE.md` and does not automatically promote Peek-specific physical gates.
+The final horizontal gesture contract was physically confirmed on this exact source on 2026-08-18. That evidence is recorded in `MEDIA_GESTURE_ACCEPTANCE.md` and does not automatically promote Peek-specific physical gates.
 
 ## Stable acceptance IDs
 
@@ -39,7 +39,7 @@ The final horizontal gesture contract was physically proven on this exact source
 | `NH-MEDIA-PEEK-003` | Fast pointer pass | Transit shorter than dwell does not expand or leave Peek stuck. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-004` | 140 ms grace | Exit/re-entry before 140 ms keeps Peek; staying outside through deadline returns to compact. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-005` | Explicit expansion | Free-surface click and physical DOWN from Peek each expand exactly once; compact click remains prompt while hover/media enrichment overlaps. | Root ownership + native XCUI stress GREEN | PENDING |
-| `NH-MEDIA-PEEK-006` | Peek horizontal gestures | LEFT -> next and RIGHT -> previous use bounded one-shot work; hover cannot steal an owned gesture. | Core direction contract GREEN through #1238 | Final horizontal physical direction PASS outside full Peek matrix; Peek-specific parity PENDING |
+| `NH-MEDIA-PEEK-006` | Peek horizontal gestures | LEFT -> next and RIGHT -> previous use bounded one-shot work; hover cannot steal an owned gesture. | Core direction contract GREEN through #1238 | Horizontal direction physically confirmed outside full Peek matrix; Peek-specific parity PENDING |
 | `NH-MEDIA-PEEK-007` | Peek seek | Timeline seek works in Peek without expanding and suppresses notch gestures while active. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-008` | Seek cursor | Cursor hides only after valid seek begin and restores on every terminal/isolation path; no warp/lock. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-009` | Track continuity | Track/source changes update active media without obvious Home/interface blink while media stays valid. | GREEN | PENDING |
