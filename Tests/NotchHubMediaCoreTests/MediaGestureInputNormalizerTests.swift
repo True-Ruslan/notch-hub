@@ -5,12 +5,12 @@ struct MediaGestureInputNormalizerTests {
     @Test
     func physicalRightXIsPositiveAcrossSystemScrollDirectionPreference() {
         let regular = MediaGestureInputNormalizer.semanticDeltas(
-            scrollingDeltaX: 18,
+            scrollingDeltaX: -18,
             scrollingDeltaY: 0,
             isDirectionInvertedFromDevice: false
         )
         let inverted = MediaGestureInputNormalizer.semanticDeltas(
-            scrollingDeltaX: -18,
+            scrollingDeltaX: 18,
             scrollingDeltaY: 0,
             isDirectionInvertedFromDevice: true
         )
@@ -22,12 +22,12 @@ struct MediaGestureInputNormalizerTests {
     @Test
     func physicalLeftXIsNegativeAcrossSystemScrollDirectionPreference() {
         let regular = MediaGestureInputNormalizer.semanticDeltas(
-            scrollingDeltaX: -18,
+            scrollingDeltaX: 18,
             scrollingDeltaY: 0,
             isDirectionInvertedFromDevice: false
         )
         let inverted = MediaGestureInputNormalizer.semanticDeltas(
-            scrollingDeltaX: 18,
+            scrollingDeltaX: -18,
             scrollingDeltaY: 0,
             isDirectionInvertedFromDevice: true
         )
