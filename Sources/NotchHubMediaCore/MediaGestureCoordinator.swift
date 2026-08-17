@@ -217,7 +217,7 @@ public final class MediaGestureCoordinator {
             effects.append(.panelVisualOffset(gesture.cumulativeY))
         case .horizontal(let direction):
             gesture.hasHorizontalVisualOffset = true
-            effects.append(.visualOffset(gesture.cumulativeX))
+            effects.append(.visualOffset(-gesture.cumulativeX))
 
             if Self.usesBoundedCapabilityResolution(gesture.surface),
                 !gesture.requestedCompactCapability
