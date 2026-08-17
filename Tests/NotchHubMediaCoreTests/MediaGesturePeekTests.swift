@@ -4,7 +4,7 @@ import Testing
 @MainActor
 struct MediaGesturePeekTests {
     @Test
-    func peekLeftRequestsBoundedCapabilityArmsOnceAndCommitsNext() throws {
+    func peekPresentationRightRequestsBoundedCapabilityArmsOnceAndCommitsPrevious() throws {
         let coordinator = MediaGestureCoordinator()
         _ = coordinator.handle(
             sample(.began),
@@ -21,7 +21,8 @@ struct MediaGesturePeekTests {
             seekActive: false
         )
         let request = try #require(capabilityRequests(changed).first)
-        #expect(request.direction == .next)
+        #expect(visualOffsets(changed) == [90])
+        #expect(request.direction == .previous)
         #expect(armHapticCount(changed) == 0)
 
         let resolved = coordinator.resolveCompactCapability(
@@ -38,11 +39,11 @@ struct MediaGesturePeekTests {
             next: .pending,
             seekActive: false
         )
-        #expect(commits(ended) == [.next])
+        #expect(commits(ended) == [.previous])
     }
 
     @Test
-    func peekRightRequestsBoundedCapabilityAndCommitsPrevious() throws {
+    func peekPresentationLeftRequestsBoundedCapabilityAndCommitsNext() throws {
         let coordinator = MediaGestureCoordinator()
         _ = coordinator.handle(
             sample(.began),
@@ -59,7 +60,8 @@ struct MediaGesturePeekTests {
             seekActive: false
         )
         let request = try #require(capabilityRequests(changed).first)
-        #expect(request.direction == .previous)
+        #expect(visualOffsets(changed) == [-90])
+        #expect(request.direction == .next)
         _ = coordinator.resolveCompactCapability(
             gestureID: request.id,
             direction: request.direction,
@@ -73,7 +75,7 @@ struct MediaGesturePeekTests {
             next: .pending,
             seekActive: false
         )
-        #expect(commits(ended) == [.previous])
+        #expect(commits(ended) == [.next])
     }
 
     @Test
