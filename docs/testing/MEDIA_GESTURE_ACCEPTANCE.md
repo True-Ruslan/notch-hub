@@ -1,117 +1,103 @@
 # M6.6 Media Gesture, Haptic and Seek Acceptance
 
-Status: IMPLEMENTED / MINIMAL TECHNICAL CANDIDATE 3/3 AUTOMATED-GREEN / FINAL DOCS-SYNC CI PENDING / PHYSICAL RETEST PENDING
-Date: 2026-08-17
+Status: IMPLEMENTED / AUTOMATED-GREEN THROUGH CI #1238 / FINAL HORIZONTAL PHYSICAL CONTRACT PASS ON `f2e81d993db37af9548799682ad8f03c7d64ae27` / FULL ONE-SHA M6.6 PHYSICAL MATRIX STILL PENDING / NOT MERGED / NOT RELEASED
+Date: 2026-08-18
 Primary target: macOS 26.6 / Mac16,8
 PR: #33 — `M6.6: app media gesture session TDD`
 
-The stable IDs below remain frozen. Automated GREEN is necessary but does not constitute target-Mac physical acceptance.
+The stable IDs below remain frozen. Automated GREEN is necessary but does not substitute for target-Mac physical evidence. Physical acceptance is recorded only for the exact behavior actually exercised on the named candidate.
 
 ## Non-negotiable boundaries
 
 - Gesture input remains local to a NotchHub-owned view; no global scroll/button/keyboard monitor, event tap, synthetic media keys, or sensitive input permission.
 - `NotchPanelTransitionCoordinator` remains the sole panel transition authority.
-- Settled compact and Peek own zero persistent media adapter processes. Bounded one-shot capability/command/probe work is allowed only behind the reviewed fixed transport boundary.
-- Bounded Peek cancellation is nonblocking for the UI actor; owned subprocess termination remains bounded by one-shot graceful/forced deadlines. Stop races and stale callbacks fail closed. Persistent expanded-runtime and explicit Quit teardown retain synchronous lifecycle verification.
+- Settled compact and Peek own zero persistent media adapter processes. Bounded one-shot work is allowed only behind the reviewed fixed transport boundary.
+- Bounded Peek cancellation is nonblocking for the UI actor; persistent expanded-runtime and explicit Quit teardown retain synchronous lifecycle verification.
 - Expanded observation remains presentation-scoped.
 - Unsupported/unknown capabilities fail closed.
-- No progress/media polling, repeating timer, display link, or sleep loop.
+- No progress/media polling, repeating timer, display link, retry or sleep loop.
 - Horizontal haptic occurs only when entering armed; no vertical gesture haptic is added.
 - Seek is available only with authoritative capability and trustworthy timing and remains isolated from track/panel gestures.
 - Physical direction is independent of macOS scroll-direction preference: LEFT means `next`, RIGHT means `previous`, DOWN means expansion, UP means collapse.
+- Horizontal presentation follows the physical finger direction: LEFT moves left; RIGHT moves right.
 - Explicit click remains a stable SwiftUI tap path; no mouse-button event authority is present.
 
 ## Stable IDs
 
 | ID | Required result | Automated | Physical |
 |---|---|---|---|
-| `NH-MEDIA-GESTURE-001` | Local-only event surface; no new sensitive authority. | GREEN through #1230 | PENDING |
-| `NH-MEDIA-GESTURE-002` | Short/reverted horizontal gesture commits no command and no haptic. | GREEN | PENDING |
-| `NH-MEDIA-GESTURE-003` | Compact physical LEFT -> one `next` on release after one arm haptic when supported. | Direction RED #1157 -> GREEN #1158; regression GREEN through #1230 | Historical candidate `6c210919...` was rejected; RETEST REQUIRED |
-| `NH-MEDIA-GESTURE-004` | Compact physical RIGHT -> one `previous` on release after one arm haptic when supported. | Direction RED #1157 -> GREEN #1158; regression GREEN through #1230 | Historical candidate `6c210919...` was rejected; RETEST REQUIRED |
-| `NH-MEDIA-GESTURE-005` | Expanded direction/threshold/commit parity with follow-finger visual tracking. | GREEN | PENDING |
-| `NH-MEDIA-GESTURE-006` | 28% / 70...120 pt threshold and 20 pt disarm hysteresis; one haptic per armed transition. | GREEN | PENDING |
-| `NH-MEDIA-GESTURE-007` | Momentum cannot capture, arm, re-arm or commit. | GREEN | PENDING |
+| `NH-MEDIA-GESTURE-001` | Local-only event surface; no new sensitive authority. | GREEN through #1238 | PENDING full exact-candidate matrix |
+| `NH-MEDIA-GESTURE-002` | Short/reverted horizontal gesture commits no command and no haptic. | GREEN through #1238 | Partial smoke only; full gate PENDING |
+| `NH-MEDIA-GESTURE-003` | Physical LEFT -> exactly one `next` on release after one arm haptic when supported; visual follows LEFT. | GREEN through #1238 | **PASS on `f2e81d993...`** |
+| `NH-MEDIA-GESTURE-004` | Physical RIGHT -> exactly one `previous` on release after one arm haptic when supported; visual follows RIGHT. | GREEN through #1238 | **PASS on `f2e81d993...`** |
+| `NH-MEDIA-GESTURE-005` | Compact/Peek/expanded direction, threshold, commit and follow-finger visual parity. | GREEN through #1238 | Horizontal follow-finger confirmed; full surface parity PENDING |
+| `NH-MEDIA-GESTURE-006` | 28% / 70...120 pt threshold and 20 pt disarm hysteresis; one haptic per armed transition. | GREEN through #1238 | Qualifying haptic PASS; complete threshold/hysteresis physical matrix PENDING |
+| `NH-MEDIA-GESTURE-007` | Momentum cannot capture, arm, re-arm or commit. | GREEN through #1238 | No-extra-switch smoke PASS; complete gate PENDING |
 | `NH-MEDIA-GESTURE-008` | Diagonal ambiguity is rejected; captured horizontal gesture cannot expand/collapse. | GREEN | PENDING |
-| `NH-MEDIA-GESTURE-009` | Compact physical DOWN requests expansion only. | GREEN | PENDING; exact-edge RETEST REQUIRED |
-| `NH-MEDIA-GESTURE-010` | Expanded physical UP requests collapse only. | GREEN | PENDING |
+| `NH-MEDIA-GESTURE-009` | Compact physical DOWN requests expansion only. | GREEN | DOWN smoke PASS; exact-edge/full gate PENDING |
+| `NH-MEDIA-GESTURE-010` | Expanded physical UP requests collapse only. | GREEN | UP smoke PASS; full gate PENDING |
 | `NH-MEDIA-GESTURE-011` | Unsupported/unknown/failed/late previous-next cannot arm, haptic or commit. | GREEN | PENDING |
 | `NH-MEDIA-GESTURE-012` | Compact arming uses bounded fresh one-shot capability validation, not persistent observation or retained capability trust. | GREEN | PENDING |
 | `NH-MEDIA-GESTURE-013` | Progress is draggable only when seek is authoritatively supported with valid timing. | GREEN | PENDING |
 | `NH-MEDIA-GESTURE-014` | Seek preview is local; one typed seek on valid completion; cancellation/failure does not fabricate success. | GREEN | PENDING |
 | `NH-MEDIA-GESTURE-015` | Seek ownership excludes track and panel gestures; track/source/capability identity change cancels the transaction. | GREEN | PENDING |
-| `NH-MEDIA-GESTURE-016` | One-shot operations are lifecycle-owned; compact/Peek and Quit leave no orphan. | Synchronous + nonblocking + stop-race regressions GREEN through #1230 | PENDING |
-| `NH-MEDIA-GESTURE-017` | Sandbox/Hardened Runtime/security/performance invariants remain intact. | GREEN through #1230 | PENDING |
+| `NH-MEDIA-GESTURE-016` | One-shot operations are lifecycle-owned; compact/Peek and Quit leave no orphan. | Stop-race + integration regressions GREEN | PENDING explicit final lifecycle evidence |
+| `NH-MEDIA-GESTURE-017` | Sandbox/Hardened Runtime/security/performance invariants remain intact. | GREEN through #1238 | Permission matrix PENDING on final exact candidate |
 | `NH-MEDIA-GESTURE-018` | Real source matrix follows macOS Now Playing; absent capability is recorded honestly. | GREEN | PENDING |
 
-## Physical direction rejection and repair
+## Final horizontal repair history
 
-Target-Mac evidence on historical candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 showed physical LEFT selecting the previous direction and physical RIGHT selecting the next direction. This remains rejection evidence for that historical candidate only.
+Historical candidate `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 proved that green automation alone was insufficient: real-media LEFT/RIGHT commands were reversed.
 
-Root cause was isolated to `MediaGestureInputNormalizer`. The semantic coordinator already mapped negative semantic X to `next` and positive X to `previous`; typed command mapping was correct. Horizontal AppKit scroll sign needed conversion into the frozen physical LEFT/RIGHT semantic sign.
+A later candidate fixed command direction but still rendered the horizontal animation opposite to the fingers. Candidate `e39f501a6388c8a0d53c1360f8b44e1bb72454cd` then made the animation follow the fingers, but physical testing showed the command mapping had become reversed relative to that presentation.
 
-Focused TDD:
+The final root cause was that the horizontal AppKit normalization sign and the presentation sign had been treated as separate compensating inversions. Final repair `f2e81d993db37af9548799682ad8f03c7d64ae27` makes semantic X represent the physical finger direction directly:
 
-- RED `f5cb5e3d1f13c7dc5564ce24068e83007f97bb1b` / CI #1157 failed the two new physical-direction assertions while vertical Y remained correct.
-- GREEN `50b82dae49f3ce6c6e194b1ab9775bd5cd5dd430` / CI #1158 changed horizontal normalization to `x: -scrollingDeltaX * preferenceScale`; Y, thresholds, haptics, lifecycle and transport were unchanged.
+- physical RIGHT normalizes to positive X;
+- physical LEFT normalizes to negative X;
+- `.visualOffset(cumulativeX)` follows the same physical sign;
+- negative/LEFT commits `.next`;
+- positive/RIGHT commits `.previous`;
+- vertical Y normalization is unchanged.
 
-The corrected direction has not yet been physically retested on the final candidate, so IDs 003/004 remain pending/retest-required rather than accepted.
+CI #1238 / run `32072408370` passed all three canonical jobs, the 365-test / 79-suite Swift gate, exact external-app XCUI 11/11, production transport/archive, security/source policy, Sandbox/Hardened Runtime/signing/preflight, unchanged size budget and performance smoke.
 
-## Explicit-click / Hover Peek lifecycle hardening
+On 2026-08-18 the target Mac16,8/macOS 26.6 physically confirmed on exact `f2e81d993db37af9548799682ad8f03c7d64ae27`:
 
-Native XCUI exposed a shared compact/Peek interaction race: a real click can move the pointer into the notch before mouse event synthesis finishes, allowing valid Hover Peek work to overlap the click.
+- RIGHT -> Previous/back;
+- RIGHT animation follows the fingers to the right;
+- LEFT -> Next;
+- LEFT animation follows the fingers to the left;
+- below-threshold horizontal smoke produced no switch;
+- momentum produced no extra switch;
+- DOWN/UP smoke remained correct;
+- supported horizontal arm haptic was felt exactly once.
 
-- Stable outer SwiftUI tap ownership was established without retries/sleeps.
-- The persistent nonactivating AppKit host gained only `acceptsFirstMouse(for:) = true`; it did not become mouse-button authority.
-- CI #1191 showed synchronous bounded-process teardown on `@MainActor` could block click processing for about 5.4 seconds.
-- Settled-only probe startup and a later read-only `NSEvent.pressedMouseButtons` timing guard were insufficient; CI #1200 reproduced a **5.444 s** stall.
-- Correctness moved to `stopNonBlocking()` for bounded Peek ownership. Cancellation returns immediately from the UI path while subprocess termination completes through bounded one-shot graceful/forced deadlines.
-- Synchronous stop semantics remain for persistent expanded runtime and Quit.
+This is explicit PASS evidence for the final horizontal direction/follow-finger contract. It does not automatically promote unrelated Peek, seek, lifecycle, permission or source-icon gates that were not re-exercised on this exact candidate.
 
-Additional regression work now covers stop-before-queued-capability launch, stale post-stop callbacks, first-usable-snapshot Peek completion and transport integration. No polling, retry, sleep or new input authority was introduced.
+## Regression coverage
 
-## Removal of speculative mouse-button semantics
+The repair is covered at three levels:
 
-A later experimental primary-press seam was evaluated but was not required by the proven lifecycle repair. Exact technical head `c4377436afa5fcb8e9eb9f9d3d8bc952f3647271` removes its state, AppKit `mouseDown`/`mouseUp` reporting, controller wiring and dedicated test. The final minimal architecture therefore retains one click authority: the stable SwiftUI tap path.
+1. `MediaGestureInputNormalizerTests` freezes physical LEFT/RIGHT signs across both macOS scroll-direction preference states and independently protects vertical DOWN/UP signs.
+2. `MediaGestureCoordinatorTests` freezes LEFT -> Next, RIGHT -> Previous, thresholds, hysteresis, haptic, momentum, diagonal arbitration, compact capability validation and vertical panel intent.
+3. `MediaGesturePhysicalPipelineTests` is an end-to-end characterization from raw AppKit horizontal delta through normalization, visual offset and typed command for both scroll-direction preference states. It was added after final physical acceptance specifically to prevent another compensating-sign regression.
 
-## Current technical baseline
+No production behavior is changed by the third layer; the new exact head must independently pass canonical CI before becoming the next candidate.
 
-Exact technical source `c4377436afa5fcb8e9eb9f9d3d8bc952f3647271` / CI #1230 / run `32000799095` is 3/3 GREEN before this documentation synchronization:
+## Remaining target procedure
 
-- warnings-as-errors build;
-- **363 Swift tests / 79 suites**;
-- strict acceptance traceability `116/116`;
-- exact external-app native XCUI **11/11**;
-- 10-cycle Hover Peek/exit/click stress GREEN with repeated click synthesis roughly **0.35–0.44 s**, instead of the historical ~5.44 s stall;
-- MediaBridge probe and production transport candidates/archive GREEN;
-- source/security policy, App Sandbox-only, Hardened Runtime/signing/preflight GREEN;
-- current cumulative size budget and shared-runner performance smoke GREEN.
+After the test/documentation head passes all three canonical CI jobs, freeze that SHA and complete the remaining one-SHA physical matrix:
 
-Technical #1230 shipping sizes: app `882895 B`, DMG `559550 B`, executable `580688 B`. The active `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json` required no expansion.
-
-This documentation update creates a new source SHA, so #1230 remains technical evidence rather than the frozen physical candidate. The docs-synchronized exact head must independently pass all three canonical jobs.
-
-## Target procedure
-
-Use only the final documentation-synchronized candidate after its exact SHA passes all three canonical CI jobs.
-
-1. Start real media playback.
-2. In compact, repeatedly perform physical LEFT and RIGHT. LEFT must commit exactly one `next`; RIGHT exactly one `previous` when supported.
-3. Confirm the arm haptic is felt exactly once per supported armed transition; short/reverted and unsupported gestures must not haptic or commit.
-4. Repeat direction/threshold/re-arm/diagonal/momentum cases in Peek and expanded and verify follow-finger visuals.
-5. Verify physical DOWN expansion and UP collapse, including exact-top-edge DOWN and pointer/panel separation cases.
-6. Verify seek capability, preview, commit/cancel, cursor restoration and track/source identity cancellation.
-7. Exercise compact click while Hover Peek/media enrichment can overlap; expansion must remain prompt and single.
-8. After bounded compact/Peek work and after real Quit, run:
-
-```bash
-pgrep -lf 'mediaremote-adapter\.pl' || true
-```
-
-Expected: empty output.
-
-9. Confirm no Accessibility, Input Monitoring, Automation/Apple Events, or Screen Recording permission prompt appears.
+1. Repeat LEFT/RIGHT once to prove the new test-only/docs-only descendant still corresponds to the accepted runtime contract.
+2. Hover Peek with media and without media, including stationary-pointer relaunch and physical hover haptic.
+3. Click while Hover Peek/media enrichment may overlap; verify prompt single expansion.
+4. Exact-top-edge DOWN, pointer-exit collapse and UP settlement.
+5. Seek capability/preview/commit/cancel, cursor restoration and identity cancellation.
+6. Source-icon/source-continuity checks.
+7. After bounded compact/Peek work and after real Quit run `pgrep -lf 'mediaremote-adapter\.pl' || true`; require empty output.
+8. Confirm Accessibility, Input Monitoring, Automation and Screen Recording remain unrequested.
 
 ## Acceptance rule
 
-M6.6 remains **not accepted** until all applicable stable gates have explicit target-Mac evidence on one exact candidate. Automated haptic-request evidence is not a substitute for the felt physical haptic. PR #33 remains draft until then.
+M6.6 remains not fully accepted until all applicable stable gates have explicit target-Mac evidence on one final exact candidate. PR #33 remains draft until then. No P1, merge or release is allowed before that closure.
