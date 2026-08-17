@@ -333,7 +333,7 @@ public final class MediaGestureCoordinator {
         let absoluteY = abs(cumulativeY)
 
         if absoluteX > 0, absoluteX >= absoluteY * Self.axisDominanceRatio {
-            return .horizontal(cumulativeX < 0 ? .next : .previous)
+            return .horizontal(cumulativeX < 0 ? .previous : .next)
         }
         if absoluteY > 0, absoluteY >= absoluteX * Self.axisDominanceRatio {
             return .vertical
@@ -347,9 +347,9 @@ public final class MediaGestureCoordinator {
     ) -> Double {
         switch direction {
         case .previous:
-            return max(0, gesture.cumulativeX)
-        case .next:
             return max(0, -gesture.cumulativeX)
+        case .next:
+            return max(0, gesture.cumulativeX)
         }
     }
 
