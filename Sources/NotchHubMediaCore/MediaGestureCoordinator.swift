@@ -56,7 +56,7 @@ public enum MediaGestureInputNormalizer {
     ) -> MediaGestureInputDeltas {
         let preferenceScale = isDirectionInvertedFromDevice ? -1.0 : 1.0
         return MediaGestureInputDeltas(
-            x: scrollingDeltaX * preferenceScale,
+            x: -scrollingDeltaX * preferenceScale,
             y: -scrollingDeltaY * preferenceScale
         )
     }
@@ -217,7 +217,7 @@ public final class MediaGestureCoordinator {
             effects.append(.panelVisualOffset(gesture.cumulativeY))
         case .horizontal(let direction):
             gesture.hasHorizontalVisualOffset = true
-            effects.append(.visualOffset(-gesture.cumulativeX))
+            effects.append(.visualOffset(gesture.cumulativeX))
 
             if Self.usesBoundedCapabilityResolution(gesture.surface),
                 !gesture.requestedCompactCapability
@@ -333,7 +333,7 @@ public final class MediaGestureCoordinator {
         let absoluteY = abs(cumulativeY)
 
         if absoluteX > 0, absoluteX >= absoluteY * Self.axisDominanceRatio {
-            return .horizontal(cumulativeX < 0 ? .previous : .next)
+            return .horizontal(cumulativeX < 0 ? .next : .previous)
         }
         if absoluteY > 0, absoluteY >= absoluteX * Self.axisDominanceRatio {
             return .vertical
@@ -347,9 +347,9 @@ public final class MediaGestureCoordinator {
     ) -> Double {
         switch direction {
         case .previous:
-            return max(0, -gesture.cumulativeX)
-        case .next:
             return max(0, gesture.cumulativeX)
+        case .next:
+            return max(0, -gesture.cumulativeX)
         }
     }
 
