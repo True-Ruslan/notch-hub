@@ -23,42 +23,33 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 
 ### M6.6 — gestures, haptics, interactive notch, seek and Hover Peek
 
-Status: **IMPLEMENTED / REGRESSION-INTEGRATED / CI #1238 3/3 GREEN / FINAL HORIZONTAL PHYSICAL CONTRACT PASS ON `f2e81d993...` / FULL ONE-SHA PHYSICAL MATRIX PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED ON EXACT `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` / PR #33 DRAFT / NOT MERGED / NOT RELEASED**.
 
-Draft PR #33 provides:
+Exact source acceptance:
+
+- CI #1241 / run `32075976405` — all three canonical jobs GREEN;
+- 366 Swift tests / 80 suites GREEN;
+- external exact-app XCUI 11/11 GREEN;
+- target Mac16,8/macOS 26.6 final matrix — PASS;
+- post-Quit `mediaremote-adapter.pl` process check — empty;
+- Accessibility / Input Monitoring / Automation / Screen Recording — NONE.
+
+Accepted behavior includes:
 
 - stable `compact`, `peek`, `expanded` ownership under one transition authority;
 - exactly 120 ms hover dwell and 140 ms Peek exit grace;
-- generic Hover Peek without usable media plus bounded optional enrichment;
+- media and generic no-media Hover Peek with physical haptic and no hover-only expansion;
+- stationary-pointer relaunch Peek;
 - persistent media runtime only in expanded;
-- explicit click/DOWN expansion with stable outer SwiftUI tap ownership;
-- exact-top-edge inclusive interactive pointer retention;
-- local previous/next gestures with physical LEFT -> `next`, RIGHT -> `previous`, independent of macOS scroll-direction preference;
-- horizontal visual motion that follows the physical fingers;
-- interactive panel follow-finger motion and exact endpoint settlement;
-- source icon, seek/cursor isolation and event-driven continuity;
-- nonblocking bounded Peek teardown with stop-race and transport-integration regressions.
+- prompt single explicit click expansion even when hover/media enrichment overlaps;
+- exact-top-edge and center DOWN follow-finger expansion without twitch/self-collapse;
+- expanded pointer-exit and physical UP exact Compact settlement;
+- physical LEFT -> `next`, RIGHT -> `previous`, independent of macOS scroll-direction preference, with visuals following the fingers;
+- source icon/fallback, seek preview/commit/cancel, cursor restoration and source/track identity cancellation;
+- nonblocking bounded Peek teardown with stop-race and transport-integration regressions;
+- unchanged Sandbox/Hardened Runtime and sensitive-permission boundary.
 
-No new global input authority, polling, repeating timer, display link, retry/sleep masking or sensitive permission was added.
-
-#### Final horizontal closure — 2026-08-18
-
-The horizontal path required multiple evidence-driven repair cycles because command semantics and presentation sign can appear correct independently while remaining wrong as a physical pipeline.
-
-Final source `f2e81d993db37af9548799682ad8f03c7d64ae27` / CI #1238 / run `32072408370` is 3/3 GREEN with 365 Swift tests / 79 suites and external exact-app XCUI 11/11.
-
-Target-Mac physical PASS on exact `f2e81d993...` confirmed:
-
-- RIGHT -> Previous/back and animation follows RIGHT;
-- LEFT -> Next and animation follows LEFT;
-- below-threshold smoke -> no switch;
-- momentum -> no extra switch;
-- DOWN/UP smoke remains correct;
-- supported horizontal arm haptic occurs once.
-
-The horizontal contract is therefore physically proven on this source candidate. A new `MediaGesturePhysicalPipelineTests` characterization now binds raw AppKit delta, scroll-direction preference normalization, visual offset and typed command in one regression so future sign changes cannot silently compensate across layers.
-
-Because the test/documentation synchronization itself creates a new SHA, M6.6 is not promoted to full accepted yet. The new exact head must pass canonical CI and then receive the remaining one-SHA physical matrix.
+Deterministic timing/arbitration/resource subcontracts remain protected by automated tests; physical-only properties are recorded against the exact candidate in the acceptance ledgers.
 
 Acceptance ledgers:
 
@@ -66,13 +57,13 @@ Acceptance ledgers:
 - `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`;
 - `docs/testing/MEDIA_PEEK_ACCEPTANCE.md`.
 
-No P1 work, merge or release is allowed before all applicable physical gates pass on one final exact candidate.
+The follow-up acceptance-record commit may change only documentation/coverage metadata. It does not move physical evidence away from source `8744b9e...`.
 
 ## P1 — whole-app performance/resource review
 
-Status: **BLOCKED UNTIL M6.6 PHYSICAL ACCEPTANCE + MERGE**.
+Status: **BLOCKED UNTIL PR #33 MERGE + POST-MERGE MAIN CI**.
 
-Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, narrow global `.mouseMoved` fallback comparison only if evidence requires it, repeated-run variance characterization, and real active-display/multi-monitor reality checks.
+Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, repeated-run variance characterization, and real active-display/multi-monitor reality checks. Any new global `.mouseMoved` fallback remains prohibited unless measured evidence demonstrates a concrete need and the security/performance tradeoff is reviewed.
 
 ## Product modules after media/performance foundation
 
@@ -85,9 +76,8 @@ Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, narrow glo
 
 ## Current priority
 
-1. Commit the final horizontal pipeline regression plus documentation synchronization atomically; production code remains unchanged from physically proven `f2e81d993...`.
-2. Pass all three canonical CI jobs on that exact new head and verify the expected regression count increase.
-3. Freeze exact source SHA + shipping/DMG artifact provenance without another repository commit.
-4. Run the remaining target-Mac one-SHA M6.6 matrix: media/no-media Peek + haptics, stationary restart, click-during-enrichment, exact-edge DOWN, pointer-exit/UP settlement, seek/cursor/source continuity, source icon, permissions and post-Quit process cleanup; include a quick LEFT/RIGHT reconfirmation.
-5. Any repeatable failure gets its own focused regression -> minimal repair -> new candidate cycle.
-6. Only after full physical PASS: mark PR #33 ready, merge, verify post-merge `main` CI, close M6.6 and begin P1.
+1. Land the M6.6 acceptance-record synchronization with no production-code change and no coverage-policy weakening.
+2. Require all three canonical CI jobs GREEN on that record commit.
+3. Keep PR #33 Draft until explicit merge authorization.
+4. On authorization, mark ready and merge with expected-head protection; verify post-merge `main` CI.
+5. Then close M6.6 as merged and start P1 before any broad multi-monitor hardening or new product module.

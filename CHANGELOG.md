@@ -6,9 +6,9 @@ All notable changes to NotchHub are documented here. The active version is store
 
 Published release remains `v0.1.0`. Everything below is source work not yet published as a new version.
 
-### M6.6 — current draft PR #33
+### M6.6 — PR #33
 
-Status: **IMPLEMENTED / REGRESSION-INTEGRATED / CI #1238 3/3 GREEN / FINAL HORIZONTAL PHYSICAL CONTRACT PASS ON `f2e81d993...` / FULL ONE-SHA PHYSICAL MATRIX PENDING / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED ON EXACT `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` / DRAFT / NOT MERGED / NOT RELEASED**.
 
 Added and hardened:
 
@@ -31,43 +31,38 @@ Added and hardened:
 
 No global scroll/button/keyboard monitor, mouse-button event authority, event tap, polling loop, repeating timer, display link, UI-test retry/sleep masking, network/telemetry authority or new sensitive permission was added.
 
-#### 2026-08-18 — final horizontal physical contract
+#### 2026-08-18 — full M6.6 physical acceptance
 
-Final source `f2e81d993db37af9548799682ad8f03c7d64ae27` / CI #1238 / run `32072408370` passed all three canonical jobs, 365 Swift tests / 79 suites, external exact-app XCUI 11/11, production transport/archive, security/source policy, Sandbox/Hardened Runtime/signing/preflight, unchanged size budget and performance smoke.
+Frozen runtime source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` passed canonical CI #1241 / run `32075976405`:
 
-Physical testing on Mac16,8/macOS 26.6 confirmed on that exact source:
+- macOS 26 compatibility — GREEN;
+- Build, test and package — GREEN;
+- macOS UI regression — GREEN;
+- 366 Swift tests / 80 suites — GREEN;
+- external exact-app XCUI 11/11 — GREEN;
+- strict acceptance traceability, production MediaRemote transport/archive, Sandbox/Hardened Runtime/signing/preflight, unchanged active cumulative size budget and shared-runner performance smoke — GREEN.
 
-- RIGHT -> Previous/back and visual motion follows the fingers RIGHT;
-- LEFT -> Next and visual motion follows the fingers LEFT;
-- below-threshold horizontal smoke -> no switch;
-- momentum -> no extra switch;
-- DOWN/UP smoke remains correct;
-- supported horizontal arm haptic is felt exactly once.
+The complete requested Mac16,8/macOS 26.6 matrix then passed on that exact source:
 
-The final root cause was a compensating-sign design across horizontal AppKit normalization, presentation displacement and media direction. The repair makes normalized X equal the physical finger direction; presentation consumes that same X and semantic command mapping remains negative/LEFT -> Next, positive/RIGHT -> Previous. Vertical normalization is unchanged.
+- RIGHT -> Previous/back; presentation follows the fingers RIGHT; one supported arm haptic;
+- LEFT -> Next; presentation follows the fingers LEFT; one supported arm haptic;
+- media-on hover -> Peek + physical haptic without hover-only expansion;
+- stationary-pointer relaunch -> Peek + physical haptic;
+- media-off hover -> generic Peek + physical haptic;
+- explicit compact click remains prompt and single while Hover Peek/media enrichment can overlap;
+- exact-top-edge and center DOWN follow the finger and settle Expanded without twitch/self-collapse;
+- expanded pointer exit and physical UP, including UP while leaving retention, settle exact Compact;
+- seek preview / commit / cancel work; cursor restores; track/source identity change cancels the transaction;
+- source-app icon and neutral fallback render correctly;
+- Accessibility, Input Monitoring, Automation and Screen Recording remain NONE;
+- after real Quit, `pgrep -lf 'mediaremote-adapter\.pl' || true` is empty.
 
-A new `MediaGesturePhysicalPipelineTests` characterization binds raw AppKit delta -> scroll-preference normalization -> visual offset -> typed media command across both macOS scroll-direction preference states. This test is intentionally added after physical closure to prevent the specific class of compensating-sign regression that escaped narrower unit tests. It adds no production behavior.
+The physically accepted runtime SHA remains `8744b9e...`. This acceptance-record synchronization changes documentation and machine-readable coverage only; it does not create a new physical-runtime claim.
 
-#### Physical acceptance history
+#### Horizontal repair history retained
 
-- `d008f698b323963f084eedce601620ee957ef442` / CI #872 — rejected; later cycles repaired hover arbitration, vertical direction, stale seek identity and visual continuity.
-- `bbba286030b3a9d193fd2c8c913691af5c8fa200` / CI #945 — rejected on stationary-startup Hover Peek; startup regression subsequently repaired.
-- `c9b4174e9cb1c841171418ade06ade833712be21` / CI #951 — rejected for expanded pointer-exit and interactive lost-terminal behavior.
-- `0a7a7c46342eb9424b55ce9e89734d9c73a437f6` / CI #1101 — rejected for no-media Hover Peek/haptic and exact-top-edge DOWN self-collapse.
-- `6c2109195042759b951217f489a201a82dd044cd` / CI #1156 — automated-green but physically rejected because LEFT/RIGHT track commands were reversed.
-- `e39f501a6388c8a0d53c1360f8b44e1bb72454cd` — physical animation followed the fingers, but media command direction remained reversed relative to the final contract.
-- `f2e81d993db37af9548799682ad8f03c7d64ae27` / CI #1238 — final horizontal direction + follow-finger + haptic smoke PASS.
+Earlier automated-green candidates exposed that command semantics and presentation sign could compensate for each other and still be physically wrong. `MediaGesturePhysicalPipelineTests` now binds raw AppKit horizontal delta -> scroll-preference normalization -> visual offset -> typed media command across both macOS scroll-direction preference states. Historical rejected candidates remain evidence and are not rewritten as passing.
 
-Historical failures remain evidence for their exact candidates and are not erased by later GREEN runs.
+#### Acceptance state
 
-#### Hover Peek / lifecycle hardening retained
-
-The final architecture keeps generic Peek before optional enrichment, inclusive exact-top-edge containment, stable outer SwiftUI click authority and local `NSTrackingArea` hover. Bounded Peek teardown uses nonblocking cancellation on the UI actor; persistent expanded runtime and explicit Quit retain synchronous fail-closed teardown verification.
-
-`MediaRemoteSystemTransportStopRaceTests` and `ShippingMediaPeekProbeTransportIntegrationTests` cover queued capability stop races, stale callbacks, first-usable-snapshot completion and bounded release. The speculative `NSEvent.pressedMouseButtons` timing guard and primary-press production seam were removed after they failed to provide deterministic correctness.
-
-#### Acceptance status after this synchronization
-
-The horizontal physical contract is proven on `f2e81d993...`, but M6.6 as a whole remains pending because the final one-SHA matrix still requires media/no-media Peek + haptic, stationary restart, click-during-enrichment, exact-edge DOWN, pointer-exit/UP settlement, seek/cursor/source continuity, source icon, permission surface and post-Quit helper cleanup on one frozen documentation/test head.
-
-The new test/documentation commit changes no production code. Its exact head must independently pass all three canonical CI jobs before it can be frozen for that final target-Mac matrix.
+M6.6 has reached **physically accepted**, but not **merged** or **released**. PR #33 remains Draft pending explicit merge authorization. After merge, post-merge `main` CI must pass before P1 target-Mac performance/resource review begins.

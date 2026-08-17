@@ -7,9 +7,9 @@ Protected branch: `main`
 
 ## Product state
 
-NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work is event-driven unless measured evidence justifies otherwise.
+NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-Published state remains immutable `v0.1.0`. M6.6 below is unreleased source work.
+Published state remains immutable `v0.1.0`. M6.6 below is accepted source work but is still unreleased and unmerged.
 
 ### Merged foundations
 
@@ -26,13 +26,39 @@ Published state remains immutable `v0.1.0`. M6.6 below is unreleased source work
 - M6.6 prerequisite tasks through vertical visual tracking — merged.
 - Regression/UI Automation Foundation — merged via PR #34 as `bd9566f690d314ed40fd6f3723a319291ceb4a58`; post-merge main CI #1053 passed all canonical jobs.
 
-Current PR #33 base is `main` at `bd9566f690d314ed40fd6f3723a319291ceb4a58`.
+Current PR #33 base remains `main` at `bd9566f690d314ed40fd6f3723a319291ceb4a58`.
 
-## Active work — M6.6 PR #33
+## M6.6 PR #33 — physically accepted source candidate
 
-PR #33 `M6.6: app media gesture session TDD` is **implemented / regression-integrated / source candidate `f2e81d993...` 3/3 automated-green / final horizontal physical contract PASS / full one-SHA M6.6 physical matrix still pending / draft / not merged / not released**.
+PR #33 `M6.6: app media gesture session TDD` is **implemented -> automated-tested -> physically accepted on exact source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` -> still draft / not merged / not released**.
 
-Current interaction contract:
+Exact source candidate evidence:
+
+- source SHA: `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`;
+- canonical CI #1241 / run `32075976405` — 3/3 GREEN;
+- Swift gate — 366 tests / 80 suites GREEN;
+- external exact-app native XCUI — 11/11 GREEN;
+- strict acceptance traceability, production MediaRemote transport/archive, Sandbox, Hardened Runtime, shipping preflight, current cumulative size budget, coverage and shared-runner performance smoke — GREEN.
+
+On 2026-08-18 the complete requested target-Mac matrix passed on Mac16,8/macOS 26.6 using that exact candidate:
+
+- RIGHT -> Previous/back, animation follows RIGHT, one supported arm haptic;
+- LEFT -> Next, animation follows LEFT, one supported arm haptic;
+- media-on hover -> Peek + physical haptic, never accidental expansion;
+- stationary-pointer relaunch -> Peek + physical haptic;
+- media-off hover -> generic Peek + physical haptic;
+- compact click while hover/media enrichment can overlap -> one prompt Expanded transition;
+- exact-top-edge DOWN and center DOWN -> stable follow-finger expansion without twitch/self-collapse;
+- expanded pointer exit -> exact Compact;
+- expanded UP, including UP while leaving retention -> exact Compact;
+- seek preview / commit / cancel -> correct; cursor restores; track/source identity change cancels the transaction;
+- source-app icon and fallback rendering -> correct;
+- Accessibility / Input Monitoring / Automation / Screen Recording -> NONE;
+- after real Quit, `pgrep -lf 'mediaremote-adapter\.pl' || true` -> empty.
+
+Deterministic subcontracts not requiring hardware perception remain covered by the automated suite: threshold/hysteresis, short/reverted gestures, momentum rejection, diagonal arbitration, capability fail-closed behavior, 120 ms dwell, 140 ms Peek grace, Reduce Motion endpoint policy, stale generation protection, bounded source lookup and transport stop races.
+
+## Accepted interaction contract
 
 - stable `compact <-> peek <-> expanded` under one transition authority;
 - hover dwell exactly 120 ms; Peek exit grace exactly 140 ms;
@@ -43,69 +69,31 @@ Current interaction contract:
 - expanded pointer exit returns non-haptically to exact compact;
 - interactive transitions settle to exact endpoints even if moving geometry loses terminal local scroll delivery;
 - physical horizontal direction is LEFT -> `next`, RIGHT -> `previous`, independent of macOS scroll-direction preference;
-- horizontal visuals follow the physical finger direction rather than the media semantic direction;
+- horizontal visuals follow the physical finger direction;
 - seek, source identity and cursor isolation remain bounded/event-driven;
 - bounded Peek cancellation is nonblocking for the UI actor, with transport stop races and late callbacks fail-closed;
 - persistent expanded-runtime and application-Quit teardown retain synchronous fail-closed lifecycle verification.
 
-No global scroll/button/keyboard monitor, mouse-button event authority, event tap, polling loop, repeating timer, display link, UI-test retry/sleep masking, new process executable boundary, network authority, telemetry or sensitive permission has been introduced.
+No global scroll/button/keyboard monitor, mouse-button event authority, event tap, polling loop, repeating timer, display link, UI-test retry/sleep masking, new process executable boundary, network authority, telemetry or sensitive permission was introduced.
 
-## Final horizontal physical evidence
+## Regression coverage
 
-Exact source `f2e81d993db37af9548799682ad8f03c7d64ae27` / CI #1238 / run `32072408370` is 3/3 GREEN:
+The final horizontal defect is guarded by `MediaGesturePhysicalPipelineTests`, which exercises raw AppKit horizontal delta -> normalization -> follow-finger visual offset -> typed media command across both macOS scroll-direction preference states. Existing coordinator, Peek, interactive-transition, seek, cursor, source-icon, lifecycle and policy suites cover the remaining deterministic contracts.
 
-- macOS 26 compatibility — SUCCESS;
-- Build, test and package — SUCCESS;
-- macOS UI regression — SUCCESS, external exact-app XCUI 11/11;
-- Swift gate — 365 tests / 79 suites;
-- strict acceptance traceability, production MediaRemote transport/archive, Sandbox, Hardened Runtime, shipping preflight, current cumulative size budget, coverage and performance smoke — GREEN.
+The acceptance ledgers are authoritative for stable IDs:
 
-On 2026-08-18 Mac16,8/macOS 26.6 physically confirmed on exact `f2e81d993...`:
+- `docs/testing/MEDIA_GESTURE_ACCEPTANCE.md`;
+- `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`;
+- `docs/testing/MEDIA_PEEK_ACCEPTANCE.md`.
 
-- RIGHT -> Previous/back and animation RIGHT with the fingers;
-- LEFT -> Next and animation LEFT with the fingers;
-- below-threshold horizontal smoke -> no switch;
-- momentum -> no extra switch;
-- DOWN/UP smoke remained correct;
-- supported horizontal arm haptic was felt exactly once.
-
-This closes the final horizontal direction/follow-finger defect. It does not by itself promote unrelated Peek, seek, source-icon, lifecycle, permission or full interactive gates that were not re-exercised on the same exact candidate.
-
-## Horizontal repair history
-
-Historical automated-green candidate `6c2109195042759b951217f489a201a82dd044cd` was physically rejected because LEFT/RIGHT media commands were reversed.
-
-A later candidate corrected visual follow-finger motion but exposed that the command semantic axis still depended on a compensating sign inversion. The final repair makes normalized X represent the physical finger direction directly:
-
-- RIGHT -> positive X;
-- LEFT -> negative X;
-- `.visualOffset(cumulativeX)` follows that sign;
-- negative/LEFT -> `.next`;
-- positive/RIGHT -> `.previous`;
-- vertical Y normalization remains unchanged.
-
-The existing normalizer and coordinator regressions are now supplemented by `MediaGesturePhysicalPipelineTests`, which exercises raw AppKit horizontal delta -> normalizer -> visual offset -> typed command across both macOS scroll-direction preference states. This is a test-only characterization addition after the physical PASS; it changes no production behavior.
-
-## Hover Peek / lifecycle repair retained
-
-The final minimal architecture keeps:
-
-- generic Peek after valid dwell;
-- media enrichment only after authoritative `.peek` settlement;
-- `stopNonBlocking()` for bounded Peek release after callback detachment;
-- immediate cancellation of in-flight one-shot work without `waitUntilExit` on the UI actor;
-- bounded graceful/forced subprocess termination;
-- synchronous `stop()` for persistent expanded runtime and explicit Quit verification;
-- no `NSEvent.pressedMouseButtons` correctness dependency and no primary-press production seam.
-
-`MediaRemoteSystemTransportStopRaceTests` and `ShippingMediaPeekProbeTransportIntegrationTests` cover late queued capability launch, stale post-stop activity, first-usable-snapshot completion and bounded transport release.
+Machine-readable traceability remains in `Tests/Acceptance/coverage.yml` plus `coverage-current.json`.
 
 ## Security and resource invariants
 
 - App Sandbox-only entitlement and Hardened Runtime remain mandatory.
 - No Accessibility, Input Monitoring, Automation, Screen Recording, networking, telemetry, history persistence or arbitrary command authority is added.
 - Universal Media retains the reviewed fixed `/usr/bin/perl` + pinned adapter/framework boundary.
-- Settled compact and Peek own zero persistent adapter; settled expanded owns the expected presentation-scoped runtime; normal Quit must leave no orphan.
+- Settled compact and Peek own zero persistent adapter; settled expanded owns the expected presentation-scoped runtime; normal Quit leaves no orphan.
 - Gesture/Peek/transition hot paths add no polling, repeating timer, display link, global monitor, event tap, per-event subprocess creation or production logging.
 - UI fixtures and diagnostics remain compile-time test-only; shipping composition still creates the concrete production runtime.
 
@@ -113,30 +101,19 @@ The final minimal architecture keeps:
 
 `performance/baseline-v0.1.0.json` and all historical feature budgets remain immutable provenance records.
 
-The active cumulative envelope remains `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json`. CI #1238 passed the same envelope without expansion.
+The active cumulative envelope remains `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json`; exact candidate CI #1241 passed without widening it.
 
-Shared-runner performance remains compatibility evidence only. Target-Mac CPU/RSS/threads/wakeups/energy acceptance remains P1 and starts only after M6.6 physical acceptance and merge.
+Shared-runner performance remains compatibility evidence only. Target-Mac CPU/RSS/threads/wakeups/energy acceptance remains P1 and starts only after PR #33 is merged and post-merge `main` is verified.
 
-## Still not accepted on one final exact candidate
+## Acceptance-record rule
 
-- complete no-media and media Hover Peek physical matrix, including stationary-pointer relaunch and physical hover haptic;
-- compact click while Hover Peek/media enrichment overlaps;
-- exact-top-edge DOWN and full interactive pointer/panel separation matrix;
-- complete UP/pointer-exit settlement matrix;
-- full seek/cursor/source-continuity matrix;
-- source-icon matrix;
-- lifecycle cleanup after real Quit with explicit empty `pgrep` evidence;
-- full permission matrix;
-- all remaining pending `NH-MEDIA-PEEK-*`, `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`, and `NH-MEDIA-SOURCE-ICON-*` gates;
-- PR #33 remains draft/unmerged;
-- no new release claim is made;
-- P1 and multi-display hardening remain blocked by M6.6 acceptance.
+The physical source acceptance is frozen on exact `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`. The follow-up acceptance-record commit changes documentation and machine-readable coverage only; it does not redefine the physically accepted runtime SHA. That record must pass all canonical CI gates before PR #33 can advance.
+
+PR #33 intentionally remains Draft until separate merge authorization. No release claim is made.
 
 ## Next optimal step
 
-1. Land the test/documentation synchronization as one atomic PR-head commit with no production-code change.
-2. Require all three canonical CI jobs GREEN on that exact head. The expected regression suite includes the new raw-input -> visual -> command horizontal pipeline test.
-3. Freeze that exact SHA and CI-produced artifact provenance without another repository commit.
-4. Perform one final target-Mac one-SHA M6.6 physical matrix on the frozen head, including a quick LEFT/RIGHT reconfirmation plus the remaining Peek, interactive, seek, source, lifecycle and permission gates.
-5. After real Quit run `pgrep -lf 'mediaremote-adapter\.pl' || true` and require empty output.
-6. Only after full one-SHA physical evidence is green may PR #33 become ready, merge, receive post-merge main verification and unblock P1/multi-display hardening.
+1. Validate this acceptance-record commit through all three canonical CI jobs without production changes or policy weakening.
+2. Update PR #33 metadata to point at accepted source `8744b9e...` and the acceptance-record CI evidence while keeping it Draft.
+3. On explicit merge authorization, mark PR #33 ready, merge with expected-head protection and verify post-merge `main` CI.
+4. Only after the merge/post-merge gate, close M6.6 as merged and begin P1 target-Mac whole-app performance/resource review before multi-monitor hardening.
