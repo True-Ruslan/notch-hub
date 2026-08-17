@@ -77,6 +77,50 @@ struct MediaGesturePeekTests {
     }
 
     @Test
+    func negativeSemanticHorizontalDeltaProducesPositivePresentationOffset() {
+        let coordinator = MediaGestureCoordinator()
+        _ = coordinator.handle(
+            sample(.began),
+            surface: .peek,
+            previous: .pending,
+            next: .pending,
+            seekActive: false
+        )
+
+        let changed = coordinator.handle(
+            sample(.changed, x: -40),
+            surface: .peek,
+            previous: .pending,
+            next: .pending,
+            seekActive: false
+        )
+
+        #expect(visualOffsets(changed) == [40])
+    }
+
+    @Test
+    func positiveSemanticHorizontalDeltaProducesNegativePresentationOffset() {
+        let coordinator = MediaGestureCoordinator()
+        _ = coordinator.handle(
+            sample(.began),
+            surface: .peek,
+            previous: .pending,
+            next: .pending,
+            seekActive: false
+        )
+
+        let changed = coordinator.handle(
+            sample(.changed, x: 40),
+            surface: .peek,
+            previous: .pending,
+            next: .pending,
+            seekActive: false
+        )
+
+        #expect(visualOffsets(changed) == [-40])
+    }
+
+    @Test
     func peekDownAt70PointsRequestsExpansionOnlyOnEnd() {
         let coordinator = MediaGestureCoordinator()
         _ = coordinator.handle(
@@ -213,6 +257,15 @@ struct MediaGesturePeekTests {
                 return nil
             }
             return direction
+        }
+    }
+
+    private func visualOffsets(_ effects: [MediaGestureEffect]) -> [Double] {
+        effects.compactMap { effect in
+            guard case .visualOffset(let value) = effect else {
+                return nil
+            }
+            return value
         }
     }
 }
