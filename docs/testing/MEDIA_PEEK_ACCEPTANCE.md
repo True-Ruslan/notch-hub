@@ -5,7 +5,7 @@ Date: 2026-08-18
 Target: macOS 26.6 / Mac16,8
 Scope: M6.6 PR #33 Hover Peek / explicit-click / lifecycle acceptance
 
-This ledger is additive. Existing `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`, and `NH-MEDIA-SOURCE-ICON-*` IDs are not renumbered or weakened. Automated CI is necessary but does not replace target-Mac physical evidence.
+This ledger is additive. Existing `NH-MEDIA-GESTURE-*`, `NH-NOTCH-INTERACTIVE-*`, and `NH-MEDIA-SOURCE-ICON-*` IDs are not renumbered or weakened. Automated CI is necessary but does not replace target-Mac physical evidence. Historical rejected gates stay rejected until superseded by explicit physical evidence on the final exact candidate.
 
 ## Current contract
 
@@ -34,8 +34,8 @@ The final horizontal gesture contract was physically confirmed on this exact sou
 
 | ID | Gate | Required result | Automated | Physical |
 |---|---|---|---|---|
-| `NH-MEDIA-PEEK-001` | Hover destination + stationary restart | With usable media, 120 ms hover opens Peek only and requests expected Peek haptic exactly once; relaunch with pointer already stationary behaves the same. | GREEN through #1238 | Historical rejection exists; final exact-head RETEST REQUIRED |
-| `NH-MEDIA-PEEK-002` | No-media hover | Valid 120 ms no-media dwell opens generic Peek, requests one hover haptic, never expands, and starts no persistent media observation. | GREEN | RETEST REQUIRED |
+| `NH-MEDIA-PEEK-001` | Hover destination + stationary restart | With usable media, 120 ms hover opens Peek only and requests expected Peek haptic exactly once; relaunch with pointer already stationary behaves the same. | GREEN through #1238 | REJECTED on historical physical candidate; final exact-head RETEST REQUIRED |
+| `NH-MEDIA-PEEK-002` | No-media hover | Valid 120 ms no-media dwell opens generic Peek, requests one hover haptic, never expands, and starts no persistent media observation. | GREEN | RETEST REQUIRED / PENDING final exact-head evidence |
 | `NH-MEDIA-PEEK-003` | Fast pointer pass | Transit shorter than dwell does not expand or leave Peek stuck. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-004` | 140 ms grace | Exit/re-entry before 140 ms keeps Peek; staying outside through deadline returns to compact. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-005` | Explicit expansion | Free-surface click and physical DOWN from Peek each expand exactly once; compact click remains prompt while hover/media enrichment overlaps. | Root ownership + native XCUI stress GREEN | PENDING |
@@ -43,8 +43,8 @@ The final horizontal gesture contract was physically confirmed on this exact sou
 | `NH-MEDIA-PEEK-007` | Peek seek | Timeline seek works in Peek without expanding and suppresses notch gestures while active. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-008` | Seek cursor | Cursor hides only after valid seek begin and restores on every terminal/isolation path; no warp/lock. | GREEN | PENDING |
 | `NH-MEDIA-PEEK-009` | Track continuity | Track/source changes update active media without obvious Home/interface blink while media stays valid. | GREEN | PENDING |
-| `NH-MEDIA-PEEK-010` | Downward continuity | Compact DOWN follows interactive expansion; exact top edge is valid with no twitch/self-collapse or intermediate settled frame. | GREEN | Historical rejection exists; final exact-head RETEST REQUIRED |
-| `NH-MEDIA-PEEK-011` | Expanded collapse + pointer exit | Expanded UP returns to exact compact; leaving retention also collapses non-haptically; no intermediate settled frame. | GREEN | Historical rejection exists; final exact-head RETEST REQUIRED |
+| `NH-MEDIA-PEEK-010` | Downward continuity | Compact DOWN follows interactive expansion; exact top edge is valid with no twitch/self-collapse or intermediate settled frame. | GREEN | REJECTED on historical exact-edge candidate; final exact-head RETEST REQUIRED |
+| `NH-MEDIA-PEEK-011` | Expanded collapse + pointer exit | Expanded UP returns to exact compact; leaving retention also collapses non-haptically; no intermediate settled frame. | GREEN | REJECTED on historical candidate; final exact-head RETEST REQUIRED |
 | `NH-MEDIA-PEEK-012` | Lifecycle | Compact, Peek, cancelled/retargeted transitions and Quit leave no unexpected persistent adapter. Bounded Peek cancellation is nonblocking for UI while subprocess ownership remains bounded. | Stop-race + transport-integration + package/security GREEN | PENDING explicit final lifecycle evidence |
 | `NH-MEDIA-PEEK-013` | Permissions | No Accessibility, Input Monitoring, Automation or Screen Recording prompts are introduced. | Security/policy GREEN | PENDING final permission matrix |
 
