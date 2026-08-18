@@ -10,40 +10,44 @@ Current published version: **`0.1.0` — Personal build**.
 
 Current development state:
 
-- M0 Engineering Foundation — accepted;
-- R0.1 Personal Release `v0.1.0` — accepted and published;
-- P0 Performance Foundation — accepted;
+- M0 Engineering Foundation — accepted/merged;
+- R0.1 Personal Release `v0.1.0` — accepted/released;
+- P0 Performance Foundation — accepted/merged;
 - P0.1 Public Repository Readiness — accepted;
-- M1 interaction/transition slice — accepted;
+- M1 interaction/transition slice — accepted/merged;
 - M6.1 Universal Media transport feasibility — accepted;
-- M6.2 production media state/controller/bridge boundary — accepted;
-- M6.3 concrete system-media transport — accepted;
-- M6.4 shipping media composition — accepted and merged;
-- **M6.5 compact + expanded Media-first UI — accepted and merged via PR #19 as `5305dbb87d7a2d0d1c7e4bc1eba156cfcafd4e86`; post-merge `main` CI #772 PASS.**
+- M6.2 production media state/controller/bridge boundary — accepted/merged;
+- M6.3 concrete system-media transport — accepted/merged;
+- M6.4 shipping media composition — accepted/merged;
+- M6.5 compact + expanded Media-first UI — accepted/merged;
+- **M6.6 gestures, haptics, interactive notch, seek and Hover Peek — implemented, automated-tested, physically accepted and merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; not released.**
+- **P1 whole-app target-Mac performance/resource review — active in Draft PR #36.**
 
 The published `v0.1.0` release predates the M1/P0.1/M6 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
 
-The next product slice is M6.6: first harden the bounded collapse-layout edge tracked in issue #20, then add local media gestures, haptics and draggable seek. P1 whole-app performance and the deferred local pointer-tracking experiment follow after that functional slice.
+The current priority is P1: measure the merged M6.6 application on Mac16,8/macOS 26.6, characterize CPU/RSS/threads/wakeups/energy/compositor behavior, and optimize only where evidence demonstrates a material issue. Broader multi-monitor hardening and new product modules remain after this resource gate.
 
 ## Universal Media
 
 NotchHub follows the macOS system Now Playing source rather than targeting one music application.
 
-Accepted behavior now includes:
+Accepted source behavior now includes:
 
-- presentation-scoped system-media runtime: zero adapter while compact, runtime only after settled expansion;
-- compact retained media context with symmetric visible wings around the physical notch;
-- expanded Media-first artwork/metadata/source presentation;
-- capability-driven previous/play-pause/next controls;
+- stable `compact`, `peek`, `expanded` ownership under one transition authority;
+- media and generic no-media Hover Peek with exact dwell/grace behavior;
+- explicit click and physical DOWN expansion plus physical UP/pointer-exit collapse;
+- horizontal LEFT -> Next and RIGHT -> Previous with presentation following the fingers;
+- public AppKit haptic feedback for supported qualifying gesture arms;
+- capability-driven previous/play-pause/next and draggable seek;
+- source-app badge/fallback and identity-locked seek cancellation;
+- presentation-scoped system-media runtime: zero persistent adapter while settled compact/Peek, runtime only in settled expanded;
 - trustworthy event-driven static progress without a one-second polling loop;
-- media disappearance while expanded -> Home without collapsing the panel;
-- fresh authoritative state replacing retained compact context after re-expansion;
 - typed, bounded system-media command/process boundary;
 - no listening-history persistence or production metadata logging.
 
 Yandex Music and Yandex Browser/Chromium system Now Playing are physically verified on the primary target. Apple Music, Spotify and additional independent-player compatibility remain explicitly unverified rather than assumed.
 
-Gestures, haptic interaction for media controls, draggable seek and animated/live compact progress are not part of M6.5.
+The physically accepted M6.6 runtime is pinned to exact source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`; documentation/coverage descendants do not rewrite that hardware evidence. The feature is now merged into `main` through `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
 
 ## Requirements
 
@@ -105,7 +109,7 @@ Current runtime policy includes:
 - no direct application networking/WebKit surface;
 - no bundled secrets;
 - no Accessibility, Input Monitoring, Automation/Apple Events or Screen Recording requirement;
-- global input observation limited to the existing narrow `.mouseMoved` fallback;
+- global input observation limited to the existing narrow `.mouseMoved` fallback under P1 review;
 - exactly one reviewed production subprocess boundary for Universal Media, fixed to `/usr/bin/perl` with pinned resources and a closed typed command surface;
 - no arbitrary shell/executable/argument surface;
 - no dynamic private-framework loading inside the NotchHub process;
@@ -123,13 +127,14 @@ Key invariants:
 
 - runtime work is event-driven by default;
 - no unreviewed polling/repeating timer/display-link/busy-loop surface;
-- compact media state owns zero adapter processes;
+- settled compact and Peek own zero persistent media observer;
 - shared CI validates deterministic source/lifecycle/package/size policy, not noisy runner CPU/RSS magnitudes;
 - target-Mac runtime evidence is required for resource acceptance;
 - immutable `v0.1.0` baseline remains historical evidence and is never silently rewritten;
-- intentional feature size growth uses separately reviewed provenance-backed budgets (`M6.4`, `M6.5`) rather than widening the historical baseline.
+- P1 combines exact CPU/RSS/thread reports with privacy-safe target-Mac wakeup/energy/compositor evidence before any optimization decision;
+- performance work cannot broaden permissions, input capture, networking or telemetry authority.
 
-See [`PERFORMANCE.md`](PERFORMANCE.md) and `performance/`.
+See [`PERFORMANCE.md`](PERFORMANCE.md), [`docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`](docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md) and `performance/`.
 
 ## Distribution
 
@@ -159,13 +164,15 @@ See [`docs/RELEASING.md`](docs/RELEASING.md).
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — milestone order and exit criteria
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — runtime/package ownership
 - [`docs/TESTING.md`](docs/TESTING.md) — CI and physical acceptance policy
-- [`docs/testing/MEDIA_UI_ACCEPTANCE.md`](docs/testing/MEDIA_UI_ACCEPTANCE.md) — M6.5 acceptance evidence
+- [`docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`](docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md) — active P1 target-Mac resource runbook
+- [`docs/testing/MEDIA_GESTURE_ACCEPTANCE.md`](docs/testing/MEDIA_GESTURE_ACCEPTANCE.md) — M6.6 gesture evidence
+- [`docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`](docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md) — M6.6 interaction evidence
+- [`docs/testing/MEDIA_PEEK_ACCEPTANCE.md`](docs/testing/MEDIA_PEEK_ACCEPTANCE.md) — M6.6 Peek evidence
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — TDD/Git/documentation policy
 - [`SECURITY.md`](SECURITY.md) — security/privacy boundary
 - [`PERFORMANCE.md`](PERFORMANCE.md) — performance/resource policy and baseline interpretation
 - [`CHANGELOG.md`](CHANGELOG.md) — notable changes
-- [`docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md`](docs/superpowers/specs/2026-08-09-universal-media-gestures-haptics-design.md) — approved Universal Media product design
-- [`docs/superpowers/specs/2026-08-11-media-first-ui-design.md`](docs/superpowers/specs/2026-08-11-media-first-ui-design.md) — M6.5 Media-first UI design
+- [`docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`](docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md) — active P1 implementation plan
 
 ## License
 
