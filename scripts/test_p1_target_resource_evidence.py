@@ -229,6 +229,40 @@ class P1TargetResourceEvidenceTests(unittest.TestCase):
                 manual_evidence=manual,
             )
 
+    def test_rejects_malformed_manual_method_and_finding_types_fail_closed(self):
+        manual = _manual_evidence()
+        manual["energy"]["method"] = ["instruments-power-profiler"]
+        with self.assertRaises(EvidenceError):
+            build_evidence_bundle(
+                expected_source_commit=SOURCE_COMMIT,
+                idle_report=_report("idle"),
+                hover_report=_report("hover"),
+                stability_report=_report("stability"),
+                manual_evidence=manual,
+            )
+
+        manual = _manual_evidence()
+        manual["energy"]["finding"] = {"value": "no-anomaly-observed"}
+        with self.assertRaises(EvidenceError):
+            build_evidence_bundle(
+                expected_source_commit=SOURCE_COMMIT,
+                idle_report=_report("idle"),
+                hover_report=_report("hover"),
+                stability_report=_report("stability"),
+                manual_evidence=manual,
+            )
+
+        manual = _manual_evidence()
+        manual["compositor"]["finding"] = ["no-anomaly-observed"]
+        with self.assertRaises(EvidenceError):
+            build_evidence_bundle(
+                expected_source_commit=SOURCE_COMMIT,
+                idle_report=_report("idle"),
+                hover_report=_report("hover"),
+                stability_report=_report("stability"),
+                manual_evidence=manual,
+            )
+
     def test_flags_explicit_manual_anomaly_for_review_without_inventing_threshold(self):
         manual = _manual_evidence()
         manual["energy"]["finding"] = "anomaly-observed"
