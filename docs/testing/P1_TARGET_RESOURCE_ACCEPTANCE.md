@@ -1,9 +1,13 @@
 # P1 Target-Mac Resource Acceptance
 
+Status: PENDING — canonical P1 target-Mac measurements are not collected yet.
+
 Primary target: `Mac16,8` / macOS `26.6`
 Measured runtime source for the initial P1 audit: `bb6df211699c5aef7bac7d50866f3e24b2fe165b`
 
 This runbook collects whole-app performance/resource evidence without changing the shipping application or granting additional permissions.
+
+The `PENDING` ledger status applies to the current P1 audit as a whole. The scenario definitions are stable; current-runtime values are not accepted until the exact target evidence below is collected and reviewed.
 
 ## Evidence boundary
 
