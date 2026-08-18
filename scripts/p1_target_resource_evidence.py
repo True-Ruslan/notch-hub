@@ -76,6 +76,12 @@ def _mapping(value: object, label: str) -> Mapping[str, object]:
     return value
 
 
+def _string(value: object, label: str) -> str:
+    if not isinstance(value, str):
+        raise EvidenceError(f"{label} must be a string")
+    return value
+
+
 def _exact_keys(value: Mapping[str, object], expected: set[str], label: str) -> None:
     actual = set(value)
     if actual != expected:
@@ -218,7 +224,8 @@ def _manual(value: object, expected_source_commit: str) -> tuple[dict[str, objec
 
     wakeups = _mapping(manual.get("idleWakeups"), "manual.idleWakeups")
     _exact_keys(wakeups, _IDLE_WAKEUP_KEYS, "manual.idleWakeups")
-    if wakeups.get("method") != "activity-monitor-idle-wake-ups":
+    wakeups_method = _string(wakeups.get("method"), "manual.idleWakeups.method")
+    if wakeups_method != "activity-monitor-idle-wake-ups":
         raise EvidenceError("idle wakeups method must be activity-monitor-idle-wake-ups")
     if _integer(wakeups.get("observationSeconds"), "manual.idleWakeups.observationSeconds", minimum=1) != 60:
         raise EvidenceError("idle wakeups observationSeconds must equal 60")
@@ -229,28 +236,29 @@ def _manual(value: object, expected_source_commit: str) -> tuple[dict[str, objec
 
     energy = _mapping(manual.get("energy"), "manual.energy")
     _exact_keys(energy, _ENERGY_KEYS, "manual.energy")
-    energy_method = energy.get("method")
+    energy_method = _string(energy.get("method"), "manual.energy.method")
     if energy_method not in _ENERGY_METHODS:
         raise EvidenceError(f"unsupported energy method: {energy_method!r}")
     if _integer(energy.get("observationSeconds"), "manual.energy.observationSeconds", minimum=1) != 60:
         raise EvidenceError("energy observationSeconds must equal 60")
-    energy_finding = energy.get("finding")
+    energy_finding = _string(energy.get("finding"), "manual.energy.finding")
     if energy_finding not in _FINDINGS:
         raise EvidenceError(f"unsupported energy finding: {energy_finding!r}")
 
     compositor = _mapping(manual.get("compositor"), "manual.compositor")
     _exact_keys(compositor, _COMPOSITOR_KEYS, "manual.compositor")
-    if compositor.get("method") != "instruments-core-animation":
+    compositor_method = _string(compositor.get("method"), "manual.compositor.method")
+    if compositor_method != "instruments-core-animation":
         raise EvidenceError("compositor method must be instruments-core-animation")
     if _integer(compositor.get("interactionCycles"), "manual.compositor.interactionCycles", minimum=1) != 10:
         raise EvidenceError("compositor interactionCycles must equal 10")
-    compositor_finding = compositor.get("finding")
+    compositor_finding = _string(compositor.get("finding"), "manual.compositor.finding")
     if compositor_finding not in _FINDINGS:
         raise EvidenceError(f"unsupported compositor finding: {compositor_finding!r}")
 
     normalized = {
         "idleWakeups": {
-            "method": "activity-monitor-idle-wake-ups",
+            "method": wakeups_method,
             "observationSeconds": 60,
             "wakeupsPerSecond": wakeups_per_second,
         },
@@ -260,7 +268,7 @@ def _manual(value: object, expected_source_commit: str) -> tuple[dict[str, objec
             "finding": energy_finding,
         },
         "compositor": {
-            "method": "instruments-core-animation",
+            "method": compositor_method,
             "interactionCycles": 10,
             "finding": compositor_finding,
         },
