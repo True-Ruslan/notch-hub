@@ -21,26 +21,64 @@ Wakeups, energy and compositor observations remain explicit target-Mac evidence.
 
 Do not commit the raw files under `build/`.
 
-## 1. Prepare exact runtime and tooling
+## 1. Prepare separate exact runtime and tooling checkouts
 
-Use an exact app built from source:
+The initial P1 audit intentionally measures the already-merged M6.6 runtime while using the separately accepted P1 measurement tooling. These are **two different Git commits** and must not be collapsed into one checkout.
+
+Set the exact runtime source and the final accepted P1 tooling source:
 
 ```bash
 RUNTIME_SHA="bb6df211699c5aef7bac7d50866f3e24b2fe165b"
-git rev-parse "$RUNTIME_SHA"
+TOOLING_SHA="<accepted-P1-tooling-SHA>"
 ```
 
-Run the measurement commands from the accepted P1 tooling checkout. `perf-baseline.py` records that checkout as `measurementToolCommit`, while `--source-commit` pins the separately measured app runtime.
+`TOOLING_SHA` must be replaced with the exact P1 foundation commit published after its canonical CI/merge gate. Do not use a moving branch name such as `main` or `agent/p1-target-mac-resource-audit` as measurement provenance.
 
-Quit any other NotchHub instance, launch the exact `RUNTIME_SHA` app normally, then obtain the PID:
+From a clean repository checkout, create two detached worktrees:
 
 ```bash
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+git worktree add --detach ../notch-hub-p1-runtime "$RUNTIME_SHA"
+git worktree add --detach ../notch-hub-p1-tooling "$TOOLING_SHA"
+
+test "$(git -C ../notch-hub-p1-runtime rev-parse HEAD)" = "$RUNTIME_SHA"
+test "$(git -C ../notch-hub-p1-tooling rev-parse HEAD)" = "$TOOLING_SHA"
+```
+
+Build the **measured application only from the runtime worktree**:
+
+```bash
+(
+  cd ../notch-hub-p1-runtime
+  ./scripts/build-app.sh
+)
+
+test "$(plutil -extract NHSourceCommit raw \
+  ../notch-hub-p1-runtime/build/NotchHub.app/Contents/Info.plist)" = "$RUNTIME_SHA"
+```
+
+Quit any other NotchHub instance, then launch exactly that app:
+
+```bash
+open ../notch-hub-p1-runtime/build/NotchHub.app
+
 PID="$(pgrep -x NotchHub)"
 test -n "$PID"
 ps -p "$PID" -o pid=,comm=
 ```
 
 If more than one NotchHub process exists, stop and resolve that ambiguity rather than guessing a PID.
+
+Run **all measurement and evidence commands from the tooling worktree**:
+
+```bash
+cd ../notch-hub-p1-tooling
+test "$(git rev-parse HEAD)" = "$TOOLING_SHA"
+```
+
+`perf-baseline.py` records this tooling checkout as `measurementToolCommit`, while every `--source-commit "$RUNTIME_SHA"` argument pins the separately measured application source. The evidence bundler rejects reports if those provenance roles drift or disagree.
 
 ## 2. Idle scenario
 
