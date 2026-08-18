@@ -40,48 +40,17 @@ Race, stale-callback, boundary and teardown behavior must be tested deterministi
 
 The physically accepted runtime source is `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`.
 
-Canonical CI #1241 / run `32075976405` passed:
+Canonical CI #1241 / run `32075976405` passed all three jobs, 366 Swift tests / 80 suites, 11/11 native external-app XCUI tests, strict acceptance traceability, production transport/archive verification, release security/signing/preflight, active size budget and shared-runner performance smoke.
 
-- all three canonical jobs;
-- 366 Swift tests / 80 suites;
-- 11/11 native external-app XCUI tests;
-- strict acceptance traceability;
-- production transport/archive verification;
-- release DMG, security, App Sandbox-only entitlement, Hardened Runtime, signing and shipping preflight;
-- active cumulative size budget without widening;
-- shared-runner performance smoke.
+The horizontal regression stack includes `MediaGestureInputNormalizerTests`, `MediaGestureCoordinatorTests` and `MediaGesturePhysicalPipelineTests`, covering raw AppKit direction through normalization, follow-finger visuals and typed commands across macOS scroll-direction preference states.
 
-The horizontal regression stack includes:
-
-- `MediaGestureInputNormalizerTests` for physical-axis normalization;
-- `MediaGestureCoordinatorTests` for direction, threshold, hysteresis, haptic, momentum, diagonal arbitration, capability validation and vertical intent;
-- `MediaGesturePhysicalPipelineTests` for raw AppKit X -> normalization -> follow-finger visual offset -> typed command across both macOS scroll-direction preference states.
-
-Hover/Peek and interaction regressions cover exact 120 ms dwell, 140 ms exit grace, generic no-media Peek, stale activation rejection, local pointer exit, exact-top-edge inclusive containment, interactive exact endpoint settlement and lost-terminal safety.
-
-Seek/source/lifecycle regressions cover capability gating, local preview and commit/cancel behavior, session identity invalidation, balanced cursor ownership, bounded public `NSWorkspace` source lookup, transport stop-before-queued-work races and stale callback rejection.
+Hover/Peek, interaction, seek/source and lifecycle regressions cover exact dwell/grace, generic no-media Peek, stale activation rejection, exact-top-edge containment, endpoint settlement, capability gating, identity invalidation, balanced cursor ownership, bounded source lookup, transport stop races and stale callback rejection.
 
 ## M6.6 physical acceptance and merge
 
 On 2026-08-18 Mac16,8/macOS 26.6, the complete requested physical matrix passed on exact source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` after CI #1241 was green.
 
-Physical evidence includes:
-
-- RIGHT -> Previous/back, follow-finger RIGHT, one supported arm haptic;
-- LEFT -> Next, follow-finger LEFT, one supported arm haptic;
-- media-on Hover Peek + haptic and stationary-pointer relaunch;
-- no-media generic Hover Peek + haptic;
-- prompt single click expansion while hover/media enrichment may overlap;
-- exact-top-edge and center DOWN without twitch/self-collapse;
-- expanded pointer-exit and physical UP exact Compact settlement;
-- seek preview/commit/cancel, cursor restore and track/source identity cancellation;
-- source icon and fallback rendering;
-- Accessibility / Input Monitoring / Automation / Screen Recording all NONE;
-- post-Quit helper cleanup confirmed by empty `pgrep -lf 'mediaremote-adapter\.pl' || true`.
-
-Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #1243 3/3 GREEN without changing production code. PR #33 was then squash-merged as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
-
-Post-merge main CI #1244 ultimately passed all three jobs on that exact source. Its first packaging attempt hit `hdiutil ... Resource temporarily unavailable` after successful tests/signing; only the failed job was rerun on unchanged source and passed. This is CI-runner evidence, not an application regression.
+Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #1243 3/3 GREEN without changing production code. PR #33 was squash-merged as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; post-merge main CI #1244 ultimately passed all three jobs on that exact source.
 
 M6.6 is merged but not released.
 
@@ -95,42 +64,36 @@ Authoritative M6.6 ledgers:
 
 Machine-readable coverage lives in `Tests/Acceptance/coverage.yml` plus `coverage-current.json`; `scripts/test_acceptance_coverage.py --mode strict` must remain green. Accepted IDs must cite concrete automated coverage, physical evidence, or both.
 
-Physical source acceptance stays pinned to `8744b9e...`; documentation descendants and the later squash merge do not rewrite that exact target-Mac claim.
+Physical source acceptance stays pinned to `8744b9e...`; documentation descendants and later squash merges do not rewrite that exact target-Mac claim.
 
 ## P1 target resource evidence foundation
 
-P1 is active in Draft PR #36.
+Status: **MERGED / POST-MERGE CI VERIFIED / TARGET-MAC EVIDENCE PENDING**.
 
-The first slice intentionally changes no shipping runtime behavior. It adds a fail-closed development/release evidence boundary around existing resource measurements.
+PR #36 merged the development/release-only evidence foundation as exact tooling SHA:
 
-Canonical deterministic coverage includes `P1TargetResourceEvidencePolicyTests`, which launches `scripts/test_p1_target_resource_evidence.py` inside normal `swift test`. This prevents the Python evidence contract from silently falling outside the protected Swift gate.
+`5cd9a2a47d87a433155f53b3aa0510000f2fce85`
 
-TDD RED evidence:
+Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged main/tooling source `5cd9a2a4...` passed post-merge CI #1261 3/3 GREEN.
 
-- head `6b7e90ff17803ef2678ff518b84fe82c8a39e06f`;
-- CI #1245;
-- 367 tests / 81 suites executed;
-- exactly one new issue: `ModuleNotFoundError: p1_target_resource_evidence` from the P1 policy test;
-- existing suites remained green.
+The foundation changed no `Sources/` file. Canonical deterministic coverage includes `P1TargetResourceEvidencePolicyTests`, which launches `scripts/test_p1_target_resource_evidence.py` inside normal `swift test` so the Python evidence contract cannot silently fall outside the protected gate.
 
-The GREEN implementation is `scripts/p1_target_resource_evidence.py`. Its contract validates:
+TDD evidence:
 
-- exact measured runtime source commit;
-- one shared measurement-tool commit;
-- exact Mac16,8/macOS 26.6 platform;
-- exact idle/hover/stability timing, sample intervals and sample counts;
-- attached-process measurement mode;
-- finite non-negative CPU/RSS/wakeup values and valid thread counts;
-- required long-run stability summary;
-- closed manual-evidence methods/findings with no arbitrary free-form surface.
+- CI #1245 / head `6b7e90ff17803ef2678ff518b84fe82c8a39e06f`: missing `p1_target_resource_evidence` implementation was the sole new failure;
+- CI #1258 / head `98cd0974da8e1a71b6322d168e9f28834fe72a0c`: malformed list/dict manual fields exposed uncontrolled `TypeError`; final code converts these to fail-closed `EvidenceError`;
+- final pre-merge and post-merge canonical gates are GREEN.
 
-The normalized bundle omits timestamps/raw traces and does not invent target thresholds for energy or compositor behavior. An explicit manual anomaly sets `reviewRequired: true` and requires investigation.
+The evidence contract validates exact measured runtime source, one shared measurement-tool commit, exact Mac16,8/macOS 26.6 platform, fixed idle/hover/stability timing/sample counts, attached-process mode, finite metrics, required stability summary and closed manual methods/findings. Normalized evidence omits timestamps/raw traces and does not invent energy/compositor thresholds. Explicit manual anomaly sets `reviewRequired: true`.
 
-Canonical target procedure is `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`.
+## P1 physical/resource collection boundary
 
-## Performance boundary
+The first P1 audit must use two distinct detached sources:
 
-`performance/baseline-v0.1.0.json` and historical feature budgets remain immutable evidence. The active cumulative envelope is `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json`; merged M6.6 passed it without widening.
+- measured runtime: `bb6df211699c5aef7bac7d50866f3e24b2fe165b`;
+- measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
+
+Later docs-only commits do not replace either provenance anchor. Canonical target procedure is `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`.
 
 Shared-runner CPU/RSS magnitudes are compatibility evidence, not target-Mac acceptance. P1 uses the real Mac16,8/macOS 26.6 for CPU/RSS/threads/wakeups/energy/compositor review.
 

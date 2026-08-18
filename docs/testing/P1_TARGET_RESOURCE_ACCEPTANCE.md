@@ -3,7 +3,8 @@
 Status: PENDING — canonical P1 target-Mac measurements are not collected yet.
 
 Primary target: `Mac16,8` / macOS `26.6`
-Measured runtime source for the initial P1 audit: `bb6df211699c5aef7bac7d50866f3e24b2fe165b`
+Measured runtime source: `bb6df211699c5aef7bac7d50866f3e24b2fe165b`
+Accepted measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`
 
 This runbook collects whole-app performance/resource evidence without changing the shipping application or granting additional permissions.
 
@@ -25,14 +26,12 @@ Do not commit the raw files under `build/`.
 
 The initial P1 audit intentionally measures the already-merged M6.6 runtime while using the separately accepted P1 measurement tooling. These are **two different Git commits** and must not be collapsed into one checkout.
 
-Set the exact runtime source and the final accepted P1 tooling source:
-
 ```bash
 RUNTIME_SHA="bb6df211699c5aef7bac7d50866f3e24b2fe165b"
-TOOLING_SHA="<accepted-P1-tooling-SHA>"
+TOOLING_SHA="5cd9a2a47d87a433155f53b3aa0510000f2fce85"
 ```
 
-`TOOLING_SHA` must be replaced with the exact P1 foundation commit published after its canonical CI/merge gate. Do not use a moving branch name such as `main` or `agent/p1-target-mac-resource-audit` as measurement provenance.
+Do not replace either with a moving branch name. Later documentation-only commits do not redefine these provenance anchors.
 
 From a clean repository checkout, create two detached worktrees:
 

@@ -4,14 +4,15 @@ Last updated: 2026-08-18
 Published version: `0.1.0` Personal Release
 Primary physical target: macOS 26.6 / Mac16,8
 Protected branch: `main`
-Current main source: `bb6df211699c5aef7bac7d50866f3e24b2fe165b`
-Active development: P1 target-Mac whole-app resource review, Draft PR #36
+Frozen P1 measured runtime: `bb6df211699c5aef7bac7d50866f3e24b2fe165b`
+Frozen P1 measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`
+Active development: P1 target-Mac whole-app resource evidence collection
 
 ## Product state
 
 NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-Published state remains immutable `v0.1.0`. M6.6 is now accepted and merged source work but remains unreleased. P1 is the active gate before broad multi-monitor hardening or another product module.
+Published state remains immutable `v0.1.0`. M6.6 is accepted and merged source work but remains unreleased. P1 is the active gate before broad multi-monitor hardening or another product module.
 
 ## Merged foundations
 
@@ -27,6 +28,7 @@ Published state remains immutable `v0.1.0`. M6.6 is now accepted and merged sour
 - M6.5 Media-first UI — accepted/merged.
 - Regression/UI Automation Foundation — merged via PR #34 as `bd9566f690d314ed40fd6f3723a319291ceb4a58`.
 - M6.6 gestures/haptics/interactive notch/seek/Hover Peek — accepted/merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
+- P1 target resource measurement foundation — implemented/tested/merged via PR #36 as `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
 
 ## M6.6 acceptance and merge provenance
 
@@ -43,13 +45,7 @@ Canonical source evidence:
 - Accessibility / Input Monitoring / Automation / Screen Recording NONE;
 - post-Quit `pgrep -lf 'mediaremote-adapter\.pl' || true` empty.
 
-Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` changed documentation/coverage only and passed CI #1243 3/3 GREEN. It did not redefine the physical runtime candidate.
-
-PR #33 was then marked Ready and squash-merged with expected-head protection. Merge/main SHA:
-
-`bb6df211699c5aef7bac7d50866f3e24b2fe165b`
-
-Post-merge main CI #1244 passed all three canonical jobs on that exact source. Its first `Build, test and package` attempt failed after successful build/tests/signing because runner `hdiutil verify` returned `Resource temporarily unavailable`; the failed job alone was rerun on the unchanged source and passed every packaging/security/performance step. This is retained as a runner/disk-image transient, not an application regression.
+Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #1243 3/3 GREEN without production changes. PR #33 was squash-merged with expected-head protection as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; post-merge CI #1244 ultimately passed 3/3 GREEN on that exact source.
 
 M6.6 state is therefore:
 
@@ -70,8 +66,6 @@ M6.6 state is therefore:
 - bounded Peek cancellation is nonblocking for the UI actor and stale/late transport work fails closed;
 - normal Quit leaves no owned media adapter process.
 
-No global scroll/button/keyboard monitor, mouse-button event authority, event tap, polling loop, repeating timer, display link, UI-test retry/sleep masking, new process executable boundary, network authority, telemetry or sensitive permission was introduced by M6.6.
-
 ## Security and resource invariants
 
 - App Sandbox-only entitlement and Hardened Runtime remain mandatory.
@@ -88,27 +82,32 @@ No global scroll/button/keyboard monitor, mouse-button event authority, event ta
 
 Shared-runner CPU/RSS values remain compatibility evidence only. Canonical runtime resource acceptance belongs to Mac16,8/macOS 26.6.
 
-Draft PR #36 starts P1 with a development/release-only evidence foundation:
+P1 measurement foundation merged via PR #36. Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge CI #1261 3/3 GREEN.
 
-- existing `perf-baseline.py` remains the non-privileged CPU/RSS/thread collector;
-- `p1_target_resource_evidence.py` validates one exact runtime source, one tool SHA, target platform and fixed scenario configuration;
-- manual evidence records idle wakeups, energy and compositor findings through explicit Apple observation tools;
-- arbitrary free-form fields/raw traces are rejected from the normalized evidence bundle;
-- privileged `sudo powermetrics` / `timerfires` are not part of the canonical automated path;
-- the new evidence contract runs inside canonical `swift test`.
+The foundation:
 
-TDD RED evidence for PR #36: CI #1245 on head `6b7e90ff17803ef2678ff518b84fe82c8a39e06f` ran 367 tests / 81 suites and failed with exactly one issue: `ModuleNotFoundError: p1_target_resource_evidence` from the new P1 policy test. Existing suites remained green. The implementation then added the missing development-only bundler; shipping runtime remains unchanged.
+- keeps existing `perf-baseline.py` as the non-privileged CPU/RSS/thread collector;
+- validates one exact runtime source, one exact tooling SHA, target platform and fixed scenario configuration;
+- records idle wakeups, energy and compositor findings through explicit Apple observation tools;
+- rejects arbitrary free-form fields/raw traces and malformed manual evidence types;
+- excludes privileged `sudo powermetrics` / `timerfires` from the canonical path;
+- runs the evidence contract inside canonical `swift test`;
+- changes no shipping runtime source.
+
+TDD RED evidence is preserved by CI #1245 for the absent implementation and CI #1258 for malformed manual JSON type handling.
+
+The initial P1 target audit intentionally measures runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` with tooling `5cd9a2a47d87a433155f53b3aa0510000f2fce85`. Later documentation-only commits do not redefine those provenance roles.
+
+## Next optimal step
+
+1. Collect target-Mac idle/hover/stability CPU/RSS/thread reports using the frozen runtime/tooling pair.
+2. Collect 60-second idle wakeup/energy evidence and 10-cycle compositor evidence.
+3. Build and validate the normalized P1 target-resource evidence bundle.
+4. Characterize variance before introducing any new absolute cross-session resource threshold.
+5. If evidence identifies a material regression, implement one isolated optimization with RED -> GREEN and rerun affected physical acceptance; otherwise accept P1 without speculative runtime changes.
+6. Only after P1 acceptance proceed to broader active-display/multi-monitor hardening or another product module.
 
 See:
 
 - `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`;
 - `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`.
-
-## Next optimal step
-
-1. Finish PR #36 automated evidence foundation and require all three canonical CI jobs GREEN.
-2. Freeze the accepted P1 measurement-tool commit while measured runtime stays exact merged M6.6 `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
-3. Collect target-Mac idle/hover/stability CPU/RSS/thread reports plus 60-second idle wakeup/energy and 10-cycle compositor evidence.
-4. Characterize variance before introducing any new absolute cross-session resource threshold.
-5. If evidence identifies a material regression, implement one isolated optimization with RED -> GREEN and rerun affected physical acceptance; otherwise accept P1 without speculative runtime changes.
-6. Only after P1 acceptance proceed to broader active-display/multi-monitor hardening or another product module.
