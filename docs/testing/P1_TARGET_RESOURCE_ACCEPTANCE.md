@@ -7,7 +7,7 @@ Measured runtime source for the initial P1 audit: `bb6df211699c5aef7bac7d50866f3
 
 This runbook collects whole-app performance/resource evidence without changing the shipping application or granting additional permissions.
 
-The `PENDING` ledger status applies to the current P1 audit as a whole. The scenario definitions are stable; current-runtime values are not accepted until the exact target evidence below is collected and reviewed.
+The stable Idle/Hover/Stability scenario identifiers and their historical definitions remain owned by `PERFORMANCE.md`; this runbook intentionally does not redeclare those acceptance IDs. Current-runtime P1 values are not accepted until the exact target evidence below is collected and reviewed.
 
 ## Evidence boundary
 
@@ -42,7 +42,7 @@ ps -p "$PID" -o pid=,comm=
 
 If more than one NotchHub process exists, stop and resolve that ambiguity rather than guessing a PID.
 
-## 2. `NH-PERF-IDLE-001`
+## 2. Idle scenario
 
 Keep NotchHub compact and untouched throughout the measurement.
 
@@ -57,7 +57,7 @@ python3 scripts/perf-baseline.py \
   --output build/p1-perf-idle.json
 ```
 
-## 3. `NH-PERF-HOVER-001`
+## 3. Hover scenario
 
 Start the sampler, then manually repeat the same five-second interaction cycle throughout the 60-second window: enter/Peek/expand or retain as appropriate, remain inside briefly, leave/collapse, then leave the remainder of the five-second cycle idle. Do not use automation or synthetic input.
 
@@ -72,7 +72,7 @@ python3 scripts/perf-baseline.py \
   --output build/p1-perf-hover.json
 ```
 
-## 4. `NH-PERF-STABILITY-001`
+## 4. Stability scenario
 
 Return the app to compact, then leave it untouched for the full run:
 
