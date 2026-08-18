@@ -21,11 +21,11 @@ Current development state:
 - M6.4 shipping media composition — accepted/merged;
 - M6.5 compact + expanded Media-first UI — accepted/merged;
 - **M6.6 gestures, haptics, interactive notch, seek and Hover Peek — implemented, automated-tested, physically accepted and merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; not released.**
-- **P1 whole-app target-Mac performance/resource review — active in Draft PR #36.**
+- **P1 whole-app target-Mac performance/resource review — measurement foundation merged via PR #36 as `5cd9a2a47d87a433155f53b3aa0510000f2fce85`; target-Mac evidence pending.**
 
 The published `v0.1.0` release predates the M1/P0.1/M6 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
 
-The current priority is P1: measure the merged M6.6 application on Mac16,8/macOS 26.6, characterize CPU/RSS/threads/wakeups/energy/compositor behavior, and optimize only where evidence demonstrates a material issue. Broader multi-monitor hardening and new product modules remain after this resource gate.
+The current priority is P1 target collection: measure exact merged M6.6 runtime `bb6df211...` on Mac16,8/macOS 26.6 using frozen measurement tooling `5cd9a2a4...`, characterize CPU/RSS/threads/wakeups/energy/compositor behavior, and optimize only where evidence demonstrates a material issue. Broader multi-monitor hardening and new product modules remain after this resource gate.
 
 ## Universal Media
 
@@ -132,6 +132,7 @@ Key invariants:
 - target-Mac runtime evidence is required for resource acceptance;
 - immutable `v0.1.0` baseline remains historical evidence and is never silently rewritten;
 - P1 combines exact CPU/RSS/thread reports with privacy-safe target-Mac wakeup/energy/compositor evidence before any optimization decision;
+- the accepted P1 tooling source is pinned to `5cd9a2a47d87a433155f53b3aa0510000f2fce85`; later documentation commits do not redefine measurement provenance;
 - performance work cannot broaden permissions, input capture, networking or telemetry authority.
 
 See [`PERFORMANCE.md`](PERFORMANCE.md), [`docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`](docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md) and `performance/`.
