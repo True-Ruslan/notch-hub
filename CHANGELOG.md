@@ -6,9 +6,29 @@ All notable changes to NotchHub are documented here. The active version is store
 
 Published release remains `v0.1.0`. Everything below is source work not yet published as a new version.
 
+### P1 — target-Mac whole-app resource audit
+
+Status: **ACTIVE / DRAFT PR #36 / MEASUREMENT FOUNDATION IN PROGRESS / NO SHIPPING RUNTIME CHANGE**.
+
+Started the post-M6.6 performance/resource gate:
+
+- added a fail-closed target-Mac evidence bundler for existing idle/hover/stability CPU/RSS/thread reports;
+- requires one exact measured-app source SHA, one measurement-tool SHA and exact `Mac16,8 / macOS 26.6` platform;
+- freezes canonical 10 s warmup + 60/60/600 s measurement windows and 1/1/5 s sample intervals;
+- normalizes only aggregate process metrics and required stability evidence;
+- adds a closed privacy-safe manual evidence surface for 60-second idle wakeups, 60-second energy observation and 10-cycle compositor review;
+- rejects arbitrary free-form fields, raw trace payloads, non-finite metrics, unsupported methods and provenance/configuration mismatches;
+- intentionally does not auto-run privileged `sudo powermetrics`/`timerfires` and adds no app entitlement or runtime telemetry;
+- runs the Python evidence contract inside canonical `swift test` through `P1TargetResourceEvidencePolicyTests`;
+- added `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md` and the active P1 implementation plan.
+
+TDD RED was captured by CI #1245 at head `6b7e90ff17803ef2678ff518b84fe82c8a39e06f`: 367 tests / 81 suites ran and exactly the new P1 gate failed because `p1_target_resource_evidence` had not yet been implemented. Existing suites remained green.
+
+No new wakeup/energy/compositor numerical threshold is claimed from assumptions. P1 must first collect repeatable target-Mac evidence and characterize variance.
+
 ### M6.6 — PR #33
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED ON EXACT `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` / DRAFT / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED ON EXACT `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` / MERGED AS `bb6df211699c5aef7bac7d50866f3e24b2fe165b` / NOT RELEASED**.
 
 Added and hardened:
 
@@ -57,12 +77,14 @@ The complete requested Mac16,8/macOS 26.6 matrix then passed on that exact sourc
 - Accessibility, Input Monitoring, Automation and Screen Recording remain NONE;
 - after real Quit, `pgrep -lf 'mediaremote-adapter\.pl' || true` is empty.
 
-The physically accepted runtime SHA remains `8744b9e...`. This acceptance-record synchronization changes documentation and machine-readable coverage only; it does not create a new physical-runtime claim.
+The physically accepted runtime SHA remains `8744b9e...`. Acceptance-record commits changed documentation/coverage only and did not create a replacement physical-runtime claim.
 
-#### Horizontal repair history retained
+#### Merge and post-merge verification
 
-Earlier automated-green candidates exposed that command semantics and presentation sign could compensate for each other and still be physically wrong. `MediaGesturePhysicalPipelineTests` now binds raw AppKit horizontal delta -> scroll-preference normalization -> visual offset -> typed media command across both macOS scroll-direction preference states. Historical rejected candidates remain evidence and are not rewritten as passing.
+Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #1243 3/3 GREEN. PR #33 was then marked Ready and squash-merged with expected-head protection as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
+
+Post-merge main CI #1244 ultimately passed all three canonical jobs on that exact merge source. Its first packaging attempt failed only because runner `hdiutil verify` returned `Resource temporarily unavailable` after build/tests/signing had succeeded. The failed job alone was rerun on unchanged source and passed every packaging/security/performance step. No application code or policy was changed for that retry.
 
 #### Acceptance state
 
-M6.6 has reached **physically accepted**, but not **merged** or **released**. PR #33 remains Draft pending explicit merge authorization. After merge, post-merge `main` CI must pass before P1 target-Mac performance/resource review begins.
+M6.6 has reached **implemented -> automated-tested -> physically accepted -> merged**. It remains **not released**; immutable published version is still `v0.1.0`.

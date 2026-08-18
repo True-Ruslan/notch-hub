@@ -23,16 +23,28 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 
 ### M6.6 — gestures, haptics, interactive notch, seek and Hover Peek
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED ON EXACT `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` / PR #33 DRAFT / NOT MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
 
-Exact source acceptance:
+Physical source acceptance remains permanently pinned to exact runtime:
 
-- CI #1241 / run `32075976405` — all three canonical jobs GREEN;
+`8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`
+
+Evidence:
+
+- source CI #1241 / run `32075976405` — all three canonical jobs GREEN;
 - 366 Swift tests / 80 suites GREEN;
 - external exact-app XCUI 11/11 GREEN;
-- target Mac16,8/macOS 26.6 final matrix — PASS;
-- post-Quit `mediaremote-adapter.pl` process check — empty;
-- Accessibility / Input Monitoring / Automation / Screen Recording — NONE.
+- complete Mac16,8/macOS 26.6 physical matrix PASS;
+- post-Quit `mediaremote-adapter.pl` process check empty;
+- Accessibility / Input Monitoring / Automation / Screen Recording NONE.
+
+Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #1243 3/3 GREEN without production changes.
+
+PR #33 was then squash-merged with expected-head protection as:
+
+`bb6df211699c5aef7bac7d50866f3e24b2fe165b`
+
+Post-merge `main` CI #1244 ultimately passed all three canonical jobs on that exact merge source. The first packaging attempt hit a runner-local `hdiutil ... Resource temporarily unavailable` failure after successful build/tests/signing; only the failed job was rerun on the unchanged source and passed. This is retained as CI infrastructure evidence, not classified as an application regression.
 
 Accepted behavior includes:
 
@@ -40,7 +52,7 @@ Accepted behavior includes:
 - exactly 120 ms hover dwell and 140 ms Peek exit grace;
 - media and generic no-media Hover Peek with physical haptic and no hover-only expansion;
 - stationary-pointer relaunch Peek;
-- persistent media runtime only in expanded;
+- persistent media runtime only in settled expanded;
 - prompt single explicit click expansion even when hover/media enrichment overlaps;
 - exact-top-edge and center DOWN follow-finger expansion without twitch/self-collapse;
 - expanded pointer-exit and physical UP exact Compact settlement;
@@ -49,21 +61,25 @@ Accepted behavior includes:
 - nonblocking bounded Peek teardown with stop-race and transport-integration regressions;
 - unchanged Sandbox/Hardened Runtime and sensitive-permission boundary.
 
-Deterministic timing/arbitration/resource subcontracts remain protected by automated tests; physical-only properties are recorded against the exact candidate in the acceptance ledgers.
-
-Acceptance ledgers:
-
-- `docs/testing/MEDIA_GESTURE_ACCEPTANCE.md`;
-- `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`;
-- `docs/testing/MEDIA_PEEK_ACCEPTANCE.md`.
-
-The follow-up acceptance-record commit may change only documentation/coverage metadata. It does not move physical evidence away from source `8744b9e...`.
+M6.6 is merged source work only; published release remains immutable `v0.1.0`.
 
 ## P1 — whole-app performance/resource review
 
-Status: **BLOCKED UNTIL PR #33 MERGE + POST-MERGE MAIN CI**.
+Status: **ACTIVE — Draft PR #36 `P1: target-Mac resource audit foundation`**.
 
-Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, repeated-run variance characterization, and real active-display/multi-monitor reality checks. Any new global `.mouseMoved` fallback remains prohibited unless measured evidence demonstrates a concrete need and the security/performance tradeoff is reviewed.
+P1 starts with measurement infrastructure and target evidence, not behavioral optimization.
+
+Phase order:
+
+1. establish fail-closed provenance/privacy validation for exact target CPU/RSS/thread reports plus wakeup/energy/compositor observations;
+2. collect exact merged M6.6 runtime evidence on Mac16,8/macOS 26.6;
+3. characterize repeated-run variance and same-session comparability before adding new absolute budgets;
+4. investigate only evidence-backed resource/compositor regressions;
+5. optimize runtime only if measurements justify it, preserving M6.6 behavior and the current permission/security boundary.
+
+The canonical P1 path remains non-privileged: no automatic `sudo powermetrics`, `timerfires`, privileged helper, telemetry or new entitlement. See `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md` and `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`.
+
+Broader active-display/multi-monitor hardening remains after the P1 resource gate. Any new global `.mouseMoved` fallback remains prohibited unless measured evidence demonstrates a concrete need and the security/performance tradeoff is explicitly reviewed.
 
 ## Product modules after media/performance foundation
 
@@ -76,8 +92,9 @@ Planned: target-Mac CPU/RSS/threads/wakeups/energy/compositor review, repeated-r
 
 ## Current priority
 
-1. Land the M6.6 acceptance-record synchronization with no production-code change and no coverage-policy weakening.
-2. Require all three canonical CI jobs GREEN on that record commit.
-3. Keep PR #33 Draft until explicit merge authorization.
-4. On authorization, mark ready and merge with expected-head protection; verify post-merge `main` CI.
-5. Then close M6.6 as merged and start P1 before any broad multi-monitor hardening or new product module.
+1. Finish PR #36 automated evidence foundation with canonical CI GREEN.
+2. Freeze the accepted P1 measurement-tool SHA without changing shipping runtime behavior.
+3. Collect target-Mac CPU/RSS/threads/wakeups/energy/compositor evidence against merged runtime `bb6df211...`.
+4. Review repeated-run variance and existing evidence-based stability/thread gates.
+5. If measurements expose a material issue, implement one isolated RED -> GREEN optimization and re-run affected physical acceptance; otherwise close P1 without speculative runtime changes.
+6. Only after P1 acceptance proceed to broader multi-monitor/active-display hardening or the next product module.
