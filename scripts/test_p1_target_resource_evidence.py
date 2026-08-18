@@ -7,7 +7,7 @@ import pathlib
 import tempfile
 import unittest
 
-from p1_target_resource_evidence import EvidenceError, build_evidence_bundle
+from p1_target_resource_evidence import EvidenceError, build_evidence_bundle, main
 
 
 SOURCE_COMMIT = "a" * 40
@@ -54,11 +54,9 @@ def _report(scenario: str) -> dict[str, object]:
             "rssStartKiB": 40_000,
             "rssFirstQuartileKiB": 40_100.0,
             "rssEndKiB": 40_200,
-            "rssGrowthKiB": 200,
             "threadStart": 4,
             "threadFirstQuartile": 4.0,
             "threadEnd": 4,
-            "threadGrowth": 0,
         }
     return report
 
@@ -242,6 +240,43 @@ class P1TargetResourceEvidenceTests(unittest.TestCase):
             manual_evidence=manual,
         )
         self.assertTrue(bundle["reviewRequired"])
+
+    def test_cli_writes_only_normalized_bundle(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            paths: dict[str, pathlib.Path] = {}
+            for name, payload in (
+                ("idle", _report("idle")),
+                ("hover", _report("hover")),
+                ("stability", _report("stability")),
+                ("manual", _manual_evidence()),
+            ):
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(payload), encoding="utf-8")
+                paths[name] = path
+
+            output = root / "evidence.json"
+            result = main(
+                [
+                    "--source-commit",
+                    SOURCE_COMMIT,
+                    "--idle",
+                    str(paths["idle"]),
+                    "--hover",
+                    str(paths["hover"]),
+                    "--stability",
+                    str(paths["stability"]),
+                    "--manual-evidence",
+                    str(paths["manual"]),
+                    "--output",
+                    str(output),
+                ]
+            )
+
+            self.assertEqual(0, result)
+            data = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(SOURCE_COMMIT, data["sourceCommit"])
+            self.assertNotIn("startedAt", json.dumps(data, sort_keys=True))
 
 
 if __name__ == "__main__":
