@@ -1,5 +1,6 @@
 public enum MediaGestureSurface: Sendable, Equatable {
     case compact
+    case peek
     case expanded
 }
 
@@ -34,6 +35,30 @@ public struct MediaGestureSample: Sendable, Equatable {
         self.deltaY = deltaY
         self.interactiveWidth = interactiveWidth
         self.isMomentum = isMomentum
+    }
+}
+
+public struct MediaGestureInputDeltas: Sendable, Equatable {
+    public let x: Double
+    public let y: Double
+
+    public init(x: Double, y: Double) {
+        self.x = x
+        self.y = y
+    }
+}
+
+public enum MediaGestureInputNormalizer {
+    public static func semanticDeltas(
+        scrollingDeltaX: Double,
+        scrollingDeltaY: Double,
+        isDirectionInvertedFromDevice: Bool
+    ) -> MediaGestureInputDeltas {
+        let preferenceScale = isDirectionInvertedFromDevice ? -1.0 : 1.0
+        return MediaGestureInputDeltas(
+            x: -scrollingDeltaX * preferenceScale,
+            y: -scrollingDeltaY * preferenceScale
+        )
     }
 }
 
@@ -123,7 +148,7 @@ public final class MediaGestureCoordinator {
         guard
             var gesture = activeGesture,
             gesture.id == gestureID,
-            gesture.surface == .compact,
+            Self.usesBoundedCapabilityResolution(gesture.surface),
             gesture.capturedAxis == .horizontal(direction),
             gesture.requestedCompactCapability,
             gesture.compactCapability == .pending
@@ -194,7 +219,9 @@ public final class MediaGestureCoordinator {
             gesture.hasHorizontalVisualOffset = true
             effects.append(.visualOffset(gesture.cumulativeX))
 
-            if gesture.surface == .compact, !gesture.requestedCompactCapability {
+            if Self.usesBoundedCapabilityResolution(gesture.surface),
+                !gesture.requestedCompactCapability
+            {
                 gesture.requestedCompactCapability = true
                 gesture.compactCapability = .pending
                 effects.append(
@@ -289,7 +316,7 @@ public final class MediaGestureCoordinator {
         previous: MediaGestureCapability,
         next: MediaGestureCapability
     ) -> MediaGestureCapability {
-        if gesture.surface == .compact {
+        if Self.usesBoundedCapabilityResolution(gesture.surface) {
             return gesture.compactCapability
         }
 
@@ -328,7 +355,7 @@ public final class MediaGestureCoordinator {
 
     private func panelCommitEffect(for gesture: ActiveGesture) -> MediaGestureEffect? {
         switch gesture.surface {
-        case .compact:
+        case .compact, .peek:
             guard gesture.cumulativeY >= Self.verticalCommitThreshold else {
                 return nil
             }
@@ -338,6 +365,15 @@ public final class MediaGestureCoordinator {
                 return nil
             }
             return .requestCollapse
+        }
+    }
+
+    private static func usesBoundedCapabilityResolution(_ surface: MediaGestureSurface) -> Bool {
+        switch surface {
+        case .compact, .peek:
+            return true
+        case .expanded:
+            return false
         }
     }
 

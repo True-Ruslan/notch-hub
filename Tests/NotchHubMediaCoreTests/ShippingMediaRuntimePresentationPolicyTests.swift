@@ -9,10 +9,14 @@ struct ShippingMediaRuntimePresentationPolicyTests {
         #expect(source.contains("private let presentationModel: ShippingMediaPresentationModel"))
         #expect(source.contains("public convenience init(presentationModel: ShippingMediaPresentationModel)"))
         #expect(source.contains("controller.changeHandler ="))
+        #expect(source.contains("switch controller.lastChangeKind"))
+        #expect(source.contains("case .ready:"))
+        #expect(source.contains("case .session:"))
         #expect(source.contains("presentationModel.apply("))
         #expect(source.contains("state: controller.state"))
         #expect(source.contains("snapshot: controller.snapshot"))
-        #expect(source.contains("presentationModel.clear()"))
+        #expect(source.contains("case .noSession, .unavailable:"))
+        #expect(source.contains("presentationModel.clearAuthoritativePresentation()"))
     }
 
     @Test
@@ -25,16 +29,19 @@ struct ShippingMediaRuntimePresentationPolicyTests {
     }
 
     @Test
-    func runtimeExposesOnlyTypedClickCommandsForThisSlice() throws {
+    func runtimeExposesOnlyTypedMediaCommandsIncludingValidatedSeek() throws {
         let source = try runtimeSource()
 
         #expect(source.contains("public func togglePlayPause()"))
         #expect(source.contains("public func goPrevious()"))
         #expect(source.contains("public func goNext()"))
+        #expect(source.contains("public func seek(to positionSeconds: Double)"))
+        #expect(source.contains("positionSeconds.isFinite"))
+        #expect(source.contains("positionSeconds >= 0"))
         #expect(source.contains("send(.togglePlayPause)"))
         #expect(source.contains("send(.previous)"))
         #expect(source.contains("send(.next)"))
-        #expect(!source.contains("public func seek"))
+        #expect(source.contains("send(.seek(seconds: positionSeconds))"))
     }
 
     @Test

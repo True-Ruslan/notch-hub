@@ -12,7 +12,14 @@ protocol SystemMediaTransport: AnyObject {
 
     func start()
     func stop()
+    func stopNonBlocking()
     func send(_ command: MediaCommand) async -> MediaCommandResult
+}
+
+extension SystemMediaTransport {
+    func stopNonBlocking() {
+        stop()
+    }
 }
 
 @MainActor

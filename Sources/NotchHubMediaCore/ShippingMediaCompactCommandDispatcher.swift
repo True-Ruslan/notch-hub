@@ -72,6 +72,23 @@ public final class ShippingMediaCompactCommandDispatcher {
         }
     }
 
+    public func canSeek() async -> Bool {
+        guard !isStopped, let client = resolveProcessClient() else {
+            return false
+        }
+
+        let operationGeneration = generation
+        do {
+            let capabilities = try await client.capabilities()
+            guard !isStopped, generation == operationGeneration else {
+                return false
+            }
+            return capabilities.seek == .supported
+        } catch {
+            return false
+        }
+    }
+
     public func send(_ action: ShippingMediaCompactCommandAction) async -> Bool {
         guard !isStopped, let client = resolveProcessClient() else {
             return false
@@ -87,6 +104,24 @@ public final class ShippingMediaCompactCommandDispatcher {
         }
 
         let result = await client.send(command)
+        guard !isStopped, generation == operationGeneration else {
+            return false
+        }
+        return result == .sent
+    }
+
+    public func seek(to positionSeconds: Double) async -> Bool {
+        guard
+            positionSeconds.isFinite,
+            positionSeconds >= 0,
+            !isStopped,
+            let client = resolveProcessClient()
+        else {
+            return false
+        }
+
+        let operationGeneration = generation
+        let result = await client.send(.seek(seconds: positionSeconds))
         guard !isStopped, generation == operationGeneration else {
             return false
         }

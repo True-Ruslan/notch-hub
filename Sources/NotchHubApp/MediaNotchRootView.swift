@@ -7,46 +7,107 @@ import SwiftUI
 struct MediaNotchRootView: View {
     @ObservedObject private var panelModel: NotchPanelModel
     @ObservedObject private var mediaModel: ShippingMediaPresentationModel
+    @ObservedObject private var mediaGestureVisualModel: MediaGestureVisualModel
+    @State private var sourceApplicationIcon: NSImage?
+    @State private var seekPreviewSeconds: Double?
+    @State private var isSeekDragging = false
 
+    private let sourceApplicationIconResolver: SourceApplicationIconResolver
     private let hardwareNotchWidth: CGFloat
     private let compactBackgroundOpacity: Double
     private let expandedContentTopInset: CGFloat
+    private let onExplicitExpansion: () -> Void
     private let onTogglePlayPause: () -> Void
     private let onPrevious: () -> Void
     private let onNext: () -> Void
+    private let onSeekBegan: () -> Bool
+    private let onSeekCommitted: (Double) -> Void
+    private let onSeekCancelled: () -> Void
 
     init(
         panelModel: NotchPanelModel,
         mediaModel: ShippingMediaPresentationModel,
+        mediaGestureVisualModel: MediaGestureVisualModel,
+        sourceApplicationIconResolver: SourceApplicationIconResolver,
         hardwareNotchWidth: CGFloat,
         compactBackgroundOpacity: Double,
         expandedContentTopInset: CGFloat,
+        onExplicitExpansion: @escaping () -> Void,
         onTogglePlayPause: @escaping () -> Void,
         onPrevious: @escaping () -> Void,
-        onNext: @escaping () -> Void
+        onNext: @escaping () -> Void,
+        onSeekBegan: @escaping () -> Bool,
+        onSeekCommitted: @escaping (Double) -> Void,
+        onSeekCancelled: @escaping () -> Void
     ) {
         self.panelModel = panelModel
         self.mediaModel = mediaModel
+        self.mediaGestureVisualModel = mediaGestureVisualModel
+        self.sourceApplicationIconResolver = sourceApplicationIconResolver
         self.hardwareNotchWidth = hardwareNotchWidth
         self.compactBackgroundOpacity = compactBackgroundOpacity
         self.expandedContentTopInset = expandedContentTopInset
+        self.onExplicitExpansion = onExplicitExpansion
         self.onTogglePlayPause = onTogglePlayPause
         self.onPrevious = onPrevious
         self.onNext = onNext
+        self.onSeekBegan = onSeekBegan
+        self.onSeekCommitted = onSeekCommitted
+        self.onSeekCancelled = onSeekCancelled
     }
 
     var body: some View {
-        Group {
+        ZStack {
             if let presentation = mediaModel.presentation {
                 mediaContent(presentation)
+                    .transition(.opacity)
             } else {
                 NotchRootView(
                     model: panelModel,
                     compactBackgroundOpacity: compactBackgroundOpacity,
-                    expandedContentTopInset: expandedContentTopInset
+                    expandedContentTopInset: expandedContentTopInset,
+                    handlesExplicitExpansionTap: false,
+                    onExplicitExpansion: onExplicitExpansion
                 )
+                .transition(.opacity)
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: requestExplicitExpansionFromTap)
+        .animation(
+            .easeInOut(duration: 0.12),
+            value: mediaModel.presentation?.sessionIdentity
+        )
+        .onChange(of: isSeekSurfaceAvailable) { _, available in
+            if !available {
+                cancelSeekPreview()
+            }
+        }
+        .onDisappear {
+            cancelSeekPreview()
+        }
+    }
+
+    private var isSeekSurfaceAvailable: Bool {
+        let presentationAllowsSeek =
+            panelModel.contentPresentation == .peek
+            || panelModel.contentPresentation == .expanded
+        guard
+            presentationAllowsSeek,
+            let presentation = mediaModel.presentation,
+            presentation.canSeek,
+            let position = presentation.positionSeconds,
+            let duration = presentation.durationSeconds,
+            position.isFinite,
+            position >= 0,
+            duration.isFinite,
+            duration > 0,
+            position <= duration
+        else {
+            return false
+        }
+
+        return true
     }
 
     @ViewBuilder
@@ -55,24 +116,51 @@ struct MediaNotchRootView: View {
             switch panelModel.contentPresentation {
             case .compact:
                 compactMediaContent(presentation)
+            case .peek:
+                peekMediaContent(presentation)
             case .expanded:
                 expandedMediaContent(presentation)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .offset(x: mediaGestureVisualModel.horizontalOffset)
         .background(Color.black)
         .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(surfaceAccessibilityIdentifier)
+        .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
+            if panelModel.contentPresentation == .expanded {
+                sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
+            }
+        }
+        .onChange(of: panelModel.contentPresentation) { _, panelPresentation in
+            if panelPresentation == .expanded {
+                sourceApplicationIcon = sourceApplicationIconResolver.icon(
+                    for: presentation.sourceBundleIdentifier
+                )
+            }
+        }
+        .onChange(of: presentation.sessionIdentity) { _, _ in
+            cancelSeekPreview()
+        }
     }
 
     private var surfaceAccessibilityIdentifier: String {
         switch panelModel.contentPresentation {
         case .compact:
             "notch.surface.compact"
+        case .peek:
+            "notch.surface.peek"
         case .expanded:
             "notch.surface.expanded"
         }
+    }
+
+    private func requestExplicitExpansionFromTap() {
+        guard panelModel.contentPresentation != .expanded else {
+            return
+        }
+        onExplicitExpansion()
     }
 
     private func compactMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
@@ -92,12 +180,64 @@ struct MediaNotchRootView: View {
             .frame(width: 36, height: 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+    }
+
+    private func peekMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
+        ZStack {
+            Color.clear
+                .contentShape(Rectangle())
+
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    artwork(presentation, size: 40)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(presentation.title ?? "Playing")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .accessibilityIdentifier("media.title")
+                        Text(presentation.artist ?? "")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.68))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .accessibilityIdentifier("media.artist")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(
+                        systemName: presentation.playbackState == .playing
+                            ? "waveform"
+                            : "pause.fill"
+                    )
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .frame(width: 22)
+                }
+
+                if let position = presentation.positionSeconds,
+                    let duration = presentation.durationSeconds
+                {
+                    seekProgress(
+                        position: position,
+                        duration: duration,
+                        canSeek: presentation.canSeek
+                    )
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 28)
+            .padding(.bottom, 10)
+        }
     }
 
     private func expandedMediaContent(_ presentation: ShippingMediaPresentation) -> some View {
         VStack(spacing: 14) {
             HStack(alignment: .top, spacing: 16) {
-                artwork(presentation, size: 92)
+                artworkWithSourceBadge(presentation, size: 92)
 
                 VStack(alignment: .leading, spacing: 5) {
                     if let title = presentation.title {
@@ -122,12 +262,6 @@ struct MediaNotchRootView: View {
                     }
 
                     Spacer(minLength: 0)
-
-                    Text(presentation.sourceDisplayName)
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.45))
-                        .lineLimit(1)
-                        .accessibilityIdentifier("media.source")
                 }
                 .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
             }
@@ -135,9 +269,11 @@ struct MediaNotchRootView: View {
             if let position = presentation.positionSeconds,
                 let duration = presentation.durationSeconds
             {
-                ProgressView(value: position, total: duration)
-                    .progressViewStyle(.linear)
-                    .tint(.white.opacity(0.85))
+                seekProgress(
+                    position: position,
+                    duration: duration,
+                    canSeek: presentation.canSeek
+                )
             }
 
             HStack(spacing: 28) {
@@ -183,6 +319,125 @@ struct MediaNotchRootView: View {
         .padding(.top, expandedContentTopInset)
     }
 
+    private func seekProgress(
+        position: Double,
+        duration: Double,
+        canSeek: Bool
+    ) -> some View {
+        GeometryReader { geometry in
+            ProgressView(
+                value: seekPreviewSeconds ?? position,
+                total: duration
+            )
+            .progressViewStyle(.linear)
+            .tint(.white.opacity(0.85))
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard canSeek else {
+                            cancelSeekPreview()
+                            return
+                        }
+
+                        if !isSeekDragging {
+                            guard onSeekBegan() else {
+                                return
+                            }
+                            isSeekDragging = true
+                        }
+
+                        seekPreviewSeconds = seekPosition(
+                            locationX: value.location.x,
+                            width: geometry.size.width,
+                            duration: duration
+                        )
+                    }
+                    .onEnded { value in
+                        guard isSeekDragging else {
+                            return
+                        }
+
+                        let positionSeconds = seekPosition(
+                            locationX: value.location.x,
+                            width: geometry.size.width,
+                            duration: duration
+                        )
+                        isSeekDragging = false
+                        seekPreviewSeconds = nil
+                        onSeekCommitted(positionSeconds)
+                    }
+            )
+        }
+        .frame(height: 8)
+        .opacity(canSeek ? 1 : 0.55)
+        .allowsHitTesting(canSeek)
+    }
+
+    private func seekPosition(
+        locationX: CGFloat,
+        width: CGFloat,
+        duration: Double
+    ) -> Double {
+        guard
+            locationX.isFinite,
+            width.isFinite,
+            width > 0,
+            duration.isFinite,
+            duration > 0
+        else {
+            return 0
+        }
+
+        let clampedX = min(max(0, locationX), width)
+        return Double(clampedX / width) * duration
+    }
+
+    private func cancelSeekPreview() {
+        guard isSeekDragging || seekPreviewSeconds != nil else {
+            return
+        }
+
+        isSeekDragging = false
+        seekPreviewSeconds = nil
+        onSeekCancelled()
+    }
+
+    private func artworkWithSourceBadge(
+        _ presentation: ShippingMediaPresentation,
+        size: CGFloat
+    ) -> some View {
+        artwork(presentation, size: size)
+            .overlay(alignment: .bottomTrailing) {
+                sourceApplicationBadge(presentation)
+                    .offset(x: 4, y: 4)
+            }
+    }
+
+    private func sourceApplicationBadge(_ presentation: ShippingMediaPresentation) -> some View {
+        Group {
+            if let sourceApplicationIcon {
+                Image(nsImage: sourceApplicationIcon)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(systemName: "app")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(4)
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+        }
+        .frame(width: 24, height: 24)
+        .background {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.black.opacity(0.75))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .accessibilityIdentifier("media.source")
+        .accessibilityLabel(Text(presentation.sourceDisplayName))
+    }
+
     private func artwork(
         _ presentation: ShippingMediaPresentation,
         size: CGFloat
@@ -211,8 +466,6 @@ struct MediaNotchRootView: View {
                 style: .continuous
             )
         )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Media artwork")
         .accessibilityIdentifier("media.artwork")
     }
 }

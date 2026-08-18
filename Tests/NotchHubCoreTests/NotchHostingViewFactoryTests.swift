@@ -54,4 +54,12 @@ struct NotchHostingViewFactoryTests {
         #expect(hostingView.layer?.cornerCurve == .continuous)
         #expect(hostingView.layer?.cornerRadius == 12)
     }
+
+    @Test
+    func hostingViewAcceptsFirstMouseForNonactivatingPanelInteraction() {
+        let model = NotchPanelModel()
+        let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
+
+        #expect(hostingView.acceptsFirstMouse(for: nil))
+    }
 }

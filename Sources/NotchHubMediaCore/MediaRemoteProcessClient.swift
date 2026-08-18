@@ -199,6 +199,35 @@ final class MediaRemoteProcessClient {
         }
     }
 
+    func stopNonBlocking() {
+        observationGeneration &+= 1
+        let process = observationProcess
+        observationProcess = nil
+        let operations = Array(oneShotOperations.values)
+
+        stdoutBuffer.removeAll(keepingCapacity: false)
+        lastTeardownClean = true
+        state = .stopped
+
+        if let process {
+            MediaRemoteDeferredTermination.start(
+                process: process,
+                timeoutScheduler: timeoutScheduler
+            ) { [weak self] clean in
+                guard let self, !clean else {
+                    return
+                }
+                self.lastTeardownClean = false
+                self.state = .teardownFailure
+                self.onFailure?(.transport)
+            }
+        }
+
+        for operation in operations {
+            operation.cancelNonBlocking(timeoutScheduler: timeoutScheduler)
+        }
+    }
+
     func send(_ command: MediaCommand) async -> MediaCommandResult {
         guard let arguments = commandArguments(for: command) else {
             return .failed
@@ -395,6 +424,79 @@ final class MediaRemoteProcessClient {
 }
 
 @MainActor
+private final class MediaRemoteDeferredTermination {
+    private let process: any MediaRemoteProcessHandle
+    private let timeoutScheduler: any MediaRemoteTimeoutScheduling
+    private let completion: @MainActor (Bool) -> Void
+    private var timeoutToken: (any MediaRemoteTimeoutToken)?
+    private var isFinished = false
+
+    private init(
+        process: any MediaRemoteProcessHandle,
+        timeoutScheduler: any MediaRemoteTimeoutScheduling,
+        completion: @escaping @MainActor (Bool) -> Void
+    ) {
+        self.process = process
+        self.timeoutScheduler = timeoutScheduler
+        self.completion = completion
+    }
+
+    static func start(
+        process: any MediaRemoteProcessHandle,
+        timeoutScheduler: any MediaRemoteTimeoutScheduling,
+        completion: @escaping @MainActor (Bool) -> Void
+    ) {
+        let termination = MediaRemoteDeferredTermination(
+            process: process,
+            timeoutScheduler: timeoutScheduler,
+            completion: completion
+        )
+        termination.begin()
+    }
+
+    private func begin() {
+        process.clearHandlers()
+        guard process.isRunning else {
+            finish(clean: true)
+            return
+        }
+
+        process.terminate()
+        timeoutToken = timeoutScheduler.schedule(
+            after: MediaRemoteProcessClient.gracefulTerminationTimeoutSeconds
+        ) { [self] in
+            handleGracefulDeadline()
+        }
+    }
+
+    private func handleGracefulDeadline() {
+        timeoutToken = nil
+        guard process.isRunning else {
+            finish(clean: true)
+            return
+        }
+
+        process.forceTerminate()
+        timeoutToken = timeoutScheduler.schedule(
+            after: MediaRemoteProcessClient.forcedTerminationTimeoutSeconds
+        ) { [self] in
+            timeoutToken = nil
+            finish(clean: !process.isRunning)
+        }
+    }
+
+    private func finish(clean: Bool) {
+        guard !isFinished else {
+            return
+        }
+        isFinished = true
+        timeoutToken?.cancel()
+        timeoutToken = nil
+        completion(clean)
+    }
+}
+
+@MainActor
 private enum MediaRemoteProcessTerminationPolicy {
     static func stop(_ process: any MediaRemoteProcessHandle) -> Bool {
         process.clearHandlers()
@@ -501,6 +603,36 @@ private final class MediaRemoteOneShotOperation {
         teardownDidFinish(clean)
         continuation.resume(throwing: clean ? CancellationError() : MediaRemoteProcessClientError.teardownFailed)
         return clean
+    }
+
+    func cancelNonBlocking(timeoutScheduler: any MediaRemoteTimeoutScheduling) {
+        if isCompleted {
+            guard needsTeardownRetry else {
+                return
+            }
+            beginDeferredTermination(timeoutScheduler: timeoutScheduler)
+            return
+        }
+
+        isCompleted = true
+        timeoutToken?.cancel()
+        timeoutToken = nil
+        needsTeardownRetry = true
+        continuation.resume(throwing: CancellationError())
+        beginDeferredTermination(timeoutScheduler: timeoutScheduler)
+    }
+
+    private func beginDeferredTermination(timeoutScheduler: any MediaRemoteTimeoutScheduling) {
+        MediaRemoteDeferredTermination.start(
+            process: process,
+            timeoutScheduler: timeoutScheduler
+        ) { [weak self] clean in
+            guard let self else {
+                return
+            }
+            self.needsTeardownRetry = !clean
+            self.teardownDidFinish(clean)
+        }
     }
 }
 

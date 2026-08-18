@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "featureId": "m6.6-hover-peek",
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "sourceCommit": "7daffde9b7c2a734e2ddfa234b1ee744b0d96d9e",
+    "workflowRunId": 31636748859,
+    "artifactId": 9157392052,
+    "summary": {
+      "executableSizeBytes": 562368,
+      "appSizeBytes": 864574,
+      "dmgSizeBytes": 555272
+    }
+  },
+  "allowanceBytes": {
+    "executableSizeBytes": 296960,
+    "appSizeBytes": 594944,
+    "dmgSizeBytes": 465920
+  }
+}

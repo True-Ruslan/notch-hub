@@ -9,6 +9,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelController: NotchPanelController?
     private var mediaRuntime: (any MediaRuntimeSession)?
     private let mediaPresentationModel = ShippingMediaPresentationModel()
+    private let mediaGestureVisualModel = MediaGestureVisualModel()
+    private let sourceApplicationIconResolver = SourceApplicationIconResolver()
+    private var mediaGestureSession: MediaGestureSession?
+    private var mediaPeekSession: MediaPeekSession?
     private let composition: AppComposition = {
         #if NOTCHHUB_UI_TESTING
             AppComposition.uiTesting(configuration: .current())
@@ -25,34 +29,99 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         let mediaPresentationModel = mediaPresentationModel
-        let contentFactory: NotchPanelContentFactory = { [weak self] model, layout in
-            NotchHostingViewFactory.make(
-                rootView: MediaNotchRootView(
-                    panelModel: model,
-                    mediaModel: mediaPresentationModel,
-                    hardwareNotchWidth: layout.hardwareNotchWidth,
-                    compactBackgroundOpacity: layout.compactBackgroundOpacity,
-                    expandedContentTopInset: layout.expandedContentTopInset,
-                    onTogglePlayPause: { [weak self] in
-                        self?.mediaRuntime?.togglePlayPause()
+        let mediaGestureVisualModel = mediaGestureVisualModel
+        let sourceApplicationIconResolver = sourceApplicationIconResolver
+
+        let mediaGestureSession: MediaGestureSession
+        #if NOTCHHUB_UI_TESTING
+            let gestureHapticRecorder = uiTestHapticRecorder
+            mediaGestureSession = MediaGestureSession(
+                compactDispatcher: ShippingMediaCompactCommandDispatcher(),
+                visualModel: mediaGestureVisualModel,
+                performArmHaptic: {
+                    gestureHapticRecorder.performExpansionHaptic()
+                }
+            )
+        #else
+            mediaGestureSession = MediaGestureSession(
+                compactDispatcher: ShippingMediaCompactCommandDispatcher(),
+                visualModel: mediaGestureVisualModel,
+                performArmHaptic: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(
+                        .levelChange,
+                        performanceTime: .now
+                    )
+                }
+            )
+        #endif
+        self.mediaGestureSession = mediaGestureSession
+
+        #if NOTCHHUB_UI_TESTING
+            let hapticDiagnosticsRecorder = uiTestHapticRecorder
+        #endif
+
+        var capturedPanelModel: NotchPanelModel?
+        let contentFactory: NotchPanelContentFactory = { [weak self, weak mediaGestureSession] model, layout in
+            capturedPanelModel = model
+            let mediaRoot = MediaNotchRootView(
+                panelModel: model,
+                mediaModel: mediaPresentationModel,
+                mediaGestureVisualModel: mediaGestureVisualModel,
+                sourceApplicationIconResolver: sourceApplicationIconResolver,
+                hardwareNotchWidth: layout.hardwareNotchWidth,
+                compactBackgroundOpacity: layout.compactBackgroundOpacity,
+                expandedContentTopInset: layout.expandedContentTopInset,
+                onExplicitExpansion: { [weak self] in
+                    self?.panelController?.requestExpansion()
+                },
+                onTogglePlayPause: { [weak self] in
+                    self?.mediaRuntime?.togglePlayPause()
+                },
+                onPrevious: { [weak self] in
+                    self?.mediaRuntime?.goPrevious()
+                },
+                onNext: { [weak self] in
+                    self?.mediaRuntime?.goNext()
+                },
+                onSeekBegan: { [weak mediaGestureSession] in
+                    mediaGestureSession?.beginSeek() ?? false
+                },
+                onSeekCommitted: { [weak mediaGestureSession] positionSeconds in
+                    mediaGestureSession?.commitSeek(to: positionSeconds)
+                },
+                onSeekCancelled: { [weak mediaGestureSession] in
+                    mediaGestureSession?.cancelSeek()
+                }
+            )
+
+            #if NOTCHHUB_UI_TESTING
+                return NotchHostingViewFactory.make(
+                    rootView: UITestHapticDiagnosticsView(
+                        recorder: hapticDiagnosticsRecorder
+                    ) {
+                        mediaRoot
                     },
-                    onPrevious: { [weak self] in
-                        self?.mediaRuntime?.goPrevious()
-                    },
-                    onNext: { [weak self] in
-                        self?.mediaRuntime?.goNext()
+                    onScrollWheel: { [weak mediaGestureSession] event in
+                        mediaGestureSession?.handleScrollWheel(event)
                     }
                 )
-            )
+            #else
+                return NotchHostingViewFactory.make(
+                    rootView: mediaRoot,
+                    onScrollWheel: { [weak mediaGestureSession] event in
+                        mediaGestureSession?.handleScrollWheel(event)
+                    }
+                )
+            #endif
         }
 
         let panelController: NotchPanelController
         #if NOTCHHUB_UI_TESTING
-            let uiTestHapticRecorder = uiTestHapticRecorder
+            let panelHapticRecorder = uiTestHapticRecorder
             panelController = NotchPanelController(
                 contentFactory: contentFactory,
                 performExpansionHaptic: {
-                    uiTestHapticRecorder.performExpansionHaptic()
+                    panelHapticRecorder.performExpansionHaptic()
                 }
             )
         #else
@@ -60,21 +129,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
         self.panelController = panelController
 
+        if let capturedPanelModel {
+            mediaGestureSession.bind(
+                panelController: panelController,
+                panelModel: capturedPanelModel,
+                runtimeProvider: { [weak self] in
+                    self?.mediaRuntime
+                },
+                presentationProvider: { [weak mediaPresentationModel] in
+                    mediaPresentationModel?.presentation
+                }
+            )
+        }
+
+        let mediaPeekSession = MediaPeekSession(
+            probe: composition.makeMediaPeekProbe(),
+            presentationModel: mediaPresentationModel,
+            panelController: panelController
+        )
+        self.mediaPeekSession = mediaPeekSession
+        panelController.hoverPeekRequestHandler = { [weak mediaPeekSession] request in
+            mediaPeekSession?.handleHoverRequest(request)
+        }
+
         mediaPresentationModel.presentationDidChange = { [weak panelController] presentation in
             panelController?.setCompactHorizontalExtension(
                 presentation == nil ? 0 : Self.mediaCompactWingWidth
             )
         }
 
-        panelController.settledPresentationHandler = { [weak self] presentation in
+        panelController.settledPresentationHandler = { [weak self, weak mediaPeekSession] presentation in
+            if let mediaPeekSession {
+                switch presentation {
+                case .peek:
+                    mediaPeekSession.handleSettledPeek()
+                case .compact, .expanded:
+                    mediaPeekSession.cancel()
+                }
+            }
             self?.updateMediaRuntime(for: presentation)
         }
         panelController.show()
     }
 
+    func applicationDidResignActive(_: Notification) {
+        mediaGestureSession?.cancelSeek()
+    }
+
     func applicationWillTerminate(_: Notification) {
         panelController?.settledPresentationHandler = nil
+        panelController?.hoverPeekRequestHandler = nil
         mediaPresentationModel.presentationDidChange = nil
+
+        if let mediaPeekSession {
+            mediaPeekSession.invalidate()
+        }
+        mediaPeekSession = nil
+
+        mediaGestureSession?.invalidate()
+        mediaGestureSession = nil
 
         mediaRuntime?.stop()
         mediaRuntime = nil
@@ -98,7 +211,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.mediaRuntime = mediaRuntime
             mediaRuntime.start()
 
-        case .compact:
+        case .compact, .peek:
             mediaRuntime?.stop()
             mediaRuntime = nil
         }

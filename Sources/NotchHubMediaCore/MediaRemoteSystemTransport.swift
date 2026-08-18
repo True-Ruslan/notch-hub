@@ -66,6 +66,21 @@ final class MediaRemoteSystemTransport: SystemMediaTransport {
     }
 
     func stop() {
+        stop(processClientStop: processClient.stop)
+    }
+
+    func stopNonBlocking() {
+        stop(processClientStop: processClient.stopNonBlocking)
+    }
+
+    func send(_ command: MediaCommand) async -> MediaCommandResult {
+        guard isStarted else {
+            return .failed
+        }
+        return await processClient.send(command)
+    }
+
+    private func stop(processClientStop: () -> Void) {
         guard isStarted else {
             return
         }
@@ -74,19 +89,12 @@ final class MediaRemoteSystemTransport: SystemMediaTransport {
         handlerGeneration &+= 1
         processClient.onPayload = nil
         processClient.onFailure = nil
-        processClient.stop()
+        processClientStop()
         activeFingerprint = nil
         activePayload = nil
         activeCapabilities = Self.unknownCapabilities
         publishedNoSession = false
         eventHandler?(.stopped)
-    }
-
-    func send(_ command: MediaCommand) async -> MediaCommandResult {
-        guard isStarted else {
-            return .failed
-        }
-        return await processClient.send(command)
     }
 
     private func receive(_ payload: MediaRemoteWirePayload?) {
@@ -150,6 +158,15 @@ final class MediaRemoteSystemTransport: SystemMediaTransport {
     ) {
         Task { [weak self] in
             guard let self else {
+                return
+            }
+
+            guard
+                self.isStarted,
+                self.handlerGeneration == expectedHandlerGeneration,
+                self.mediaGeneration == expectedMediaGeneration,
+                self.activeFingerprint == fingerprint
+            else {
                 return
             }
 

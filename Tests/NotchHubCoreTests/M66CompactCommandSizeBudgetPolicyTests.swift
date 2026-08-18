@@ -3,7 +3,7 @@ import Testing
 
 struct M66CompactCommandSizeBudgetPolicyTests {
     @Test
-    func compactCommandDispatcherHistoricalBudgetRemainsProvenanced() throws {
+    func compactCommandDispatcherBudgetRemainsProvenanced() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -11,12 +11,6 @@ struct M66CompactCommandSizeBudgetPolicyTests {
         let budgetURL = repositoryRoot.appendingPathComponent(
             "performance/m6-6-compact-command-size-budget.json"
         )
-
-        let budgetExists = FileManager.default.fileExists(atPath: budgetURL.path)
-        #expect(budgetExists)
-        guard budgetExists else {
-            return
-        }
 
         let budget = try JSONDecoder().decode(
             FeatureBudget.self,

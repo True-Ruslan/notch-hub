@@ -1,129 +1,119 @@
 # Project state
 
-Last updated: 2026-08-15
-Current published version: `0.1.0` (Personal Release)
-Repository visibility: **Public**
-Default branch: `main`
-Primary physical target: macOS `26.6` / `Mac16,8`
+Last updated: 2026-08-18
+Published version: `0.1.0` Personal Release
+Primary physical target: macOS 26.6 / Mac16,8
+Protected branch: `main`
 
-## Current state
+## Product state
 
-The currently published release remains immutable `v0.1.0`. It predates the accepted M1/P0.1/M6 source work; the regression/UI automation foundation and all current M6.6 work remain unreleased.
+NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-`main` remains at `172805f8cd63dab664d0dbc6747576fb51b13e7a` (`M6.6: add vertical gesture visual tracking`). M6.1 through M6.5 and the already merged M6.6 prerequisites remain accepted/merged as recorded in the acceptance ledgers and Git history.
+Published state remains immutable `v0.1.0`. M6.6 below is accepted source work but is still unreleased and unmerged.
 
-Two draft PRs remain intentionally separated:
+### Merged foundations
 
-- **PR #33 — M6.6 consolidated interaction + Hover Peek:** implemented and automated-tested, but **physical acceptance is still pending**. Its frozen target-Mac candidate remains `423bc5d72a3676d01793f898ed2e8e79845bc8cd`; CI #962 / run `31685581542` passed the required automation. The PR stays draft, unmerged and unreleased until it is rebased/resumed after the testing foundation merge, passes fresh regression CI, then passes the focused repair retest and remaining M6.6 physical matrix on `Mac16,8` / macOS 26.6.
-- **PR #34 — Regression and UI Automation Foundation:** Plan 1 and the Legacy Regression Baseline Backfill are implemented and automated-verified. The pre-documentation exact candidate `1e9ec7ac322ab4580f4f867e39457db915cfcb77` passed CI #1051 / run `31847082833` with all three required jobs green and then passed two additional independent `macOS UI regression` executions on the same exact source. PR #34 remains draft/unmerged/unreleased until this documentation-synchronized head receives fresh exact-head CI and final review.
+- M0 Engineering Foundation — accepted/merged.
+- R0.1 Personal Release `v0.1.0` — accepted/released.
+- P0 Performance Foundation — accepted/merged; immutable baseline preserved.
+- P0.1 Public repository readiness — accepted.
+- M1 primary interaction/transition foundation — accepted/merged; active-display/fullscreen/Spaces/notchless/multi-monitor hardening remains deferred.
+- M6.1 transport feasibility — accepted.
+- M6.2 normalized media boundary — accepted/merged.
+- M6.3 production system transport — accepted/merged.
+- M6.4 shipping media composition/lazy lifecycle — accepted/merged.
+- M6.5 Media-first UI — accepted/merged.
+- M6.6 prerequisite tasks through vertical visual tracking — merged.
+- Regression/UI Automation Foundation — merged via PR #34 as `bd9566f690d314ed40fd6f3723a319291ceb4a58`; post-merge main CI #1053 passed all canonical jobs.
 
-PR #34 does not intentionally repair or tune M6.6 product behavior. PR #33 remained untouched while the accepted baseline was backfilled.
+Current PR #33 base remains `main` at `bd9566f690d314ed40fd6f3723a319291ceb4a58`.
 
-## Regression and UI automation foundation
+## M6.6 PR #33 — physically accepted source candidate
 
-The foundation establishes a native macOS regression layer without replacing SwiftPM as the production build system:
+PR #33 `M6.6: app media gesture session TDD` is **implemented -> automated-tested -> physically accepted on exact source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` -> still draft / not merged / not released**.
 
-- a checked-in Xcode project containing only a non-production UI-test host and `NotchHubUITests`;
-- XCUI tests launch the exact SwiftPM-built `NotchHub.app` by URL rather than linking production source into the UI-test target;
-- deterministic media and haptic fixtures compile only under `NOTCHHUB_UI_TESTING`;
-- normal Personal/Release builds are verified to contain none of the fixture markers;
-- stable accessibility identifiers expose externally meaningful notch/media state to XCUIAutomation;
-- UI synchronization uses XCTest predicates/state waits rather than arbitrary sleeps or automatic retries;
-- failure evidence includes screenshot, accessibility hierarchy, `.xcresult`, and exact `NHSourceCommit` provenance;
-- deterministic UI journeys exercise real XCUI hover, pointer exit and typed media-control interaction;
-- canonical CI contains the third required job `macOS UI regression` on `macos-26` while preserving package/security/performance gates.
+Exact source candidate evidence:
 
-No new network authority, telemetry, sensitive permission, global scroll monitor, event tap, polling loop, repeating watchdog, display link or synthetic media-key path is introduced by the testing foundation.
+- source SHA: `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`;
+- canonical CI #1241 / run `32075976405` — 3/3 GREEN;
+- Swift gate — 366 tests / 80 suites GREEN;
+- external exact-app native XCUI — 11/11 GREEN;
+- strict acceptance traceability, production MediaRemote transport/archive, Sandbox, Hardened Runtime, shipping preflight, current cumulative size budget, coverage and shared-runner performance smoke — GREEN.
 
-## Acceptance traceability — Plan 2 complete on the PR branch
+On 2026-08-18 the complete requested target-Mac matrix passed on Mac16,8/macOS 26.6 using that exact candidate:
 
-Authoritative plan: `docs/superpowers/plans/2026-08-14-legacy-regression-baseline-backfill.md`.
+- RIGHT -> Previous/back, animation follows RIGHT, one supported arm haptic;
+- LEFT -> Next, animation follows LEFT, one supported arm haptic;
+- media-on hover -> Peek + physical haptic, never accidental expansion;
+- stationary-pointer relaunch -> Peek + physical haptic;
+- media-off hover -> generic Peek + physical haptic;
+- compact click while hover/media enrichment can overlap -> one prompt Expanded transition;
+- exact-top-edge DOWN and center DOWN -> stable follow-finger expansion without twitch/self-collapse;
+- expanded pointer exit -> exact Compact;
+- expanded UP, including UP while leaving retention -> exact Compact;
+- seek preview / commit / cancel -> correct; cursor restores; track/source identity change cancels the transaction;
+- source-app icon and fallback rendering -> correct;
+- Accessibility / Input Monitoring / Automation / Screen Recording -> NONE;
+- after real Quit, `pgrep -lf 'mediaremote-adapter\.pl' || true` -> empty.
 
-`Tests/Acceptance/coverage.yml` plus `scripts/test_acceptance_coverage.py` now provide complete fail-closed traceability across the discovered stable acceptance inventory:
+Deterministic subcontracts not requiring hardware perception remain covered by the automated suite: threshold/hysteresis, short/reverted gestures, momentum rejection, diagonal arbitration, capability fail-closed behavior, 120 ms dwell, 140 ms Peek grace, Reduce Motion endpoint policy, stale generation protection, bounded source lookup and transport stop races.
 
-- exact CI output on `1e9ec7ac322ab4580f4f867e39457db915cfcb77`: `discovered=90 mapped=90 unmapped=0 missingAutomation=30`;
-- every discovered stable ID has a manifest entry with ledger-derived status;
-- accepted deterministic behavior points to concrete unit/integration/UI/policy/shipping evidence;
-- genuinely physical properties retain explicit `physicalOnlyReason` evidence instead of being falsely treated as automated;
-- pending/deferred M6.6 and deferred M1 contracts remain pending/deferred rather than being promoted to accepted;
-- canonical CI now runs `python3 scripts/test_acceptance_coverage.py --mode strict` in both `macOS UI regression` and `Build, test and package`.
+## Accepted interaction contract
 
-The `missingAutomation=30` report is not unmapped debt: it includes contracts whose current status or genuinely physical evidence does not require an automated layer. Strict mapping debt is zero.
+- stable `compact <-> peek <-> expanded` under one transition authority;
+- hover dwell exactly 120 ms; Peek exit grace exactly 140 ms;
+- generic Peek works without usable media; optional media enrichment begins only after authoritative Peek settlement;
+- settled compact and Peek own zero persistent media observer; only settled expanded owns the presentation-scoped shipping runtime;
+- explicit click remains one stable SwiftUI tap path; persistent AppKit hosting accepts first mouse but owns no mouse-button semantics;
+- physical DOWN expands; physical UP collapses; exact top-screen/panel `maxY` remains inside the interaction region;
+- expanded pointer exit returns non-haptically to exact compact;
+- interactive transitions settle to exact endpoints even if moving geometry loses terminal local scroll delivery;
+- physical horizontal direction is LEFT -> `next`, RIGHT -> `previous`, independent of macOS scroll-direction preference;
+- horizontal visuals follow the physical finger direction;
+- seek, source identity and cursor isolation remain bounded/event-driven;
+- bounded Peek cancellation is nonblocking for the UI actor, with transport stop races and late callbacks fail-closed;
+- persistent expanded-runtime and application-Quit teardown retain synchronous fail-closed lifecycle verification.
 
-A validator regression found during Task 9 was closed under RED -> GREEN: ordinary behavioral prose such as a lowercase `failed` capability can no longer silently turn a pending acceptance ID into `rejected`; per-ID `PASS`/`FAIL`/`DEFERRED` remains recognized only as explicit acceptance tokens, while document-level `Status:` parsing remains authoritative.
+No global scroll/button/keyboard monitor, mouse-button event authority, event tap, polling loop, repeating timer, display link, UI-test retry/sleep masking, new process executable boundary, network authority, telemetry or sensitive permission was introduced.
 
-## Exact pre-documentation verification
+## Regression coverage
 
-Source `1e9ec7ac322ab4580f4f867e39457db915cfcb77`, CI #1051 / run `31847082833`:
+The final horizontal defect is guarded by `MediaGesturePhysicalPipelineTests`, which exercises raw AppKit horizontal delta -> normalization -> follow-finger visual offset -> typed media command across both macOS scroll-direction preference states. Existing coordinator, Peek, interactive-transition, seek, cursor, source-icon, lifecycle and policy suites cover the remaining deterministic contracts.
 
-- `macOS 26 compatibility` — PASS;
-- `macOS UI regression` — PASS;
-- `Build, test and package` — PASS;
-- strict acceptance coverage — `90 / 90` mapped, zero unmapped;
-- Swift suite — **250 tests PASS**;
-- source/security policy, Sandbox-only entitlement, Hardened Runtime/signing, shipping preflight, system-library boundary, feature-size budget and performance smoke — PASS;
-- exact shipping candidate sizes — executable `446,656 B`, app `748,863 B`, DMG `483,835 B`, within the regression-foundation envelope;
-- the same exact source completed **three independent `macOS UI regression` executions successfully**; no failed run was retried merely to obtain a green result.
+The acceptance ledgers are authoritative for stable IDs:
 
-A fresh documentation-synchronized exact-head CI is still required before PR #34 may be considered merge-ready.
+- `docs/testing/MEDIA_GESTURE_ACCEPTANCE.md`;
+- `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`;
+- `docs/testing/MEDIA_PEEK_ACCEPTANCE.md`.
 
-## Status ladder
+Machine-readable traceability remains in `Tests/Acceptance/coverage.yml` plus `coverage-current.json`.
 
-- M0 Engineering Foundation — **accepted / merged**.
-- R0.1 Personal Release `v0.1.0` — **accepted / released**.
-- P0 Performance Foundation — **accepted / merged**; immutable baseline preserved.
-- P0.1 Public Repository Readiness — **accepted**.
-- M1 primary notch interaction/transition slice — **physically accepted / merged**.
-- M6.1 transport feasibility — **physically accepted**.
-- M6.2 production media boundary — **accepted / merged**.
-- M6.3 production system transport — **physically accepted / merged**.
-- M6.4 shipping composition — **physically accepted / merged**.
-- M6.5 Media-first UI — **physically accepted / merged**.
-- M6.6 merged prerequisites on `main` — **implemented / automated-tested / merged**.
-- M6.6 consolidated PR #33 — **implemented / automated-tested / physical retest pending / not merged / not released**.
-- Regression/UI Automation Foundation + Legacy Backfill in PR #34 — **implemented / automated-verified / strict PASS on pre-doc candidate / final docs-head CI and review pending / not merged / not released**.
-- P1 whole-app performance/resource review — **blocked until M6.6 acceptance and merge**.
+## Security and resource invariants
 
-## Security and privacy baseline
+- App Sandbox-only entitlement and Hardened Runtime remain mandatory.
+- No Accessibility, Input Monitoring, Automation, Screen Recording, networking, telemetry, history persistence or arbitrary command authority is added.
+- Universal Media retains the reviewed fixed `/usr/bin/perl` + pinned adapter/framework boundary.
+- Settled compact and Peek own zero persistent adapter; settled expanded owns the expected presentation-scoped runtime; normal Quit leaves no orphan.
+- Gesture/Peek/transition hot paths add no polling, repeating timer, display link, global monitor, event tap, per-event subprocess creation or production logging.
+- UI fixtures and diagnostics remain compile-time test-only; shipping composition still creates the concrete production runtime.
 
-`SECURITY.md` remains authoritative. Important invariants are unchanged:
+## Performance state
 
-- local-first and no telemetry;
-- App Sandbox-only application entitlement;
-- Hardened Runtime without dangerous exceptions;
-- no direct application networking;
-- no bundled secrets;
-- no broad global input capture beyond the existing narrow `.mouseMoved` fallback;
-- exactly one reviewed production media subprocess boundary fixed to `/usr/bin/perl` with pinned resources and a closed typed command surface;
-- no direct private-framework loading in the NotchHub process;
-- no media listening-history persistence/logging;
-- no Accessibility, Input Monitoring, Automation/Apple Events or Screen Recording expansion for the testing foundation.
+`performance/baseline-v0.1.0.json` and all historical feature budgets remain immutable provenance records.
 
-UI fixtures substitute only nondeterministic external boundaries under a compile-time testing condition and are explicitly rejected from shipping artifacts.
+The active cumulative envelope remains `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json`; exact candidate CI #1241 passed without widening it.
 
-## Performance baseline
+Shared-runner performance remains compatibility evidence only. Target-Mac CPU/RSS/threads/wakeups/energy acceptance remains P1 and starts only after PR #33 is merged and post-merge `main` is verified.
 
-`performance/baseline-v0.1.0.json` remains immutable historical evidence:
+## Acceptance-record rule
 
-- executable `220,560 B`;
-- app `223,555 B`;
-- DMG `73,955 B`.
+The physical source acceptance is frozen on exact `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`. The follow-up acceptance-record commit changes documentation and machine-readable coverage only; it does not redefine the physically accepted runtime SHA. That record must pass all canonical CI gates before PR #33 can advance.
 
-Historical M6 feature budgets remain immutable. The foundation uses the separate provenance-backed `performance/regression-ui-automation-foundation-size-budget.json`; canonical CI enforces that envelope instead of rewriting earlier budgets. Shared-runner CPU/RSS/thread magnitudes remain compatibility evidence only; target-Mac performance acceptance still follows `PERFORMANCE.md`.
-
-## Known limitations / technical debt
-
-- PR #34 still requires fresh CI on this documentation-synchronized exact head, final diff review, merge and post-merge `main` CI before the foundation is accepted as merged.
-- PR #33 still requires rebase/resume after #34, fresh automated regression evidence, target-Mac physical retest and the remaining M6.6 gesture/Peek/seek/source-icon/lifecycle/permission matrix.
-- Apple Music, Spotify and additional-player compatibility remain unverified rather than assumed.
-- active-display migration, multi-monitor hardening, fullscreen/Spaces, screen-configuration changes, notchless mode and click/pin policy remain deferred M1 work;
-- the global `.mouseMoved` fallback remains pending the P1 local-tracking comparison;
-- portable absolute memory-footprint measurement and repeated-run variance characterization remain P1 research.
+PR #33 intentionally remains Draft until separate merge authorization. No release claim is made.
 
 ## Next optimal step
 
-1. Run canonical CI on this documentation-synchronized PR #34 exact head and require all three jobs, including strict traceability and real XCUI, to pass.
-2. Review the final PR #34 diff for unsupported acceptance claims, accidental product behavior changes, security/trust-boundary widening or performance-policy weakening.
-3. If clean, mark PR #34 ready, merge it through normal protected-branch rules, and require post-merge `main` CI to pass.
-4. Only then rebase/resume PR #33 onto the merged regression foundation, obtain a fresh exact-head candidate and run the new regression suite before target-Mac physical acceptance.
-5. Only after M6.6 is physically accepted and merged may P1 resource/performance work or later product milestones advance.
+1. Validate this acceptance-record commit through all three canonical CI jobs without production changes or policy weakening.
+2. Update PR #33 metadata to point at accepted source `8744b9e...` and the acceptance-record CI evidence while keeping it Draft.
+3. On explicit merge authorization, mark PR #33 ready, merge with expected-head protection and verify post-merge `main` CI.
+4. Only after the merge/post-merge gate, close M6.6 as merged and begin P1 target-Mac whole-app performance/resource review before multi-monitor hardening.

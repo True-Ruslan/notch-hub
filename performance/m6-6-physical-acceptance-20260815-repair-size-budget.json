@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 614400,
+    "dmgSizeBytes": 466944,
+    "executableSizeBytes": 315392
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9248133083,
+    "sourceCommit": "63b0f2f96f879123f3883db7311c90a20d3a4328",
+    "summary": {
+      "appSizeBytes": 883039,
+      "dmgSizeBytes": 555132,
+      "executableSizeBytes": 580832
+    },
+    "workflowRunId": 31889213155
+  },
+  "featureId": "m6.6-physical-acceptance-20260815-repair",
+  "schemaVersion": 1
+}

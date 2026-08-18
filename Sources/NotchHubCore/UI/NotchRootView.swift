@@ -4,21 +4,36 @@ public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
     private let compactBackgroundOpacity: Double
     private let expandedContentTopInset: CGFloat
+    private let handlesExplicitExpansionTap: Bool
+    private let onExplicitExpansion: () -> Void
 
     public init(
         model: NotchPanelModel,
         compactBackgroundOpacity: Double,
-        expandedContentTopInset: CGFloat
+        expandedContentTopInset: CGFloat,
+        handlesExplicitExpansionTap: Bool = true,
+        onExplicitExpansion: @escaping () -> Void = {}
     ) {
         self.model = model
         self.compactBackgroundOpacity = compactBackgroundOpacity
         self.expandedContentTopInset = expandedContentTopInset
+        self.handlesExplicitExpansionTap = handlesExplicitExpansionTap
+        self.onExplicitExpansion = onExplicitExpansion
     }
 
     public var body: some View {
+        if handlesExplicitExpansionTap {
+            surfaceContent
+                .onTapGesture(perform: requestExplicitExpansionFromTap)
+        } else {
+            surfaceContent
+        }
+    }
+
+    private var surfaceContent: some View {
         Group {
             switch model.contentPresentation {
-            case .compact:
+            case .compact, .peek:
                 compactContent
             case .expanded:
                 expandedContent
@@ -39,6 +54,8 @@ public struct NotchRootView: View {
         switch model.contentPresentation {
         case .compact:
             "notch.surface.compact"
+        case .peek:
+            "notch.surface.peek"
         case .expanded:
             "notch.surface.expanded"
         }
@@ -77,7 +94,7 @@ public struct NotchRootView: View {
 
             Spacer(minLength: 0)
 
-            Text("Move the pointer away to collapse")
+            Text("Use the upward gesture to collapse")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.55))
         }
@@ -99,5 +116,12 @@ public struct NotchRootView: View {
             .white.opacity(0.08),
             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
         )
+    }
+
+    private func requestExplicitExpansionFromTap() {
+        guard model.contentPresentation != .expanded else {
+            return
+        }
+        onExplicitExpansion()
     }
 }

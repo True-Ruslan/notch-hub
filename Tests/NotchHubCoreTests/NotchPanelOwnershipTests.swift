@@ -107,6 +107,16 @@ struct NotchPanelOwnershipTests {
         #expect(!controllerSource.contains("panel.setFrame("))
     }
 
+    @Test
+    func showKeepsStationaryPointerEligibleForHoverDwell() throws {
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(controllerSource.contains("to: NSEvent.mouseLocation"))
+        #expect(!controllerSource.contains("allowActivation: false"))
+    }
+
     private func sourceText(relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot =

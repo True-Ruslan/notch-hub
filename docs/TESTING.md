@@ -1,162 +1,100 @@
 # Testing
 
-## Goal
+## Policy
 
-Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer/trackpad feel, compositor/window-animation continuity, physical haptic feel, exact macOS trust/permission surfaces, third-party player integration, and target-hardware resource measurements.
+Automate every deterministic behavior that can be validated reliably. Manual acceptance is reserved for physical notch geometry, real pointer/trackpad feel, compositor continuity, haptic feel, macOS permission/trust surfaces, third-party integration and target-hardware resources.
 
-A green pipeline is necessary but is not proof of real-device UX or target-Mac efficiency. Manual success likewise never replaces deterministic automated coverage that can reasonably exist.
+A green pipeline is necessary but never substitutes for target-Mac acceptance. Manual success never substitutes for reproducible automated coverage.
 
-## Required CI gates
+## Required CI
 
-The canonical `.github/workflows/ci.yml` owns all untrusted pull-request execution. Required checks are:
+Canonical protected-branch jobs:
 
 - `macOS 26 compatibility`;
 - `macOS UI regression`;
 - `Build, test and package`.
 
-The UI job is intentionally part of the same canonical workflow rather than a second PR-triggered workflow. Checkout is read-only and no secrets or privileged write authority are required.
+CI covers warnings-as-errors builds, Swift tests, exact external-app XCUI, acceptance-traceability policy, release/security/performance/media policy, strict formatting/plist/shell checks, Sandbox/Hardened Runtime/signing/system-library verification, shipping media preflight, deterministic artifact sizes, active provenance-backed feature budget, performance-harness schema smoke and artifacts.
 
-Current CI validates:
+Do not weaken tests, security rules, production behavior or historical baselines merely to obtain green CI.
 
-1. Swift package structure, warnings-as-errors compilation and complete Swift tests on macOS 26.
-2. Release, security, media-probe and performance policy.
-3. Production media probe/candidate build, archive round-trip and provenance.
-4. App/DMG packaging, signing, Hardened Runtime, exact App Sandbox entitlement and system-library-only application linkage.
-5. Shipping media preflight and deterministic artifact-size enforcement against immutable P0 baseline plus the current reviewed feature envelope.
-6. Native XCTest/XCUIAutomation project policy and compile-time fixture isolation.
-7. Exact SwiftPM-built UI-test app creation with `NOTCHHUB_UI_TESTING` only for that build.
-8. Shipping-artifact leak verification proving fixture/test-only markers are absent.
-9. **Fail-closed strict acceptance traceability** over every stable `NH-*` ledger entry in both the UI job and the normal build/package job.
-10. Real external-app XCUI journeys on `macos-26`, preserving `.xcresult` and diagnostics.
-11. Exact UI app source provenance: `NHSourceCommit` must match the PR-head/source SHA before the test app is launched.
+## Regression/UI automation foundation
 
-Do not lower assertions, delete useful tests, weaken security/release/performance policy, widen accepted budgets, or weaken production behavior merely to make CI green.
+PR #34 merged the native regression foundation as `bd9566f690d314ed40fd6f3723a319291ceb4a58`; post-merge main CI #1053 passed all three jobs.
 
-## Testing pyramid
+The foundation includes exact SwiftPM-built app launch through XCUI, source provenance validation, compile-time-only fixtures, stable accessibility IDs, state-driven synchronization, diagnostics, and fail-closed machine-readable acceptance coverage.
 
-### Deterministic unit / policy
+## TDD rule
 
-Use Swift Testing or Python policy tests for state machines, geometry, lifecycle, stale-callback handling, schemas, source-policy/security invariants, performance policies and artifact contracts.
+For production behavior:
 
-### Integration / shipping
+1. add a focused regression test;
+2. preserve a RED run proving the intended missing behavior;
+3. implement the minimum GREEN change;
+4. run full CI/security/performance verification;
+5. only then advance to another independent defect.
 
-Use exact production transports and packaged artifacts where the OS/process boundary matters. Validate provenance, teardown, signing, entitlements and the fixed reviewed `/usr/bin/perl` media boundary.
+Race, stale-callback, boundary and teardown behavior must be tested deterministically without arbitrary sleeps where practical.
 
-### Native UI / E2E
+## M6.6 automated acceptance baseline
 
-The production build system remains SwiftPM. `NotchHubUITests.xcodeproj` contains only a minimal non-production test host and the UI-test bundle. Tests launch the exact SwiftPM-built `NotchHub.app` with `XCUIApplication(url:)`.
+The physically accepted runtime source is `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`.
 
-Current deterministic UI coverage proves on `macos-26`:
+Canonical CI #1241 / run `32075976405` passed:
 
-- exact external app launch/terminate;
-- stable compact accessibility surface;
-- real hover-dwell expansion through the AppKit/SwiftUI pointer path;
-- pointer-exit return to stable compact;
-- repeated hover/exit cycles do not leave a stale surface;
-- deterministic media fixture exposes authoritative title/artist/source state;
-- real XCUI `Next` changes Track A -> Track B;
-- real XCUI `Previous` returns Track B -> Track A;
-- real XCUI Play/Pause toggles the visible accessibility state;
-- unsupported fixture capabilities remain disabled and do not mutate track state;
-- failures preserve exact source SHA, screenshot, accessibility hierarchy and `.xcresult`.
+- all three canonical jobs;
+- 366 Swift tests / 80 suites;
+- 11/11 native external-app XCUI tests;
+- strict acceptance traceability;
+- production transport/archive verification;
+- release DMG, security, App Sandbox-only entitlement, Hardened Runtime, signing and shipping preflight;
+- active cumulative size budget without widening;
+- shared-runner performance smoke.
 
-UI synchronization uses `NSPredicate`, `XCTNSPredicateExpectation` and `XCTWaiter`. Fixed sleeps and automatic retries are rejected by policy.
+The horizontal regression stack includes:
 
-## Fixture / shipping separation
+- `MediaGestureInputNormalizerTests` for physical-axis normalization;
+- `MediaGestureCoordinatorTests` for direction, threshold, hysteresis, haptic, momentum, diagonal arbitration, capability validation and vertical intent;
+- `MediaGesturePhysicalPipelineTests` for raw AppKit X -> normalization -> follow-finger visual offset -> typed command across both macOS scroll-direction preference states.
 
-UI fixtures replace only nondeterministic external media/haptic boundaries and exist only under `#if NOTCHHUB_UI_TESTING`.
+Hover/Peek and interaction regressions cover exact 120 ms dwell, 140 ms exit grace, generic no-media Peek, stale activation rejection, local pointer exit, exact-top-edge inclusive containment, interactive exact endpoint settlement and lost-terminal safety.
 
-The deterministic media fixture is local and bounded: fixed tracks/state, no network, subprocess, file I/O, polling, repeating timer or display link. Shipping composition remains the default when the compiler condition is absent.
+Seek/source/lifecycle regressions cover capability gating, local preview and commit/cancel behavior, session identity invalidation, balanced cursor ownership, bounded public `NSWorkspace` source lookup, transport stop-before-queued-work races and stale callback rejection.
 
-Normal Personal/Release artifacts are verified to contain no fixture marker or UI-test diagnostic marker. UI automation must not add Accessibility, Input Monitoring, Automation, Screen Recording, event taps, global scroll capture, synthetic media keys or any broader input authority.
+## M6.6 physical acceptance
 
-## Accessibility contract
+On 2026-08-18 Mac16,8/macOS 26.6, the complete requested physical matrix passed on exact source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` after CI #1241 was green.
 
-Stable identifiers used by XCUIAutomation include externally meaningful notch/media surfaces and controls such as:
+Physical evidence includes:
 
-- `notch.surface.compact`;
-- `notch.surface.expanded`;
-- `media.artwork`;
-- `media.title`;
-- `media.artist`;
-- `media.playPause`;
-- `media.previous`;
-- `media.next`;
-- `media.source`.
+- RIGHT -> Previous/back, follow-finger RIGHT, one supported arm haptic;
+- LEFT -> Next, follow-finger LEFT, one supported arm haptic;
+- media-on Hover Peek + haptic and stationary-pointer relaunch;
+- no-media generic Hover Peek + haptic;
+- prompt single click expansion while hover/media enrichment may overlap;
+- exact-top-edge and center DOWN without twitch/self-collapse;
+- expanded pointer-exit and physical UP exact Compact settlement;
+- seek preview/commit/cancel, cursor restore and track/source identity cancellation;
+- source icon and fallback rendering;
+- Accessibility / Input Monitoring / Automation / Screen Recording all NONE;
+- post-Quit helper cleanup confirmed by empty `pgrep -lf 'mediaremote-adapter\.pl' || true`.
 
-These are testability/accessibility seams, not an alternate state-control API.
+Deterministic-only subcontracts such as exact timer thresholds, hysteresis, diagonal rejection, stale generation rejection and Reduce Motion policy are accepted through automated evidence rather than invented manual evidence.
 
 ## Acceptance traceability
 
-`Tests/Acceptance/coverage.yml` is the machine-readable mapping layer. `scripts/test_acceptance_coverage.py` discovers stable `NH-*` IDs from `docs/testing/*.md` and validates ID uniqueness, canonical source, ledger-derived status, evidence layer and referenced test symbols.
+Authoritative M6.6 ledgers:
 
-Two validator modes remain available:
+- `docs/testing/MEDIA_GESTURE_ACCEPTANCE.md`;
+- `docs/testing/INTERACTIVE_NOTCH_ACCEPTANCE.md`;
+- `docs/testing/MEDIA_PEEK_ACCEPTANCE.md`.
 
-- `--mode audit` is a development diagnostic that permits unmapped contracts while still rejecting invalid entries;
-- `--mode strict` is the canonical CI gate and requires every discovered stable acceptance contract to be mapped.
+Machine-readable coverage lives in `Tests/Acceptance/coverage.yml` plus `coverage-current.json`; `scripts/test_acceptance_coverage.py --mode strict` must remain green. Accepted IDs must cite concrete automated coverage, physical evidence, or both. Historical rejected evidence is retained in prose but no longer describes the final exact candidate.
 
-The Legacy Regression Baseline Backfill has completed the strict inventory on the PR #34 branch. Exact pre-documentation candidate `1e9ec7ac322ab4580f4f867e39457db915cfcb77` reports:
-
-```text
-Acceptance coverage strict passed: discovered=90 mapped=90 unmapped=0 missingAutomation=30
-```
-
-Interpretation:
-
-- `mapped=90 / unmapped=0` means the entire discovered acceptance inventory has an explicit status/evidence record;
-- accepted deterministic M1 and M6.1-M6.5 contracts cite executable unit/integration/UI/policy/shipping evidence;
-- genuinely physical properties may include a `physical` layer only with a concrete `physicalOnlyReason`;
-- pending/deferred contracts remain pending/deferred and are not converted into accepted behavior merely to satisfy automation;
-- `missingAutomation=30` is not unmapped debt: it includes pending/deferred or genuinely physical cases that do not currently carry an automated evidence layer.
-
-The status parser also distinguishes explicit acceptance tokens from ordinary behavioral prose: lowercase wording such as a `failed` capability no longer reclassifies a pending ledger entry as rejected. Explicit per-ID `PASS`/`FAIL`/`DEFERRED` and document-level `Status:` remain authoritative.
-
-Canonical CI runs strict traceability in **both** `macOS UI regression` and `Build, test and package`, so losing or corrupting the mapping fails closed even if one testing layer is skipped by a future workflow mistake.
-
-## Regression-foundation verification checkpoint
-
-On exact source `1e9ec7ac322ab4580f4f867e39457db915cfcb77`, CI #1051 / run `31847082833` passed:
-
-- all three required jobs;
-- strict `90/90` acceptance mapping;
-- 250 Swift tests;
-- source/security policy and Sandbox/Hardened Runtime/signing checks;
-- shipping fixture-leak exclusion and shipping media preflight;
-- foundation feature-size gate and performance smoke;
-- one canonical `macOS UI regression` execution plus two additional independent UI executions on the exact same source, for **3/3 successful XCUI runs**.
-
-This evidence validates the pre-documentation candidate. A fresh exact-head CI after documentation synchronization is still required before PR #34 merge readiness.
-
-## Physical-only boundary
-
-Physical target acceptance remains authoritative where automation cannot establish equivalence, including:
-
-- exact physical-notch visual geometry and compositor continuity;
-- real trackpad gesture/haptic feel;
-- target-Mac permission/trust prompts;
-- real third-party player behavior;
-- target-hardware CPU/RSS/thread/wakeup/energy measurements;
-- display/Spaces behavior requiring actual multi-display/fullscreen hardware context.
-
-Detailed physical evidence remains in the acceptance ledgers under `docs/testing/`. In particular:
-
-- M1: `NOTCH_INTERACTION_ACCEPTANCE.md`;
-- M6.1: `MEDIA_BRIDGE_PROBE_ACCEPTANCE.md`;
-- M6.3: `PRODUCTION_MEDIA_TRANSPORT_ACCEPTANCE.md`;
-- M6.4: `SHIPPING_MEDIA_COMPOSITION_ACCEPTANCE.md`;
-- M6.5: `MEDIA_UI_ACCEPTANCE.md`;
-- M6.6 gesture contract: `MEDIA_GESTURE_ACCEPTANCE.md`;
-- M6.6 interactive contract: `INTERACTIVE_NOTCH_ACCEPTANCE.md`;
-- M6.6 Hover Peek contract: `MEDIA_PEEK_ACCEPTANCE.md`.
+The acceptance-record commit is documentation/coverage-only. Physical source acceptance stays pinned to `8744b9e...`; a docs-only descendant is not a replacement runtime candidate.
 
 ## Performance boundary
 
-`PERFORMANCE.md` and `performance/baseline-v0.1.0.json` are authoritative. The immutable `v0.1.0` artifact baseline remains executable `220,560 B`, app `223,555 B`, DMG `73,955 B`.
+`performance/baseline-v0.1.0.json` and historical feature budgets remain immutable evidence. The active cumulative envelope is `performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json`; CI #1241 passed it without widening.
 
-Intentional shipping growth uses separate provenance-backed cumulative envelopes; historical budgets are not rewritten. The Regression/UI Automation Foundation has its own reviewed envelope. Shared GitHub runners validate deterministic performance policy/schema/package behavior; target runtime magnitudes remain real-hardware evidence.
-
-## Current M6.6 boundary
-
-PR #33 remains draft and physically unaccepted. Its frozen physical candidate is `423bc5d72a3676d01793f898ed2e8e79845bc8cd` with automated CI green, but target-Mac retest remains mandatory.
-
-The testing foundation does not repair M6.6 behavior and does not convert automated UI evidence into physical acceptance. Product feature work remains frozen until PR #34 is merged and post-merge `main` CI passes; #33 must then be rebased/resumed and revalidated against the merged regression foundation before physical acceptance continues.
+Shared-runner CPU/RSS magnitudes are compatibility evidence, not target-Mac acceptance. P1 target resource review starts only after PR #33 merge and post-merge `main` CI.

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "featureId": "m6.6-physical-acceptance-repair",
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "sourceCommit": "d8fb784eb9eb47c7af34dbd689b6fcfa5aadef12",
+    "workflowRunId": 31617785894,
+    "artifactId": 9150099248,
+    "summary": {
+      "executableSizeBytes": 523200,
+      "appSizeBytes": 825406,
+      "dmgSizeBytes": 527113
+    }
+  },
+  "allowanceBytes": {
+    "executableSizeBytes": 257024,
+    "appSizeBytes": 556032,
+    "dmgSizeBytes": 437248
+  }
+}

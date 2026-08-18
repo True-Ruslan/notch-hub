@@ -6,12 +6,17 @@ protocol MediaRemoteProcessClientProtocol: AnyObject {
 
     func startObservation() throws
     func stop()
+    func stopNonBlocking()
     func send(_ command: MediaCommand) async -> MediaCommandResult
     func capabilities() async throws -> MediaCommandCapabilities
 }
 
 extension MediaRemoteProcessClientProtocol {
     var lastTeardownClean: Bool { true }
+
+    func stopNonBlocking() {
+        stop()
+    }
 }
 
 extension MediaRemoteProcessClient: MediaRemoteProcessClientProtocol {}

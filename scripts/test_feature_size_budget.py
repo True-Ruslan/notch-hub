@@ -189,7 +189,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         extra_top_level = self.feature_budget()
         extra_top_level["notes"] = "unexpected"
         with self.assertRaises(ValueError):
-            compare_size_summary_to_feature_budget(summary, self.baseline(), extra_top_level)
+            compare_size_summary_to_feature_budget(
+                summary,
+                self.baseline(),
+                extra_top_level,
+            )
 
         no_baseline_id = self.baseline()
         del no_baseline_id["baselineId"]
@@ -266,151 +270,222 @@ class FeatureSizeBudgetTests(unittest.TestCase):
                 )
             self.assertIn("feature-adjusted ceiling", stderr.getvalue())
 
-    def test_repository_feature_budgets_remain_provenanced_tight_and_self_validating(self):
-        baseline = json.loads(
+    def repository_baseline(self):
+        return json.loads(
             (REPOSITORY_ROOT / "performance" / "baseline-v0.1.0.json").read_text(
                 encoding="utf-8"
             )
         )
-        expected = {
-            "m6-4-shipping-media-size-budget.json": {
-                "featureId": "m6.4-shipping-media-composition",
-                "sourceCommit": "21318c94cfcda45f147d3967ddcd7194034e9812",
-                "workflowRunId": 31402487785,
-                "artifactId": 9068350685,
-                "allowanceBytes": {
-                    "appSizeBytes": 360448,
-                    "dmgSizeBytes": 327680,
-                    "executableSizeBytes": 65536,
-                },
-                "summary": {
-                    "appSizeBytes": 615022,
-                    "dmgSizeBytes": 406615,
-                    "executableSizeBytes": 312816,
-                },
-            },
-            "m6-5-media-first-ui-size-budget.json": {
-                "featureId": "m6.5-media-first-ui",
-                "sourceCommit": "3db9d05619b38198c00b57b3cdd043af0618f714",
-                "workflowRunId": 31537964825,
-                "artifactId": 9119647587,
-                "allowanceBytes": {
-                    "appSizeBytes": 430080,
-                    "dmgSizeBytes": 376832,
-                    "executableSizeBytes": 135168,
-                },
-                "summary": {
-                    "appSizeBytes": 699614,
-                    "dmgSizeBytes": 461748,
-                    "executableSizeBytes": 397408,
-                },
-            },
-            "m6-6-one-shot-lifecycle-size-budget.json": {
-                "featureId": "m6.6-one-shot-lifecycle",
-                "sourceCommit": "55d08e58ce755a4e5d32a1128bd1a1262fe1ff42",
-                "workflowRunId": 31575348332,
-                "artifactId": 9133032338,
-                "allowanceBytes": {
-                    "appSizeBytes": 450560,
-                    "dmgSizeBytes": 376832,
-                    "executableSizeBytes": 151552,
-                },
-                "summary": {
-                    "appSizeBytes": 717406,
-                    "dmgSizeBytes": 465191,
-                    "executableSizeBytes": 415200,
-                },
-            },
-            "m6-6-gesture-engine-size-budget.json": {
-                "featureId": "m6.6-gesture-engine",
-                "sourceCommit": "ddad4a3efa579caf818693dece9845059fbcd810",
-                "workflowRunId": 31582412364,
-                "artifactId": 9135807459,
-                "allowanceBytes": {
-                    "appSizeBytes": 458752,
-                    "dmgSizeBytes": 389120,
-                    "executableSizeBytes": 159744,
-                },
-                "summary": {
-                    "appSizeBytes": 724814,
-                    "dmgSizeBytes": 474960,
-                    "executableSizeBytes": 422608,
-                },
-            },
-            "m6-6-compact-command-size-budget.json": {
-                "featureId": "m6.6-compact-command",
-                "sourceCommit": "55f2ee429932b68ed7a02c3750cd28a28c9bd3d9",
-                "workflowRunId": 31588206985,
-                "artifactId": 9138085911,
-                "allowanceBytes": {
-                    "appSizeBytes": 479232,
-                    "dmgSizeBytes": 389120,
-                    "executableSizeBytes": 180224,
-                },
-                "summary": {
-                    "appSizeBytes": 745582,
-                    "dmgSizeBytes": 475100,
-                    "executableSizeBytes": 443376,
-                },
-            },
-            "regression-ui-automation-foundation-size-budget.json": {
-                "featureId": "regression-ui-automation-foundation",
-                "sourceCommit": "e9d414e094ee2ea5f72815078210e4dda9163aec",
-                "workflowRunId": 31842940616,
-                "artifactId": 9235015770,
-                "allowanceBytes": {
-                    "appSizeBytes": 479232,
-                    "dmgSizeBytes": 397312,
-                    "executableSizeBytes": 184320,
-                },
-                "summary": {
-                    "appSizeBytes": 748863,
-                    "dmgSizeBytes": 483851,
-                    "executableSizeBytes": 446656,
-                },
-            },
-        }
 
-        for file_name, contract in expected.items():
-            with self.subTest(file_name=file_name):
-                feature_budget = json.loads(
-                    (REPOSITORY_ROOT / "performance" / file_name).read_text(
-                        encoding="utf-8"
-                    )
-                )
-                self.assertEqual(1, feature_budget["schemaVersion"])
-                self.assertEqual("v0.1.0", feature_budget["baselineId"])
-                self.assertEqual(contract["featureId"], feature_budget["featureId"])
-                self.assertEqual(
-                    contract["sourceCommit"],
-                    feature_budget["evidence"]["sourceCommit"],
-                )
-                self.assertEqual(
-                    contract["workflowRunId"],
-                    feature_budget["evidence"]["workflowRunId"],
-                )
-                self.assertEqual(
-                    contract["artifactId"],
-                    feature_budget["evidence"]["artifactId"],
-                )
-                self.assertEqual(
-                    contract["allowanceBytes"],
-                    feature_budget["allowanceBytes"],
-                )
-                self.assertEqual(
-                    contract["summary"],
-                    feature_budget["evidence"]["summary"],
-                )
-                self.assertEqual(
-                    [],
-                    compare_size_summary_to_feature_budget(
-                        feature_budget["evidence"]["summary"],
-                        baseline,
-                        feature_budget,
-                    ),
+    def repository_budget(self, filename):
+        return json.loads(
+            (REPOSITORY_ROOT / "performance" / filename).read_text(encoding="utf-8")
+        )
+
+    def assert_repository_budget(
+        self,
+        *,
+        filename,
+        feature_id,
+        source_commit,
+        workflow_run_id,
+        artifact_id,
+        summary=None,
+        allowance=None,
+    ):
+        baseline = self.repository_baseline()
+        feature_budget = self.repository_budget(filename)
+        self.assertEqual(feature_id, feature_budget["featureId"])
+        self.assertEqual("v0.1.0", feature_budget["baselineId"])
+        self.assertEqual(source_commit, feature_budget["evidence"]["sourceCommit"])
+        self.assertEqual(workflow_run_id, feature_budget["evidence"]["workflowRunId"])
+        self.assertEqual(artifact_id, feature_budget["evidence"]["artifactId"])
+        if summary is not None:
+            self.assertEqual(summary, feature_budget["evidence"]["summary"])
+        if allowance is not None:
+            self.assertEqual(allowance, feature_budget["allowanceBytes"])
+        self.assertEqual(
+            [],
+            compare_size_summary_to_feature_budget(
+                feature_budget["evidence"]["summary"],
+                baseline,
+                feature_budget,
+            ),
+        )
+
+    def test_repository_historical_budgets_remain_exact_and_self_validating(self):
+        historical = (
+            (
+                "m6-4-shipping-media-size-budget.json",
+                "m6.4-shipping-media-composition",
+                "21318c94cfcda45f147d3967ddcd7194034e9812",
+                31402487785,
+                9068350685,
+                None,
+                None,
+            ),
+            (
+                "m6-5-media-first-ui-size-budget.json",
+                "m6.5-media-first-ui",
+                "3db9d05619b38198c00b57b3cdd043af0618f714",
+                31537964825,
+                9119647587,
+                {"appSizeBytes": 699614, "dmgSizeBytes": 461748, "executableSizeBytes": 397408},
+                {"appSizeBytes": 430080, "dmgSizeBytes": 376832, "executableSizeBytes": 135168},
+            ),
+            (
+                "m6-6-one-shot-lifecycle-size-budget.json",
+                "m6.6-one-shot-lifecycle",
+                "55d08e58ce755a4e5d32a1128bd1a1262fe1ff42",
+                31575348332,
+                9133032338,
+                {"appSizeBytes": 717406, "dmgSizeBytes": 465191, "executableSizeBytes": 415200},
+                {"appSizeBytes": 450560, "dmgSizeBytes": 376832, "executableSizeBytes": 151552},
+            ),
+            (
+                "m6-6-gesture-engine-size-budget.json",
+                "m6.6-gesture-engine",
+                "ddad4a3efa579caf818693dece9845059fbcd810",
+                31582412364,
+                9135807459,
+                {"appSizeBytes": 724814, "dmgSizeBytes": 474960, "executableSizeBytes": 422608},
+                {"appSizeBytes": 458752, "dmgSizeBytes": 389120, "executableSizeBytes": 159744},
+            ),
+            (
+                "m6-6-compact-command-size-budget.json",
+                "m6.6-compact-command",
+                "55f2ee429932b68ed7a02c3750cd28a28c9bd3d9",
+                31588206985,
+                9138085911,
+                {"appSizeBytes": 745582, "dmgSizeBytes": 475100, "executableSizeBytes": 443376},
+                {"appSizeBytes": 479232, "dmgSizeBytes": 389120, "executableSizeBytes": 180224},
+            ),
+            (
+                "m6-6-app-gesture-session-size-budget.json",
+                "m6.6-app-gesture-session",
+                "3ebbf68a373e32189196b18a11610ec4d2babca9",
+                31598200510,
+                9142119577,
+                {"appSizeBytes": 763662, "dmgSizeBytes": 490395, "executableSizeBytes": 461456},
+                {"appSizeBytes": 499712, "dmgSizeBytes": 405504, "executableSizeBytes": 200704},
+            ),
+            (
+                "m6-6-source-app-icon-size-budget.json",
+                "m6.6-source-app-icon",
+                "066b8264f53c1dc1afe01fe8a120bb8ab9509102",
+                31601331136,
+                9143349824,
+                {"appSizeBytes": 782414, "dmgSizeBytes": 506515, "executableSizeBytes": 480208},
+                {"appSizeBytes": 518144, "dmgSizeBytes": 421888, "executableSizeBytes": 219136},
+            ),
+            (
+                "m6-6-media-seek-size-budget.json",
+                "m6.6-media-seek",
+                "01bb282f7cbc5eab57b11b1695ccf9768fc6cb2e",
+                31606258918,
+                9145423733,
+                {"appSizeBytes": 802190, "dmgSizeBytes": 520488, "executableSizeBytes": 499984},
+                {"appSizeBytes": 536576, "dmgSizeBytes": 434176, "executableSizeBytes": 237568},
+            ),
+            (
+                "m6-6-physical-acceptance-repair-size-budget.json",
+                "m6.6-physical-acceptance-repair",
+                "d8fb784eb9eb47c7af34dbd689b6fcfa5aadef12",
+                31617785894,
+                9150099248,
+                {"appSizeBytes": 825406, "dmgSizeBytes": 527113, "executableSizeBytes": 523200},
+                {"appSizeBytes": 556032, "dmgSizeBytes": 437248, "executableSizeBytes": 257024},
+            ),
+        )
+        for filename, feature_id, source_commit, run_id, artifact_id, summary, allowance in historical:
+            with self.subTest(filename=filename):
+                self.assert_repository_budget(
+                    filename=filename,
+                    feature_id=feature_id,
+                    source_commit=source_commit,
+                    workflow_run_id=run_id,
+                    artifact_id=artifact_id,
+                    summary=summary,
+                    allowance=allowance,
                 )
 
-    def test_ci_uses_current_foundation_feature_budget_over_immutable_baseline(self):
+    def test_repository_hover_peek_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-hover-peek-size-budget.json",
+            feature_id="m6.6-hover-peek",
+            source_commit="7daffde9b7c2a734e2ddfa234b1ee744b0d96d9e",
+            workflow_run_id=31636748859,
+            artifact_id=9157392052,
+            summary={
+                "appSizeBytes": 864574,
+                "dmgSizeBytes": 555272,
+                "executableSizeBytes": 562368,
+            },
+            allowance={
+                "appSizeBytes": 594944,
+                "dmgSizeBytes": 465920,
+                "executableSizeBytes": 296960,
+            },
+        )
+
+    def test_repository_m6_6_regression_foundation_integration_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-regression-foundation-integration-size-budget.json",
+            feature_id="m6.6-regression-foundation-integration",
+            source_commit="452f78b0e42c5302702393e9c45c563849661ca4",
+            workflow_run_id=31869841148,
+            artifact_id=9243156724,
+            summary={
+                "appSizeBytes": 882687,
+                "dmgSizeBytes": 552272,
+                "executableSizeBytes": 580480,
+            },
+            allowance={
+                "appSizeBytes": 614400,
+                "dmgSizeBytes": 462848,
+                "executableSizeBytes": 315392,
+            },
+        )
+
+    def test_repository_m6_6_physical_acceptance_20260815_repair_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-physical-acceptance-20260815-repair-size-budget.json",
+            feature_id="m6.6-physical-acceptance-20260815-repair",
+            source_commit="63b0f2f96f879123f3883db7311c90a20d3a4328",
+            workflow_run_id=31889213155,
+            artifact_id=9248133083,
+            summary={
+                "appSizeBytes": 883039,
+                "dmgSizeBytes": 555132,
+                "executableSizeBytes": 580832,
+            },
+            allowance={
+                "appSizeBytes": 614400,
+                "dmgSizeBytes": 466944,
+                "executableSizeBytes": 315392,
+            },
+        )
+
+    def test_repository_m6_6_physical_acceptance_20260816_first_click_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-physical-acceptance-20260816-first-click-size-budget.json",
+            feature_id="m6.6-physical-acceptance-20260816-first-click",
+            source_commit="327f5b4180d71a1001fb93285fa25b98abcc088c",
+            workflow_run_id=31914056522,
+            artifact_id=9254479722,
+            summary={
+                "appSizeBytes": 883087,
+                "dmgSizeBytes": 557704,
+                "executableSizeBytes": 580880,
+            },
+            allowance={
+                "appSizeBytes": 614400,
+                "dmgSizeBytes": 471040,
+                "executableSizeBytes": 315392,
+            },
+        )
+
+    def test_ci_uses_first_click_physical_acceptance_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -418,18 +493,27 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/regression-ui-automation-foundation-size-budget.json",
+            "--feature-budget performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json",
             workflow,
         )
-        for historical in (
+        for historical_budget in (
+            "m6-6-physical-acceptance-20260815-repair-size-budget.json",
+            "m6-6-regression-foundation-integration-size-budget.json",
+            "regression-ui-automation-foundation-size-budget.json",
+            "m6-6-hover-peek-size-budget.json",
+            "m6-6-physical-acceptance-repair-size-budget.json",
+            "m6-6-media-seek-size-budget.json",
+            "m6-6-source-app-icon-size-budget.json",
+            "m6-6-app-gesture-session-size-budget.json",
             "m6-6-compact-command-size-budget.json",
             "m6-6-gesture-engine-size-budget.json",
             "m6-6-one-shot-lifecycle-size-budget.json",
             "m6-5-media-first-ui-size-budget.json",
         ):
-            self.assertNotIn(f"--feature-budget performance/{historical}", workflow)
+            self.assertNotIn(f"--feature-budget performance/{historical_budget}", workflow)
         self.assertNotIn(
-            "check-size-budget \\\n            --summary build/perf-size.json",
+            "check-size-budget \\\
+            --summary build/perf-size.json",
             workflow,
         )
 

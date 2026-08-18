@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "featureId": "m6.6-app-gesture-session",
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "sourceCommit": "3ebbf68a373e32189196b18a11610ec4d2babca9",
+    "workflowRunId": 31598200510,
+    "artifactId": 9142119577,
+    "summary": {
+      "executableSizeBytes": 461456,
+      "appSizeBytes": 763662,
+      "dmgSizeBytes": 490395
+    }
+  },
+  "allowanceBytes": {
+    "executableSizeBytes": 200704,
+    "appSizeBytes": 499712,
+    "dmgSizeBytes": 405504
+  }
+}

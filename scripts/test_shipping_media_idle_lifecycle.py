@@ -23,13 +23,15 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
 
         did_finish = app_delegate.split(
             "func applicationDidFinishLaunching", 1
-        )[1].split("func applicationWillTerminate", 1)[0]
+        )[1].split("func applicationDidResignActive", 1)[0]
         self.assertNotIn("ShippingMediaRuntime()", did_finish)
         self.assertNotIn("ShippingMediaRuntime(presentationModel:", did_finish)
         self.assertNotIn("mediaRuntime.start()", did_finish)
 
         required_app_fragments = (
             "private let mediaPresentationModel = ShippingMediaPresentationModel()",
+            "private let composition:",
+            "AppComposition.shipping()",
             "panelController.settledPresentationHandler",
             "updateMediaRuntime(for: presentation)",
             "private func updateMediaRuntime(for presentation: NotchPresentation)",
@@ -37,7 +39,7 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
             "guard mediaRuntime == nil else",
             "let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)",
             "mediaRuntime.start()",
-            "case .compact:",
+            "case .compact, .peek:",
             "mediaRuntime?.stop()",
             "mediaRuntime = nil",
         )
@@ -50,6 +52,14 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
             "ShippingMediaRuntime(presentationModel: $0)",
             app_composition,
         )
+
+        update_runtime = app_delegate.split(
+            "private func updateMediaRuntime(for presentation: NotchPresentation)", 1
+        )[1]
+        compact_peek_branch = update_runtime.split("case .compact, .peek:", 1)[1]
+        self.assertNotIn("ShippingMediaRuntime(", compact_peek_branch)
+        self.assertNotIn("mediaRuntime.start()", compact_peek_branch)
+
         self.assertIn(
             "public var settledPresentationHandler:",
             panel_controller,

@@ -59,6 +59,45 @@ struct MediaRemoteOneShotLifecycleTests {
     }
 
     @Test
+    func nonblockingStopCancelsOneShotBeforeDeferredTerminationDeadlines() async throws {
+        let launcher = OneShotLifecycleLauncher { _ in [false, false] }
+        let scheduler = OneShotLifecycleTimeoutScheduler()
+        let client = makeClient(launcher: launcher, scheduler: scheduler)
+
+        let commandTask = Task { @MainActor in
+            await client.send(.previous)
+        }
+
+        await waitForLaunchCount(1, launcher: launcher)
+        let handle = try #require(launcher.records.first?.handle)
+
+        client.stopNonBlocking()
+
+        #expect(client.state == .stopped)
+        #expect(client.lastTeardownClean)
+        #expect(handle.terminateCount == 1)
+        #expect(handle.forceTerminateCount == 0)
+        #expect(handle.waitTimeouts.isEmpty)
+        #expect(scheduler.cancelledCount == 1)
+        #expect(await commandTask.value == .failed)
+
+        scheduler.fireNextPending()
+
+        #expect(handle.forceTerminateCount == 1)
+        #expect(handle.waitTimeouts.isEmpty)
+
+        handle.isRunning = false
+        scheduler.fireNextPending()
+        client.stop()
+
+        #expect(handle.terminateCount == 1)
+        #expect(handle.forceTerminateCount == 1)
+        #expect(handle.waitTimeouts.isEmpty)
+        #expect(client.state == .stopped)
+        #expect(client.lastTeardownClean)
+    }
+
+    @Test
     func failedOneShotTeardownFailsClosedAndRemainsOwnedForRetry() async throws {
         let launcher = OneShotLifecycleLauncher { _ in [false, false] }
         let scheduler = OneShotLifecycleTimeoutScheduler()
@@ -253,6 +292,10 @@ private final class OneShotLifecycleTimeoutScheduler: MediaRemoteTimeoutScheduli
         return OneShotLifecycleTimeoutToken(entry: entry)
     }
 
+    func fireNextPending() {
+        entries.first { !$0.isCancelled && !$0.isFired }?.fire()
+    }
+
     func fireAll() {
         for entry in entries {
             entry.fire()
@@ -264,6 +307,7 @@ private final class OneShotLifecycleTimeoutScheduler: MediaRemoteTimeoutScheduli
 private final class OneShotLifecycleScheduledAction {
     private var action: (@MainActor @Sendable () -> Void)?
     private(set) var isCancelled = false
+    private(set) var isFired = false
 
     init(action: @escaping @MainActor @Sendable () -> Void) {
         self.action = action
@@ -275,6 +319,10 @@ private final class OneShotLifecycleScheduledAction {
     }
 
     func fire() {
+        guard !isFired else {
+            return
+        }
+        isFired = true
         let action = action
         self.action = nil
         action?()

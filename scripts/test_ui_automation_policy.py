@@ -3,16 +3,29 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from test_acceptance_coverage import _infer_status
+import test_acceptance_coverage as acceptance_coverage
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_APP = (ROOT / "scripts/build-app.sh").read_text(encoding="utf-8")
 CI = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 PERSONAL_RELEASE = (ROOT / ".github/workflows/personal-release.yml").read_text(encoding="utf-8")
 TRUSTED_RELEASE = (ROOT / ".github/workflows/trusted-release.yml").read_text(encoding="utf-8")
+UI_APPLICATION = (
+    ROOT / "Tests/UITests/Support/NotchHubUIApplication.swift"
+).read_text(encoding="utf-8")
+MEDIA_NOTCH_ROOT = (
+    ROOT / "Sources/NotchHubApp/MediaNotchRootView.swift"
+).read_text(encoding="utf-8")
+HOSTING_VIEW_FACTORY = (
+    ROOT / "Sources/NotchHubCore/UI/NotchHostingViewFactory.swift"
+).read_text(encoding="utf-8")
+EXPLICIT_EXPANSION = UI_APPLICATION.split("func openExpandedExplicitly", 1)[1].split(
+    "func hoverCompact", 1
+)[0]
 
 FORBIDDEN_MARKERS = (
     b"NOTCHHUB_UI_FIXTURE",
+    b"no-media-hover",
     b"media-standard",
     b"media-unsupported",
     b"ui-test.hapticCount",
@@ -35,6 +48,19 @@ class UIAutomationPolicyTests(unittest.TestCase):
         self.assertIn("NOTCHHUB_UI_TESTING", BUILD_APP)
         self.assertIn("-DNOTCHHUB_UI_TESTING", BUILD_APP)
 
+    def test_explicit_expansion_harness_clicks_persistent_appkit_hit_target(self):
+        self.assertNotIn('"notch.surface.hitTarget"', MEDIA_NOTCH_ROOT)
+        self.assertIn('setAccessibilityIdentifier("notch.surface.hitTarget")', HOSTING_VIEW_FACTORY)
+        self.assertIn("setAccessibilityElement(true)", HOSTING_VIEW_FACTORY)
+        self.assertIn('descendants(matching: .any)', EXPLICIT_EXPANSION)
+        self.assertIn('matching(identifier: "notch.surface.hitTarget")', EXPLICIT_EXPANSION)
+        self.assertIn("hitTarget.click()", EXPLICIT_EXPANSION)
+        self.assertNotIn('surface("notch.surface.hitTarget")', EXPLICIT_EXPANSION)
+        self.assertNotIn("compact.click()", EXPLICIT_EXPANSION)
+        self.assertNotIn("CGEvent(", EXPLICIT_EXPANSION)
+        self.assertNotIn("CGWarpMouseCursorPosition", EXPLICIT_EXPANSION)
+        self.assertNotIn("app.coordinate(", EXPLICIT_EXPANSION)
+
     def test_acceptance_status_parser_does_not_treat_passive_as_pass(self):
         ledger = """Status: CONTRACT FROZEN / IMPLEMENTATION PENDING
 
@@ -45,7 +71,7 @@ class UIAutomationPolicyTests(unittest.TestCase):
 
         self.assertEqual(
             "pending",
-            _infer_status("NH-MEDIA-GESTURE-013", ledger),
+            acceptance_coverage._infer_status("NH-MEDIA-GESTURE-013", ledger),
         )
 
     def test_acceptance_status_parser_does_not_treat_failed_behavior_as_rejection(self):
@@ -58,7 +84,7 @@ class UIAutomationPolicyTests(unittest.TestCase):
 
         self.assertEqual(
             "pending",
-            _infer_status("NH-MEDIA-GESTURE-011", ledger),
+            acceptance_coverage._infer_status("NH-MEDIA-GESTURE-011", ledger),
         )
 
     def test_acceptance_status_parser_still_recognizes_explicit_pass_and_fail_tokens(self):
@@ -69,8 +95,154 @@ class UIAutomationPolicyTests(unittest.TestCase):
 | `NH-TEST-002` | Gate | FAIL |
 """
 
-        self.assertEqual("accepted", _infer_status("NH-TEST-001", passed))
-        self.assertEqual("rejected", _infer_status("NH-TEST-002", failed))
+        self.assertEqual("accepted", acceptance_coverage._infer_status("NH-TEST-001", passed))
+        self.assertEqual("rejected", acceptance_coverage._infer_status("NH-TEST-002", failed))
+
+    def test_acceptance_supersession_requires_accepted_source_existing_target_and_design(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            decision = root / "docs/superpowers/specs/peek-design.md"
+            decision.parent.mkdir(parents=True)
+            decision.write_text(
+                "Approved design. This document supersedes earlier M1 hover behavior.\n",
+                encoding="utf-8",
+            )
+            contracts = {
+                "NH-HOVER-001": acceptance_coverage.Contract(
+                    "NH-HOVER-001", root / "old.md", "accepted"
+                ),
+                "NH-MEDIA-PEEK-001": acceptance_coverage.Contract(
+                    "NH-MEDIA-PEEK-001", root / "new.md", "rejected"
+                ),
+            }
+            entries = [
+                {
+                    "id": "NH-HOVER-001",
+                    "supersededBy": "NH-MEDIA-PEEK-001",
+                    "decisionSource": decision.as_posix(),
+                }
+            ]
+
+            supersessions = acceptance_coverage.validate_supersessions(
+                entries,
+                contracts,
+                repository_root=root,
+            )
+
+            self.assertEqual("NH-MEDIA-PEEK-001", supersessions["NH-HOVER-001"]["supersededBy"])
+
+    def test_acceptance_supersession_rejects_nonaccepted_source(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            decision = root / "docs/superpowers/specs/peek-design.md"
+            decision.parent.mkdir(parents=True)
+            decision.write_text("This supersedes earlier behavior.\n", encoding="utf-8")
+            contracts = {
+                "NH-HOVER-001": acceptance_coverage.Contract(
+                    "NH-HOVER-001", root / "old.md", "pending"
+                ),
+                "NH-MEDIA-PEEK-001": acceptance_coverage.Contract(
+                    "NH-MEDIA-PEEK-001", root / "new.md", "pending"
+                ),
+            }
+
+            with self.assertRaisesRegex(acceptance_coverage.CoverageError, "historically accepted"):
+                acceptance_coverage.validate_supersessions(
+                    [
+                        {
+                            "id": "NH-HOVER-001",
+                            "supersededBy": "NH-MEDIA-PEEK-001",
+                            "decisionSource": decision.as_posix(),
+                        }
+                    ],
+                    contracts,
+                    repository_root=root,
+                )
+
+    def test_acceptance_supersession_rejects_missing_or_non_superseding_decision(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            decision = root / "docs/superpowers/specs/peek-design.md"
+            decision.parent.mkdir(parents=True)
+            decision.write_text("Approved design without replacement language.\n", encoding="utf-8")
+            contracts = {
+                "NH-HOVER-001": acceptance_coverage.Contract(
+                    "NH-HOVER-001", root / "old.md", "accepted"
+                ),
+                "NH-MEDIA-PEEK-001": acceptance_coverage.Contract(
+                    "NH-MEDIA-PEEK-001", root / "new.md", "pending"
+                ),
+            }
+
+            with self.assertRaisesRegex(acceptance_coverage.CoverageError, "supersed"):
+                acceptance_coverage.validate_supersessions(
+                    [
+                        {
+                            "id": "NH-HOVER-001",
+                            "supersededBy": "NH-MEDIA-PEEK-001",
+                            "decisionSource": decision.as_posix(),
+                        }
+                    ],
+                    contracts,
+                    repository_root=root,
+                )
+
+    def test_current_acceptance_overlay_can_replace_evidence_without_changing_identity(self):
+        base = [
+            {
+                "id": "NH-HOVER-DELAY-002",
+                "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+                "status": "accepted",
+                "coverage": [{"layer": "unit", "test": "Old.Suite.oldEvidence"}],
+                "physicalOnlyReason": None,
+            }
+        ]
+        overlay = [
+            {
+                "id": "NH-HOVER-DELAY-002",
+                "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+                "status": "accepted",
+                "coverage": [{"layer": "unit", "test": "New.Suite.currentEvidence"}],
+                "physicalOnlyReason": None,
+            },
+            {
+                "id": "NH-MEDIA-PEEK-001",
+                "source": "docs/testing/MEDIA_PEEK_ACCEPTANCE.md",
+                "status": "rejected",
+                "coverage": [],
+                "physicalOnlyReason": None,
+            },
+        ]
+
+        merged = acceptance_coverage.merge_manifest_entries(base, overlay)
+        by_id = {entry["id"]: entry for entry in merged}
+
+        self.assertEqual(
+            "New.Suite.currentEvidence",
+            by_id["NH-HOVER-DELAY-002"]["coverage"][0]["test"],
+        )
+        self.assertEqual("rejected", by_id["NH-MEDIA-PEEK-001"]["status"])
+
+    def test_current_acceptance_overlay_cannot_change_existing_source_or_status(self):
+        base = [
+            {
+                "id": "NH-HOVER-DELAY-002",
+                "source": "docs/testing/NOTCH_INTERACTION_ACCEPTANCE.md",
+                "status": "accepted",
+                "coverage": [{"layer": "unit", "test": "Old.Suite.oldEvidence"}],
+                "physicalOnlyReason": None,
+            }
+        ]
+
+        for field, value in (
+            ("source", "docs/testing/MEDIA_PEEK_ACCEPTANCE.md"),
+            ("status", "pending"),
+        ):
+            candidate = dict(base[0])
+            candidate[field] = value
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(acceptance_coverage.CoverageError, field):
+                    acceptance_coverage.merge_manifest_entries(base, [candidate])
 
     def test_shipping_workflows_never_enable_fixture_build(self):
         self.assertNotIn("NOTCHHUB_UI_TESTING=1", CI)

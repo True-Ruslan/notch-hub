@@ -9,6 +9,7 @@ struct NotchPanelTransitionCoordinatorTests {
         hasHardwareNotch: true,
         hardwareNotchWidth: 180,
         compactFrame: CGRect(x: 410, y: 868, width: 180, height: 32),
+        peekFrame: CGRect(x: 320, y: 804, width: 360, height: 96),
         expandedFrame: CGRect(x: 240, y: 650, width: 520, height: 250)
     )
 
@@ -31,6 +32,86 @@ struct NotchPanelTransitionCoordinatorTests {
 
         #expect(fixture.coordinator.phase.isExpanded)
         #expect(fixture.coordinator.desiredPresentation == .expanded)
+    }
+
+    @Test
+    func hoverPeekSettlesOnlyAfterMatchingCompletion() {
+        let fixture = makeFixture()
+
+        fixture.coordinator.requestPeek(layout: layout)
+
+        #expect(fixture.coordinator.phase.isExpanding)
+        #expect(fixture.coordinator.desiredPresentation == .peek)
+        #expect(fixture.model.contentPresentation == .peek)
+        #expect(fixture.driver.requests.count == 1)
+        #expect(fixture.driver.requests[0].frame == layout.peekFrame)
+        #expect(fixture.driver.requests[0].cornerRadius == 18)
+        #expect(fixture.driver.requests[0].duration == 0.20)
+        #expect(fixture.haptics.requestCount == 1)
+
+        fixture.driver.complete(index: 0)
+
+        #expect(fixture.coordinator.phase.isPeek)
+        #expect(fixture.coordinator.desiredPresentation == .peek)
+        #expect(fixture.model.contentPresentation == .peek)
+    }
+
+    @Test
+    func peekCollapseRetainsPeekContentUntilMatchingCompletion() {
+        let fixture = makeFixture(initialPresentation: .peek)
+
+        fixture.coordinator.requestProgrammaticCollapse(layout: layout)
+
+        #expect(fixture.coordinator.phase.isCollapsing)
+        #expect(fixture.coordinator.desiredPresentation == .compact)
+        #expect(fixture.model.contentPresentation == .peek)
+        #expect(fixture.driver.requests.count == 1)
+        #expect(fixture.driver.requests[0].frame == layout.compactFrame)
+        #expect(fixture.driver.requests[0].cornerRadius == 12)
+        #expect(fixture.haptics.requestCount == 0)
+
+        fixture.driver.complete(index: 0)
+
+        #expect(fixture.model.contentPresentation == .compact)
+        #expect(fixture.coordinator.phase.isCompact)
+    }
+
+    @Test
+    func explicitExpansionFromPeekUsesExpandedEndpointWithoutHoverHaptic() {
+        let fixture = makeFixture(initialPresentation: .peek)
+
+        fixture.coordinator.requestProgrammaticExpansion(layout: layout)
+
+        #expect(fixture.coordinator.phase.isExpanding)
+        #expect(fixture.coordinator.desiredPresentation == .expanded)
+        #expect(fixture.model.contentPresentation == .expanded)
+        #expect(fixture.driver.requests.count == 1)
+        #expect(fixture.driver.requests[0].frame == layout.expandedFrame)
+        #expect(fixture.driver.requests[0].cornerRadius == 22)
+        #expect(fixture.haptics.requestCount == 0)
+    }
+
+    @Test
+    func stalePeekCompletionCannotWinAfterExplicitExpansion() {
+        let fixture = makeFixture()
+
+        fixture.coordinator.requestPeek(layout: layout)
+        fixture.coordinator.requestProgrammaticExpansion(layout: layout)
+
+        #expect(fixture.driver.requests.count == 2)
+        #expect(fixture.driver.cancelCount == 1)
+        #expect(fixture.coordinator.desiredPresentation == .expanded)
+        #expect(fixture.model.contentPresentation == .expanded)
+
+        fixture.driver.complete(index: 0)
+
+        #expect(fixture.coordinator.phase.isExpanding)
+        #expect(fixture.coordinator.desiredPresentation == .expanded)
+        #expect(fixture.model.contentPresentation == .expanded)
+
+        fixture.driver.complete(index: 1)
+
+        #expect(fixture.coordinator.phase.isExpanded)
     }
 
     @Test
@@ -206,6 +287,14 @@ struct NotchPanelTransitionCoordinatorTests {
 private extension NotchPanelTransitionPhase {
     var isCompact: Bool {
         if case .compact = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    var isPeek: Bool {
+        if case .peek = self {
             true
         } else {
             false
