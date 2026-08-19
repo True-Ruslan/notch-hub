@@ -8,13 +8,15 @@ A green pipeline is necessary but never substitutes for target-Mac acceptance. M
 
 ## Required CI
 
-Canonical protected-branch jobs:
+Canonical protected-branch-intended jobs:
 
 - `macOS 26 compatibility`;
 - `macOS UI regression`;
 - `Build, test and package`.
 
 CI covers warnings-as-errors builds, Swift tests, exact external-app XCUI, acceptance-traceability policy, release/security/performance/media policy, strict formatting/plist/shell checks, Sandbox/Hardened Runtime/signing/system-library verification, shipping media preflight, deterministic artifact sizes, active provenance-backed feature budget, performance-harness schema smoke and artifacts.
+
+Repository-side enforcement for `main` is currently tracked separately in issue #42 because GitHub reports the branch unprotected. The CI requirements above remain the project contract and must not be weakened merely because repository protection is temporarily missing.
 
 Do not weaken tests, security rules, production behavior or historical baselines merely to obtain green CI.
 
@@ -78,35 +80,45 @@ Machine-readable coverage lives in `Tests/Acceptance/coverage.yml` plus `coverag
 
 Original full M6.6 physical source acceptance stays pinned to `8744b9e...`; the later hardware-notch screen-selection correction has its own exact physical source `46f069e...`. Documentation descendants and squash merges do not rewrite either exact target-Mac claim.
 
-## P1 target resource evidence foundation
+## P1 target resource evidence foundation and patch-family correction
 
-Status: **MERGED / POST-MERGE CI VERIFIED / TARGET-MAC EVIDENCE PENDING**.
+Status: **MERGED / CANONICAL CI VERIFIED / TARGET-MAC EVIDENCE PENDING**.
 
-PR #36 merged the development/release-only evidence foundation as exact tooling SHA:
+PR #36 established the development/release-only evidence foundation as historical tooling SHA:
 
 `5cd9a2a47d87a433155f53b3aa0510000f2fce85`
 
-Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged main/tooling source `5cd9a2a4...` passed post-merge CI #1261 3/3 GREEN.
+Final PR #36 head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged foundation source `5cd9a2a4...` passed post-merge CI #1261 3/3 GREEN.
 
-The foundation changed no `Sources/` file. Canonical deterministic coverage includes `P1TargetResourceEvidencePolicyTests`, which launches `scripts/test_p1_target_resource_evidence.py` inside normal `swift test` so the Python evidence contract cannot silently fall outside the protected gate.
+The foundation changed no `Sources/` file. Canonical deterministic coverage includes `P1TargetResourceEvidencePolicyTests`, which launches Python evidence tests inside normal `swift test` so the evidence contract cannot silently fall outside the canonical gate.
 
-TDD evidence:
+Before physical collection began, the target Mac was observed on macOS `26.6.1`. The sampler already recorded exact `sw_vers -productVersion`, but the bundler still hard-coded literal `26.6`. PR #44 corrected that tooling contract:
 
-- CI #1245 / head `6b7e90ff17803ef2678ff518b84fe82c8a39e06f`: missing `p1_target_resource_evidence` implementation was the sole new failure;
-- CI #1258 / head `98cd0974da8e1a71b6322d168e9f28834fe72a0c`: malformed list/dict manual fields exposed uncontrolled `TypeError`; final code converts these to fail-closed `EvidenceError`;
-- final pre-merge and post-merge canonical gates are GREEN.
+- exact model remains `Mac16,8`;
+- accepted OS family is canonical `26.6` / `26.6.x` only;
+- exact patch version is preserved, not normalized away;
+- Idle/Hover/Stability/manual evidence must all report the same exact platform;
+- adjacent minor versions, malformed/extra/leading-zero version components and wrong models fail closed;
+- `P1TargetResourceEvidencePolicyTests` now runs both `test_p1_target_resource_evidence.py` and `test_p1_target_platform_family.py` inside canonical Swift tests;
+- a temporary separate PR workflow used only to establish isolated RED/GREEN evidence was removed after release policy correctly rejected a second untrusted pull-request execution path.
 
-The evidence contract validates exact measured runtime source, one shared measurement-tool commit, exact Mac16,8/macOS 26.6 platform, fixed idle/hover/stability timing/sample counts, attached-process mode, finite metrics, required stability summary and closed manual methods/findings. Normalized evidence omits timestamps/raw traces and does not invent energy/compositor thresholds. Explicit manual anomaly sets `reviewRequired: true`.
+PR #44 TDD evidence includes the exact RED where `26.6.1` was rejected by the old validator, followed by GREEN and strengthened fail-closed boundary tests. Final head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as current P1 measurement tooling:
+
+`99a75dbe0664120a572bd8229d4fe461790ee07b`
+
+The older `5cd9a2a...` remains immutable foundation provenance but is superseded for new physical P1 collection.
 
 ## P1 physical/resource collection boundary
 
 The canonical P1 audit must use two distinct detached sources:
 
 - measured corrected merged runtime: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`;
-- measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
+- measurement tooling: `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+
+The current physical target environment is `Mac16,8 / macOS 26.6.1`. The validator accepts the macOS 26.6 patch family but requires every report and the manual evidence to preserve the same exact patch version within one bundle.
 
 The previous runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` remains historical M6.6 merge evidence but is superseded for P1 measurement by the later hardware-notch screen-selection correction. Later docs-only commits do not replace the current runtime/tooling provenance anchors. Canonical target procedure is `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`.
 
-Shared-runner CPU/RSS magnitudes are compatibility evidence, not target-Mac acceptance. P1 uses the real Mac16,8/macOS 26.6 for CPU/RSS/threads/wakeups/energy/compositor review.
+Shared-runner CPU/RSS magnitudes are compatibility evidence, not target-Mac acceptance. P1 uses the real Mac16,8/macOS 26.6.x target for CPU/RSS/threads/wakeups/energy/compositor review while preserving exact patch provenance.
 
 The canonical P1 path does not automatically run privileged collectors such as `sudo powermetrics` or `timerfires`, does not add app permissions, and does not commit raw Instruments traces. Numeric budgets are introduced only after repeatable real-hardware evidence supports them.
