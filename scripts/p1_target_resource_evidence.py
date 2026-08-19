@@ -9,7 +9,9 @@ import sys
 from collections.abc import Mapping, Sequence
 
 
-_TARGET_PLATFORM = {"macOSVersion": "26.6", "modelIdentifier": "Mac16,8"}
+_TARGET_MODEL_IDENTIFIER = "Mac16,8"
+_TARGET_MACOS_MAJOR_MINOR = (26, 6)
+_PLATFORM_KEYS = {"macOSVersion", "modelIdentifier"}
 _SCENARIO_CONFIGURATION = {
     "idle": {"warmup": 10.0, "duration": 60.0, "interval": 1.0, "sampleCount": 60},
     "hover": {"warmup": 10.0, "duration": 60.0, "interval": 1.0, "sampleCount": 60},
@@ -104,18 +106,33 @@ def _integer(value: object, label: str, *, minimum: int) -> int:
     return value
 
 
+def _macos_26_6_version(value: object, label: str) -> str:
+    version = _string(value, label)
+    components = version.split(".")
+    if len(components) not in (2, 3):
+        raise EvidenceError(f"{label} must be macOS 26.6 or a 26.6.x patch release")
+    if any(not component.isascii() or not component.isdigit() for component in components):
+        raise EvidenceError(f"{label} must contain only canonical integer version components")
+    if any(str(int(component)) != component for component in components):
+        raise EvidenceError(f"{label} must not contain leading zeros")
+
+    major, minor = (int(component) for component in components[:2])
+    if (major, minor) != _TARGET_MACOS_MAJOR_MINOR:
+        raise EvidenceError(f"{label} must be macOS 26.6 or a 26.6.x patch release")
+    return version
+
+
 def _platform(value: object, label: str) -> dict[str, str]:
     platform = _mapping(value, label)
-    _exact_keys(platform, set(_TARGET_PLATFORM), label)
-    normalized = {
-        "macOSVersion": platform.get("macOSVersion"),
-        "modelIdentifier": platform.get("modelIdentifier"),
-    }
-    if normalized != _TARGET_PLATFORM:
+    _exact_keys(platform, _PLATFORM_KEYS, label)
+
+    version = _macos_26_6_version(platform.get("macOSVersion"), f"{label}.macOSVersion")
+    model = _string(platform.get("modelIdentifier"), f"{label}.modelIdentifier")
+    if model != _TARGET_MODEL_IDENTIFIER:
         raise EvidenceError(
-            f"{label} must be exact target {_TARGET_PLATFORM!r}, got {normalized!r}"
+            f"{label}.modelIdentifier must equal {_TARGET_MODEL_IDENTIFIER!r}, got {model!r}"
         )
-    return dict(_TARGET_PLATFORM)
+    return {"macOSVersion": version, "modelIdentifier": model}
 
 
 def _summary(value: object, expected_count: int, label: str) -> dict[str, float | int]:
@@ -155,7 +172,8 @@ def _report(
     scenario: str,
     expected_source_commit: str,
     expected_tool_commit: str | None,
-) -> tuple[dict[str, object], str]:
+    expected_platform: Mapping[str, str] | None,
+) -> tuple[dict[str, object], str, dict[str, str]]:
     report = _mapping(value, f"{scenario} report")
     expected_keys = set(_REPORT_KEYS)
     if scenario == "stability":
@@ -173,6 +191,10 @@ def _report(
     if expected_tool_commit is not None and tool_commit != expected_tool_commit:
         raise EvidenceError(f"{scenario} report measurement tool commit mismatch")
     platform = _platform(report.get("platform"), f"{scenario}.platform")
+    if expected_platform is not None and platform != expected_platform:
+        raise EvidenceError(
+            f"{scenario} report platform mismatch; expected {dict(expected_platform)!r}, got {platform!r}"
+        )
     if report.get("measurementMode") != "attached":
         raise EvidenceError(f"{scenario} report must use attached measurement mode")
     if not isinstance(report.get("startedAt"), str) or not isinstance(report.get("endedAt"), str):
@@ -208,19 +230,25 @@ def _report(
             "stability.stabilitySummary",
         )
 
-    # Platform is validated here but emitted once at the bundle root.
-    assert platform == _TARGET_PLATFORM
-    return normalized, tool_commit
+    return normalized, tool_commit, platform
 
 
-def _manual(value: object, expected_source_commit: str) -> tuple[dict[str, object], bool]:
+def _manual(
+    value: object,
+    expected_source_commit: str,
+    expected_platform: Mapping[str, str],
+) -> tuple[dict[str, object], bool]:
     manual = _mapping(value, "manual evidence")
     _exact_keys(manual, _MANUAL_KEYS, "manual evidence")
     if manual.get("schemaVersion") != 1:
         raise EvidenceError("manual evidence schemaVersion must equal 1")
     if _commit(manual.get("sourceCommit"), "manual.sourceCommit") != expected_source_commit:
         raise EvidenceError("manual evidence source commit mismatch")
-    _platform(manual.get("platform"), "manual.platform")
+    platform = _platform(manual.get("platform"), "manual.platform")
+    if platform != expected_platform:
+        raise EvidenceError(
+            f"manual evidence platform mismatch; expected {dict(expected_platform)!r}, got {platform!r}"
+        )
 
     wakeups = _mapping(manual.get("idleWakeups"), "manual.idleWakeups")
     _exact_keys(wakeups, _IDLE_WAKEUP_KEYS, "manual.idleWakeups")
@@ -288,28 +316,33 @@ def build_evidence_bundle(
     source_commit = _commit(expected_source_commit, "expected source commit")
     scenarios: dict[str, object] = {}
     tool_commit: str | None = None
+    platform: dict[str, str] | None = None
     for scenario, report in (
         ("idle", idle_report),
         ("hover", hover_report),
         ("stability", stability_report),
     ):
-        normalized, current_tool_commit = _report(
+        normalized, current_tool_commit, current_platform = _report(
             report,
             scenario=scenario,
             expected_source_commit=source_commit,
             expected_tool_commit=tool_commit,
+            expected_platform=platform,
         )
         if tool_commit is None:
             tool_commit = current_tool_commit
+        if platform is None:
+            platform = current_platform
         scenarios[scenario] = normalized
 
     assert tool_commit is not None
-    normalized_manual, review_required = _manual(manual_evidence, source_commit)
+    assert platform is not None
+    normalized_manual, review_required = _manual(manual_evidence, source_commit, platform)
     return {
         "schemaVersion": 1,
         "sourceCommit": source_commit,
         "measurementToolCommit": tool_commit,
-        "platform": dict(_TARGET_PLATFORM),
+        "platform": dict(platform),
         "scenarios": scenarios,
         "manualEvidence": normalized_manual,
         "reviewRequired": review_required,
