@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 614400,
+    "dmgSizeBytes": 475136,
+    "executableSizeBytes": 315392
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9355827331,
+    "sourceCommit": "46f069e57997eab060c79c3d9e279da944d6e263",
+    "summary": {
+      "appSizeBytes": 882911,
+      "dmgSizeBytes": 561421,
+      "executableSizeBytes": 580704
+    },
+    "workflowRunId": 32226544212
+  },
+  "featureId": "m6.6-hardware-notch-screen-selection",
+  "schemaVersion": 1
+}
