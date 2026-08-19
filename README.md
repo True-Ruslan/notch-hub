@@ -22,11 +22,11 @@ Current development state:
 - M6.5 compact + expanded Media-first UI — accepted/merged;
 - **M6.6 gestures, haptics, interactive notch, seek and Hover Peek — implemented, automated-tested, physically accepted and merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; not released.**
 - **M6.6 hardware-notch screen-selection correction — physically accepted on exact runtime `46f069e57997eab060c79c3d9e279da944d6e263`, CI-verified and merged via PR #40 as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`; not released.**
-- **P1 whole-app target-Mac performance/resource review — measurement foundation merged via PR #36 as `5cd9a2a47d87a433155f53b3aa0510000f2fce85`; corrected merged runtime re-frozen; target-Mac evidence pending.**
+- **P1 whole-app target-Mac performance/resource review — runtime frozen at `e8d77968...`; current patch-aware measurement tooling merged via PR #44 as `99a75dbe0664120a572bd8229d4fe461790ee07b`; target-Mac evidence pending.**
 
 The published `v0.1.0` release predates the M1/P0.1/M6 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
 
-The current priority is P1 target collection: measure exact corrected merged runtime `e8d77968...` on Mac16,8/macOS 26.6 using frozen measurement tooling `5cd9a2a4...`, characterize CPU/RSS/threads/wakeups/energy/compositor behavior, and optimize only where evidence demonstrates a material issue. Broader multi-monitor hardening and new product modules remain after this resource gate.
+The current priority is P1 target collection: measure exact corrected merged runtime `e8d77968...` on exact `Mac16,8` hardware in the macOS 26.6 patch family, currently `26.6.1`, using frozen measurement tooling `99a75dbe...`. Every evidence file preserves the exact patch version. CPU/RSS/threads/wakeups/energy/compositor behavior is reviewed before any optimization. Broader multi-monitor hardening and new product modules remain after this resource gate.
 
 ## Universal Media
 
@@ -53,7 +53,7 @@ The original full M6.6 physical acceptance is pinned to exact source `8744b9e623
 ## Requirements
 
 - deployment target: macOS 14+;
-- primary real-hardware acceptance target: macOS 26.6 / `Mac16,8`;
+- primary real-hardware acceptance target: `Mac16,8` / macOS 26.6.x; current physical environment is 26.6.1;
 - Swift 6 / Xcode for development;
 - installed Personal builds require only the `.dmg` / `.app`.
 
@@ -69,6 +69,8 @@ python3 scripts/performance_policy.py audit Sources
 ```
 
 Behavior changes and deterministic defects use RED -> GREEN -> REFACTOR where a truthful RED is possible. Physical acceptance is reserved for behavior CI cannot honestly prove, such as real notch geometry, actual player integration, permission surfaces, haptic feel and target-Mac resource behavior.
+
+P1 Python evidence validation is intentionally exercised through `P1TargetResourceEvidencePolicyTests` inside canonical `swift test`, including both the core evidence suite and the macOS 26.6 patch-family regression suite. Public/fork pull requests continue to use one reviewed read-only `pull_request` CI path.
 
 Build a local ad-hoc app/DMG:
 
@@ -133,7 +135,8 @@ Key invariants:
 - target-Mac runtime evidence is required for resource acceptance;
 - immutable `v0.1.0` baseline remains historical evidence and is never silently rewritten;
 - P1 combines exact CPU/RSS/thread reports with privacy-safe target-Mac wakeup/energy/compositor evidence before any optimization decision;
-- the corrected P1 measured runtime is pinned to `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` and the accepted P1 tooling source to `5cd9a2a47d87a433155f53b3aa0510000f2fce85`; later documentation commits do not redefine measurement provenance;
+- the corrected P1 measured runtime is pinned to `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` and current accepted P1 tooling source to `99a75dbe0664120a572bd8229d4fe461790ee07b`; later documentation commits do not redefine measurement provenance;
+- P1 accepts only exact `Mac16,8` plus canonical macOS 26.6 patch-family versions and preserves the exact patch value across the whole evidence bundle;
 - performance work cannot broaden permissions, input capture, networking or telemetry authority.
 
 See [`PERFORMANCE.md`](PERFORMANCE.md), [`docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`](docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md) and `performance/`.
@@ -142,7 +145,7 @@ See [`PERFORMANCE.md`](PERFORMANCE.md), [`docs/testing/P1_TARGET_RESOURCE_ACCEPT
 
 ### Personal Release — current
 
-Versioned builds are published through **Actions -> Personal Release** from protected `main`.
+Versioned builds are published through **Actions -> Personal Release** from `main` under the repository's intended protected-branch policy. GitHub currently reports `main` unprotected; issue #42 tracks restoration of repository-side enforcement before this can again be stated as an enforced guarantee.
 
 They are:
 
