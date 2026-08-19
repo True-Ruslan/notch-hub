@@ -8,6 +8,9 @@ struct M66FirstClickAcceptanceSizeBudgetPolicyTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+        let currentBudgetURL = repositoryRoot.appendingPathComponent(
+            "performance/m6-6-hardware-notch-screen-selection-size-budget.json"
+        )
         let budgetURL = repositoryRoot.appendingPathComponent(
             "performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json"
         )
@@ -19,11 +22,17 @@ struct M66FirstClickAcceptanceSizeBudgetPolicyTests {
         )
 
         let budgetExists = FileManager.default.fileExists(atPath: budgetURL.path)
+        let currentBudgetExists = FileManager.default.fileExists(atPath: currentBudgetURL.path)
         #expect(budgetExists)
-        guard budgetExists else {
+        #expect(currentBudgetExists)
+        guard budgetExists, currentBudgetExists else {
             return
         }
 
+        let currentBudget = try JSONDecoder().decode(
+            FeatureBudget.self,
+            from: Data(contentsOf: currentBudgetURL)
+        )
         let budget = try JSONDecoder().decode(
             FeatureBudget.self,
             from: Data(contentsOf: budgetURL)
@@ -64,9 +73,47 @@ struct M66FirstClickAcceptanceSizeBudgetPolicyTests {
         #expect(budget.allowanceBytes.dmgSizeBytes.isMultiple(of: 4_096))
         #expect(budget.allowanceBytes.executableSizeBytes.isMultiple(of: 4_096))
 
+        #expect(currentBudget.schemaVersion == 1)
+        #expect(currentBudget.featureId == "m6.6-hardware-notch-screen-selection")
+        #expect(currentBudget.baselineId == "v0.1.0")
+        #expect(
+            currentBudget.evidence.sourceCommit
+                == "46f069e57997eab060c79c3d9e279da944d6e263"
+        )
+        #expect(currentBudget.evidence.workflowRunId == 32_226_544_212)
+        #expect(currentBudget.evidence.artifactId == 9_355_827_331)
+        #expect(
+            currentBudget.evidence.summary
+                == SizeSummary(
+                    appSizeBytes: 882_911,
+                    dmgSizeBytes: 561_421,
+                    executableSizeBytes: 580_704
+                )
+        )
+        #expect(currentBudget.allowanceBytes.appSizeBytes == budget.allowanceBytes.appSizeBytes)
+        #expect(
+            currentBudget.allowanceBytes.executableSizeBytes
+                == budget.allowanceBytes.executableSizeBytes
+        )
+        #expect(
+            currentBudget.allowanceBytes.dmgSizeBytes
+                == budget.allowanceBytes.dmgSizeBytes + 4_096
+        )
+        #expect(currentBudget.allowanceBytes.appSizeBytes == 614_400)
+        #expect(currentBudget.allowanceBytes.dmgSizeBytes == 475_136)
+        #expect(currentBudget.allowanceBytes.executableSizeBytes == 315_392)
+        #expect(currentBudget.allowanceBytes.appSizeBytes.isMultiple(of: 4_096))
+        #expect(currentBudget.allowanceBytes.dmgSizeBytes.isMultiple(of: 4_096))
+        #expect(currentBudget.allowanceBytes.executableSizeBytes.isMultiple(of: 4_096))
+
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
+                "--feature-budget performance/m6-6-hardware-notch-screen-selection-size-budget.json"
+            )
+        )
+        #expect(
+            !workflow.contains(
                 "--feature-budget performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json"
             )
         )

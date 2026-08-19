@@ -54,6 +54,11 @@ struct M66PhysicalAcceptance20260815RepairSizeBudgetPolicyTests {
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
+                "--feature-budget performance/m6-6-hardware-notch-screen-selection-size-budget.json"
+            )
+        )
+        #expect(
+            !workflow.contains(
                 "--feature-budget performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json"
             )
         )

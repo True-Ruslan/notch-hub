@@ -485,6 +485,25 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
+    def test_repository_m6_6_hardware_notch_screen_selection_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m6-6-hardware-notch-screen-selection-size-budget.json",
+            feature_id="m6.6-hardware-notch-screen-selection",
+            source_commit="46f069e57997eab060c79c3d9e279da944d6e263",
+            workflow_run_id=32226544212,
+            artifact_id=9355827331,
+            summary={
+                "appSizeBytes": 882911,
+                "dmgSizeBytes": 561421,
+                "executableSizeBytes": 580704,
+            },
+            allowance={
+                "appSizeBytes": 614400,
+                "dmgSizeBytes": 475136,
+                "executableSizeBytes": 315392,
+            },
+        )
+
     def test_ci_uses_first_click_physical_acceptance_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
@@ -493,10 +512,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-physical-acceptance-20260816-first-click-size-budget.json",
+            "--feature-budget performance/m6-6-hardware-notch-screen-selection-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-6-physical-acceptance-20260816-first-click-size-budget.json",
             "m6-6-physical-acceptance-20260815-repair-size-budget.json",
             "m6-6-regression-foundation-integration-size-budget.json",
             "regression-ui-automation-foundation-size-budget.json",
@@ -512,8 +532,7 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         ):
             self.assertNotIn(f"--feature-budget performance/{historical_budget}", workflow)
         self.assertNotIn(
-            "check-size-budget \\\
-            --summary build/perf-size.json",
+            "check-size-budget \\\n            --summary build/perf-size.json",
             workflow,
         )
 
