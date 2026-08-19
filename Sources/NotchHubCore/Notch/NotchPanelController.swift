@@ -86,7 +86,16 @@ public final class NotchPanelController: NSObject {
         performExpansionHaptic: @escaping @MainActor () -> Void,
         internalInitialization _: Void
     ) {
-        let screen = NSScreen.main ?? NSScreen.screens[0]
+        let screens = NSScreen.screens
+        let fallbackIndex = NSScreen.main.flatMap { mainScreen in
+            screens.firstIndex(where: { $0 === mainScreen })
+        }
+        let screenInputs = screens.map { ScreenGeometryInput(screen: $0) }
+        let selectedIndex = NotchScreenSelection.preferredIndex(
+            in: screenInputs,
+            fallbackIndex: fallbackIndex
+        ) ?? 0
+        let screen = screens[selectedIndex]
         let resolvedLayout = NotchGeometry.layout(
             for: ScreenGeometryInput(screen: screen)
         )
