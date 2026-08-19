@@ -1,10 +1,11 @@
 # P1 Target-Mac Resource Audit Plan
 
 Date: 2026-08-18
-Primary target: Mac16,8 / macOS 26.6
+Primary target: Mac16,8 / macOS 26.6.x
+Current physical environment: Mac16,8 / macOS 26.6.1
 Measured runtime: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`
-Measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`
-Status: active — measurement foundation merged; corrected runtime re-frozen; target-Mac collection next
+Measurement tooling: `99a75dbe0664120a572bd8229d4fe461790ee07b`
+Status: active — measurement foundation merged; corrected runtime re-frozen; patch-family tooling re-frozen; target-Mac collection next
 
 ## Goal
 
@@ -16,13 +17,13 @@ PR #36 established and merged a development/release-only evidence boundary:
 
 1. keep the existing `/bin/ps` collector for CPU, RSS and thread count;
 2. validate exact Idle/Hover/Stability configuration owned by `PERFORMANCE.md`;
-3. require one exact measured-app source SHA, one measurement-tool SHA and exact `Mac16,8 / 26.6` platform across all reports;
+3. require one exact measured-app source SHA, one measurement-tool SHA and target platform provenance across all reports;
 4. record only normalized aggregate values in the combined evidence bundle;
 5. summarize idle wakeups through Activity Monitor and energy/compositor observations through supported Apple developer tools;
 6. reject arbitrary free-form/manual fields, malformed manual types and raw trace payloads from machine-readable evidence;
 7. run the evidence-contract regression inside canonical `swift test` so it cannot silently fall out of CI.
 
-TDD RED evidence is preserved by CI #1245 and #1258. Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge main CI #1261 3/3 GREEN.
+TDD RED evidence is preserved by CI #1245 and #1258. Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged foundation source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge main CI #1261 3/3 GREEN.
 
 This phase changed no shipping runtime source.
 
@@ -40,9 +41,29 @@ PR #40 repaired the selection policy using public AppKit only and preserved the 
 
 The previous frozen P1 runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` remains historical M6.6 merge evidence but is superseded for P1 measurement. Canonical P1 collection now measures the corrected **merged** runtime `e8d77968...`; the exact physical acceptance claim remains pinned to `46f069e...`.
 
+## Patch-family tooling provenance gate — DONE
+
+Before physical resource collection began, the target Mac was observed on macOS `26.6.1`. `perf-baseline.py` already recorded exact `sw_vers -productVersion`, but the evidence bundler still required the literal platform string `26.6`.
+
+PR #44 corrected this without changing the sampler or shipping runtime:
+
+1. exact model remains `Mac16,8`;
+2. accepted OS family is canonical `26.6` / `26.6.x` only;
+3. the exact observed patch string is preserved in normalized evidence;
+4. Idle/Hover/Stability/manual evidence must agree on the same exact platform;
+5. adjacent minor versions, malformed/extra/leading-zero components and wrong hardware fail closed;
+6. the existing `P1TargetResourceEvidencePolicyTests` Swift bridge now runs both P1 Python suites inside canonical `swift test`;
+7. release policy remains intact: a temporary alternate `pull_request` workflow used to establish isolated RED/GREEN evidence was removed, preserving one reviewed untrusted PR execution path.
+
+Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as current measurement tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+
+The original foundation SHA `5cd9a2a...` remains immutable history but is superseded for new P1 target evidence.
+
 ## Phase 2 — target-Mac collection — NEXT
 
-Measure exact corrected merged runtime source `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` using exact P1 measurement-tool commit `5cd9a2a47d87a433155f53b3aa0510000f2fce85` in a separate detached tooling worktree.
+Measure exact corrected merged runtime source `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` using exact P1 measurement-tool commit `99a75dbe0664120a572bd8229d4fe461790ee07b` in a separate detached tooling worktree.
+
+Current collection environment is exact `Mac16,8 / macOS 26.6.1`. The validator accepts the 26.6 patch family but every file in one bundle must preserve the same exact patch version. If the OS changes before completion, start a fresh complete bundle rather than mixing sessions.
 
 Required evidence:
 
@@ -82,7 +103,8 @@ Any optimization must preserve M6.6 physical behavior, hardware-notch screen bin
 
 P1 can be accepted only when:
 
-- canonical target evidence is complete for exact measured runtime `e8d77968...` using exact tooling `5cd9a2a4...`;
+- canonical target evidence is complete for exact measured runtime `e8d77968...` using exact tooling `99a75dbe...`;
+- all evidence in one bundle agrees on exact `Mac16,8` and one canonical macOS 26.6 patch version;
 - CPU/RSS/thread reports pass provenance and scenario validation;
 - long-run RSS/thread growth stays bounded by existing evidence-based rules;
 - idle wakeups are explicitly recorded and reviewed;
