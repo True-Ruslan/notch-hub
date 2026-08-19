@@ -3,12 +3,26 @@
 Status: PENDING — canonical P1 target-Mac measurements are not collected yet.
 
 Primary target: `Mac16,8` / macOS `26.6`
-Measured runtime source: `bb6df211699c5aef7bac7d50866f3e24b2fe165b`
+Measured runtime source: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`
 Accepted measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`
 
 This runbook collects whole-app performance/resource evidence without changing the shipping application or granting additional permissions.
 
 The stable Idle/Hover/Stability scenario identifiers and their historical definitions remain owned by `PERFORMANCE.md`; this runbook intentionally does not redeclare those acceptance IDs. Current-runtime P1 values are not accepted until the exact target evidence below is collected and reviewed.
+
+## Runtime refreeze provenance
+
+The previous P1 runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` is historical M6.6 merge evidence and is **superseded for canonical P1 measurement** because a real multi-monitor launch regression was later found: the panel could bind to `NSScreen.main` instead of the available hardware-notch display.
+
+The correction has separate physical, CI and merge provenance and those claims must not be collapsed:
+
+- exact runtime physically re-checked on `Mac16,8 / macOS 26.6` with an external monitor attached: `46f069e57997eab060c79c3d9e279da944d6e263` — hardware-notch display binding PASS;
+- commits after `46f069e...` through the PR head changed only size-policy/CI/test metadata and no shipping `Sources/` file;
+- final PR #40 head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN;
+- PR #40 squash-merged as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`;
+- final PR head and squash-merge share exact Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21`.
+
+Therefore P1 measures the **corrected merged runtime SHA** `e8d77968...`. The physical claim remains pinned to `46f069e...`; measuring the merged SHA does not rewrite that historical hardware evidence.
 
 ## Evidence boundary
 
@@ -24,20 +38,22 @@ Do not commit the raw files under `build/`.
 
 ## 1. Prepare separate exact runtime and tooling checkouts
 
-The initial P1 audit intentionally measures the already-merged M6.6 runtime while using the separately accepted P1 measurement tooling. These are **two different Git commits** and must not be collapsed into one checkout.
+The P1 audit measures the corrected merged runtime while using the separately accepted P1 measurement tooling. These are **two different immutable Git commits** and must not be collapsed into one checkout.
 
 ```bash
-RUNTIME_SHA="bb6df211699c5aef7bac7d50866f3e24b2fe165b"
+RUNTIME_SHA="e8d77968abd9ba7a5aaed6c63d108a67b8d8a251"
 TOOLING_SHA="5cd9a2a47d87a433155f53b3aa0510000f2fce85"
 ```
 
 Do not replace either with a moving branch name. Later documentation-only commits do not redefine these provenance anchors.
 
-From a clean repository checkout, create two detached worktrees:
+From a clean repository checkout, fetch the exact commits and create two detached worktrees:
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
+
+git fetch origin
 
 git worktree add --detach ../notch-hub-p1-runtime "$RUNTIME_SHA"
 git worktree add --detach ../notch-hub-p1-tooling "$TOOLING_SHA"
@@ -58,17 +74,19 @@ test "$(plutil -extract NHSourceCommit raw \
   ../notch-hub-p1-runtime/build/NotchHub.app/Contents/Info.plist)" = "$RUNTIME_SHA"
 ```
 
-Quit any other NotchHub instance, then launch exactly that app:
+Quit any other NotchHub instance, then launch exactly that app and require exactly one process:
 
 ```bash
+pkill -x NotchHub 2>/dev/null || true
 open ../notch-hub-p1-runtime/build/NotchHub.app
 
 PID="$(pgrep -x NotchHub)"
 test -n "$PID"
+test "$(pgrep -x NotchHub | wc -l | tr -d ' ')" = "1"
 ps -p "$PID" -o pid=,comm=
 ```
 
-If more than one NotchHub process exists, stop and resolve that ambiguity rather than guessing a PID.
+If the exact-process checks fail, stop and resolve the ambiguity rather than guessing a PID.
 
 Run **all measurement and evidence commands from the tooling worktree**:
 
@@ -173,7 +191,7 @@ Create `build/p1-manual-resource-evidence.json` locally:
 ```json
 {
   "schemaVersion": 1,
-  "sourceCommit": "bb6df211699c5aef7bac7d50866f3e24b2fe165b",
+  "sourceCommit": "e8d77968abd9ba7a5aaed6c63d108a67b8d8a251",
   "platform": {
     "macOSVersion": "26.6",
     "modelIdentifier": "Mac16,8"
