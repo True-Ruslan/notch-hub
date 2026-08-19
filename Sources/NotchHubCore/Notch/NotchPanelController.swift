@@ -91,10 +91,11 @@ public final class NotchPanelController: NSObject {
             screens.firstIndex(where: { $0 === mainScreen })
         }
         let screenInputs = screens.map { ScreenGeometryInput(screen: $0) }
-        let selectedIndex = NotchScreenSelection.preferredIndex(
-            in: screenInputs,
-            fallbackIndex: fallbackIndex
-        ) ?? 0
+        let selectedIndex =
+            NotchScreenSelection.preferredIndex(
+                in: screenInputs,
+                fallbackIndex: fallbackIndex
+            ) ?? 0
         let screen = screens[selectedIndex]
         let resolvedLayout = NotchGeometry.layout(
             for: ScreenGeometryInput(screen: screen)
