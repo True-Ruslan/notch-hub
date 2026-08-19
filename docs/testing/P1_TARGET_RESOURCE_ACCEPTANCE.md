@@ -5,7 +5,7 @@ Status: PENDING — canonical P1 target-Mac measurements are not collected yet.
 Primary target: `Mac16,8` / macOS `26.6.x`
 Current physical environment: macOS `26.6.1`
 Measured runtime source: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`
-Accepted measurement tooling: `99a75dbe0664120a572bd8229d4fe461790ee07b`
+Accepted measurement tooling: `28965561f81c71ea58a352301fbe08554c644044`
 
 This runbook collects whole-app performance/resource evidence without changing the shipping application or granting additional permissions.
 
@@ -29,21 +29,35 @@ Therefore P1 measures the **corrected merged runtime SHA** `e8d77968...`. The ph
 
 ## Tooling refreeze provenance
 
-PR #36 originally established the P1 evidence foundation as tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`. Before physical collection began, the target Mac had advanced from macOS `26.6` to security/stability patch `26.6.1`, exposing that the evidence bundler incorrectly required the literal string `26.6`.
+PR #36 originally established the P1 evidence foundation as tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
 
-PR #44 corrected only P1 tooling/tests:
+PR #44 then corrected the platform validator for the real target after macOS advanced to `26.6.1`:
 
-- `perf-baseline.py` already recorded the exact `sw_vers -productVersion` value and required no sampler change;
-- the evidence validator now accepts only canonical `26.6` / `26.6.x` versions while preserving the exact patch string;
+- accepts only canonical `26.6` / `26.6.x` versions while preserving the exact patch string;
 - all scenario reports and manual evidence must agree on that exact platform;
 - exact model remains `Mac16,8`;
 - malformed/adjacent versions and platform mismatches fail closed;
-- the existing Swift test bridge now runs both Python P1 suites inside canonical `swift test`;
-- no alternate pull-request workflow, runtime source, entitlement, permission, telemetry, networking or polling change was introduced.
+- the existing Swift test bridge runs the P1 Python contract inside canonical `swift test`.
 
-TDD RED was preserved on the temporary isolated tooling run where `26.6.1` was the sole new failing positive case under the old validator. Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed canonical CI #1283 3/3 GREEN, then PR #44 squash-merged as `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN and squash-merged as tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`.
 
-Therefore canonical P1 collection uses **measurement tooling SHA `99a75dbe...`**. The older `5cd9a2a...` remains immutable foundation history but is superseded for new P1 evidence.
+The first target collection attempt on `99a75dbe...` produced one valid diagnostic Idle report, then exposed a separate measurement-tool defect during Hover: `/bin/ps` inherited an interactive locale and emitted a comma decimal separator, while the strict parser correctly rejected non-canonical numeric text. Hover produced **no evidence file**.
+
+PR #47 repaired the sampler boundary without weakening the parser:
+
+- copy the parent environment for the process-sampling subprocesses;
+- force `LC_ALL=C` only for `/bin/ps` CPU/RSS and `/bin/ps -M` thread sampling;
+- preserve unrelated environment variables;
+- do not change the launched NotchHub process environment;
+- keep `parse_ps_sample` strict/fail-closed;
+- add locale regression coverage through the existing canonical Swift-to-Python P1 test bridge;
+- change no shipping `Sources/`, app permission, entitlement, networking, telemetry, polling or product behavior.
+
+RED head `63af71dc9a614837fa2fe67f31d0cd0b5e3c0aa9` failed CI #1287 exactly because both `/bin/ps` calls had `env=None`. GREEN head `5e1d870f67972d5799c34e77acc1a8c1f4de9f7b` passed CI #1288 3/3 GREEN, including coverage-instrumented tests, release/security policy, Performance harness compatibility smoke and UI regression. PR #47 squash-merged as current tooling `28965561f81c71ea58a352301fbe08554c644044`.
+
+Therefore canonical P1 collection now uses **measurement tooling SHA `28965561...`**. Older tooling SHAs remain immutable history but are superseded for new P1 evidence.
+
+The Idle report previously collected with `99a75dbe...` remains diagnostic history: CPU median/max `0.0/0.0%`, RSS median/max `56,416/58,464 KiB`, threads median/max `3/7`. The `threadMax=7` observation exceeded the existing direct Idle gate `<=6` and must not be erased or rerun away. However, because `measurementToolCommit` is part of the closed evidence contract, that old Idle report **must not be mixed** with new Hover/Stability reports. The complete final Idle/Hover/Stability bundle must be recollected using `28965561...` only; if the thread excess repeats, it remains a P1 blocker for investigation.
 
 ## Evidence boundary
 
@@ -52,6 +66,8 @@ Machine-readable process metrics are collected by `scripts/perf-baseline.py` thr
 - CPU percentage;
 - RSS in KiB;
 - thread count.
+
+The sampler forces a deterministic `C` locale only for its `/bin/ps` child processes so numeric text is locale-independent. It does not alter the measured application environment.
 
 Wakeups, energy and compositor observations remain explicit target-Mac evidence. The canonical path does **not** automatically invoke privileged collectors and does not store raw Instruments traces in the repository evidence bundle.
 
@@ -63,7 +79,7 @@ The P1 audit measures the corrected merged runtime while using the separately ac
 
 ```bash
 RUNTIME_SHA="e8d77968abd9ba7a5aaed6c63d108a67b8d8a251"
-TOOLING_SHA="99a75dbe0664120a572bd8229d4fe461790ee07b"
+TOOLING_SHA="28965561f81c71ea58a352301fbe08554c644044"
 ```
 
 Do not replace either with a moving branch name. Later documentation-only commits do not redefine these provenance anchors.
@@ -91,7 +107,7 @@ fi
 
 The validator independently enforces canonical integer components, so values such as `26.06.1`, `26.6.01`, `26.6.1.1`, `26.5.x` and `26.7` are rejected even if a looser shell pattern would otherwise be attempted. Current physical collection is expected to record exact version `26.6.1`.
 
-From a clean repository checkout, fetch the exact commits and create or verify two detached worktrees. Do not globally enable `set -e` in an interactive Terminal session.
+From a clean repository checkout, fetch the exact commits and create or verify two detached worktrees. Do not globally enable `set -e` or `set -euo pipefail` in an interactive Terminal session.
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)"
