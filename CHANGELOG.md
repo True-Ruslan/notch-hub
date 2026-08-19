@@ -8,12 +8,12 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### P1 — target-Mac whole-app resource audit
 
-Status: **MEASUREMENT FOUNDATION MERGED / CORRECTED MERGED RUNTIME RE-FROZEN / TARGET-MAC EVIDENCE PENDING**.
+Status: **MEASUREMENT FOUNDATION MERGED / CORRECTED MERGED RUNTIME RE-FROZEN / PATCH-FAMILY TOOLING RE-FROZEN / TARGET-MAC EVIDENCE PENDING**.
 
-PR #36 established and merged the post-M6.6 performance/resource measurement foundation as exact tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`:
+PR #36 established and merged the post-M6.6 performance/resource measurement foundation as historical tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`:
 
 - added a fail-closed target-Mac evidence bundler for existing idle/hover/stability CPU/RSS/thread reports;
-- requires one exact measured-app source SHA, one measurement-tool SHA and exact `Mac16,8 / macOS 26.6` platform;
+- requires one exact measured-app source SHA, one measurement-tool SHA and target platform provenance;
 - freezes canonical 10 s warmup + 60/60/600 s measurement windows and 1/1/5 s sample intervals;
 - normalizes only aggregate process metrics and required stability evidence;
 - adds a closed privacy-safe manual evidence surface for 60-second idle wakeups, 60-second energy observation and 10-cycle compositor review;
@@ -23,16 +23,34 @@ PR #36 established and merged the post-M6.6 performance/resource measurement fou
 - added the exact two-worktree target collection procedure and active P1 plan;
 - changed development tooling/tests/docs only, with zero `Sources/` changes.
 
-TDD RED evidence:
+TDD RED evidence for the foundation:
 
 - CI #1245 at `6b7e90ff17803ef2678ff518b84fe82c8a39e06f`: exactly the new P1 gate failed because the implementation module did not exist;
 - CI #1258 at `98cd0974da8e1a71b6322d168e9f28834fe72a0c`: exactly the malformed manual-type regression failed because an uncontrolled `TypeError` escaped instead of fail-closed `EvidenceError`.
 
-Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge main CI #1261 3/3 GREEN, including the 367-test/81-suite gate, native XCUI, strict traceability, security, DMG, Sandbox/Hardened Runtime, active size budget and performance smoke.
+Final PR #36 head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged foundation source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge main CI #1261 3/3 GREEN.
 
-Before target collection began, the old P1 runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` was superseded for measurement because the later real multi-monitor check found the hardware-notch screen-selection regression described below. Canonical P1 target collection now measures corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` using unchanged exact tooling `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
+Before target collection began, the old P1 runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` was superseded for measurement because the later real multi-monitor check found the hardware-notch screen-selection regression described below. Canonical P1 target collection measures corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`.
 
 Physical, CI and merge provenance remain distinct: the corrected runtime behavior physically passed on exact source `46f069e57997eab060c79c3d9e279da944d6e263`; no shipping `Sources/` changed after that point; final PR #40 head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN; the squash merge `e8d77968...` shares Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21` with that final head.
+
+#### 2026-08-19 — macOS 26.6 patch-family evidence correction
+
+The target Mac was observed on macOS `26.6.1` before P1 collection. `perf-baseline.py` already preserved the exact `sw_vers -productVersion`, but the evidence bundler still required literal `26.6`, which would have rejected honest evidence from the current patch release.
+
+PR #44 corrected P1 tooling without changing the shipping runtime or sampler:
+
+- exact target model remains `Mac16,8`;
+- accepts only canonical macOS `26.6` / `26.6.x` versions;
+- preserves the exact observed patch version in normalized evidence;
+- requires Idle/Hover/Stability/manual evidence to agree on one exact platform;
+- rejects adjacent minor versions, malformed/extra/leading-zero version components and wrong models;
+- extends the existing `P1TargetResourceEvidencePolicyTests` Swift bridge to run both Python P1 suites inside canonical `swift test`;
+- preserves the single reviewed public `pull_request` execution path: a temporary separate workflow used only to capture isolated RED/GREEN evidence was removed after release policy correctly rejected it.
+
+TDD preserved an exact RED where `26.6.1` failed under the old validator, followed by GREEN and strengthened mismatch/malformed-version cases. Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as current P1 measurement tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+
+The original foundation `5cd9a2a...` remains immutable historical provenance but is superseded for new P1 evidence. Current canonical pair is runtime `e8d77968...` + tooling `99a75dbe...`; current physical collection environment is exact Mac16,8/macOS `26.6.1`.
 
 No new wakeup/energy/compositor numerical threshold is claimed from assumptions. P1 remains pending until repeatable target-Mac evidence is collected and reviewed.
 
