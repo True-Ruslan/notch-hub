@@ -2,13 +2,16 @@
 
 Status: PENDING — canonical P1 target-Mac measurements are not collected yet.
 
-Primary target: `Mac16,8` / macOS `26.6`
+Primary target: `Mac16,8` / macOS `26.6.x`
+Current physical environment: macOS `26.6.1`
 Measured runtime source: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`
-Accepted measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`
+Accepted measurement tooling: `99a75dbe0664120a572bd8229d4fe461790ee07b`
 
 This runbook collects whole-app performance/resource evidence without changing the shipping application or granting additional permissions.
 
 The stable Idle/Hover/Stability scenario identifiers and their historical definitions remain owned by `PERFORMANCE.md`; this runbook intentionally does not redeclare those acceptance IDs. Current-runtime P1 values are not accepted until the exact target evidence below is collected and reviewed.
+
+The P1 platform policy treats `26.6` and canonical integer patch releases `26.6.x` as one supported target family while preserving the **exact observed version** in every report and in the normalized evidence bundle. Idle, Hover, Stability and manual evidence must all report the same exact patch version. Adjacent minor versions, malformed versions, extra version components, leading-zero components and non-`Mac16,8` hardware fail closed.
 
 ## Runtime refreeze provenance
 
@@ -23,6 +26,24 @@ The correction has separate physical, CI and merge provenance and those claims m
 - final PR head and squash-merge share exact Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21`.
 
 Therefore P1 measures the **corrected merged runtime SHA** `e8d77968...`. The physical claim remains pinned to `46f069e...`; measuring the merged SHA does not rewrite that historical hardware evidence.
+
+## Tooling refreeze provenance
+
+PR #36 originally established the P1 evidence foundation as tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`. Before physical collection began, the target Mac had advanced from macOS `26.6` to security/stability patch `26.6.1`, exposing that the evidence bundler incorrectly required the literal string `26.6`.
+
+PR #44 corrected only P1 tooling/tests:
+
+- `perf-baseline.py` already recorded the exact `sw_vers -productVersion` value and required no sampler change;
+- the evidence validator now accepts only canonical `26.6` / `26.6.x` versions while preserving the exact patch string;
+- all scenario reports and manual evidence must agree on that exact platform;
+- exact model remains `Mac16,8`;
+- malformed/adjacent versions and platform mismatches fail closed;
+- the existing Swift test bridge now runs both Python P1 suites inside canonical `swift test`;
+- no alternate pull-request workflow, runtime source, entitlement, permission, telemetry, networking or polling change was introduced.
+
+TDD RED was preserved on the temporary isolated tooling run where `26.6.1` was the sole new failing positive case under the old validator. Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed canonical CI #1283 3/3 GREEN, then PR #44 squash-merged as `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+
+Therefore canonical P1 collection uses **measurement tooling SHA `99a75dbe...`**. The older `5cd9a2a...` remains immutable foundation history but is superseded for new P1 evidence.
 
 ## Evidence boundary
 
@@ -42,12 +63,35 @@ The P1 audit measures the corrected merged runtime while using the separately ac
 
 ```bash
 RUNTIME_SHA="e8d77968abd9ba7a5aaed6c63d108a67b8d8a251"
-TOOLING_SHA="5cd9a2a47d87a433155f53b3aa0510000f2fce85"
+TOOLING_SHA="99a75dbe0664120a572bd8229d4fe461790ee07b"
 ```
 
 Do not replace either with a moving branch name. Later documentation-only commits do not redefine these provenance anchors.
 
-From a clean repository checkout, fetch the exact commits and create two detached worktrees:
+Before measurement, record and validate the exact physical platform:
+
+```bash
+MODEL="$(sysctl -n hw.model)"
+MACOS="$(sw_vers -productVersion)"
+
+printf 'Model: %s\nmacOS: %s\n' "$MODEL" "$MACOS"
+
+if [ "$MODEL" != "Mac16,8" ]; then
+  echo "MODEL — FAIL"
+else
+  echo "MODEL — PASS"
+fi
+
+if printf '%s\n' "$MACOS" | grep -Eq '^26\.6(\.[0-9]+)?$'; then
+  echo "MACOS FAMILY — PASS"
+else
+  echo "MACOS FAMILY — FAIL"
+fi
+```
+
+The validator independently enforces canonical integer components, so values such as `26.06.1`, `26.6.01`, `26.6.1.1`, `26.5.x` and `26.7` are rejected even if a looser shell pattern would otherwise be attempted. Current physical collection is expected to record exact version `26.6.1`.
+
+From a clean repository checkout, fetch the exact commits and create or verify two detached worktrees. Do not globally enable `set -e` in an interactive Terminal session.
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)"
@@ -61,6 +105,8 @@ git worktree add --detach ../notch-hub-p1-tooling "$TOOLING_SHA"
 test "$(git -C ../notch-hub-p1-runtime rev-parse HEAD)" = "$RUNTIME_SHA"
 test "$(git -C ../notch-hub-p1-tooling rev-parse HEAD)" = "$TOOLING_SHA"
 ```
+
+If either worktree already exists, inspect its cleanliness and exact SHA before replacing it; do not delete a dirty worktree automatically.
 
 Build the **measured application only from the runtime worktree**:
 
@@ -186,14 +232,14 @@ Do not convert a single noisy trace into a new hard numerical budget without rep
 
 ## 8. Manual evidence JSON
 
-Create `build/p1-manual-resource-evidence.json` locally:
+Create `build/p1-manual-resource-evidence.json` locally using the **exact same macOS version recorded by the three sampler reports**. For the current target session that value is `26.6.1`:
 
 ```json
 {
   "schemaVersion": 1,
   "sourceCommit": "e8d77968abd9ba7a5aaed6c63d108a67b8d8a251",
   "platform": {
-    "macOSVersion": "26.6",
+    "macOSVersion": "26.6.1",
     "modelIdentifier": "Mac16,8"
   },
   "idleWakeups": {
@@ -214,7 +260,7 @@ Create `build/p1-manual-resource-evidence.json` locally:
 }
 ```
 
-Replace only the measured wakeup value and findings with observed values. Do not add notes, usernames, paths, window titles, raw trace data, media metadata or other free-form fields; the validator rejects extra schema surface.
+Replace only the measured wakeup value and findings with observed values. If macOS is updated before all evidence is collected, do not mix sessions: start a new complete bundle on one exact patch version. Do not add notes, usernames, paths, window titles, raw trace data, media metadata or other free-form fields; the validator rejects extra schema surface.
 
 ## 9. Build normalized evidence bundle
 
@@ -231,7 +277,8 @@ python3 scripts/p1_target_resource_evidence.py \
 The command fails closed when:
 
 - source/tool provenance differs across reports;
-- platform is not exact `Mac16,8 / 26.6`;
+- platform is not exact `Mac16,8` plus canonical macOS `26.6` / `26.6.x`;
+- exact macOS patch version differs across Idle/Hover/Stability/manual evidence;
 - scenario timing/sample counts differ from the canonical contract;
 - reports use a non-attached measurement mode;
 - required stability data is missing;
