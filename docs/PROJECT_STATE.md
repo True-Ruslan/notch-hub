@@ -2,10 +2,11 @@
 
 Last updated: 2026-08-19
 Published version: `0.1.0` Personal Release
-Primary physical target: macOS 26.6 / Mac16,8
-Protected branch: `main`
+Primary physical target: Mac16,8 / macOS 26.6.x
+Current physical environment: Mac16,8 / macOS 26.6.1
+Branch governance: `main` is intended to be protected; GitHub currently reports it unprotected and issue #42 tracks restoration
 Frozen P1 measured runtime: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`
-Frozen P1 measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`
+Frozen P1 measurement tooling: `99a75dbe0664120a572bd8229d4fe461790ee07b`
 Active development: P1 target-Mac whole-app resource evidence collection
 
 ## Product state
@@ -30,6 +31,7 @@ Published state remains immutable `v0.1.0`. M6.6 and its hardware-notch screen-s
 - M6.6 gestures/haptics/interactive notch/seek/Hover Peek — accepted/merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
 - M6.6 hardware-notch screen-selection correction — physically accepted/tested/merged via PR #40 as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`.
 - P1 target resource measurement foundation — implemented/tested/merged via PR #36 as `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
+- P1 macOS 26.6 patch-family evidence correction — TDD-tested/merged via PR #44 as current tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`.
 
 ## M6.6 original acceptance and merge provenance
 
@@ -94,36 +96,39 @@ M6.6 current state is therefore:
 
 ## Performance state — P1 active
 
-`performance/baseline-v0.1.0.json` and all historical feature budgets remain immutable provenance records. The active cumulative size envelope is now `performance/m6-6-hardware-notch-screen-selection-size-budget.json`; the older first-click budget remains historical evidence.
+`performance/baseline-v0.1.0.json` and all historical feature budgets remain immutable provenance records. The active cumulative size envelope is `performance/m6-6-hardware-notch-screen-selection-size-budget.json`; the older first-click budget remains historical evidence.
 
-Shared-runner CPU/RSS values remain compatibility evidence only. Canonical runtime resource acceptance belongs to Mac16,8/macOS 26.6.
+Shared-runner CPU/RSS values remain compatibility evidence only. Canonical runtime resource acceptance belongs to exact `Mac16,8` hardware in the macOS `26.6` patch family, with the exact observed patch version preserved in every evidence file. The current machine is on `26.6.1`.
 
-P1 measurement foundation merged via PR #36. Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge CI #1261 3/3 GREEN.
+PR #36 established the P1 measurement foundation. Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged foundation source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge CI #1261 3/3 GREEN.
 
-The foundation:
+Before target collection, macOS advanced to `26.6.1`, exposing an overly literal `26.6` platform check. PR #44 corrected the P1 validator without changing the sampler or shipping runtime:
 
-- keeps existing `perf-baseline.py` as the non-privileged CPU/RSS/thread collector;
-- validates one exact runtime source, one exact tooling SHA, target platform and fixed scenario configuration;
-- records idle wakeups, energy and compositor findings through explicit Apple observation tools;
-- rejects arbitrary free-form fields/raw traces and malformed manual evidence types;
-- excludes privileged `sudo powermetrics` / `timerfires` from the canonical path;
-- runs the evidence contract inside canonical `swift test`;
-- changes no shipping runtime source.
+- accepts only canonical `26.6` / `26.6.x` versions;
+- preserves exact patch provenance instead of normalizing it away;
+- requires exact platform agreement across Idle/Hover/Stability/manual evidence;
+- keeps exact model `Mac16,8`;
+- rejects adjacent/malformed versions and wrong models;
+- extends the existing Swift-to-Python canonical test bridge to both P1 Python suites;
+- preserves the single reviewed untrusted `pull_request` CI path after release policy correctly rejected a temporary alternate workflow.
 
-TDD RED evidence is preserved by CI #1245 for the absent implementation and CI #1258 for malformed manual JSON type handling.
+TDD RED/GREEN evidence was captured during PR #44 development. Final head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as current P1 tooling source `99a75dbe0664120a572bd8229d4fe461790ee07b`.
 
-The canonical P1 target audit now measures corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` with tooling `5cd9a2a47d87a433155f53b3aa0510000f2fce85`. The previous runtime `bb6df211...` is historical M6.6 merge evidence but is superseded for P1 because of the later screen-selection correctness fix. Later documentation-only commits do not redefine the new runtime/tooling provenance pair.
+The canonical P1 target audit therefore measures corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` with tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`. The older tooling `5cd9a2a...` remains immutable foundation history but is superseded for new target evidence. Later documentation-only commits do not redefine the runtime/tooling provenance pair.
 
 ## Next optimal step
 
-1. Collect target-Mac idle/hover/stability CPU/RSS/thread reports using frozen runtime `e8d77968...` and tooling `5cd9a2a4...`.
-2. Collect 60-second idle wakeup/energy evidence and 10-cycle compositor evidence.
-3. Build and validate the normalized P1 target-resource evidence bundle.
-4. Characterize variance before introducing any new absolute cross-session resource threshold.
-5. If evidence identifies a material regression, implement one isolated optimization with RED -> GREEN and rerun affected physical acceptance; otherwise accept P1 without speculative runtime changes.
-6. Only after P1 acceptance proceed to broader active-display/multi-monitor hardening or another product module.
+1. Replace the old detached P1 tooling checkout with exact tooling `99a75dbe...`; keep runtime `e8d77968...` unchanged.
+2. Collect target-Mac idle/hover/stability CPU/RSS/thread reports on the current exact platform Mac16,8/macOS 26.6.1.
+3. Collect 60-second idle wakeup/energy evidence and 10-cycle compositor evidence.
+4. Build and validate the normalized P1 target-resource evidence bundle; all files must preserve exact `26.6.1` platform provenance for this session.
+5. Characterize variance before introducing any new absolute cross-session resource threshold.
+6. If evidence identifies a material regression, implement one isolated optimization with RED -> GREEN and rerun affected physical acceptance; otherwise accept P1 without speculative runtime changes.
+7. Only after P1 acceptance proceed to broader active-display/multi-monitor hardening or another product module.
 
 See:
 
 - `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`;
-- `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`.
+- `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`;
+- issue #38 for live collection status;
+- issue #42 for repository branch-protection restoration.
