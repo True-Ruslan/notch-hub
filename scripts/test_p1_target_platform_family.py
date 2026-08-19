@@ -11,11 +11,11 @@ TOOL_COMMIT = "b" * 40
 MODEL = "Mac16,8"
 
 
-def _platform(version: str) -> dict[str, str]:
-    return {"macOSVersion": version, "modelIdentifier": MODEL}
+def _platform(version: str, model: str = MODEL) -> dict[str, str]:
+    return {"macOSVersion": version, "modelIdentifier": model}
 
 
-def _report(scenario: str, version: str) -> dict[str, object]:
+def _report(scenario: str, version: str, model: str = MODEL) -> dict[str, object]:
     duration = 600.0 if scenario == "stability" else 60.0
     interval = 5.0 if scenario == "stability" else 1.0
     count = 120 if scenario == "stability" else 60
@@ -24,7 +24,7 @@ def _report(scenario: str, version: str) -> dict[str, object]:
         "scenario": scenario,
         "sourceCommit": SOURCE_COMMIT,
         "measurementToolCommit": TOOL_COMMIT,
-        "platform": _platform(version),
+        "platform": _platform(version, model),
         "measurementMode": "attached",
         "startedAt": "2026-08-19T18:00:00Z",
         "endedAt": "2026-08-19T18:10:00Z",
@@ -55,11 +55,11 @@ def _report(scenario: str, version: str) -> dict[str, object]:
     return report
 
 
-def _manual(version: str) -> dict[str, object]:
+def _manual(version: str, model: str = MODEL) -> dict[str, object]:
     return {
         "schemaVersion": 1,
         "sourceCommit": SOURCE_COMMIT,
-        "platform": _platform(version),
+        "platform": _platform(version, model),
         "idleWakeups": {
             "method": "activity-monitor-idle-wake-ups",
             "observationSeconds": 60,
@@ -78,31 +78,50 @@ def _manual(version: str) -> dict[str, object]:
     }
 
 
-def _bundle(version: str, *, hover_version: str | None = None) -> dict[str, object]:
+def _bundle(
+    version: str,
+    *,
+    hover_version: str | None = None,
+    manual_version: str | None = None,
+    model: str = MODEL,
+) -> dict[str, object]:
     return build_evidence_bundle(
         expected_source_commit=SOURCE_COMMIT,
-        idle_report=_report("idle", version),
-        hover_report=_report("hover", hover_version or version),
-        stability_report=_report("stability", version),
-        manual_evidence=_manual(version),
+        idle_report=_report("idle", version, model),
+        hover_report=_report("hover", hover_version or version, model),
+        stability_report=_report("stability", version, model),
+        manual_evidence=_manual(manual_version or version, model),
     )
 
 
 class P1TargetPlatformFamilyTests(unittest.TestCase):
     def test_accepts_and_preserves_26_6_patch_release(self):
-        bundle = _bundle("26.6.1")
-        self.assertEqual(_platform("26.6.1"), bundle["platform"])
-
-    def test_keeps_exact_26_6_compatible(self):
-        bundle = _bundle("26.6")
-        self.assertEqual(_platform("26.6"), bundle["platform"])
+        for version in ("26.6", "26.6.0", "26.6.1"):
+            with self.subTest(version=version):
+                bundle = _bundle(version)
+                self.assertEqual(_platform(version), bundle["platform"])
 
     def test_rejects_cross_file_patch_version_mismatch(self):
         with self.assertRaises(EvidenceError):
             _bundle("26.6.1", hover_version="26.6.2")
+        with self.assertRaises(EvidenceError):
+            _bundle("26.6.1", manual_version="26.6.2")
+
+    def test_rejects_non_target_model(self):
+        with self.assertRaises(EvidenceError):
+            _bundle("26.6.1", model="Mac16,7")
 
     def test_rejects_adjacent_minor_and_malformed_versions(self):
-        for version in ("26.5.9", "26.7", "26.6.1.1", "26.6.beta", "26.06.1"):
+        for version in (
+            "26.5.9",
+            "26.7",
+            "26.6.1.1",
+            "26.6.beta",
+            "26.06.1",
+            "26.6.01",
+            "26.6.-1",
+            "26.6.",
+        ):
             with self.subTest(version=version):
                 with self.assertRaises(EvidenceError):
                     _bundle(version)
