@@ -38,7 +38,7 @@ Race, stale-callback, boundary and teardown behavior must be tested deterministi
 
 ## M6.6 automated acceptance baseline
 
-The physically accepted runtime source is `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`.
+The original physically accepted runtime source is `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`.
 
 Canonical CI #1241 / run `32075976405` passed all three jobs, 366 Swift tests / 80 suites, 11/11 native external-app XCUI tests, strict acceptance traceability, production transport/archive verification, release security/signing/preflight, active size budget and shared-runner performance smoke.
 
@@ -54,6 +54,18 @@ Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #124
 
 M6.6 is merged but not released.
 
+## M6.6 hardware-notch screen-selection correction
+
+A later real multi-monitor launch check found that the panel could bind to external `NSScreen.main` while a hardware-notch screen was available. The correction followed the same split automation/physical policy:
+
+- focused regression tests prove that a hardware-notch display wins over the preferred/main external display while preserving no-notch fallback;
+- exact runtime `46f069e57997eab060c79c3d9e279da944d6e263` was built with matching `NHSourceCommit` and physically re-checked on Mac16,8/macOS 26.6 with external monitor attached — PASS;
+- commits after `46f069e...` through the final PR head changed only policy/tests/CI metadata and no shipping `Sources/` file;
+- final PR head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN, including `macOS 26 compatibility`, `macOS UI regression`, `Build, test and package`, active size budget, Sandbox and Hardened Runtime checks;
+- PR #40 squash-merged as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`, sharing Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21` with the final PR head.
+
+Do not rewrite the exact physical claim from `46f069e...` to the squash SHA. The merged runtime is `e8d77968...`; the physically executed correction remains `46f069e...`.
+
 ## Acceptance traceability
 
 Authoritative M6.6 ledgers:
@@ -64,7 +76,7 @@ Authoritative M6.6 ledgers:
 
 Machine-readable coverage lives in `Tests/Acceptance/coverage.yml` plus `coverage-current.json`; `scripts/test_acceptance_coverage.py --mode strict` must remain green. Accepted IDs must cite concrete automated coverage, physical evidence, or both.
 
-Physical source acceptance stays pinned to `8744b9e...`; documentation descendants and later squash merges do not rewrite that exact target-Mac claim.
+Original full M6.6 physical source acceptance stays pinned to `8744b9e...`; the later hardware-notch screen-selection correction has its own exact physical source `46f069e...`. Documentation descendants and squash merges do not rewrite either exact target-Mac claim.
 
 ## P1 target resource evidence foundation
 
@@ -88,12 +100,12 @@ The evidence contract validates exact measured runtime source, one shared measur
 
 ## P1 physical/resource collection boundary
 
-The first P1 audit must use two distinct detached sources:
+The canonical P1 audit must use two distinct detached sources:
 
-- measured runtime: `bb6df211699c5aef7bac7d50866f3e24b2fe165b`;
+- measured corrected merged runtime: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`;
 - measurement tooling: `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
 
-Later docs-only commits do not replace either provenance anchor. Canonical target procedure is `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`.
+The previous runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` remains historical M6.6 merge evidence but is superseded for P1 measurement by the later hardware-notch screen-selection correction. Later docs-only commits do not replace the current runtime/tooling provenance anchors. Canonical target procedure is `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`.
 
 Shared-runner CPU/RSS magnitudes are compatibility evidence, not target-Mac acceptance. P1 uses the real Mac16,8/macOS 26.6 for CPU/RSS/threads/wakeups/energy/compositor review.
 
