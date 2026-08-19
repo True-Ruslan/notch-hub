@@ -21,7 +21,8 @@ struct P1TargetResourceEvidencePolicyTests {
             "unittest",
             "-v",
             "test_p1_target_resource_evidence.py",
-            "test_p1_target_platform_family.py"
+            "test_p1_target_platform_family.py",
+            "test_perf_baseline_locale.py"
         ]
         process.currentDirectoryURL = scriptsDirectory
         process.standardOutput = stdout
