@@ -21,11 +21,12 @@ Current development state:
 - M6.4 shipping media composition — accepted/merged;
 - M6.5 compact + expanded Media-first UI — accepted/merged;
 - **M6.6 gestures, haptics, interactive notch, seek and Hover Peek — implemented, automated-tested, physically accepted and merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; not released.**
-- **P1 whole-app target-Mac performance/resource review — measurement foundation merged via PR #36 as `5cd9a2a47d87a433155f53b3aa0510000f2fce85`; target-Mac evidence pending.**
+- **M6.6 hardware-notch screen-selection correction — physically accepted on exact runtime `46f069e57997eab060c79c3d9e279da944d6e263`, CI-verified and merged via PR #40 as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`; not released.**
+- **P1 whole-app target-Mac performance/resource review — measurement foundation merged via PR #36 as `5cd9a2a47d87a433155f53b3aa0510000f2fce85`; corrected merged runtime re-frozen; target-Mac evidence pending.**
 
 The published `v0.1.0` release predates the M1/P0.1/M6 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
 
-The current priority is P1 target collection: measure exact merged M6.6 runtime `bb6df211...` on Mac16,8/macOS 26.6 using frozen measurement tooling `5cd9a2a4...`, characterize CPU/RSS/threads/wakeups/energy/compositor behavior, and optimize only where evidence demonstrates a material issue. Broader multi-monitor hardening and new product modules remain after this resource gate.
+The current priority is P1 target collection: measure exact corrected merged runtime `e8d77968...` on Mac16,8/macOS 26.6 using frozen measurement tooling `5cd9a2a4...`, characterize CPU/RSS/threads/wakeups/energy/compositor behavior, and optimize only where evidence demonstrates a material issue. Broader multi-monitor hardening and new product modules remain after this resource gate.
 
 ## Universal Media
 
@@ -47,7 +48,7 @@ Accepted source behavior now includes:
 
 Yandex Music and Yandex Browser/Chromium system Now Playing are physically verified on the primary target. Apple Music, Spotify and additional independent-player compatibility remain explicitly unverified rather than assumed.
 
-The physically accepted M6.6 runtime is pinned to exact source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`; documentation/coverage descendants do not rewrite that hardware evidence. The feature is now merged into `main` through `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
+The original full M6.6 physical acceptance is pinned to exact source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`, with PR #33 merged as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`. The later hardware-notch display correction has its own exact physical source `46f069e57997eab060c79c3d9e279da944d6e263` and corrected merged source `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`. Documentation/coverage descendants do not rewrite those exact hardware claims.
 
 ## Requirements
 
@@ -132,7 +133,7 @@ Key invariants:
 - target-Mac runtime evidence is required for resource acceptance;
 - immutable `v0.1.0` baseline remains historical evidence and is never silently rewritten;
 - P1 combines exact CPU/RSS/thread reports with privacy-safe target-Mac wakeup/energy/compositor evidence before any optimization decision;
-- the accepted P1 tooling source is pinned to `5cd9a2a47d87a433155f53b3aa0510000f2fce85`; later documentation commits do not redefine measurement provenance;
+- the corrected P1 measured runtime is pinned to `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` and the accepted P1 tooling source to `5cd9a2a47d87a433155f53b3aa0510000f2fce85`; later documentation commits do not redefine measurement provenance;
 - performance work cannot broaden permissions, input capture, networking or telemetry authority.
 
 See [`PERFORMANCE.md`](PERFORMANCE.md), [`docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`](docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md) and `performance/`.

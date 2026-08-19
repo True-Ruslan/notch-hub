@@ -8,7 +8,7 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### P1 — target-Mac whole-app resource audit
 
-Status: **MEASUREMENT FOUNDATION MERGED / POST-MERGE CI GREEN / TARGET-MAC EVIDENCE PENDING / NO SHIPPING RUNTIME CHANGE**.
+Status: **MEASUREMENT FOUNDATION MERGED / CORRECTED MERGED RUNTIME RE-FROZEN / TARGET-MAC EVIDENCE PENDING**.
 
 PR #36 established and merged the post-M6.6 performance/resource measurement foundation as exact tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`:
 
@@ -28,15 +28,19 @@ TDD RED evidence:
 - CI #1245 at `6b7e90ff17803ef2678ff518b84fe82c8a39e06f`: exactly the new P1 gate failed because the implementation module did not exist;
 - CI #1258 at `98cd0974da8e1a71b6322d168e9f28834fe72a0c`: exactly the malformed manual-type regression failed because an uncontrolled `TypeError` escaped instead of fail-closed `EvidenceError`.
 
-Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge main CI #1261 3/3 GREEN, including the 367-test/81-suite gate, native XCUI, strict traceability, security, DMG, Sandbox/Hardened Runtime, unchanged active size budget and performance smoke.
+Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge main CI #1261 3/3 GREEN, including the 367-test/81-suite gate, native XCUI, strict traceability, security, DMG, Sandbox/Hardened Runtime, active size budget and performance smoke.
 
-Initial P1 target collection intentionally measures exact merged M6.6 runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` using exact tooling `5cd9a2a47d87a433155f53b3aa0510000f2fce85`. Later documentation commits do not redefine those provenance anchors.
+Before target collection began, the old P1 runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` was superseded for measurement because the later real multi-monitor check found the hardware-notch screen-selection regression described below. Canonical P1 target collection now measures corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` using unchanged exact tooling `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
+
+Physical, CI and merge provenance remain distinct: the corrected runtime behavior physically passed on exact source `46f069e57997eab060c79c3d9e279da944d6e263`; no shipping `Sources/` changed after that point; final PR #40 head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN; the squash merge `e8d77968...` shares Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21` with that final head.
 
 No new wakeup/energy/compositor numerical threshold is claimed from assumptions. P1 remains pending until repeatable target-Mac evidence is collected and reviewed.
 
-### M6.6 — PR #33
+### M6.6 — PR #33 + corrective PR #40
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED ON EXACT `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` / MERGED AS `bb6df211699c5aef7bac7d50866f3e24b2fe165b` / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+
+Original M6.6 full physical acceptance remains pinned to exact `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`; PR #33 squash-merged as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
 
 Added and hardened:
 
@@ -65,10 +69,18 @@ Frozen runtime source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` passed canonica
 
 The complete requested Mac16,8/macOS 26.6 matrix then passed on that exact source, including horizontal direction/follow-finger/haptic behavior, Hover Peek, click, vertical transitions, seek/source/cursor handling, source icon/fallback, no sensitive permissions and clean helper teardown after Quit.
 
-#### Merge and post-merge verification
+#### Original merge and post-merge verification
 
 Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #1243 3/3 GREEN. PR #33 was squash-merged with expected-head protection as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
 
 Post-merge main CI #1244 ultimately passed all three canonical jobs on that exact merge source. Its first packaging attempt failed only because runner `hdiutil verify` returned `Resource temporarily unavailable`; the failed job alone was rerun on unchanged source and passed. No application code or policy was changed for that retry.
+
+#### 2026-08-19 — hardware-notch screen-selection correction
+
+A real Mac16,8/macOS 26.6 launch with an external monitor attached exposed that `NSScreen.main` was not a valid product invariant: NotchHub could bind to the external display even though the built-in hardware-notch display was available.
+
+PR #40 added deterministic hardware-notch-first screen selection using existing public AppKit geometry signals, preserving `NSScreen.main` then first-screen fallback when no hardware notch exists. No polling, private display API, telemetry, new permission, entitlement or persistent display state was added.
+
+Exact runtime `46f069e57997eab060c79c3d9e279da944d6e263` was built with matching `NHSourceCommit` and physically re-checked with the external monitor attached — hardware-notch binding PASS. Subsequent commits changed only size-policy/CI/test metadata. Final head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN, including the provenance-locked hardware-notch repair size envelope. PR #40 squash-merged as corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`.
 
 M6.6 has reached **implemented -> automated-tested -> physically accepted -> merged**. It remains **not released**; immutable published version is still `v0.1.0`.
