@@ -80,7 +80,7 @@ Machine-readable coverage lives in `Tests/Acceptance/coverage.yml` plus `coverag
 
 Original full M6.6 physical source acceptance stays pinned to `8744b9e...`; the later hardware-notch screen-selection correction has its own exact physical source `46f069e...`. Documentation descendants and squash merges do not rewrite either exact target-Mac claim.
 
-## P1 target resource evidence foundation and patch-family correction
+## P1 target resource evidence foundation and tooling corrections
 
 Status: **MERGED / CANONICAL CI VERIFIED / TARGET-MAC EVIDENCE PENDING**.
 
@@ -90,7 +90,7 @@ PR #36 established the development/release-only evidence foundation as historica
 
 Final PR #36 head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged foundation source `5cd9a2a4...` passed post-merge CI #1261 3/3 GREEN.
 
-The foundation changed no `Sources/` file. Canonical deterministic coverage includes `P1TargetResourceEvidencePolicyTests`, which launches Python evidence tests inside normal `swift test` so the evidence contract cannot silently fall outside the canonical gate.
+The foundation changed no `Sources/` file. Canonical deterministic coverage includes `P1TargetResourceEvidencePolicyTests`, which launches Python P1 tests inside normal `swift test` so the evidence contract cannot silently fall outside the canonical gate.
 
 Before physical collection began, the target Mac was observed on macOS `26.6.1`. The sampler already recorded exact `sw_vers -productVersion`, but the bundler still hard-coded literal `26.6`. PR #44 corrected that tooling contract:
 
@@ -99,25 +99,40 @@ Before physical collection began, the target Mac was observed on macOS `26.6.1`.
 - exact patch version is preserved, not normalized away;
 - Idle/Hover/Stability/manual evidence must all report the same exact platform;
 - adjacent minor versions, malformed/extra/leading-zero version components and wrong models fail closed;
-- `P1TargetResourceEvidencePolicyTests` now runs both `test_p1_target_resource_evidence.py` and `test_p1_target_platform_family.py` inside canonical Swift tests;
+- `P1TargetResourceEvidencePolicyTests` runs both `test_p1_target_resource_evidence.py` and `test_p1_target_platform_family.py` inside canonical Swift tests;
 - a temporary separate PR workflow used only to establish isolated RED/GREEN evidence was removed after release policy correctly rejected a second untrusted pull-request execution path.
 
-PR #44 TDD evidence includes the exact RED where `26.6.1` was rejected by the old validator, followed by GREEN and strengthened fail-closed boundary tests. Final head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as current P1 measurement tooling:
+Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN and squash-merged as tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`.
 
-`99a75dbe0664120a572bd8229d4fe461790ee07b`
+The first real collection attempt then exposed a second tooling defect. Idle completed and remains valid diagnostic evidence, including thread median/max `3/7`, but Hover produced no evidence file because `/bin/ps` inherited an interactive locale and returned a comma decimal separator while `parse_ps_sample` correctly requires dot-decimal input.
 
-The older `5cd9a2a...` remains immutable foundation provenance but is superseded for new physical P1 collection.
+PR #47 fixed the sampler boundary rather than weakening parsing:
+
+- `scripts/perf-baseline.py` copies the parent environment for process sampling and sets `LC_ALL=C` only for the two `/bin/ps` child processes;
+- unrelated environment variables remain available;
+- the measured NotchHub process environment is unchanged;
+- strict parser behavior is unchanged;
+- `test_perf_baseline_locale.py` proves both sampling subprocesses receive deterministic locale settings even under a non-C parent locale;
+- `P1TargetResourceEvidencePolicyTests` now runs all three P1 Python suites in the existing canonical Swift gate.
+
+RED head `63af71dc9a614837fa2fe67f31d0cd0b5e3c0aa9` failed CI #1287 exactly because both ps calls had `env=None`; the existing P1 suites remained green. GREEN head `5e1d870f67972d5799c34e77acc1a8c1f4de9f7b` passed CI #1288 3/3 GREEN, including coverage-instrumented tests, release/security/performance policy, Performance harness compatibility smoke and UI regression. PR #47 squash-merged as current P1 measurement tooling:
+
+`28965561f81c71ea58a352301fbe08554c644044`
+
+Older tooling SHAs remain immutable provenance but are superseded for new physical P1 collection.
 
 ## P1 physical/resource collection boundary
 
 The canonical P1 audit must use two distinct detached sources:
 
 - measured corrected merged runtime: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`;
-- measurement tooling: `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+- measurement tooling: `28965561f81c71ea58a352301fbe08554c644044`.
 
 The current physical target environment is `Mac16,8 / macOS 26.6.1`. The validator accepts the macOS 26.6 patch family but requires every report and the manual evidence to preserve the same exact patch version within one bundle.
 
 The previous runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` remains historical M6.6 merge evidence but is superseded for P1 measurement by the later hardware-notch screen-selection correction. Later docs-only commits do not replace the current runtime/tooling provenance anchors. Canonical target procedure is `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`.
+
+The Idle report collected with prior tooling `99a75dbe...` remains diagnostic evidence, including `threadMax=7` against the current Idle gate `<=6`. It must not be mixed into a bundle whose other reports use `28965561...`. The complete canonical Idle/Hover/Stability set must therefore be recollected on the new tooling SHA. This is provenance-driven recollection, not permission to repeat runs until a favorable value appears; a repeated thread excess remains a blocker.
 
 Shared-runner CPU/RSS magnitudes are compatibility evidence, not target-Mac acceptance. P1 uses the real Mac16,8/macOS 26.6.x target for CPU/RSS/threads/wakeups/energy/compositor review while preserving exact patch provenance.
 
