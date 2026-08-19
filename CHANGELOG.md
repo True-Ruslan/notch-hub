@@ -8,7 +8,7 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### P1 — target-Mac whole-app resource audit
 
-Status: **MEASUREMENT FOUNDATION MERGED / CORRECTED MERGED RUNTIME RE-FROZEN / PATCH-FAMILY TOOLING RE-FROZEN / TARGET-MAC EVIDENCE PENDING**.
+Status: **MEASUREMENT FOUNDATION MERGED / CORRECTED MERGED RUNTIME RE-FROZEN / PATCH-FAMILY VALIDATOR MERGED / LOCALE-STABLE TOOLING RE-FROZEN / TARGET-MAC EVIDENCE PENDING**.
 
 PR #36 established and merged the post-M6.6 performance/resource measurement foundation as historical tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`:
 
@@ -48,9 +48,28 @@ PR #44 corrected P1 tooling without changing the shipping runtime or sampler:
 - extends the existing `P1TargetResourceEvidencePolicyTests` Swift bridge to run both Python P1 suites inside canonical `swift test`;
 - preserves the single reviewed public `pull_request` execution path: a temporary separate workflow used only to capture isolated RED/GREEN evidence was removed after release policy correctly rejected it.
 
-TDD preserved an exact RED where `26.6.1` failed under the old validator, followed by GREEN and strengthened mismatch/malformed-version cases. Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as current P1 measurement tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+TDD preserved an exact RED where `26.6.1` failed under the old validator, followed by GREEN and strengthened mismatch/malformed-version cases. Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as P1 tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`.
 
-The original foundation `5cd9a2a...` remains immutable historical provenance but is superseded for new P1 evidence. Current canonical pair is runtime `e8d77968...` + tooling `99a75dbe...`; current physical collection environment is exact Mac16,8/macOS `26.6.1`.
+#### 2026-08-20 — locale-stable P1 process sampling
+
+The first physical collection attempt with tooling `99a75dbe...` produced a valid diagnostic Idle report on exact runtime `e8d77968...` and exact Mac16,8/macOS 26.6.1. Its summary was CPU median/max `0.0/0.0%`, RSS median/max `56,416/58,464 KiB`, and thread median/max `3/7`. The observed `threadMax=7` exceeds the existing direct Idle gate `<=6` and remains diagnostic evidence; the aggregate-only report does not retain raw per-sample rows, so the exact transient sample cannot be reconstructed after the fact.
+
+The subsequent Hover attempt produced **no evidence file** because `/bin/ps` inherited the interactive locale and emitted a comma decimal separator while the strict parser correctly requires locale-independent dot-decimal input.
+
+PR #47 corrected only the measurement boundary:
+
+- process sampling copies the parent environment and forces `LC_ALL=C` for both `/bin/ps` CPU/RSS and `/bin/ps -M` thread subprocesses;
+- unrelated environment variables are preserved;
+- the measured NotchHub application environment is unchanged;
+- `parse_ps_sample` remains strict/fail-closed rather than learning locale-specific formats;
+- new `test_perf_baseline_locale.py` regression coverage runs through the existing canonical `P1TargetResourceEvidencePolicyTests` Swift bridge;
+- no shipping `Sources/`, permission, entitlement, networking, telemetry, polling or product behavior changed.
+
+TDD RED head `63af71dc9a614837fa2fe67f31d0cd0b5e3c0aa9` failed CI #1287 exactly because both sampling subprocesses had `env=None`; the existing P1 Python suites remained green. GREEN head `5e1d870f67972d5799c34e77acc1a8c1f4de9f7b` passed CI #1288 3/3 GREEN, including coverage-instrumented tests, release/security/performance policy, Performance harness compatibility smoke, package/size checks and UI regression. PR #47 squash-merged as current P1 measurement tooling `28965561f81c71ea58a352301fbe08554c644044`.
+
+Current canonical pair is runtime `e8d77968...` + tooling `28965561...`; current physical collection environment remains exact Mac16,8/macOS `26.6.1`. Tooling `5cd9a2a...` and `99a75dbe...` remain immutable historical provenance but are superseded for new P1 evidence.
+
+Because `measurementToolCommit` is part of the evidence contract, the earlier Idle report from `99a75dbe...` cannot be mixed with new Hover/Stability reports. The complete final Idle/Hover/Stability set must be recollected on tooling `28965561...`. This is required by provenance and does not authorize rerunning until a favorable thread maximum appears; if `threadMax > 6` repeats, it remains a blocker.
 
 No new wakeup/energy/compositor numerical threshold is claimed from assumptions. P1 remains pending until repeatable target-Mac evidence is collected and reviewed.
 
