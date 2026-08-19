@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import json
 import math
+import os
 import pathlib
 import subprocess
 import sys
@@ -47,12 +48,20 @@ def _hardware_model() -> str | None:
     return value or None
 
 
+def _sampling_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    environment["LC_ALL"] = "C"
+    return environment
+
+
 def _sample_process(pid: int):
+    sampling_environment = _sampling_environment()
     metrics = subprocess.run(
         ["/bin/ps", "-p", str(pid), "-o", "%cpu=", "-o", "rss="],
         check=False,
         capture_output=True,
         text=True,
+        env=sampling_environment,
     )
     if metrics.returncode != 0:
         message = metrics.stderr.strip() or metrics.stdout.strip() or f"ps exited {metrics.returncode}"
@@ -70,6 +79,7 @@ def _sample_process(pid: int):
         check=False,
         capture_output=True,
         text=True,
+        env=sampling_environment,
     )
     if threads.returncode != 0:
         message = threads.stderr.strip() or threads.stdout.strip() or f"ps -M exited {threads.returncode}"
