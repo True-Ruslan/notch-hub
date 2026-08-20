@@ -23,6 +23,7 @@ final class NotchPanelTransitionCoordinator {
     private let cancelAnimation: @MainActor () -> Void
     private let performExpansionHaptic: @MainActor () -> Void
     private let applyInteractivePresentation: @MainActor (CGRect, CGFloat) -> Void
+    private let applySettledPresentation: @MainActor (CGRect, CGFloat) -> Void
 
     private(set) var phase: NotchPanelTransitionPhase
     private(set) var desiredPresentation: NotchPresentation
@@ -40,7 +41,8 @@ final class NotchPanelTransitionCoordinator {
             @escaping @MainActor (CGRect, CGFloat, TimeInterval, @escaping @MainActor () -> Void) -> Void,
         cancelAnimation: @escaping @MainActor () -> Void,
         performExpansionHaptic: @escaping @MainActor () -> Void,
-        applyInteractivePresentation: @escaping @MainActor (CGRect, CGFloat) -> Void = { _, _ in }
+        applyInteractivePresentation: @escaping @MainActor (CGRect, CGFloat) -> Void = { _, _ in },
+        applySettledPresentation: @escaping @MainActor (CGRect, CGFloat) -> Void = { _, _ in }
     ) {
         self.model = model
         self.currentAnimationDuration = animationDuration
@@ -48,6 +50,7 @@ final class NotchPanelTransitionCoordinator {
         self.cancelAnimation = cancelAnimation
         self.performExpansionHaptic = performExpansionHaptic
         self.applyInteractivePresentation = applyInteractivePresentation
+        self.applySettledPresentation = applySettledPresentation
         self.desiredPresentation = initialPresentation
         switch initialPresentation {
         case .compact:
@@ -375,7 +378,9 @@ final class NotchPanelTransitionCoordinator {
         ) { [weak self] in
             self?.completeTransition(
                 generation: scheduledGeneration,
-                expectedPresentation: presentation
+                expectedPresentation: presentation,
+                settledFrame: frame,
+                settledCornerRadius: cornerRadius
             )
         }
 
@@ -395,7 +400,9 @@ final class NotchPanelTransitionCoordinator {
 
     private func completeTransition(
         generation scheduledGeneration: UInt64,
-        expectedPresentation: NotchPresentation
+        expectedPresentation: NotchPresentation,
+        settledFrame: CGRect,
+        settledCornerRadius: CGFloat
     ) {
         guard
             !isInvalidated,
@@ -406,6 +413,7 @@ final class NotchPanelTransitionCoordinator {
         }
 
         hasActiveAnimation = false
+        applySettledPresentation(settledFrame, settledCornerRadius)
 
         switch expectedPresentation {
         case .compact:
