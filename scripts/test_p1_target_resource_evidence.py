@@ -126,6 +126,39 @@ class P1TargetResourceEvidenceTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, serialized)
 
+    def test_accepts_manual_visual_compositor_fallback_when_instruments_unavailable(self):
+        manual = _manual_evidence()
+        manual["compositor"]["method"] = "manual-visual-compositor"
+
+        bundle = build_evidence_bundle(
+            expected_source_commit=SOURCE_COMMIT,
+            idle_report=_report("idle"),
+            hover_report=_report("hover"),
+            stability_report=_report("stability"),
+            manual_evidence=manual,
+        )
+
+        self.assertEqual(
+            "manual-visual-compositor",
+            bundle["manualEvidence"]["compositor"]["method"],
+        )
+        self.assertFalse(bundle["reviewRequired"])
+
+    def test_manual_visual_compositor_anomaly_requires_review(self):
+        manual = _manual_evidence()
+        manual["compositor"]["method"] = "manual-visual-compositor"
+        manual["compositor"]["finding"] = "anomaly-observed"
+
+        bundle = build_evidence_bundle(
+            expected_source_commit=SOURCE_COMMIT,
+            idle_report=_report("idle"),
+            hover_report=_report("hover"),
+            stability_report=_report("stability"),
+            manual_evidence=manual,
+        )
+
+        self.assertTrue(bundle["reviewRequired"])
+
     def test_rejects_mismatched_source_or_tool_provenance(self):
         idle = _report("idle")
         idle["sourceCommit"] = "c" * 40
@@ -209,6 +242,17 @@ class P1TargetResourceEvidenceTests(unittest.TestCase):
 
         manual = _manual_evidence()
         manual["energy"]["method"] = "sudo-powermetrics"
+        with self.assertRaises(EvidenceError):
+            build_evidence_bundle(
+                expected_source_commit=SOURCE_COMMIT,
+                idle_report=_report("idle"),
+                hover_report=_report("hover"),
+                stability_report=_report("stability"),
+                manual_evidence=manual,
+            )
+
+        manual = _manual_evidence()
+        manual["compositor"]["method"] = "screen-recording-fps"
         with self.assertRaises(EvidenceError):
             build_evidence_bundle(
                 expected_source_commit=SOURCE_COMMIT,
