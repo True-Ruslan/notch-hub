@@ -141,6 +141,14 @@ public final class NotchPanelController: NSObject {
                     frame: frame,
                     cornerRadius: cornerRadius
                 )
+            },
+            applySettledPresentation: { frame, cornerRadius in
+                applyInteractiveNotchPanelPresentation(
+                    panel: panel,
+                    chromeView: hostingView,
+                    frame: frame,
+                    cornerRadius: cornerRadius
+                )
             }
         )
         let hoverPeekRequestRelay = NotchHoverPeekRequestRelay()
