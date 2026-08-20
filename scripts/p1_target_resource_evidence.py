@@ -56,6 +56,7 @@ _ENERGY_KEYS = {"method", "observationSeconds", "finding"}
 _COMPOSITOR_KEYS = {"method", "interactionCycles", "finding"}
 _FINDINGS = {"no-anomaly-observed", "anomaly-observed"}
 _ENERGY_METHODS = {"instruments-power-profiler", "activity-monitor-energy"}
+_COMPOSITOR_METHODS = {"instruments-core-animation", "manual-visual-compositor"}
 
 
 class EvidenceError(ValueError):
@@ -276,8 +277,8 @@ def _manual(
     compositor = _mapping(manual.get("compositor"), "manual.compositor")
     _exact_keys(compositor, _COMPOSITOR_KEYS, "manual.compositor")
     compositor_method = _string(compositor.get("method"), "manual.compositor.method")
-    if compositor_method != "instruments-core-animation":
-        raise EvidenceError("compositor method must be instruments-core-animation")
+    if compositor_method not in _COMPOSITOR_METHODS:
+        raise EvidenceError(f"unsupported compositor method: {compositor_method!r}")
     if _integer(compositor.get("interactionCycles"), "manual.compositor.interactionCycles", minimum=1) != 10:
         raise EvidenceError("compositor interactionCycles must equal 10")
     compositor_finding = _string(compositor.get("finding"), "manual.compositor.finding")
