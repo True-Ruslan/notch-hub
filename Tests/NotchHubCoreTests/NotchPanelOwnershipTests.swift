@@ -26,6 +26,20 @@ struct NotchPanelOwnershipTests {
     }
 
     @Test
+    func shippingTransitionBoundaryReconcilesSettledPhysicalEndpoint() throws {
+        let controllerSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+        let coordinatorSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelTransitionCoordinator.swift"
+        )
+
+        #expect(controllerSource.contains("applySettledPresentation: { frame, cornerRadius in"))
+        #expect(controllerSource.contains("applyInteractiveNotchPanelPresentation("))
+        #expect(coordinatorSource.contains("applySettledPresentation(settledFrame, settledCornerRadius)"))
+    }
+
+    @Test
     func animationCancellationFreezesVisibleCornerRadiusBeforeRemovingAnimation() throws {
         let driverSource = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelAnimationDriver.swift"
