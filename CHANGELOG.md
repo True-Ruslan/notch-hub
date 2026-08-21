@@ -8,116 +8,89 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### P1 — target-Mac whole-app resource audit
 
-Status: **MEASUREMENT FOUNDATION MERGED / CORRECTED MERGED RUNTIME RE-FROZEN / PATCH-FAMILY VALIDATOR MERGED / LOCALE-STABLE TOOLING RE-FROZEN / TARGET-MAC EVIDENCE PENDING**.
+Status: **ACCEPTED — COMPLETE TARGET-MAC EVIDENCE / DIRECT GATES PASS / NOT RELEASED**.
 
-PR #36 established and merged the post-M6.6 performance/resource measurement foundation as historical tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`:
+P1 began with PR #36, which established the fail-closed target-Mac measurement/evidence foundation as historical tooling source `5cd9a2a47d87a433155f53b3aa0510000f2fce85`. The evidence contract separates measured runtime provenance from tooling provenance, freezes Idle/Hover/Stability timing and sample counts, stores only aggregate process evidence, uses a closed privacy-safe manual evidence surface and intentionally avoids privileged automatic collectors or new app permissions.
 
-- added a fail-closed target-Mac evidence bundler for existing idle/hover/stability CPU/RSS/thread reports;
-- requires one exact measured-app source SHA, one measurement-tool SHA and target platform provenance;
-- freezes canonical 10 s warmup + 60/60/600 s measurement windows and 1/1/5 s sample intervals;
-- normalizes only aggregate process metrics and required stability evidence;
-- adds a closed privacy-safe manual evidence surface for 60-second idle wakeups, 60-second energy observation and 10-cycle compositor review;
-- rejects arbitrary free-form fields, raw trace payloads, non-finite metrics, unsupported methods, malformed manual types and provenance/configuration mismatches;
-- intentionally does not auto-run privileged `sudo powermetrics`/`timerfires` and adds no app entitlement or runtime telemetry;
-- runs the Python evidence contract inside canonical `swift test` through `P1TargetResourceEvidencePolicyTests`;
-- added the exact two-worktree target collection procedure and active P1 plan;
-- changed development tooling/tests/docs only, with zero `Sources/` changes.
+#### Tooling hardening
 
-TDD RED evidence for the foundation:
+PR #44 corrected the platform validator after the physical target advanced to macOS `26.6.1`. Exact model remains `Mac16,8`; only canonical `26.6` / `26.6.x` versions are accepted; the exact patch is preserved and must agree across Idle/Hover/Stability/manual evidence. It squash-merged as `99a75dbe0664120a572bd8229d4fe461790ee07b`.
 
-- CI #1245 at `6b7e90ff17803ef2678ff518b84fe82c8a39e06f`: exactly the new P1 gate failed because the implementation module did not exist;
-- CI #1258 at `98cd0974da8e1a71b6322d168e9f28834fe72a0c`: exactly the malformed manual-type regression failed because an uncontrolled `TypeError` escaped instead of fail-closed `EvidenceError`.
+The first physical collection attempt then exposed locale-dependent `/bin/ps` output. PR #47 made sampling deterministic by applying `LC_ALL=C` only to the sampler subprocesses while preserving the parent/measured-app environment and strict parser. RED head `63af71dc9a614837fa2fe67f31d0cd0b5e3c0aa9` failed the intended locale regression; GREEN head `5e1d870f67972d5799c34e77acc1a8c1f4de9f7b` passed CI #1288 3/3 GREEN; squash merge `28965561f81c71ea58a352301fbe08554c644044` became the locale-stable sampler provenance.
 
-Final PR #36 head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged foundation source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge main CI #1261 3/3 GREEN.
+PR #49 then extended the closed evidence contract with the accepted qualitative `manual-visual-compositor` fallback while retaining `instruments-core-animation` as preferred when available. It merged as final accepted P1 tooling/evidence checkout `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`. `perf-baseline.py` itself remained unchanged from the locale-stable sampler ancestry.
 
-Before target collection began, the old P1 runtime `bb6df211699c5aef7bac7d50866f3e24b2fe165b` was superseded for measurement because the later real multi-monitor check found the hardware-notch screen-selection regression described below. Canonical P1 target collection measures corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`.
+#### Runtime defects found by physical P1 acceptance
 
-Physical, CI and merge provenance remain distinct: the corrected runtime behavior physically passed on exact source `46f069e57997eab060c79c3d9e279da944d6e263`; no shipping `Sources/` changed after that point; final PR #40 head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN; the squash merge `e8d77968...` shares Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21` with that final head.
+P1 target-Mac testing found real behavior defects rather than merely resource numbers, and each candidate was rejected until physically corrected.
 
-#### 2026-08-19 — macOS 26.6 patch-family evidence correction
+1. The earlier hardware-notch launch regression had already been repaired by PR #40, merged as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`.
+2. Manual compositor acceptance on that runtime exposed an expanded-size panel displaying compact content and remaining stuck. PR #51 added exact current-generation frame/corner reconciliation before logical settlement. RED `7e06d24d0b89f4c413c180882ec9d628384e9bce`; physically accepted GREEN head `329b867595b6ffe127fa3552f51bef8412865f37`; squash merge `1f56c3e5da8a46509a3472a52da12a1abfb16a8c`. Accepted head and merge share Git tree `8aebcc6db915b77e30c51b1d4fc45e4c3b895bb1`.
+3. Activity Monitor then showed that the existing persistent global `.mouseMoved` monitor amplified unrelated external-monitor pointer motion from about `3` to `111` Idle Wake Ups while the app was otherwise inactive. PR #53 replaced persistent global observation with a bounded escape monitor tied to an actual local/tracking interaction.
 
-The target Mac was observed on macOS `26.6.1` before P1 collection. `perf-baseline.py` already preserved the exact `sw_vers -productVersion`, but the evidence bundler still required literal `26.6`, which would have rejected honest evidence from the current patch release.
+The first PR #53 candidate that removed global observation entirely was rejected because rapid pointer exit could leave a large black Peek panel stuck. A second one-shot candidate was also rejected because it removed the global fallback on the first inside global sample before the true outside escape arrived. Final head `bddd0503d972c652752a0e1463f3495685accc83` retained the bounded monitor while samples remained inside the current interactive region and removed it only after the actual outside sample was delivered to the existing interaction state machine.
 
-PR #44 corrected P1 tooling without changing the shipping runtime or sampler:
+Final PR #53 physical acceptance on Mac16,8/macOS 26.6.2:
 
-- exact target model remains `Mac16,8`;
-- accepts only canonical macOS `26.6` / `26.6.x` versions;
-- preserves the exact observed patch version in normalized evidence;
-- requires Idle/Hover/Stability/manual evidence to agree on one exact platform;
-- rejects adjacent minor versions, malformed/extra/leading-zero version components and wrong models;
-- extends the existing `P1TargetResourceEvidencePolicyTests` Swift bridge to run both Python P1 suites inside canonical `swift test`;
-- preserves the single reviewed public `pull_request` execution path: a temporary separate workflow used only to capture isolated RED/GREEN evidence was removed after release policy correctly rejected it.
+- rapid exit 30/30 PASS, including immediate exits and migration to the external monitor;
+- normal compositor cycles 10/10 PASS;
+- reversal recovery PASS;
+- freeze/stuck panel NOT OBSERVED;
+- frame/corner/flicker anomalies NONE;
+- hardware-notch binding PASS;
+- same-candidate Activity Monitor A/B: Idle Wake Ups `2` stationary and `2` during unrelated pointer motion on the external monitor, eliminating the prior `3 -> 111` amplification.
 
-TDD preserved an exact RED where `26.6.1` failed under the old validator, followed by GREEN and strengthened mismatch/malformed-version cases. Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as P1 tooling `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+PR #53 squash-merged as final measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`. The physically accepted head and squash merge share exact Git tree `8f0a7fee0b02599520a5776133f51c1215da7d98`.
 
-#### 2026-08-20 — locale-stable P1 process sampling
+#### 2026-08-21 — final coherent P1 acceptance
 
-The first physical collection attempt with tooling `99a75dbe...` produced a valid diagnostic Idle report on exact runtime `e8d77968...` and exact Mac16,8/macOS 26.6.1. Its summary was CPU median/max `0.0/0.0%`, RSS median/max `56,416/58,464 KiB`, and thread median/max `3/7`. The observed `threadMax=7` exceeds the existing direct Idle gate `<=6` and remains diagnostic evidence; the aggregate-only report does not retain raw per-sample rows, so the exact transient sample cannot be reconstructed after the fact.
+The complete final bundle was recollected after the runtime fixes on one exact platform/tooling provenance:
 
-The subsequent Hover attempt produced **no evidence file** because `/bin/ps` inherited the interactive locale and emitted a comma decimal separator while the strict parser correctly requires locale-independent dot-decimal input.
+- measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`;
+- tooling `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`;
+- exact target `Mac16,8 / macOS 26.6.2`;
+- hardware-notch binding PASS;
+- exactly one measured NotchHub process from the built app with embedded source SHA matching the runtime.
 
-PR #47 corrected only the measurement boundary:
+Reviewed machine evidence:
 
-- process sampling copies the parent environment and forces `LC_ALL=C` for both `/bin/ps` CPU/RSS and `/bin/ps -M` thread subprocesses;
-- unrelated environment variables are preserved;
-- the measured NotchHub application environment is unchanged;
-- `parse_ps_sample` remains strict/fail-closed rather than learning locale-specific formats;
-- new `test_perf_baseline_locale.py` regression coverage runs through the existing canonical `P1TargetResourceEvidencePolicyTests` Swift bridge;
-- no shipping `Sources/`, permission, entitlement, networking, telemetry, polling or product behavior changed.
+- **Idle** — CPU median/max `0.0/0.0%`; RSS median/max `58,432/58,496 KiB`; thread median/max `3/6`. Direct Idle thread gate `<=6` PASS.
+- **Hover** — CPU median/max `6.8/32.3%`; RSS median/max `75,936/76,784 KiB`; thread median/max `6/6`. CPU median steady-state target `<=8.0%` PASS and thread gate `<=9` PASS. The one-second CPU max remains diagnostic under the accepted policy and is not a standalone portable cross-session gate.
+- **Stability** — CPU median/max `0.0/0.0%`; RSS start/end `58,816 -> 54,848 KiB`, delta `-3,968 KiB`; thread start/end `3 -> 3`, max `5`, delta `0`. RSS growth, thread max and thread-delta direct gates PASS.
 
-TDD RED head `63af71dc9a614837fa2fe67f31d0cd0b5e3c0aa9` failed CI #1287 exactly because both sampling subprocesses had `env=None`; the existing P1 Python suites remained green. GREEN head `5e1d870f67972d5799c34e77acc1a8c1f4de9f7b` passed CI #1288 3/3 GREEN, including coverage-instrumented tests, release/security/performance policy, Performance harness compatibility smoke, package/size checks and UI regression. PR #47 squash-merged as current P1 measurement tooling `28965561f81c71ea58a352301fbe08554c644044`.
+Reviewed manual evidence:
 
-Current canonical pair is runtime `e8d77968...` + tooling `28965561...`; current physical collection environment remains exact Mac16,8/macOS `26.6.1`. Tooling `5cd9a2a...` and `99a75dbe...` remain immutable historical provenance but are superseded for new P1 evidence.
+- Activity Monitor Idle Wake Ups, 60 s: `0.0/s`, explicitly reviewed with no anomaly;
+- Activity Monitor Energy fallback, 60 s: `no-anomaly-observed`; Energy Impact `0.0`, App Nap `No`, Preventing Sleep `No`; displayed 12-hour value `0.29` retained only as diagnostic historical context;
+- manual visual compositor: exactly 10 cycles, `no-anomaly-observed`; reversal recovery PASS; no freeze/stuck panel or frame/corner/flicker anomaly.
 
-Because `measurementToolCommit` is part of the evidence contract, the earlier Idle report from `99a75dbe...` cannot be mixed with new Hover/Stability reports. The complete final Idle/Hover/Stability set must be recollected on tooling `28965561...`. This is required by provenance and does not authorize rerunning until a favorable thread maximum appears; if `threadMax > 6` repeats, it remains a blocker.
+The closed-schema manual evidence and normalized `p1-target-resource-evidence.json` validated successfully with `reviewRequired=false`. Final direct-gate review returned PASS for Idle threads, Hover CPU median/threads, Stability RSS growth/threads/thread delta and manual review status.
 
-No new wakeup/energy/compositor numerical threshold is claimed from assumptions. P1 remains pending until repeatable target-Mac evidence is collected and reviewed.
+Issue #38 was closed completed after review. Earlier 26.6.1, pre-settlement and pre-pointer-fix evidence remains immutable diagnostic history and is not mixed into this accepted bundle.
 
-### M6.6 — PR #33 + corrective PR #40
+No speculative runtime optimization is justified by the accepted evidence. P1 acceptance is not a release event; published release remains `v0.1.0`.
+
+### M6.6 — PR #33 + corrective runtime work
 
 Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
 
 Original M6.6 full physical acceptance remains pinned to exact `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`; PR #33 squash-merged as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
 
-Added and hardened:
+Accepted M6.6 behavior includes:
 
 - local App-owned media gesture session with bounded horizontal visuals and public AppKit arm haptic;
 - stable `compact`, `peek`, `expanded` presentation states under the existing Core transition authority;
 - exactly 120 ms Hover Peek activation plus 140 ms pointer-exit grace;
 - generic no-media Peek with one hover-haptic request after valid dwell;
-- click and physical DOWN as explicit expansion paths, with stable outer SwiftUI tap ownership;
-- persistent nonactivating AppKit host first-mouse acceptance without mouse-button authority;
+- click and physical DOWN as explicit expansion paths;
 - bounded one-shot media probing/commands in compact and Peek while persistent runtime remains expanded-only;
-- bounded Peek cancellation that is nonblocking for the UI actor while subprocess ownership remains bounded by finite graceful/forced deadlines;
-- stop-race hardening that prevents queued capability work or stale callbacks from escaping a stopped transport;
-- exact-top-edge inclusive pointer retention for interactive DOWN;
-- physical horizontal normalization independent of macOS scroll-direction preference: LEFT -> `next`, RIGHT -> `previous`;
-- horizontal presentation that follows the physical finger direction;
-- source-app identity badge through public `NSWorkspace` with bounded in-memory cache;
-- capability-gated draggable seek in Peek and expanded, identity-locked across track/source changes;
-- balanced seek cursor ownership without pointer warp/lock;
-- strict native regression/UI automation and provenance-backed cumulative size budgets.
+- bounded Peek cancellation and transport teardown;
+- physical LEFT -> `next`, RIGHT -> `previous`, independent of macOS scroll-direction preference;
+- draggable seek/source identity/cursor isolation;
+- hardware-notch-first initial screen selection with `NSScreen.main`/first-screen fallback;
+- exact current-generation physical endpoint settlement before logical presentation settlement;
+- bounded pointer escape monitoring only during an actual interaction rather than persistent global mouse observation.
 
-No global scroll/button/keyboard monitor, mouse-button event authority, event tap, polling loop, repeating timer, display link, UI-test retry/sleep masking, network/telemetry authority or new sensitive permission was added.
+No global scroll/button/keyboard monitor, mouse-button event authority, event tap, polling loop, repeating timer, display link, UI-test retry/sleep masking, networking/telemetry authority or new sensitive permission was added.
 
-#### 2026-08-18 — full M6.6 physical acceptance
-
-Frozen runtime source `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3` passed canonical CI #1241 / run `32075976405` 3/3 GREEN with 366 Swift tests / 80 suites and external exact-app XCUI 11/11.
-
-The complete requested Mac16,8/macOS 26.6 matrix then passed on that exact source, including horizontal direction/follow-finger/haptic behavior, Hover Peek, click, vertical transitions, seek/source/cursor handling, source icon/fallback, no sensitive permissions and clean helper teardown after Quit.
-
-#### Original merge and post-merge verification
-
-Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #1243 3/3 GREEN. PR #33 was squash-merged with expected-head protection as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`.
-
-Post-merge main CI #1244 ultimately passed all three canonical jobs on that exact merge source. Its first packaging attempt failed only because runner `hdiutil verify` returned `Resource temporarily unavailable`; the failed job alone was rerun on unchanged source and passed. No application code or policy was changed for that retry.
-
-#### 2026-08-19 — hardware-notch screen-selection correction
-
-A real Mac16,8/macOS 26.6 launch with an external monitor attached exposed that `NSScreen.main` was not a valid product invariant: NotchHub could bind to the external display even though the built-in hardware-notch display was available.
-
-PR #40 added deterministic hardware-notch-first screen selection using existing public AppKit geometry signals, preserving `NSScreen.main` then first-screen fallback when no hardware notch exists. No polling, private display API, telemetry, new permission, entitlement or persistent display state was added.
-
-Exact runtime `46f069e57997eab060c79c3d9e279da944d6e263` was built with matching `NHSourceCommit` and physically re-checked with the external monitor attached — hardware-notch binding PASS. Subsequent commits changed only size-policy/CI/test metadata. Final head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN, including the provenance-locked hardware-notch repair size envelope. PR #40 squash-merged as corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`.
-
-M6.6 has reached **implemented -> automated-tested -> physically accepted -> merged**. It remains **not released**; immutable published version is still `v0.1.0`.
+Published release remains `v0.1.0`.
