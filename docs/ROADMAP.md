@@ -1,6 +1,6 @@
 # Roadmap
 
-Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.1. Published Personal Release: `v0.1.0`.
+Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.1.0`.
 
 States are explicit: **implemented -> automated-tested -> physically accepted -> merged -> released**. Green CI does not substitute for target-Mac acceptance when physical UI, permissions, third-party behavior or resources are part of the contract.
 
@@ -10,8 +10,8 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 - **R0.1 Personal Release — ACCEPTED / RELEASED**: immutable `v0.1.0`.
 - **P0 Performance Foundation — ACCEPTED / MERGED**.
 - **P0.1 Public repository readiness — ACCEPTED**.
-- **M1 primary interaction foundation — ACCEPTED / MERGED**; active-display/fullscreen/Spaces/notchless/broader multi-monitor hardening remains deferred.
-- **Regression/UI Automation Foundation — IMPLEMENTED / TESTED / MERGED** via PR #34 as `bd9566f690d314ed40fd6f3723a319291ceb4a58`; post-merge main CI #1053 passed all three canonical jobs.
+- **M1 primary interaction foundation — ACCEPTED / MERGED**; broader active-display/fullscreen/Spaces/notchless/multi-monitor hardening remains a later slice.
+- **Regression/UI Automation Foundation — IMPLEMENTED / TESTED / MERGED** via PR #34 as `bd9566f690d314ed40fd6f3723a319291ceb4a58`.
 
 ## M6 — Universal Media / System Now Playing
 
@@ -25,72 +25,69 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 
 Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
 
-Original full physical source acceptance remains permanently pinned to exact runtime:
+Original full physical source acceptance remains permanently pinned to exact runtime `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`. PR #33 squash-merged as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; published release remains immutable `v0.1.0`.
 
-`8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`
+Later real target-Mac checks found and repaired three independent runtime defects while preserving the accepted interaction/security boundary:
 
-PR #33 was squash-merged with expected-head protection as:
+- hardware-notch launch screen selection — PR #40, merged `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`;
+- exact compositor endpoint settlement — PR #51, physically accepted head `329b867595b6ffe127fa3552f51bef8412865f37`, merged `1f56c3e5da8a46509a3472a52da12a1abfb16a8c`;
+- broad global pointer wakeups plus rapid-exit loss — PR #53, physically accepted head `bddd0503d972c652752a0e1463f3495685accc83`, merged `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`.
 
-`bb6df211699c5aef7bac7d50866f3e24b2fe165b`
-
-Post-merge `main` CI #1244 passed all three canonical jobs on that exact merge source. M6.6 remains unreleased; published release is still immutable `v0.1.0`.
-
-Accepted behavior includes stable compact/Peek/expanded ownership, exact hover dwell/grace, media and no-media Peek, prompt explicit click, physical DOWN/UP/pointer-exit transitions, LEFT -> Next / RIGHT -> Previous follow-finger gestures, seek/source identity/cursor isolation, bounded transport teardown, unchanged Sandbox/Hardened Runtime and no new sensitive permissions.
-
-#### Corrective hardware-notch screen selection
-
-A later real multi-monitor check exposed a launch correctness regression: `NSScreen.main` could resolve to an external display while the built-in hardware-notch display remained available.
-
-PR #40 repaired this using public AppKit notch geometry and preserved no-notch fallback behavior:
-
-- exact runtime `46f069e57997eab060c79c3d9e279da944d6e263` physically passed on Mac16,8/macOS 26.6 with external monitor attached;
-- no shipping `Sources/` change occurred after that physical re-check;
-- final PR head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN;
-- squash merge `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` has the same Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21` as the final PR head.
-
-The physical claim stays pinned to `46f069e...`; the corrected merged runtime is `e8d77968...`.
+Final PR #53 physical acceptance on Mac16,8/macOS 26.6.2 covered rapid exit 30/30, compositor 10/10, reversal recovery, hardware-notch binding and same-candidate wakeup A/B. The accepted head and squash merge share Git tree `8f0a7fee0b02599520a5776133f51c1215da7d98`.
 
 ## P1 — whole-app performance/resource review
 
-Status: **ACTIVE — MEASUREMENT FOUNDATION MERGED / CORRECTED RUNTIME RE-FROZEN / PATCH-FAMILY VALIDATOR MERGED / LOCALE-STABLE TOOLING RE-FROZEN / TARGET-MAC EVIDENCE PENDING**.
+Status: **ACCEPTED — COMPLETE TARGET-MAC EVIDENCE / DIRECT GATES PASS / NO SPECULATIVE OPTIMIZATION REQUIRED**.
 
-PR #36 established the P1 measurement foundation as historical tooling source:
+Accepted provenance:
 
-`5cd9a2a47d87a433155f53b3aa0510000f2fce85`
+- measured runtime: `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`;
+- measurement/evidence tooling: `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`;
+- exact target: `Mac16,8 / macOS 26.6.2`;
+- closed issue #38 contains the live collection and final acceptance trail.
 
-Pre-merge CI #1260 and post-merge `main` CI #1261 both passed all three canonical jobs. The foundation changed development tooling/tests/docs only and no `Sources/` file.
+Final evidence:
 
-The canonical P1 audit measures exact corrected merged runtime:
+- Idle — CPU median/max `0.0/0.0%`; RSS median/max `58,432/58,496 KiB`; threads median/max `3/6`; Idle thread gate PASS.
+- Hover — CPU median/max `6.8/32.3%`; RSS median/max `75,936/76,784 KiB`; threads median/max `6/6`; CPU median target and thread gate PASS. One-second CPU max remains diagnostic under the accepted policy.
+- Stability — CPU median/max `0.0/0.0%`; RSS `58,816 -> 54,848 KiB` (`-3,968 KiB`); threads `3 -> 3`, max `5`; all direct growth/thread gates PASS.
+- Activity Monitor Idle Wake Ups, 60 s — `0.0/s`, explicitly reviewed with no anomaly.
+- Activity Monitor Energy fallback, 60 s — `no-anomaly-observed`; Energy Impact `0.0`, App Nap `No`, Preventing Sleep `No`.
+- Manual visual compositor — exactly 10 cycles PASS; reversal recovery PASS; no freeze/stuck panel or frame/corner/flicker anomaly.
+- Normalized evidence bundle — validation PASS, `reviewRequired=false`, final direct-gate review PASS.
 
-`e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`
+Earlier 26.6.1 and pre-fix measurements remain historical diagnostic evidence and are not mixed with the accepted 26.6.2 bundle.
 
-with current exact measurement tooling from PR #47:
+P1 lifecycle is complete as an acceptance gate. It is not a release event; published version remains `v0.1.0`.
 
-`28965561f81c71ea58a352301fbe08554c644044`
+## Next hardening slice — active-display / multi-monitor migration
 
-PR #44 was required before physical collection because the target Mac had advanced to macOS `26.6.1`, exposing an overly literal exact-`26.6` validator. The fix preserves exact patch provenance while accepting only canonical `26.6` / `26.6.x` versions and exact `Mac16,8`; all scenario/manual files must agree on the same exact patch version. Final PR #44 head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN before squash merge as `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+Status: **NEXT / SPECIFICATION REQUIRED BEFORE SHIPPING IMPLEMENTATION**.
 
-The first target attempt on `99a75dbe...` produced valid diagnostic Idle evidence, including `threadMax=7` against the direct Idle gate `<=6`, but Hover then failed before producing an evidence file because `/bin/ps` inherited a locale that emitted a comma decimal separator. PR #47 fixed the sampler boundary by forcing `LC_ALL=C` only for both `/bin/ps` sampling subprocesses while preserving the parent environment, leaving the measured application environment and strict parser unchanged. RED head `63af71dc9a614837fa2fe67f31d0cd0b5e3c0aa9` failed CI #1287 exactly on the new locale regression; GREEN head `5e1d870f67972d5799c34e77acc1a8c1f4de9f7b` passed CI #1288 3/3 GREEN, including Performance harness compatibility smoke. PR #47 squash-merged as current tooling `28965561f81c71ea58a352301fbe08554c644044`.
+The next preferred technical step is event-driven display-topology hardening now that P1 no longer blocks runtime work. The slice should remain narrowly scoped to correctly moving/settling NotchHub when the relevant display topology changes.
 
-The runtime/tooling SHAs have distinct roles and must remain separate. The previous P1 runtime `bb6df211...` remains historical M6.6 merge evidence but is superseded for measurement because of the later screen-selection correction. Tooling `5cd9a2a...` and `99a75dbe...` likewise remain historical provenance but are superseded for new P1 evidence by `28965561...`. Later docs-only state commits do not redefine either current provenance claim.
+Required invariants before implementation:
 
-Phase order:
+1. hardware-notch display remains preferred whenever available;
+2. when the available hardware-notch screen changes or display topology changes, the panel migrates deterministically without polling;
+3. when no hardware-notch display is available, preserve the accepted `NSScreen.main` then first-screen fallback;
+4. migration must settle exact frame/corner geometry before publishing settled logical presentation;
+5. active hover/Peek/Expanded interaction must fail closed or reconcile deterministically across migration; stale transition completions must not move the new screen endpoint;
+6. no private display APIs, repeating timers, display links, telemetry or new permissions;
+7. multi-monitor physical acceptance on the target Mac is mandatory before merge.
 
-1. **DONE** — establish fail-closed provenance/privacy validation for target CPU/RSS/thread reports plus wakeup/energy/compositor observations;
-2. **DONE** — correct the discovered hardware-notch display binding regression and re-freeze the merged runtime provenance;
-3. **DONE** — make the platform validator patch-aware without losing exact macOS provenance;
-4. **DONE** — make `/bin/ps` sampling locale-stable without weakening the strict parser or changing the measured app environment, and re-freeze tooling to PR #47 merge;
-5. **NEXT** — recollect the complete Idle/Hover/Stability set on exact Mac16,8/macOS 26.6.1 using runtime `e8d77968...` and tooling `28965561...`;
-6. collect wakeup/energy/compositor evidence and build the normalized bundle using the same exact platform/tooling provenance;
-7. characterize repeated-run variance and same-session comparability before adding new absolute budgets;
-8. investigate only evidence-backed resource/compositor regressions;
-9. optimize runtime only if measurements justify it, preserving accepted M6.6 behavior and the current permission/security boundary.
+Implementation order:
 
-The earlier Idle result from `99a75dbe...` remains diagnostic history and must not be mixed into the final bundle. Recollection on `28965561...` is required by provenance, not to seek a more favorable value; if `threadMax > 6` repeats, it remains a blocker.
+1. write/approve the display-migration invariant/spec;
+2. add RED tests for display add/remove/topology change and stale transition behavior;
+3. implement the smallest event-driven observer/migration authority using public AppKit notifications/signals;
+4. run canonical CI and security/performance policy checks;
+5. physically validate on Mac16,8/macOS 26.6.x with an external monitor, including connect/disconnect while Compact, Peek and Expanded as applicable;
+6. only then merge; release remains a separate decision.
 
-The canonical P1 path remains non-privileged: no automatic `sudo powermetrics`, `timerfires`, privileged helper, telemetry or new entitlement. See `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md` and `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`.
+## Repository governance
 
-Broader active-display/multi-monitor hardening remains after the P1 resource gate.
+Issue #42 remains open because `main` is intended to be protected but GitHub currently reports it unprotected. Restoring branch governance remains a repository-quality priority and should be completed when repository capabilities permit. Do not treat the current unprotected state as accepted architecture.
 
 ## Product modules after media/performance foundation
 
@@ -103,10 +100,8 @@ Broader active-display/multi-monitor hardening remains after the P1 resource gat
 
 ## Current priority
 
-1. Replace the old P1 tooling checkout with exact `28965561...`; keep runtime `e8d77968...` unchanged.
-2. Recollect complete target-Mac Idle/Hover/Stability CPU/RSS/thread evidence on exact current platform Mac16,8/macOS 26.6.1 with one tooling SHA.
-3. Preserve the old `99a75dbe...` Idle result as diagnostic history; do not mix it into the final bundle or rerun merely for a favorable result.
-4. Collect 60-second idle wakeup + energy evidence and 10-cycle compositor evidence.
-5. Validate the normalized P1 evidence bundle and characterize variance before introducing any new absolute cross-session resource threshold.
-6. If evidence identifies a material regression, implement one isolated RED -> GREEN optimization and rerun affected physical acceptance; otherwise accept P1 without speculative runtime changes.
-7. Only after P1 acceptance proceed to broader multi-monitor/active-display hardening or the next product module.
+1. Merge the P1 documentation/provenance sync after CI.
+2. Keep issue #42 visible for branch-protection restoration.
+3. Start the active-display/multi-monitor migration slice with a written spec and RED tests; no speculative resource optimization.
+4. Require target-Mac physical acceptance before any shipping display-migration merge.
+5. Keep the published Personal Release at immutable `v0.1.0` until an explicit release decision.
