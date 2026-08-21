@@ -3,7 +3,7 @@ import Testing
 
 struct RegressionUIFoundationSizeBudgetPolicyTests {
     @Test
-    func foundationBudgetRemainsProvenancedHistoricalEvidenceWhileLatestRepairBudgetIsActive() throws {
+    func foundationBudgetRemainsProvenancedHistoricalEvidenceWhileM1BudgetIsActive() throws {
         let repositoryRoot = repositoryRoot()
         let budgetURL =
             repositoryRoot
@@ -20,6 +20,11 @@ struct RegressionUIFoundationSizeBudgetPolicyTests {
         let ci = try String(contentsOf: ciURL, encoding: .utf8)
         #expect(
             ci.contains(
+                "--feature-budget performance/m1-active-display-migration-size-budget.json"
+            )
+        )
+        #expect(
+            !ci.contains(
                 "--feature-budget performance/m6-6-hardware-notch-screen-selection-size-budget.json"
             )
         )
