@@ -274,6 +274,49 @@ final class NotchPanelTransitionCoordinator {
         }
     }
 
+    func displayLayoutDidChange(_ layout: NotchLayout) {
+        guard !isInvalidated else {
+            return
+        }
+
+        let targetPresentation: NotchPresentation
+        let shouldPublishSettlement: Bool
+
+        switch phase {
+        case .compact:
+            targetPresentation = .compact
+            shouldPublishSettlement = false
+        case .peek:
+            targetPresentation = .peek
+            shouldPublishSettlement = false
+        case .expanded:
+            targetPresentation = .expanded
+            shouldPublishSettlement = false
+        case .expanding, .collapsing:
+            targetPresentation = desiredPresentation
+            shouldPublishSettlement = true
+        case .interactiveExpanding:
+            targetPresentation = .compact
+            shouldPublishSettlement = false
+        case .interactiveCollapsing:
+            targetPresentation = .expanded
+            shouldPublishSettlement = false
+        }
+
+        generation &+= 1
+        cancelActiveAnimationIfNeeded()
+        desiredPresentation = targetPresentation
+
+        let endpoint = Self.endpoint(for: targetPresentation, layout: layout)
+        applySettledPresentation(endpoint.frame, endpoint.cornerRadius)
+        model.setContentPresentation(targetPresentation)
+        phase = Self.settledPhase(for: targetPresentation)
+
+        if shouldPublishSettlement {
+            settledPresentationHandler?(targetPresentation)
+        }
+    }
+
     func invalidate() {
         guard !isInvalidated else {
             return
@@ -348,39 +391,30 @@ final class NotchPanelTransitionCoordinator {
         let scheduledGeneration = generation
         cancelActiveAnimationIfNeeded()
 
-        let frame: CGRect
-        let cornerRadius: CGFloat
+        let endpoint = Self.endpoint(for: presentation, layout: layout)
 
         switch presentation {
         case .compact:
             phase = .collapsing
-            frame = layout.compactFrame
-            cornerRadius = Self.compactCornerRadius
-
         case .peek:
             phase = .expanding
             model.setContentPresentation(.peek)
-            frame = layout.peekFrame
-            cornerRadius = Self.peekCornerRadius
-
         case .expanded:
             phase = .expanding
             model.setContentPresentation(.expanded)
-            frame = layout.expandedFrame
-            cornerRadius = Self.expandedCornerRadius
         }
 
         hasActiveAnimation = true
         animate(
-            frame,
-            cornerRadius,
+            endpoint.frame,
+            endpoint.cornerRadius,
             currentAnimationDuration()
         ) { [weak self] in
             self?.completeTransition(
                 generation: scheduledGeneration,
                 expectedPresentation: presentation,
-                settledFrame: frame,
-                settledCornerRadius: cornerRadius
+                settledFrame: endpoint.frame,
+                settledCornerRadius: endpoint.cornerRadius
             )
         }
 
@@ -427,6 +461,33 @@ final class NotchPanelTransitionCoordinator {
         }
 
         settledPresentationHandler?(expectedPresentation)
+    }
+
+    private static func endpoint(
+        for presentation: NotchPresentation,
+        layout: NotchLayout
+    ) -> (frame: CGRect, cornerRadius: CGFloat) {
+        switch presentation {
+        case .compact:
+            (layout.compactFrame, compactCornerRadius)
+        case .peek:
+            (layout.peekFrame, peekCornerRadius)
+        case .expanded:
+            (layout.expandedFrame, expandedCornerRadius)
+        }
+    }
+
+    private static func settledPhase(
+        for presentation: NotchPresentation
+    ) -> NotchPanelTransitionPhase {
+        switch presentation {
+        case .compact:
+            .compact
+        case .peek:
+            .peek
+        case .expanded:
+            .expanded
+        }
     }
 
     private static func interactiveProgress(
