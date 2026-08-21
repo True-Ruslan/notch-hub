@@ -41,15 +41,18 @@ struct NotchLocalPointerTrackingPolicyTests {
     }
 
     @Test
-    func panelControllerBindsLocalTrackingToExistingInteractionPathWithoutMouseButtonAuthority() throws {
+    func panelControllerRoutesTrackingEventsThroughBoundedEscapeMonitor() throws {
         let source = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
         )
 
         #expect(source.contains("NotchLocalPointerTracking"))
         #expect(source.contains("onNotchPointerEvent"))
-        #expect(source.contains("updateInteraction(for: pointer)"))
+        #expect(source.contains("pointerMonitor.handleTrackedPointer(pointer)"))
         #expect(source.contains("pointerMonitor.start"))
+        #expect(source.contains("shouldRetainGlobalMonitoring"))
+        #expect(source.contains("NotchPointerPolicy.presentation"))
+        #expect(source.contains("transitionCoordinator.desiredPresentation"))
         #expect(!source.contains("leftMouseDown"))
         #expect(!source.contains("addLocalMonitorForEvents"))
         #expect(!source.contains("CGEvent.tapCreate"))
