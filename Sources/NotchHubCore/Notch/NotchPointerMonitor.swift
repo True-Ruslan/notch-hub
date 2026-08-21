@@ -8,10 +8,8 @@ final class NotchPointerMonitor {
     typealias Removal = (Any) -> Void
 
     private let addLocal: Registration
-    private let addGlobal: Registration
     private let remove: Removal
     private var localMonitor: Any?
-    private var globalMonitor: Any?
     private var isStarted = false
 
     init() {
@@ -24,14 +22,6 @@ final class NotchPointerMonitor {
                 return event
             }
         }
-        self.addGlobal = { handler in
-            NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { _ in
-                let pointer = NSEvent.mouseLocation
-                MainActor.assumeIsolated {
-                    handler(pointer)
-                }
-            }
-        }
         self.remove = { monitor in
             NSEvent.removeMonitor(monitor)
         }
@@ -39,11 +29,10 @@ final class NotchPointerMonitor {
 
     init(
         addLocal: @escaping Registration,
-        addGlobal: @escaping Registration,
+        addGlobal _: @escaping Registration,
         remove: @escaping Removal
     ) {
         self.addLocal = addLocal
-        self.addGlobal = addGlobal
         self.remove = remove
     }
 
@@ -54,7 +43,6 @@ final class NotchPointerMonitor {
 
         isStarted = true
         localMonitor = addLocal(handler)
-        globalMonitor = addGlobal(handler)
     }
 
     func invalidate() {
@@ -67,11 +55,6 @@ final class NotchPointerMonitor {
         if let localMonitor {
             remove(localMonitor)
             self.localMonitor = nil
-        }
-
-        if let globalMonitor {
-            remove(globalMonitor)
-            self.globalMonitor = nil
         }
     }
 }
