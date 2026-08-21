@@ -61,16 +61,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
 
         var capturedPanelModel: NotchPanelModel?
-        let contentFactory: NotchPanelContentFactory = { [weak self, weak mediaGestureSession] model, layout in
+        let contentFactory: NotchPanelContentFactory = {
+            [weak self, weak mediaGestureSession] model, layoutModel in
             capturedPanelModel = model
             let mediaRoot = MediaNotchRootView(
                 panelModel: model,
+                layoutModel: layoutModel,
                 mediaModel: mediaPresentationModel,
                 mediaGestureVisualModel: mediaGestureVisualModel,
                 sourceApplicationIconResolver: sourceApplicationIconResolver,
-                hardwareNotchWidth: layout.hardwareNotchWidth,
-                compactBackgroundOpacity: layout.compactBackgroundOpacity,
-                expandedContentTopInset: layout.expandedContentTopInset,
                 onExplicitExpansion: { [weak self] in
                     self?.panelController?.requestExpansion()
                 },
