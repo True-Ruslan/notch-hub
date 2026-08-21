@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 634880,
+    "dmgSizeBytes": 483328,
+    "executableSizeBytes": 335872
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9458436704,
+    "sourceCommit": "7b0d686acb9c45521090b0963e992dd817e4bc95",
+    "summary": {
+      "appSizeBytes": 901551,
+      "dmgSizeBytes": 570958,
+      "executableSizeBytes": 599344
+    },
+    "workflowRunId": 32514576639
+  },
+  "featureId": "m1-active-display-migration",
+  "schemaVersion": 1
+}
