@@ -84,19 +84,22 @@ struct NotchPanelOwnershipTests {
         )
 
         #expect(controllerSource.contains("NotchPanelContentFactory"))
-        #expect(controllerSource.contains("contentFactory(model, resolvedLayout)"))
+        #expect(controllerSource.contains("contentFactory(model, layoutModel)"))
         #expect(!controllerSource.contains("import NotchHubMediaCore"))
     }
 
     @Test
-    func compactWingGeometryRemainsOwnedByPanelTransitionInput() throws {
+    func compactWingGeometryRemainsOwnedBySharedPanelLayoutInput() throws {
         let controllerSource = try sourceText(
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
         )
+        let layoutModelSource = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelLayoutModel.swift"
+        )
 
         #expect(controllerSource.contains("public func setCompactHorizontalExtension"))
-        #expect(controllerSource.contains("baseLayout.withCompactHorizontalExtension"))
-        #expect(controllerSource.contains("currentLayout"))
+        #expect(controllerSource.contains("layoutModel.currentLayout"))
+        #expect(layoutModelSource.contains("layout.withCompactHorizontalExtension"))
         #expect(!controllerSource.contains("panel.setFrame("))
     }
 
@@ -106,16 +109,14 @@ struct NotchPanelOwnershipTests {
             relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
         )
 
-        #expect(controllerSource.contains("let boundedExtension = max(0, extensionWidth)"))
         #expect(
             controllerSource.contains(
-                "guard boundedExtension != layoutState.compactHorizontalExtension else"
+                "guard layoutModel.setCompactHorizontalExtension(extensionWidth) else"
             )
         )
-        #expect(controllerSource.contains("layoutState.compactHorizontalExtension = boundedExtension"))
         #expect(
             controllerSource.contains(
-                "transitionCoordinator.animationPolicyDidChange(layout: layoutState.currentLayout)"
+                "transitionCoordinator.animationPolicyDidChange(layout: layoutModel.currentLayout)"
             )
         )
         #expect(!controllerSource.contains("panel.setFrame("))
