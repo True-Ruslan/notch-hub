@@ -1,19 +1,21 @@
 # Project state
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
 Published version: `0.1.0` Personal Release
 Primary physical target: Mac16,8 / macOS 26.6.x
-Current physical environment: Mac16,8 / macOS 26.6.1
+Current physical environment: Mac16,8 / macOS 26.6.2
 Branch governance: `main` is intended to be protected; GitHub currently reports it unprotected and issue #42 tracks restoration
-Frozen P1 measured runtime: `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`
-Frozen P1 measurement tooling: `28965561f81c71ea58a352301fbe08554c644044`
-Active development: P1 target-Mac whole-app resource evidence recollection after locale-stable tooling refreeze
+Accepted P1 measured runtime: `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`
+Accepted P1 measurement/evidence tooling: `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`
+Active development: P1 accepted; next product hardening may proceed without speculative resource optimization
 
 ## Product state
 
 NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-Published state remains immutable `v0.1.0`. M6.6 and its hardware-notch screen-selection correction are accepted/merged source work but remain unreleased. P1 is the active gate before broader multi-monitor hardening or another product module.
+Published state remains immutable `v0.1.0`. M6.6, its hardware-notch screen-selection correction, the compositor settlement repair and the bounded pointer-monitor correction are accepted/merged source work but remain unreleased.
+
+P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization. Broader active-display/multi-monitor hardening or the next product module may now proceed, while issue #42 still tracks restoration of intended `main` branch governance.
 
 ## Merged foundations
 
@@ -32,7 +34,11 @@ Published state remains immutable `v0.1.0`. M6.6 and its hardware-notch screen-s
 - M6.6 hardware-notch screen-selection correction — physically accepted/tested/merged via PR #40 as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`.
 - P1 target resource measurement foundation — implemented/tested/merged via PR #36 as `5cd9a2a47d87a433155f53b3aa0510000f2fce85`.
 - P1 macOS 26.6 patch-family evidence correction — TDD-tested/merged via PR #44 as `99a75dbe0664120a572bd8229d4fe461790ee07b`.
-- P1 locale-stable process sampler — TDD-tested/merged via PR #47 as current tooling `28965561f81c71ea58a352301fbe08554c644044`.
+- P1 locale-stable process sampler — TDD-tested/merged via PR #47 as `28965561f81c71ea58a352301fbe08554c644044`.
+- P1 manual compositor fallback/evidence contract — tested/merged via PR #49 as accepted tooling `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`.
+- P1 compositor endpoint settlement repair — physically accepted/tested/merged via PR #51 as `1f56c3e5da8a46509a3472a52da12a1abfb16a8c`.
+- P1 bounded pointer monitoring / rapid-exit repair — TDD-tested, physically accepted and merged via PR #53 as accepted measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`.
+- P1 whole-app target-Mac resource review — accepted on Mac16,8/macOS 26.6.2; issue #38 closed completed.
 
 ## M6.6 original acceptance and merge provenance
 
@@ -51,25 +57,17 @@ Canonical source evidence:
 
 Acceptance-record head `c9fbd0605b33a318bb4371ae0f2c928120356adf` passed CI #1243 3/3 GREEN without production changes. PR #33 was squash-merged with expected-head protection as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; post-merge CI #1244 ultimately passed 3/3 GREEN on that exact source.
 
-## M6.6 hardware-notch screen-selection correction
+## Corrective runtime provenance after M6.6
 
-A later real multi-monitor check found that `NSScreen.main` could be an external display even while the built-in hardware-notch display was available. PR #40 repaired initial panel screen selection using public AppKit notch geometry while preserving the no-notch fallback.
+The later multi-monitor and P1 physical checks found three real runtime defects and each remains separately traceable:
 
-Lifecycle/provenance is explicit:
+1. **Hardware-notch initial screen selection** — PR #40. Exact physical repair source `46f069e57997eab060c79c3d9e279da944d6e263`; final PR head `b19801be1201a43572f5ea6574d32edfc9174dc5`; squash merge `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`; final head and merge share Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21`.
+2. **Compositor endpoint settlement** — PR #51. RED `7e06d24d0b89f4c413c180882ec9d628384e9bce`; physically accepted GREEN head `329b867595b6ffe127fa3552f51bef8412865f37`; squash merge `1f56c3e5da8a46509a3472a52da12a1abfb16a8c`; accepted head and merge share Git tree `8aebcc6db915b77e30c51b1d4fc45e4c3b895bb1`.
+3. **Broad global pointer wakeups plus rapid-exit loss** — PR #53. Early candidates were correctly rejected by target-Mac testing. Final head `bddd0503d972c652752a0e1463f3495685accc83` physically passed rapid exit 30/30, compositor 10/10, reversal recovery, hardware-notch binding and wakeup A/B. Squash merge `11dad43364a969f4d5f8c1a92e1281b5b41c8a74` shares the same Git tree `8f0a7fee0b02599520a5776133f51c1215da7d98` as the accepted head.
 
-- runtime implementation physically re-checked on exact source `46f069e57997eab060c79c3d9e279da944d6e263` with Mac16,8/macOS 26.6 and external monitor attached — hardware-notch binding PASS;
-- commits after `46f069e...` through the final PR head changed only size-policy/CI/test metadata and no shipping `Sources/` file;
-- final PR head `b19801be1201a43572f5ea6574d32edfc9174dc5` passed CI #1274 3/3 GREEN, including release size budget, Sandbox/Hardened Runtime, macOS 26 and UI regression gates;
-- PR #40 squash-merged as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`;
-- final PR head and squash merge share Git tree `f1884e9727d3d5794fb0122e86d9d0b85c3d9d21`.
+The accepted pointer-monitor design keeps system-wide mouse observation absent in ordinary idle and bounds the global escape monitor to an active local/tracking interaction. It retains the monitor while global samples remain inside the current interactive region and tears it down after the actual outside sample is delivered to the existing state machine. No polling, timer, display link, event tap or new permission was introduced.
 
-The exact physical claim remains `46f069e...`; the corrected merged runtime is `e8d77968...`.
-
-M6.6 current state is therefore:
-
-**implemented -> automated-tested -> physically accepted -> merged -> not released**.
-
-## Accepted M6.6 interaction contract
+## Accepted interaction contract
 
 - stable `compact <-> peek <-> expanded` under one transition authority;
 - hover dwell exactly 120 ms; Peek exit grace exactly 140 ms;
@@ -83,6 +81,8 @@ M6.6 current state is therefore:
 - seek, source identity and cursor isolation remain bounded/event-driven;
 - bounded Peek cancellation is nonblocking for the UI actor and stale/late transport work fails closed;
 - initial panel binding prefers the available hardware-notch display over `NSScreen.main`, with `NSScreen.main` then first-screen fallback when no hardware notch is present;
+- current-generation transition settlement reconciles exact physical frame/corner before logical settled presentation is published;
+- rapid pointer exit during an interaction is recovered through bounded escape observation without persistent system-wide mouse monitoring;
 - normal Quit leaves no owned media adapter process.
 
 ## Security and resource invariants
@@ -91,59 +91,52 @@ M6.6 current state is therefore:
 - No Accessibility, Input Monitoring, Automation, Screen Recording, networking, telemetry, history persistence or arbitrary command authority is added.
 - Universal Media retains the reviewed fixed `/usr/bin/perl` + pinned adapter/framework boundary.
 - Settled compact and Peek own zero persistent adapter; settled expanded owns the expected presentation-scoped runtime.
-- Gesture/Peek/transition/screen-selection hot paths add no polling, repeating timer, display link, event tap, per-event subprocess creation or production logging.
-- The existing narrow global `.mouseMoved` fallback predates P1 and is a measurement/optimization candidate, not permission to broaden input capture.
+- Gesture/Peek/transition/screen-selection/pointer hot paths add no polling, repeating timer, display link, event tap, per-event subprocess creation or production logging.
+- Global `.mouseMoved` observation is no longer persistently armed in idle; the final bounded escape monitor is active only during an actual NotchHub interaction and tears down after outside escape delivery.
 - UI fixtures and diagnostics remain compile-time test-only.
 
-## Performance state — P1 active
+## Performance state — P1 accepted
 
-`performance/baseline-v0.1.0.json` and all historical feature budgets remain immutable provenance records. The active cumulative size envelope is `performance/m6-6-hardware-notch-screen-selection-size-budget.json`; the older first-click budget remains historical evidence.
+`performance/baseline-v0.1.0.json` and all historical feature budgets remain immutable provenance records. The active cumulative size envelope remains `performance/m6-6-hardware-notch-screen-selection-size-budget.json`; historical budgets remain evidence rather than rewritten baselines.
 
-Shared-runner CPU/RSS values remain compatibility evidence only. Canonical runtime resource acceptance belongs to exact `Mac16,8` hardware in the macOS `26.6` patch family, with the exact observed patch version preserved in every evidence file. The current machine is on `26.6.1`.
+Shared-runner CPU/RSS values remain compatibility evidence only. Canonical runtime resource acceptance belongs to exact `Mac16,8` hardware in the macOS `26.6` patch family, with the exact observed patch version preserved consistently across a bundle.
 
-PR #36 established the P1 measurement foundation. Final PR head `8f2e1c51ba8d69a66165a8e0db5f64f029cc3fcd` passed CI #1260 3/3 GREEN. Squash-merged foundation source `5cd9a2a47d87a433155f53b3aa0510000f2fce85` passed post-merge CI #1261 3/3 GREEN.
+The final accepted P1 bundle uses:
 
-Before target collection, macOS advanced to `26.6.1`, exposing an overly literal `26.6` platform check. PR #44 corrected the P1 validator without changing the sampler or shipping runtime:
+- runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`;
+- tooling `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`;
+- target `Mac16,8 / macOS 26.6.2`;
+- exact coherent Idle/Hover/Stability/manual provenance with `reviewRequired=false`.
 
-- accepts only canonical `26.6` / `26.6.x` versions;
-- preserves exact patch provenance instead of normalizing it away;
-- requires exact platform agreement across Idle/Hover/Stability/manual evidence;
-- keeps exact model `Mac16,8`;
-- rejects adjacent/malformed versions and wrong models;
-- extends the existing Swift-to-Python canonical test bridge to both P1 Python suites;
-- preserves the single reviewed untrusted `pull_request` CI path after release policy correctly rejected a temporary alternate workflow.
+Final reviewed evidence:
 
-TDD RED/GREEN evidence was captured during PR #44 development. Final head `b1ff7dab8a1f386c04d9d5e2792ba27ca9f89b6a` passed CI #1283 3/3 GREEN. PR #44 squash-merged as tooling source `99a75dbe0664120a572bd8229d4fe461790ee07b`.
+- **Idle** — CPU median/max `0.0/0.0%`; RSS median/max `58,432/58,496 KiB`; threads median/max `3/6`. Idle direct thread gate `<=6` PASS.
+- **Hover** — CPU median/max `6.8/32.3%`; RSS median/max `75,936/76,784 KiB`; threads median/max `6/6`. CPU median steady-state target `<=8.0%` PASS; thread gate `<=9` PASS. The one-second CPU max remains diagnostic rather than a standalone portable gate.
+- **Stability** — CPU median/max `0.0/0.0%`; RSS start/end `58,816 -> 54,848 KiB`, delta `-3,968 KiB`; thread start/end `3 -> 3`, thread max `5`, delta `0`. RSS growth, thread max and thread-delta gates PASS.
+- **Idle Wake Ups** — Activity Monitor, 60 s, `0.0/s`; explicitly reviewed with no anomaly.
+- **Energy** — Activity Monitor Energy fallback, 60 s, `no-anomaly-observed`; observed Energy Impact `0.0`, App Nap `No`, Preventing Sleep `No`. The displayed 12-hour value `0.29` is retained only as historical diagnostic context, not a 60-second threshold.
+- **Compositor** — `manual-visual-compositor`, exactly 10 cycles, `no-anomaly-observed`; reversal recovery PASS; freeze/stuck panel not observed; frame/corner/flicker anomalies none.
 
-The first target collection attempt on `99a75dbe...` produced a valid diagnostic Idle report on exact runtime `e8d77968...` and exact Mac16,8/macOS 26.6.1. Idle CPU median/max were `0.0/0.0%`, RSS median/max were `56,416/58,464 KiB`, and thread median/max were `3/7`; `threadMax=7` exceeded the existing direct Idle gate `<=6`. The report intentionally contains aggregate summaries rather than raw per-sample rows, so the transient location cannot be reconstructed after the run. That observation remains diagnostic history and is not discarded.
+The normalized closed-schema bundle validated successfully and all direct gates passed. Earlier 26.6.1, pre-settlement and pre-pointer-fix measurements remain immutable diagnostic history and are not mixed into the accepted bundle.
 
-The subsequent Hover collection produced no evidence file because `/bin/ps` inherited the interactive locale and emitted a comma decimal separator while the strict parser correctly required locale-independent dot-decimal input. PR #47 fixed the measurement boundary rather than weakening the parser:
+P1 therefore reached:
 
-- both `/bin/ps` sampling subprocesses receive a copy of the parent environment with `LC_ALL=C`;
-- unrelated environment variables are preserved;
-- the launched NotchHub app environment is not changed;
-- the strict parser remains fail-closed;
-- a dedicated locale regression runs through the existing canonical Swift-to-Python P1 bridge;
-- no shipping `Sources/`, permission, entitlement, telemetry, networking, polling or product behavior changed.
+**implemented -> tested -> physically accepted -> merged runtime measured -> accepted**.
 
-RED head `63af71dc9a614837fa2fe67f31d0cd0b5e3c0aa9` failed CI #1287 exactly because both `/bin/ps` calls had `env=None`. GREEN head `5e1d870f67972d5799c34e77acc1a8c1f4de9f7b` passed CI #1288 3/3 GREEN, including coverage, release/security policy, Performance harness compatibility smoke and UI regression. PR #47 squash-merged as current P1 tooling source `28965561f81c71ea58a352301fbe08554c644044`.
-
-The canonical P1 target audit therefore measures corrected merged runtime `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251` with tooling `28965561f81c71ea58a352301fbe08554c644044`. Earlier tooling SHAs remain immutable provenance history but are superseded for new target evidence. Because `measurementToolCommit` is part of the evidence contract, the previous Idle report on `99a75dbe...` must not be mixed with reports from `28965561...`; the complete final Idle/Hover/Stability set must be recollected on one tooling SHA.
+Published release is still `v0.1.0`; P1 acceptance is not a release claim.
 
 ## Next optimal step
 
-1. Replace the detached P1 tooling checkout with exact tooling `28965561...`; keep runtime `e8d77968...` unchanged.
-2. Recollect target-Mac Idle/Hover/Stability CPU/RSS/thread reports on the current exact platform Mac16,8/macOS 26.6.1 using only tooling `28965561...`.
-3. Preserve the earlier `99a75dbe...` Idle result as diagnostic evidence; do not use it in the final normalized bundle and do not rerun merely to seek a favorable thread maximum.
-4. Collect 60-second idle wakeup/energy evidence and 10-cycle compositor evidence.
-5. Build and validate the normalized P1 target-resource evidence bundle; all files must preserve exact `26.6.1` platform provenance and one exact tooling SHA.
-6. Characterize variance before introducing any new absolute cross-session resource threshold.
-7. If the new canonical Idle again exceeds the thread gate, or other evidence identifies a material regression, investigate one evidence-backed cause at a time with RED -> GREEN; otherwise accept P1 without speculative runtime changes.
-8. Only after P1 acceptance proceed to broader active-display/multi-monitor hardening or another product module.
+1. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
+2. Proceed to the next bounded product-hardening slice now that P1 is accepted. The preferred technical direction is event-driven active-display/multi-monitor migration handling: correctly move/settle NotchHub when display topology or the relevant hardware-notch screen changes, without polling or private display APIs.
+3. Start that slice with a written invariant/spec and RED tests for display add/remove/main-screen/topology transitions, preserving the accepted hardware-notch-first selection fallback and exact transition settlement behavior.
+4. Require target-Mac physical acceptance with an external monitor for any shipping display-migration change; distinguish implementation, automated testing, physical acceptance, merge and release.
+5. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
+6. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
 
 See:
 
 - `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`;
 - `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`;
-- issue #38 for live collection status;
+- closed issue #38 for the complete P1 evidence/acceptance trail;
 - issue #42 for repository branch-protection restoration.
