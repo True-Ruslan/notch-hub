@@ -339,7 +339,7 @@ public final class NotchPanelController: NSObject {
             replacingBaseLayout: newBaseLayout
         )
 
-        interactionCoordinator.cancelPendingActivationForInteractiveTransition()
+        interactionCoordinator.resetPointerStateForDisplayMigration()
         pointerMonitor.resetInteractionEscapeMonitoring()
         transitionCoordinator.displayLayoutDidChange(newEffectiveLayout)
         _ = layoutModel.updateBaseLayout(newBaseLayout)
