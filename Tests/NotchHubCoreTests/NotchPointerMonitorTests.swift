@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct NotchPointerMonitorTests {
     @Test
-    func startRegistersOneLocalAndOneGlobalMouseMovedMonitor() {
+    func startRegistersOnlyOneLocalMouseMovedMonitor() {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
         var received: [CGPoint] = []
@@ -16,14 +16,14 @@ struct NotchPointerMonitorTests {
         }
 
         #expect(backend.localRegistrationCount == 1)
-        #expect(backend.globalRegistrationCount == 1)
+        #expect(backend.globalRegistrationCount == 0)
 
         let localPoint = CGPoint(x: 10, y: 20)
-        let globalPoint = CGPoint(x: 30, y: 40)
+        let unrelatedGlobalPoint = CGPoint(x: 30, y: 40)
         backend.emitLocal(localPoint)
-        backend.emitGlobal(globalPoint)
+        backend.emitGlobal(unrelatedGlobalPoint)
 
-        #expect(received == [localPoint, globalPoint])
+        #expect(received == [localPoint])
     }
 
     @Test
@@ -35,11 +35,11 @@ struct NotchPointerMonitorTests {
         monitor.start { _ in }
 
         #expect(backend.localRegistrationCount == 1)
-        #expect(backend.globalRegistrationCount == 1)
+        #expect(backend.globalRegistrationCount == 0)
     }
 
     @Test
-    func invalidateRemovesBothMonitorsExactlyOnce() {
+    func invalidateRemovesLocalMonitorExactlyOnce() {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
 
@@ -47,11 +47,11 @@ struct NotchPointerMonitorTests {
         monitor.invalidate()
         monitor.invalidate()
 
-        #expect(backend.removedTokens.sorted() == ["global-1", "local-1"])
+        #expect(backend.removedTokens == ["local-1"])
     }
 
     @Test
-    func liveMouseMovedDeliveryDoesNotAllocateTaskPerEvent() throws {
+    func liveMouseMovedDeliveryDoesNotAllocateTaskOrUseGlobalObservation() throws {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot =
             testFile
@@ -67,6 +67,7 @@ struct NotchPointerMonitorTests {
 
         #expect(!source.contains("Task { @MainActor"))
         #expect(source.contains("MainActor.assumeIsolated"))
+        #expect(!source.contains("NSEvent.addGlobalMonitorForEvents"))
     }
 
     private func makeMonitor(backend: FakeNotchEventMonitorBackend) -> NotchPointerMonitor {
