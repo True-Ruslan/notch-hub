@@ -136,6 +136,28 @@ struct NotchPointerMonitorTests {
     }
 
     @Test
+    func resetInteractionEscapeMonitoringRemovesOnlyGlobalAndAllowsRearm() {
+        let backend = FakeNotchEventMonitorBackend()
+        let monitor = makeMonitor(backend: backend)
+
+        monitor.start(
+            shouldRetainGlobalMonitoring: { _ in true },
+            handler: { _ in }
+        )
+        backend.emitLocal(CGPoint(x: 10, y: 20))
+
+        monitor.resetInteractionEscapeMonitoring()
+
+        #expect(backend.removedTokens == ["global-1"])
+        #expect(backend.localRegistrationCount == 1)
+
+        backend.emitLocal(CGPoint(x: 11, y: 21))
+
+        #expect(backend.globalRegistrationCount == 2)
+        #expect(backend.removedTokens == ["global-1"])
+    }
+
+    @Test
     func repeatedStartDoesNotRegisterDuplicateLocalMonitor() {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
