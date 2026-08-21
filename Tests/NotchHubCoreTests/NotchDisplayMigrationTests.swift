@@ -55,7 +55,7 @@ struct NotchDisplayMigrationTests {
     @Test(arguments: [
         NotchPresentation.compact,
         NotchPresentation.peek,
-        NotchPresentation.expanded,
+        NotchPresentation.expanded
     ])
     func stableEndpointMigrationReconcilesPhysicalGeometryWithoutDuplicateSettlement(
         presentation: NotchPresentation
