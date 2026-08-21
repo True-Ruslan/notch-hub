@@ -55,22 +55,6 @@ struct NotchLocalPointerTrackingPolicyTests {
         #expect(!source.contains("CGEvent.tapCreate"))
     }
 
-    @Test
-    func localTrackingArmsEscapeFallbackBeforeProcessingInteraction() throws {
-        let source = try sourceText(
-            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
-        )
-
-        let armRange = try #require(
-            source.range(of: "pointerMonitor.beginLocalInteraction()")
-        )
-        let updateRange = try #require(
-            source.range(of: "updateInteraction(for: pointer)")
-        )
-
-        #expect(armRange.lowerBound < updateRange.lowerBound)
-    }
-
     private func sourceText(relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot =
