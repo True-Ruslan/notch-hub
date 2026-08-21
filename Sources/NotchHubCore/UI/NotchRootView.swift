@@ -2,21 +2,18 @@ import SwiftUI
 
 public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
-    private let compactBackgroundOpacity: Double
-    private let expandedContentTopInset: CGFloat
+    @ObservedObject private var layoutModel: NotchPanelLayoutModel
     private let handlesExplicitExpansionTap: Bool
     private let onExplicitExpansion: () -> Void
 
     public init(
         model: NotchPanelModel,
-        compactBackgroundOpacity: Double,
-        expandedContentTopInset: CGFloat,
+        layoutModel: NotchPanelLayoutModel,
         handlesExplicitExpansionTap: Bool = true,
         onExplicitExpansion: @escaping () -> Void = {}
     ) {
         self.model = model
-        self.compactBackgroundOpacity = compactBackgroundOpacity
-        self.expandedContentTopInset = expandedContentTopInset
+        self.layoutModel = layoutModel
         self.handlesExplicitExpansionTap = handlesExplicitExpansionTap
         self.onExplicitExpansion = onExplicitExpansion
     }
@@ -42,7 +39,7 @@ public struct NotchRootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             model.contentPresentation == .compact
-                ? Color.black.opacity(compactBackgroundOpacity)
+                ? Color.black.opacity(layoutModel.currentLayout.compactBackgroundOpacity)
                 : Color.black
         )
         .contentShape(Rectangle())
@@ -100,7 +97,7 @@ public struct NotchRootView: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
-        .padding(.top, expandedContentTopInset)
+        .padding(.top, layoutModel.currentLayout.expandedContentTopInset)
     }
 
     private func moduleTile(_ title: String, systemImage: String) -> some View {
