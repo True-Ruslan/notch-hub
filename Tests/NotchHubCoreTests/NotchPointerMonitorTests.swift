@@ -10,7 +10,10 @@ struct NotchPointerMonitorTests {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
 
-        monitor.start { _ in }
+        monitor.start(
+            shouldRetainGlobalMonitoring: { _ in true },
+            handler: { _ in }
+        )
 
         #expect(backend.localRegistrationCount == 1)
         #expect(backend.globalRegistrationCount == 0)
@@ -23,10 +26,13 @@ struct NotchPointerMonitorTests {
         var received: [CGPoint] = []
         var globalCountWhenDelivered: Int?
 
-        monitor.start { point in
-            received.append(point)
-            globalCountWhenDelivered = backend.globalRegistrationCount
-        }
+        monitor.start(
+            shouldRetainGlobalMonitoring: { _ in true },
+            handler: { point in
+                received.append(point)
+                globalCountWhenDelivered = backend.globalRegistrationCount
+            }
+        )
 
         let localPoint = CGPoint(x: 10, y: 20)
         backend.emitLocal(localPoint)
@@ -41,7 +47,10 @@ struct NotchPointerMonitorTests {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
 
-        monitor.start { _ in }
+        monitor.start(
+            shouldRetainGlobalMonitoring: { _ in true },
+            handler: { _ in }
+        )
         backend.emitLocal(CGPoint(x: 10, y: 20))
         backend.emitLocal(CGPoint(x: 11, y: 21))
         backend.emitLocal(CGPoint(x: 12, y: 22))
@@ -52,23 +61,58 @@ struct NotchPointerMonitorTests {
     }
 
     @Test
-    func firstGlobalEscapeDisarmsMonitorBeforeDeliveringOutsidePointer() {
+    func insideGlobalSamplesDoNotConsumeEscapeMonitorBeforeActualOutsideExit() {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
         var observations: [(CGPoint, Int)] = []
 
-        monitor.start { point in
-            observations.append((point, backend.removedTokens.count))
-        }
-        backend.emitLocal(CGPoint(x: 10, y: 20))
+        monitor.start(
+            shouldRetainGlobalMonitoring: { point in
+                point.x < 30
+            },
+            handler: { point in
+                observations.append((point, backend.removedTokens.count))
+            }
+        )
 
-        let outsidePoint = CGPoint(x: 30, y: 40)
+        let localPoint = CGPoint(x: 10, y: 20)
+        let stillInsideGlobalPoint = CGPoint(x: 20, y: 20)
+        let outsidePoint = CGPoint(x: 40, y: 20)
+
+        backend.emitLocal(localPoint)
+        backend.emitGlobal(stillInsideGlobalPoint)
+
+        #expect(observations.map(\.0) == [localPoint, stillInsideGlobalPoint])
+        #expect(backend.globalRegistrationCount == 1)
+        #expect(backend.removedTokens.isEmpty)
+
         backend.emitGlobal(outsidePoint)
-        backend.emitGlobal(CGPoint(x: 50, y: 60))
+        backend.emitGlobal(CGPoint(x: 50, y: 20))
 
-        #expect(observations.count == 2)
-        #expect(observations[1].0 == outsidePoint)
-        #expect(observations[1].1 == 1)
+        #expect(observations.map(\.0) == [localPoint, stillInsideGlobalPoint, outsidePoint])
+        #expect(observations.last?.1 == 0)
+        #expect(backend.removedTokens == ["global-1"])
+    }
+
+    @Test
+    func outsideGlobalSampleIsDeliveredBeforeEscapeMonitorIsRemoved() {
+        let backend = FakeNotchEventMonitorBackend()
+        let monitor = makeMonitor(backend: backend)
+        var removalCountsAtDelivery: [Int] = []
+
+        monitor.start(
+            shouldRetainGlobalMonitoring: { point in
+                point.x < 30
+            },
+            handler: { _ in
+                removalCountsAtDelivery.append(backend.removedTokens.count)
+            }
+        )
+
+        backend.emitLocal(CGPoint(x: 10, y: 20))
+        backend.emitGlobal(CGPoint(x: 40, y: 20))
+
+        #expect(removalCountsAtDelivery == [0, 0])
         #expect(backend.removedTokens == ["global-1"])
     }
 
@@ -77,9 +121,14 @@ struct NotchPointerMonitorTests {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
 
-        monitor.start { _ in }
+        monitor.start(
+            shouldRetainGlobalMonitoring: { point in
+                point.x < 30
+            },
+            handler: { _ in }
+        )
         backend.emitLocal(CGPoint(x: 10, y: 20))
-        backend.emitGlobal(CGPoint(x: 30, y: 40))
+        backend.emitGlobal(CGPoint(x: 40, y: 20))
         backend.emitLocal(CGPoint(x: 11, y: 21))
 
         #expect(backend.globalRegistrationCount == 2)
@@ -91,8 +140,14 @@ struct NotchPointerMonitorTests {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
 
-        monitor.start { _ in }
-        monitor.start { _ in }
+        monitor.start(
+            shouldRetainGlobalMonitoring: { _ in true },
+            handler: { _ in }
+        )
+        monitor.start(
+            shouldRetainGlobalMonitoring: { _ in true },
+            handler: { _ in }
+        )
 
         #expect(backend.localRegistrationCount == 1)
         #expect(backend.globalRegistrationCount == 0)
@@ -103,7 +158,10 @@ struct NotchPointerMonitorTests {
         let backend = FakeNotchEventMonitorBackend()
         let monitor = makeMonitor(backend: backend)
 
-        monitor.start { _ in }
+        monitor.start(
+            shouldRetainGlobalMonitoring: { _ in true },
+            handler: { _ in }
+        )
         backend.emitLocal(CGPoint(x: 10, y: 20))
         monitor.invalidate()
         monitor.invalidate()
@@ -112,7 +170,7 @@ struct NotchPointerMonitorTests {
     }
 
     @Test
-    func liveMouseMovedDeliveryDoesNotAllocateTaskAndGlobalObservationIsOneShot() throws {
+    func liveMouseMovedDeliveryDoesNotAllocateTaskAndGlobalObservationIsBoundedByRetention() throws {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot =
             testFile
@@ -130,6 +188,7 @@ struct NotchPointerMonitorTests {
         #expect(source.contains("MainActor.assumeIsolated"))
         #expect(source.contains("NSEvent.addLocalMonitorForEvents"))
         #expect(source.contains("NSEvent.addGlobalMonitorForEvents"))
+        #expect(source.contains("shouldRetainGlobalMonitoring"))
         #expect(source.contains("armGlobalEscapeMonitorIfNeeded"))
         #expect(source.contains("disarmGlobalEscapeMonitor"))
     }
