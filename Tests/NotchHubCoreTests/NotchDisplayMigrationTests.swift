@@ -63,13 +63,13 @@ struct NotchDisplayMigrationTests {
         let model = NotchPanelModel()
         model.setContentPresentation(presentation)
         let driver = DisplayMigrationDriver()
-        var hapticCount = 0
+        let haptics = DisplayMigrationCounter()
         var settlements: [NotchPresentation] = []
         let coordinator = makeCoordinator(
             model: model,
             initialPresentation: presentation,
             driver: driver,
-            hapticCount: &hapticCount
+            haptics: haptics
         )
         coordinator.settledPresentationHandler = { settlements.append($0) }
 
@@ -84,26 +84,26 @@ struct NotchDisplayMigrationTests {
         #expect(coordinator.phase.isSettled(presentation))
         #expect(model.contentPresentation == presentation)
         #expect(settlements.isEmpty)
-        #expect(hapticCount == 0)
+        #expect(haptics.value == 0)
     }
 
     @Test
     func inFlightExpansionMigratesToNewExpandedEndpointAndRejectsOldCompletion() {
         let model = NotchPanelModel()
         let driver = DisplayMigrationDriver()
-        var hapticCount = 0
+        let haptics = DisplayMigrationCounter()
         var settlements: [NotchPresentation] = []
         let coordinator = makeCoordinator(
             model: model,
             initialPresentation: .compact,
             driver: driver,
-            hapticCount: &hapticCount
+            haptics: haptics
         )
         coordinator.settledPresentationHandler = { settlements.append($0) }
 
         coordinator.accept(.deliberateExpansion, layout: oldLayout)
         #expect(driver.animationRequests.count == 1)
-        #expect(hapticCount == 1)
+        #expect(haptics.value == 1)
 
         coordinator.displayLayoutDidChange(newLayout)
 
@@ -115,7 +115,7 @@ struct NotchDisplayMigrationTests {
         #expect(coordinator.phase.isSettled(.expanded))
         #expect(model.contentPresentation == .expanded)
         #expect(settlements == [.expanded])
-        #expect(hapticCount == 1)
+        #expect(haptics.value == 1)
 
         driver.completeAnimation(index: 0)
 
@@ -129,13 +129,13 @@ struct NotchDisplayMigrationTests {
         let model = NotchPanelModel()
         model.setContentPresentation(.expanded)
         let driver = DisplayMigrationDriver()
-        var hapticCount = 0
+        let haptics = DisplayMigrationCounter()
         var settlements: [NotchPresentation] = []
         let coordinator = makeCoordinator(
             model: model,
             initialPresentation: .expanded,
             driver: driver,
-            hapticCount: &hapticCount
+            haptics: haptics
         )
         coordinator.settledPresentationHandler = { settlements.append($0) }
 
@@ -152,7 +152,7 @@ struct NotchDisplayMigrationTests {
         #expect(coordinator.phase.isSettled(.compact))
         #expect(model.contentPresentation == .compact)
         #expect(settlements == [.compact])
-        #expect(hapticCount == 0)
+        #expect(haptics.value == 0)
 
         driver.completeAnimation(index: 0)
 
@@ -165,13 +165,13 @@ struct NotchDisplayMigrationTests {
     func interactiveExpansionMigrationCancelsBackToCompactOrigin() {
         let model = NotchPanelModel()
         let driver = DisplayMigrationDriver()
-        var hapticCount = 0
+        let haptics = DisplayMigrationCounter()
         var settlements: [NotchPresentation] = []
         let coordinator = makeCoordinator(
             model: model,
             initialPresentation: .compact,
             driver: driver,
-            hapticCount: &hapticCount
+            haptics: haptics
         )
         coordinator.settledPresentationHandler = { settlements.append($0) }
 
@@ -188,7 +188,7 @@ struct NotchDisplayMigrationTests {
         #expect(coordinator.phase.isSettled(.compact))
         #expect(model.contentPresentation == .compact)
         #expect(settlements.isEmpty)
-        #expect(hapticCount == 0)
+        #expect(haptics.value == 0)
     }
 
     @Test
@@ -196,13 +196,13 @@ struct NotchDisplayMigrationTests {
         let model = NotchPanelModel()
         model.setContentPresentation(.expanded)
         let driver = DisplayMigrationDriver()
-        var hapticCount = 0
+        let haptics = DisplayMigrationCounter()
         var settlements: [NotchPresentation] = []
         let coordinator = makeCoordinator(
             model: model,
             initialPresentation: .expanded,
             driver: driver,
-            hapticCount: &hapticCount
+            haptics: haptics
         )
         coordinator.settledPresentationHandler = { settlements.append($0) }
 
@@ -219,7 +219,7 @@ struct NotchDisplayMigrationTests {
         #expect(coordinator.phase.isSettled(.expanded))
         #expect(model.contentPresentation == .expanded)
         #expect(settlements.isEmpty)
-        #expect(hapticCount == 0)
+        #expect(haptics.value == 0)
     }
 
     @Test
@@ -264,7 +264,7 @@ struct NotchDisplayMigrationTests {
         model: NotchPanelModel,
         initialPresentation: NotchPresentation,
         driver: DisplayMigrationDriver,
-        hapticCount: inout Int
+        haptics: DisplayMigrationCounter
     ) -> NotchPanelTransitionCoordinator {
         NotchPanelTransitionCoordinator(
             model: model,
@@ -279,7 +279,7 @@ struct NotchDisplayMigrationTests {
                 )
             },
             cancelAnimation: { driver.cancel() },
-            performExpansionHaptic: { hapticCount += 1 },
+            performExpansionHaptic: { haptics.value += 1 },
             applyInteractivePresentation: { frame, radius in
                 driver.applyInteractive(frame: frame, radius: radius)
             },
@@ -337,6 +337,11 @@ private extension NotchPanelTransitionPhase {
             false
         }
     }
+}
+
+@MainActor
+private final class DisplayMigrationCounter {
+    var value = 0
 }
 
 @MainActor
