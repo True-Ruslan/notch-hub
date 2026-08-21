@@ -4,6 +4,7 @@ import CoreGraphics
 @MainActor
 final class NotchPointerMonitor {
     typealias Handler = @MainActor (CGPoint) -> Void
+    typealias RetentionPolicy = @MainActor (CGPoint) -> Bool
     typealias Registration = (@escaping Handler) -> Any?
     typealias Removal = (Any) -> Void
 
@@ -11,7 +12,9 @@ final class NotchPointerMonitor {
     private let addGlobal: Registration
     private let remove: Removal
     private var localMonitor: Any?
-    private var globalMonitor: Any?
+    private var globalEscapeMonitor: Any?
+    private var eventHandler: Handler?
+    private var shouldRetainGlobalMonitoring: RetentionPolicy?
     private var isStarted = false
 
     init() {
@@ -47,14 +50,30 @@ final class NotchPointerMonitor {
         self.remove = remove
     }
 
-    func start(handler: @escaping Handler) {
+    func start(
+        shouldRetainGlobalMonitoring: @escaping RetentionPolicy,
+        handler: @escaping Handler
+    ) {
         guard !isStarted else {
             return
         }
 
         isStarted = true
-        localMonitor = addLocal(handler)
-        globalMonitor = addGlobal(handler)
+        self.shouldRetainGlobalMonitoring = shouldRetainGlobalMonitoring
+        eventHandler = handler
+        localMonitor = addLocal { [weak self] pointer in
+            self?.handleTrackedPointer(pointer)
+        }
+    }
+
+    func handleTrackedPointer(_ pointer: CGPoint) {
+        guard isStarted else {
+            return
+        }
+
+        armGlobalEscapeMonitorIfNeeded()
+        eventHandler?(pointer)
+        disarmGlobalEscapeMonitorIfPointerExited(pointer)
     }
 
     func invalidate() {
@@ -63,15 +82,56 @@ final class NotchPointerMonitor {
         }
 
         isStarted = false
+        disarmGlobalEscapeMonitor()
 
         if let localMonitor {
             remove(localMonitor)
             self.localMonitor = nil
         }
 
-        if let globalMonitor {
-            remove(globalMonitor)
-            self.globalMonitor = nil
+        eventHandler = nil
+        shouldRetainGlobalMonitoring = nil
+    }
+
+    private func armGlobalEscapeMonitorIfNeeded() {
+        guard
+            isStarted,
+            globalEscapeMonitor == nil
+        else {
+            return
         }
+
+        globalEscapeMonitor = addGlobal { [weak self] pointer in
+            self?.handleGlobalPointer(pointer)
+        }
+    }
+
+    private func handleGlobalPointer(_ pointer: CGPoint) {
+        guard isStarted else {
+            return
+        }
+
+        eventHandler?(pointer)
+        disarmGlobalEscapeMonitorIfPointerExited(pointer)
+    }
+
+    private func disarmGlobalEscapeMonitorIfPointerExited(_ pointer: CGPoint) {
+        guard
+            let shouldRetainGlobalMonitoring,
+            !shouldRetainGlobalMonitoring(pointer)
+        else {
+            return
+        }
+
+        disarmGlobalEscapeMonitor()
+    }
+
+    private func disarmGlobalEscapeMonitor() {
+        guard let globalEscapeMonitor else {
+            return
+        }
+
+        self.globalEscapeMonitor = nil
+        remove(globalEscapeMonitor)
     }
 }
