@@ -93,12 +93,12 @@ struct NotchLocalGestureInputTests {
         #expect(source.contains("public func requestCollapse()"))
         #expect(
             source.contains(
-                "transitionCoordinator.requestProgrammaticExpansion(layout: layoutState.currentLayout)"
+                "transitionCoordinator.requestProgrammaticExpansion(layout: layoutModel.currentLayout)"
             )
         )
         #expect(
             source.contains(
-                "transitionCoordinator.requestProgrammaticCollapse(layout: layoutState.currentLayout)"
+                "transitionCoordinator.requestProgrammaticCollapse(layout: layoutModel.currentLayout)"
             )
         )
         #expect(!source.contains("panel.setFrame("))
