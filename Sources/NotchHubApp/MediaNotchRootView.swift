@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor
 struct MediaNotchRootView: View {
     @ObservedObject private var panelModel: NotchPanelModel
+    @ObservedObject private var layoutModel: NotchPanelLayoutModel
     @ObservedObject private var mediaModel: ShippingMediaPresentationModel
     @ObservedObject private var mediaGestureVisualModel: MediaGestureVisualModel
     @State private var sourceApplicationIcon: NSImage?
@@ -13,9 +14,6 @@ struct MediaNotchRootView: View {
     @State private var isSeekDragging = false
 
     private let sourceApplicationIconResolver: SourceApplicationIconResolver
-    private let hardwareNotchWidth: CGFloat
-    private let compactBackgroundOpacity: Double
-    private let expandedContentTopInset: CGFloat
     private let onExplicitExpansion: () -> Void
     private let onTogglePlayPause: () -> Void
     private let onPrevious: () -> Void
@@ -26,12 +24,10 @@ struct MediaNotchRootView: View {
 
     init(
         panelModel: NotchPanelModel,
+        layoutModel: NotchPanelLayoutModel,
         mediaModel: ShippingMediaPresentationModel,
         mediaGestureVisualModel: MediaGestureVisualModel,
         sourceApplicationIconResolver: SourceApplicationIconResolver,
-        hardwareNotchWidth: CGFloat,
-        compactBackgroundOpacity: Double,
-        expandedContentTopInset: CGFloat,
         onExplicitExpansion: @escaping () -> Void,
         onTogglePlayPause: @escaping () -> Void,
         onPrevious: @escaping () -> Void,
@@ -41,12 +37,10 @@ struct MediaNotchRootView: View {
         onSeekCancelled: @escaping () -> Void
     ) {
         self.panelModel = panelModel
+        self.layoutModel = layoutModel
         self.mediaModel = mediaModel
         self.mediaGestureVisualModel = mediaGestureVisualModel
         self.sourceApplicationIconResolver = sourceApplicationIconResolver
-        self.hardwareNotchWidth = hardwareNotchWidth
-        self.compactBackgroundOpacity = compactBackgroundOpacity
-        self.expandedContentTopInset = expandedContentTopInset
         self.onExplicitExpansion = onExplicitExpansion
         self.onTogglePlayPause = onTogglePlayPause
         self.onPrevious = onPrevious
@@ -64,8 +58,7 @@ struct MediaNotchRootView: View {
             } else {
                 NotchRootView(
                     model: panelModel,
-                    compactBackgroundOpacity: compactBackgroundOpacity,
-                    expandedContentTopInset: expandedContentTopInset,
+                    layoutModel: layoutModel,
                     handlesExplicitExpansionTap: false,
                     onExplicitExpansion: onExplicitExpansion
                 )
@@ -86,6 +79,14 @@ struct MediaNotchRootView: View {
         .onDisappear {
             cancelSeekPreview()
         }
+    }
+
+    private var hardwareNotchWidth: CGFloat {
+        layoutModel.currentLayout.hardwareNotchWidth
+    }
+
+    private var expandedContentTopInset: CGFloat {
+        layoutModel.currentLayout.expandedContentTopInset
     }
 
     private var isSeekSurfaceAvailable: Bool {
