@@ -35,6 +35,7 @@ struct NotchPanelOwnershipTests {
         )
 
         #expect(controllerSource.contains("applySettledPresentation: { frame, cornerRadius in"))
+        #expect(controllerSource.contains("applySettledNotchPanelPresentation("))
         #expect(controllerSource.contains("applyInteractiveNotchPanelPresentation("))
         #expect(coordinatorSource.contains("applySettledPresentation(settledFrame, settledCornerRadius)"))
     }
