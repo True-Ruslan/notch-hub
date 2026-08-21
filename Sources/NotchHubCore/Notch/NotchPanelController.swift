@@ -2,20 +2,8 @@ import AppKit
 import Dispatch
 import SwiftUI
 
-public typealias NotchPanelContentFactory = @MainActor (NotchPanelModel, NotchLayout) -> NSView
-
-private final class NotchPanelLayoutState {
-    let baseLayout: NotchLayout
-    var compactHorizontalExtension: CGFloat = 0
-
-    init(baseLayout: NotchLayout) {
-        self.baseLayout = baseLayout
-    }
-
-    var currentLayout: NotchLayout {
-        baseLayout.withCompactHorizontalExtension(compactHorizontalExtension)
-    }
-}
+public typealias NotchPanelContentFactory =
+    @MainActor (NotchPanelModel, NotchPanelLayoutModel) -> NSView
 
 @MainActor
 private final class NotchHoverPeekRequestRelay {
@@ -32,7 +20,7 @@ public final class NotchPanelController: NSObject {
     private let interactionCoordinator: NotchInteractionCoordinator
     private let transitionCoordinator: NotchPanelTransitionCoordinator
     private let pointerMonitor: NotchPointerMonitor
-    private let layoutState: NotchPanelLayoutState
+    private let layoutModel: NotchPanelLayoutModel
     private let hoverPeekRequestRelay: NotchHoverPeekRequestRelay
     private var reduceMotionEnabled: Bool
 
@@ -52,8 +40,8 @@ public final class NotchPanelController: NSObject {
     }
 
     public override convenience init() {
-        self.init { model, layout in
-            NotchHostingViewFactory.make(model: model, layout: layout)
+        self.init { model, layoutModel in
+            NotchHostingViewFactory.make(model: model, layoutModel: layoutModel)
         }
     }
 
@@ -86,21 +74,11 @@ public final class NotchPanelController: NSObject {
         performExpansionHaptic: @escaping @MainActor () -> Void,
         internalInitialization _: Void
     ) {
-        let screens = NSScreen.screens
-        let fallbackIndex = NSScreen.main.flatMap { mainScreen in
-            screens.firstIndex(where: { $0 === mainScreen })
+        guard let resolvedLayout = Self.preferredBaseLayout() else {
+            preconditionFailure("NotchHub requires at least one available screen")
         }
-        let screenInputs = screens.map { ScreenGeometryInput(screen: $0) }
-        let selectedIndex =
-            NotchScreenSelection.preferredIndex(
-                in: screenInputs,
-                fallbackIndex: fallbackIndex
-            ) ?? 0
-        let screen = screens[selectedIndex]
-        let resolvedLayout = NotchGeometry.layout(
-            for: ScreenGeometryInput(screen: screen)
-        )
-        let layoutState = NotchPanelLayoutState(baseLayout: resolvedLayout)
+
+        let layoutModel = NotchPanelLayoutModel(baseLayout: resolvedLayout)
         let model = NotchPanelModel()
         let panel = NSPanel(
             contentRect: resolvedLayout.compactFrame,
@@ -108,7 +86,7 @@ public final class NotchPanelController: NSObject {
             backing: .buffered,
             defer: false
         )
-        let hostingView = contentFactory(model, resolvedLayout)
+        let hostingView = contentFactory(model, layoutModel)
         panel.contentView = hostingView
 
         let workspace = NSWorkspace.shared
@@ -169,7 +147,7 @@ public final class NotchPanelController: NSObject {
                 hoverPeekRequestRelay.emit(request)
             },
             emitIntent: { intent in
-                transitionCoordinator.accept(intent, layout: layoutState.currentLayout)
+                transitionCoordinator.accept(intent, layout: layoutModel.currentLayout)
             }
         )
 
@@ -177,13 +155,14 @@ public final class NotchPanelController: NSObject {
         self.interactionCoordinator = interactionCoordinator
         self.transitionCoordinator = transitionCoordinator
         self.pointerMonitor = NotchPointerMonitor()
-        self.layoutState = layoutState
+        self.layoutModel = layoutModel
         self.hoverPeekRequestRelay = hoverPeekRequestRelay
         self.reduceMotionEnabled = initialReduceMotion
 
         super.init()
 
         configureAccessibilityObservation()
+        configureDisplayObservation()
         configurePanel()
         configureLocalPointerTracking(hostingView)
         configurePointerMonitoring()
@@ -193,19 +172,17 @@ public final class NotchPanelController: NSObject {
         panel.orderFrontRegardless()
         interactionCoordinator.pointerMoved(
             to: NSEvent.mouseLocation,
-            layout: layoutState.currentLayout,
+            layout: layoutModel.currentLayout,
             currentPresentation: transitionCoordinator.desiredPresentation
         )
     }
 
     public func setCompactHorizontalExtension(_ extensionWidth: CGFloat) {
-        let boundedExtension = max(0, extensionWidth)
-        guard boundedExtension != layoutState.compactHorizontalExtension else {
+        guard layoutModel.setCompactHorizontalExtension(extensionWidth) else {
             return
         }
 
-        layoutState.compactHorizontalExtension = boundedExtension
-        transitionCoordinator.animationPolicyDidChange(layout: layoutState.currentLayout)
+        transitionCoordinator.animationPolicyDidChange(layout: layoutModel.currentLayout)
     }
 
     public func resolveHoverPeekRequest(
@@ -215,32 +192,32 @@ public final class NotchPanelController: NSObject {
         let accepted = interactionCoordinator.resolveHoverPeekRequest(
             request,
             mediaAvailable: mediaAvailable,
-            layout: layoutState.currentLayout,
+            layout: layoutModel.currentLayout,
             currentPresentation: transitionCoordinator.desiredPresentation
         )
         guard accepted else {
             return
         }
 
-        transitionCoordinator.requestPeek(layout: layoutState.currentLayout)
+        transitionCoordinator.requestPeek(layout: layoutModel.currentLayout)
     }
 
     public func setPeekInteractionHeld(_ held: Bool) {
         interactionCoordinator.setPeekInteractionHeld(
             held,
-            layout: layoutState.currentLayout,
+            layout: layoutModel.currentLayout,
             currentPresentation: transitionCoordinator.desiredPresentation
         )
     }
 
     public func requestExpansion() {
         interactionCoordinator.cancelPendingActivationForInteractiveTransition()
-        transitionCoordinator.requestProgrammaticExpansion(layout: layoutState.currentLayout)
+        transitionCoordinator.requestProgrammaticExpansion(layout: layoutModel.currentLayout)
     }
 
     public func requestCollapse() {
         interactionCoordinator.cancelPendingActivationForInteractiveTransition()
-        transitionCoordinator.requestProgrammaticCollapse(layout: layoutState.currentLayout)
+        transitionCoordinator.requestProgrammaticCollapse(layout: layoutModel.currentLayout)
     }
 
     public func cancelPendingHoverActivation() {
@@ -251,7 +228,7 @@ public final class NotchPanelController: NSObject {
     public func beginInteractiveExpansion() -> Bool {
         let didBegin = transitionCoordinator.beginInteractiveTransition(
             from: .compact,
-            layout: layoutState.currentLayout
+            layout: layoutModel.currentLayout
         )
         if didBegin {
             interactionCoordinator.cancelPendingActivationForInteractiveTransition()
@@ -263,7 +240,7 @@ public final class NotchPanelController: NSObject {
     public func beginInteractiveCollapse() -> Bool {
         let didBegin = transitionCoordinator.beginInteractiveTransition(
             from: .expanded,
-            layout: layoutState.currentLayout
+            layout: layoutModel.currentLayout
         )
         if didBegin {
             interactionCoordinator.cancelPendingActivationForInteractiveTransition()
@@ -277,7 +254,7 @@ public final class NotchPanelController: NSObject {
     ) {
         transitionCoordinator.updateInteractiveTransition(
             verticalDistance: verticalDistance,
-            layout: layoutState.currentLayout
+            layout: layoutModel.currentLayout
         )
         collapseInteractiveTransitionIfPointerExited(pointer)
     }
@@ -285,13 +262,14 @@ public final class NotchPanelController: NSObject {
     public func finishInteractiveTransition(commit: Bool) {
         transitionCoordinator.finishInteractiveTransition(
             commit: commit,
-            layout: layoutState.currentLayout
+            layout: layoutModel.currentLayout
         )
     }
 
     public func invalidate() {
         settledPresentationHandler = nil
         hoverPeekRequestHandler = nil
+        removeDisplayObserver()
         removeLocalPointerTracking()
         pointerMonitor.invalidate()
         interactionCoordinator.invalidate()
@@ -309,14 +287,14 @@ public final class NotchPanelController: NSObject {
         )
     }
 
-    @objc private func accessibilityDisplayOptionsDidChange(_ notification: Notification) {
+    @objc private func accessibilityDisplayOptionsDidChange(_: Notification) {
         let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         guard reduceMotion != reduceMotionEnabled else {
             return
         }
 
         reduceMotionEnabled = reduceMotion
-        transitionCoordinator.animationPolicyDidChange(layout: layoutState.currentLayout)
+        transitionCoordinator.animationPolicyDidChange(layout: layoutModel.currentLayout)
     }
 
     private func removeAccessibilityObserver() {
@@ -326,6 +304,68 @@ public final class NotchPanelController: NSObject {
             name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
             object: workspace
         )
+    }
+
+    private func configureDisplayObservation() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(displayParametersDidChange(_:)),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: NSApplication.shared
+        )
+    }
+
+    @objc private func displayParametersDidChange(_: Notification) {
+        migrateToPreferredDisplayIfNeeded()
+    }
+
+    private func removeDisplayObserver() {
+        NotificationCenter.default.removeObserver(
+            self,
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: NSApplication.shared
+        )
+    }
+
+    private func migrateToPreferredDisplayIfNeeded() {
+        guard
+            let newBaseLayout = Self.preferredBaseLayout(),
+            newBaseLayout != layoutModel.baseLayout
+        else {
+            return
+        }
+
+        let newEffectiveLayout = layoutModel.effectiveLayout(
+            replacingBaseLayout: newBaseLayout
+        )
+
+        interactionCoordinator.cancelPendingActivationForInteractiveTransition()
+        pointerMonitor.resetInteractionEscapeMonitoring()
+        transitionCoordinator.displayLayoutDidChange(newEffectiveLayout)
+        _ = layoutModel.updateBaseLayout(newBaseLayout)
+    }
+
+    private static func preferredBaseLayout() -> NotchLayout? {
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else {
+            return nil
+        }
+
+        let fallbackIndex = NSScreen.main.flatMap { mainScreen in
+            screens.firstIndex(where: { $0 === mainScreen })
+        }
+        let screenInputs = screens.map { ScreenGeometryInput(screen: $0) }
+        guard
+            let selectedIndex = NotchScreenSelection.preferredIndex(
+                in: screenInputs,
+                fallbackIndex: fallbackIndex
+            ),
+            screenInputs.indices.contains(selectedIndex)
+        else {
+            return nil
+        }
+
+        return NotchGeometry.layout(for: screenInputs[selectedIndex])
     }
 
     private func configurePanel() {
@@ -378,7 +418,7 @@ public final class NotchPanelController: NSObject {
         return NotchPointerPolicy.presentation(
             current: transitionCoordinator.desiredPresentation,
             pointer: pointer,
-            layout: layoutState.currentLayout
+            layout: layoutModel.currentLayout
         ) != .compact
     }
 
@@ -390,7 +430,7 @@ public final class NotchPanelController: NSObject {
 
         interactionCoordinator.pointerMoved(
             to: pointer,
-            layout: layoutState.currentLayout,
+            layout: layoutModel.currentLayout,
             currentPresentation: transitionCoordinator.desiredPresentation
         )
     }
@@ -404,6 +444,6 @@ public final class NotchPanelController: NSObject {
         }
 
         interactionCoordinator.cancelPendingActivationForInteractiveTransition()
-        transitionCoordinator.accept(.pointerExitCollapse, layout: layoutState.currentLayout)
+        transitionCoordinator.accept(.pointerExitCollapse, layout: layoutModel.currentLayout)
     }
 }
