@@ -128,13 +128,12 @@ public enum NotchHostingViewFactory {
 
     static func make(
         model: NotchPanelModel,
-        layout: NotchLayout
+        layoutModel: NotchPanelLayoutModel
     ) -> NSHostingView<NotchRootView> {
         make(
             rootView: NotchRootView(
                 model: model,
-                compactBackgroundOpacity: layout.compactBackgroundOpacity,
-                expandedContentTopInset: layout.expandedContentTopInset
+                layoutModel: layoutModel
             )
         )
     }
