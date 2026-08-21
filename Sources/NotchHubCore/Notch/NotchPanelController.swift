@@ -347,7 +347,7 @@ public final class NotchPanelController: NSObject {
         }
 
         trackingView.onNotchPointerEvent = { [weak self] pointer in
-            self?.updateInteraction(for: pointer)
+            self?.pointerMonitor.handleTrackedPointer(pointer)
         }
     }
 
@@ -360,9 +360,26 @@ public final class NotchPanelController: NSObject {
     }
 
     private func configurePointerMonitoring() {
-        pointerMonitor.start { [weak self] pointer in
-            self?.updateInteraction(for: pointer)
+        pointerMonitor.start(
+            shouldRetainGlobalMonitoring: { [weak self] pointer in
+                self?.shouldRetainGlobalPointerMonitoring(for: pointer) ?? false
+            },
+            handler: { [weak self] pointer in
+                self?.updateInteraction(for: pointer)
+            }
+        )
+    }
+
+    private func shouldRetainGlobalPointerMonitoring(for pointer: CGPoint) -> Bool {
+        if transitionCoordinator.isInteractiveTransitionActive {
+            return NotchPointerPolicy.containsInteractivePointer(pointer, in: panel.frame)
         }
+
+        return NotchPointerPolicy.presentation(
+            current: transitionCoordinator.desiredPresentation,
+            pointer: pointer,
+            layout: layoutState.currentLayout
+        ) != .compact
     }
 
     private func updateInteraction(for pointer: CGPoint) {
