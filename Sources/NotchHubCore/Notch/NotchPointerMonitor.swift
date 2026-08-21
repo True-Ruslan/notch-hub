@@ -29,7 +29,6 @@ final class NotchPointerMonitor {
 
     init(
         addLocal: @escaping Registration,
-        addGlobal _: @escaping Registration,
         remove: @escaping Removal
     ) {
         self.addLocal = addLocal
