@@ -3,7 +3,7 @@ import Testing
 
 struct M66HoverPeekSizeBudgetPolicyTests {
     @Test
-    func hoverPeekBudgetRemainsHistoricalWhileLatestPhysicalRepairBudgetIsActive() throws {
+    func hoverPeekBudgetRemainsHistoricalWhileM1BudgetIsActive() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -51,6 +51,11 @@ struct M66HoverPeekSizeBudgetPolicyTests {
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
+                "--feature-budget performance/m1-active-display-migration-size-budget.json"
+            )
+        )
+        #expect(
+            !workflow.contains(
                 "--feature-budget performance/m6-6-hardware-notch-screen-selection-size-budget.json"
             )
         )
