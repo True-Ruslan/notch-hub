@@ -304,6 +304,49 @@ struct NotchInteractionCoordinatorTests {
     }
 
     @Test
+    func displayMigrationCancelsPendingPeekCollapseAndStaleCallback() {
+        let fixture = makeFixture()
+
+        fixture.coordinator.pointerMoved(
+            to: outside,
+            layout: layout,
+            currentPresentation: .peek
+        )
+        #expect(fixture.scheduler.pendingCount == 1)
+
+        fixture.coordinator.resetPointerStateForDisplayMigration()
+        fixture.scheduler.advance(by: 1, invokeCancelled: true)
+
+        #expect(fixture.intents.isEmpty)
+        #expect(fixture.scheduler.pendingCount == 0)
+    }
+
+    @Test
+    func displayMigrationInvalidatesIssuedHoverRequestUntilNewPointerEvent() {
+        let fixture = makeFixture()
+
+        fixture.coordinator.pointerMoved(
+            to: insideCompact,
+            layout: layout,
+            currentPresentation: .compact
+        )
+        fixture.scheduler.advance(by: 0.12)
+        let request = fixture.requests[0]
+
+        fixture.coordinator.resetPointerStateForDisplayMigration()
+
+        let accepted = fixture.coordinator.resolveHoverPeekRequest(
+            request,
+            mediaAvailable: true,
+            layout: layout,
+            currentPresentation: .compact
+        )
+
+        #expect(!accepted)
+        #expect(fixture.intents.isEmpty)
+    }
+
+    @Test
     func expandedPointerExitEmitsNonHapticCollapseIntent() {
         let fixture = makeFixture()
 
