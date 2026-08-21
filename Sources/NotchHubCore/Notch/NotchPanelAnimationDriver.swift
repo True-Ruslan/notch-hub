@@ -70,6 +70,27 @@ func applyInteractiveNotchPanelPresentation(
 }
 
 @MainActor
+func applySettledNotchPanelPresentation(
+    panel: NSPanel,
+    chromeView: NSView,
+    frame: CGRect,
+    cornerRadius: CGFloat
+) {
+    chromeView.wantsLayer = true
+    if let layer = chromeView.layer {
+        layer.masksToBounds = true
+        layer.cornerCurve = .continuous
+        layer.removeAnimation(forKey: notchCornerAnimationKey)
+        setNotchCornerRadius(cornerRadius, on: layer)
+    }
+
+    NSAnimationContext.runAnimationGroup { context in
+        context.duration = 0
+        panel.animator().setFrame(frame, display: true)
+    }
+}
+
+@MainActor
 func cancelNotchPanelAnimation(chromeView: NSView) {
     freezeVisibleCornerRadius(chromeView: chromeView)
 }
