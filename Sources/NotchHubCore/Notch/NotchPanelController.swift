@@ -121,7 +121,7 @@ public final class NotchPanelController: NSObject {
                 )
             },
             applySettledPresentation: { frame, cornerRadius in
-                applyInteractiveNotchPanelPresentation(
+                applySettledNotchPanelPresentation(
                     panel: panel,
                     chromeView: hostingView,
                     frame: frame,
