@@ -3,9 +3,19 @@ import SwiftUI
 /// A small animated equalizer for Compact's right wing, replacing a static
 /// play/pause glyph. Purely a projection of the already-published
 /// `playbackState` — it observes no audio signal and starts no new media
-/// transport. Animation is driven by SwiftUI's declarative, Core-Animation-
-/// backed `repeatForever`, not by any timer primitive; see
+/// transport. Animation is driven by SwiftUI's `PhaseAnimator`, a
+/// declarative, Core-Animation-backed looping mechanism — not by any timer
+/// primitive; see
 /// docs/superpowers/specs/2026-08-22-compact-live-equalizer-design.md.
+///
+/// `PhaseAnimator` (not the older `.repeatForever` modifier) is used
+/// specifically because a repeating implicit animation can be silently
+/// frozen when an unrelated ancestor view commits its own explicit
+/// `withAnimation` transaction (observed here: the horizontal swipe gesture
+/// used for next/previous freezing the bars until the panel was
+/// expanded and collapsed again, which force-recreated the view).
+/// `PhaseAnimator` owns its own animation timeline and is unaffected by
+/// ancestor transactions.
 struct MediaCompactEqualizerView: View {
     let isPlaying: Bool
 
@@ -28,29 +38,34 @@ struct MediaCompactEqualizerView: View {
     }
 }
 
+private enum EqualizerBarPhase: CaseIterable, Equatable {
+    case low
+    case high
+}
+
 private struct EqualizerBar: View {
     let duration: Double
     let minHeight: CGFloat
     let maxHeight: CGFloat
     let isPlaying: Bool
 
-    @State private var isGrown = false
-
     var body: some View {
-        Capsule()
-            .fill(.white.opacity(isPlaying ? 0.9 : 0.5))
-            .frame(width: 3, height: isGrown ? maxHeight : minHeight)
-            .animation(
-                isPlaying
-                    ? .easeInOut(duration: duration).repeatForever(autoreverses: true)
-                    : .easeInOut(duration: 0.2),
-                value: isGrown
-            )
-            .onAppear {
-                isGrown = isPlaying
+        Group {
+            if isPlaying {
+                PhaseAnimator(EqualizerBarPhase.allCases) { phase in
+                    Capsule()
+                        .fill(.white.opacity(0.9))
+                        .frame(width: 3, height: phase == .high ? maxHeight : minHeight)
+                } animation: { _ in
+                    .easeInOut(duration: duration)
+                }
+            } else {
+                Capsule()
+                    .fill(.white.opacity(0.5))
+                    .frame(width: 3, height: minHeight)
             }
-            .onChange(of: isPlaying) { _, playing in
-                isGrown = playing
-            }
+        }
+        .frame(width: 3, height: maxHeight, alignment: .center)
+        .animation(.easeInOut(duration: 0.2), value: isPlaying)
     }
 }

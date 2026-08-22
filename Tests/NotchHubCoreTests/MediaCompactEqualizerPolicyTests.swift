@@ -10,8 +10,8 @@ struct MediaCompactEqualizerPolicyTests {
 
         #expect(source.contains("struct MediaCompactEqualizerView"))
         #expect(source.contains("let isPlaying: Bool"))
-        #expect(source.contains(".repeatForever(autoreverses: true)"))
-        #expect(source.contains("isPlaying"))
+        #expect(source.contains("PhaseAnimator("))
+        #expect(source.contains("if isPlaying {"))
 
         #expect(!source.contains("Timer.scheduledTimer"))
         #expect(!source.contains("Timer.publish"))
