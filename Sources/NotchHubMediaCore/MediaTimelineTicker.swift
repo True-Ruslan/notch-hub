@@ -2,6 +2,7 @@ import Foundation
 
 /// A handle to a scheduled repeating tick, returned by an injected scheduler
 /// so tests can control ticking without a real `Timer`/run loop.
+@MainActor
 public protocol MediaTimelineTickerHandle {
     func invalidate()
 }
