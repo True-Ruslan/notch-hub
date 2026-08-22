@@ -38,20 +38,36 @@ struct MediaPeekSecurityPerformancePolicyTests {
     }
 
     @Test
-    func peekNeverStartsPersistentShippingRuntime() throws {
+    func mediaRuntimeStartsOnceAtLaunchAndStopsOnlyAtQuit() throws {
+        // M6.7 reverses the prior "zero-adapter compact" invariant: the
+        // shipping runtime now runs for the app's whole lifetime so Compact
+        // reflects live state, per
+        // docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md.
         let appSource = try sourceText("Sources/NotchHubApp/AppDelegate.swift")
         let probeSource = try sourceText("Sources/NotchHubMediaCore/ShippingMediaPeekProbe.swift")
 
-        #expect(appSource.contains("case .compact, .peek:"))
-        #expect(appSource.contains("mediaRuntime?.stop()"))
-        #expect(appSource.contains("case .expanded:"))
+        #expect(appSource.contains("let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)"))
         #expect(appSource.contains("mediaRuntime.start()"))
+        #expect(appSource.contains("mediaRuntime?.stop()"))
+        #expect(!appSource.contains("func updateMediaRuntime"))
         #expect(probeSource.contains("transport.start()"))
         #expect(probeSource.contains("activeTransport.eventHandler = nil"))
         #expect(probeSource.contains("activeTransport.stopNonBlocking()"))
         #expect(!probeSource.contains("activeTransport.stop()"))
         #expect(!probeSource.contains("repeat"))
         #expect(!probeSource.contains("while true"))
+    }
+
+    @Test
+    func timelineTickerIsTheOnlyReviewedBoundedTimerAndNeverArmsInCompact() throws {
+        let tickerSource = try sourceText("Sources/NotchHubMediaCore/MediaTimelineTicker.swift")
+        let rootViewSource = try sourceText("Sources/NotchHubApp/MediaNotchRootView.swift")
+
+        #expect(tickerSource.contains("Timer.scheduledTimer(withTimeInterval:"))
+        #expect(tickerSource.contains("let shouldRun = isArmed && isPlaying && anchorCapturedAt != nil"))
+        #expect(tickerSource.contains("invalidate()"))
+        #expect(!rootViewSource.contains("Timer("))
+        #expect(!rootViewSource.contains("Timer.scheduledTimer"))
     }
 
     @Test

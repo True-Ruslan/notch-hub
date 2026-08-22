@@ -8,6 +8,7 @@ struct MediaNotchRootView: View {
     @ObservedObject private var panelModel: NotchPanelModel
     @ObservedObject private var layoutModel: NotchPanelLayoutModel
     @ObservedObject private var mediaModel: ShippingMediaPresentationModel
+    @ObservedObject private var timelineTicker: MediaTimelineTicker
     @ObservedObject private var mediaGestureVisualModel: MediaGestureVisualModel
     @State private var sourceApplicationIcon: NSImage?
     @State private var seekPreviewSeconds: Double?
@@ -34,11 +35,13 @@ struct MediaNotchRootView: View {
         onNext: @escaping () -> Void,
         onSeekBegan: @escaping () -> Bool,
         onSeekCommitted: @escaping (Double) -> Void,
-        onSeekCancelled: @escaping () -> Void
+        onSeekCancelled: @escaping () -> Void,
+        timelineTicker: MediaTimelineTicker
     ) {
         self.panelModel = panelModel
         self.layoutModel = layoutModel
         self.mediaModel = mediaModel
+        self.timelineTicker = timelineTicker
         self.mediaGestureVisualModel = mediaGestureVisualModel
         self.sourceApplicationIconResolver = sourceApplicationIconResolver
         self.onExplicitExpansion = onExplicitExpansion
@@ -223,7 +226,7 @@ struct MediaNotchRootView: View {
                     let duration = presentation.durationSeconds
                 {
                     seekProgress(
-                        position: position,
+                        position: timelineTicker.displayedPositionSeconds ?? position,
                         duration: duration,
                         canSeek: presentation.canSeek
                     )
@@ -271,7 +274,7 @@ struct MediaNotchRootView: View {
                 let duration = presentation.durationSeconds
             {
                 seekProgress(
-                    position: position,
+                    position: timelineTicker.displayedPositionSeconds ?? position,
                     duration: duration,
                     canSeek: presentation.canSeek
                 )

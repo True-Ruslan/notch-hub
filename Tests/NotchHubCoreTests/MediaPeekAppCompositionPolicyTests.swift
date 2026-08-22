@@ -58,8 +58,9 @@ struct MediaPeekAppCompositionPolicyTests {
         #expect(source.contains("mediaPeekSession?.handleHoverRequest(request)"))
         #expect(source.contains("mediaPeekSession.cancel()"))
         #expect(source.contains("mediaPeekSession.invalidate()"))
-        #expect(source.contains("case .compact, .peek:"))
-        #expect(source.contains("case .expanded:"))
+        #expect(source.contains("case .peek:"))
+        #expect(source.contains("mediaPeekSession.handleSettledPeek()"))
+        #expect(source.contains("case .compact, .expanded:"))
         #expect(composition.contains("ShippingMediaPeekProbe()"))
         #expect(composition.contains("UITestMediaPeekProbe(result: .noSession)"))
     }
