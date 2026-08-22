@@ -60,30 +60,17 @@ Earlier 26.6.1 and pre-fix measurements remain historical diagnostic evidence an
 
 P1 lifecycle is complete as an acceptance gate. It is not a release event; published version remains `v0.1.0`.
 
-## Next hardening slice — active-display / multi-monitor migration
+## M1 — active-display / multi-monitor migration
 
-Status: **NEXT / SPECIFICATION REQUIRED BEFORE SHIPPING IMPLEMENTATION**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
 
-The next preferred technical step is event-driven display-topology hardening now that P1 no longer blocks runtime work. The slice should remain narrowly scoped to correctly moving/settling NotchHub when the relevant display topology changes.
+Event-driven display-topology migration: observes `NSApplication.didChangeScreenParametersNotification`, resolves `NSScreen.screens` fresh on topology change while preserving hardware-notch-first selection and the accepted `NSScreen.main`/first-screen fallback, migrates Compact/Peek/Expanded through one shared `NotchPanelLayoutModel`, retargets in-flight programmatic and interactive transitions by generation, and resets the bounded pointer-escape monitor across migration. No private display APIs, repeating timers, display links, telemetry or new permissions were added.
 
-Required invariants before implementation:
+Automated candidate `dd945dc3ca009f8d9429ad044d50a01a2ea1bb62`; CI #1344 3/3 GREEN; full Swift suite 392 tests GREEN.
 
-1. hardware-notch display remains preferred whenever available;
-2. when the available hardware-notch screen changes or display topology changes, the panel migrates deterministically without polling;
-3. when no hardware-notch display is available, preserve the accepted `NSScreen.main` then first-screen fallback;
-4. migration must settle exact frame/corner geometry before publishing settled logical presentation;
-5. active hover/Peek/Expanded interaction must fail closed or reconcile deterministically across migration; stale transition completions must not move the new screen endpoint;
-6. no private display APIs, repeating timers, display links, telemetry or new permissions;
-7. multi-monitor physical acceptance on the target Mac is mandatory before merge.
+Physical acceptance on `Mac16,8 / macOS 26.6.2` with an external monitor connected — 11/11 PASS, covering connect/disconnect/reconfigure across Compact/Peek/Expanded, interruption of programmatic and interactive transitions, no-notch fallback, repeated migration cycles, post-migration pointer/hover scoping and no new permission prompts. Full checklist recorded in PR #56.
 
-Implementation order:
-
-1. write/approve the display-migration invariant/spec;
-2. add RED tests for display add/remove/topology change and stale transition behavior;
-3. implement the smallest event-driven observer/migration authority using public AppKit notifications/signals;
-4. run canonical CI and security/performance policy checks;
-5. physically validate on Mac16,8/macOS 26.6.x with an external monitor, including connect/disconnect while Compact, Peek and Expanded as applicable;
-6. only then merge; release remains a separate decision.
+PR #56 squash-merged as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed. Published release remains immutable `v0.1.0`.
 
 ## Repository governance
 
@@ -100,8 +87,7 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 
 ## Current priority
 
-1. Merge the P1 documentation/provenance sync after CI.
-2. Keep issue #42 visible for branch-protection restoration.
-3. Start the active-display/multi-monitor migration slice with a written spec and RED tests; no speculative resource optimization.
-4. Require target-Mac physical acceptance before any shipping display-migration merge.
-5. Keep the published Personal Release at immutable `v0.1.0` until an explicit release decision.
+1. Keep issue #42 visible for branch-protection restoration.
+2. M1 active-display/multi-monitor migration is accepted; select and specify the next bounded product-hardening slice or module (e.g. remaining fullscreen/Spaces/notchless hardening, or the next M2+ product module) rather than speculative resource optimization.
+3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
+4. Keep the published Personal Release at immutable `v0.1.0` until an explicit release decision.
