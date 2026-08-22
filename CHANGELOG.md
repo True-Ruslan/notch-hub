@@ -82,6 +82,33 @@ Physical acceptance on exact `Mac16,8 / macOS 26.6.2`, built-in hardware-notch d
 
 PR #56 squash-merged as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed completed. Design/invariants: `docs/superpowers/specs/2026-08-21-active-display-multi-monitor-migration-design.md`. Published release remains `v0.1.0`.
 
+### M6.7 — live media timeline and live Compact display
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+
+PR #58 deliberately reverses two prior accepted invariants, both explicitly decided by the product owner and recorded before implementation in `docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md`:
+
+1. **Always-on shipping media runtime.** `ShippingMediaRuntime.start()` now runs once at launch and `stop()` once at Quit, instead of being scoped to settled `.expanded`. Compact's existing artwork/play-pause icon becomes live for free — already reactively bound to the presentation model — reflecting a track change, pause or play/pause toggle performed outside NotchHub without needing to re-expand.
+2. **One narrowly-scoped, reviewed, bounded-lifecycle timer.** `MediaTimelineTicker` extrapolates the displayed playback position between authoritative system events at ~300ms, armed only while the settled panel presentation is Peek or Expanded and playback is active, torn down on collapse, pause, session loss or quit; never runs in Compact or Idle. `scripts/performance_policy.py`'s runtime audit previously had no exception mechanism at all for its blanket Timer/polling scan; this PR adds a fail-closed, schema-validated reviewed-exception manifest (`performance/reviewed-runtime-timers.json`) scoped to exactly this one `(file, rule)` pair, covered by its own unit tests, rather than working around the audit with a different API.
+
+A real pre-existing hazard was found and fixed along the way: `MediaPeekSession.handleSettledPeek()` started its bounded one-shot probe unconditionally, which was safe before M6.7 (Compact/Peek never had a live authoritative presentation to protect) but could clobber the runtime's already-good data with the probe's `.noSession` result once the runtime became always-active — reproduced by a hover-then-click sequence erasing title/artist/artwork moments before Expanded rendered. Fixed by skipping the probe entirely when a live presentation already exists.
+
+Automated verification: canonical CI (`macOS 26 compatibility`, `macOS UI regression`, `Build, test and package`) 3/3 GREEN on exact candidate `3cee40c9650d50254f25e633a3e0e5163124df07`; `MediaTimelineTickerTests` (fully clock/timer-injected, no real `Timer`/run loop) cover bounded arm/disarm conditions, extrapolation and duration clamping, re-anchoring without drift, and optimistic seek re-anchoring; `scripts/performance_policy.py`'s reviewed-exception mechanism has its own fail-closed unit tests; the active `performance/m6-7-live-media-timeline-and-compact-size-budget.json` size gate passed.
+
+Physical acceptance on exact `Mac16,8 / macOS 26.6.2` — **7/7 PASS**: live-ticking timeline in Peek and in Expanded while playing; exact freeze on pause with no drift and correct resume; Compact reflecting a track change/pause/play-pause toggle performed outside NotchHub without re-expanding; `ps` CPU sampling across 5 samples while settled Compact showed `0.0%` (ticker correctly torn down); post-Quit `pgrep -lf 'mediaremote-adapter\.pl'` empty under a normal quit; and a fresh P1-style Idle/Hover/Stability resource bundle, required because Idle no longer has a zero-adapter baseline —
+
+| Scenario | CPU median/max | RSS median/max (KiB) | Thread median/max |
+|---|---|---|---|
+| Idle | 0.0% / 2.4% | 73,648 / 73,776 | 4 / 5 |
+| Hover | 0.0% / 18.0% | 71,832 / 72,128 | 3 / 5 |
+| Stability | 0.0% / 0.0% | 64,160 / 71,648 | 3 / 7 |
+
+with Stability RSS `71,648 -> 59,904` KiB (delta `-11,744`, a decrease) and threads `3 -> 3` (delta `0`). All direct gates PASS against the previously accepted thresholds (Idle threadMax `<=6`; Hover CPU median `<=8.0%`, threadMax `<=9`; Stability RSS delta `<=+8192`, threadMax `<=9`, thread delta `<=+2`) despite the adapter now running continuously. This bundle supersedes the prior "zero-adapter compact" Idle baseline in `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`, which remains immutable historical evidence for the source it measured.
+
+Physical acceptance also confirmed Force Quit (Activity Monitor) leaves an orphaned `mediaremote-adapter.pl` process — expected for any app with a child process under SIGKILL, not a regression — and surfaced a separate, non-blocking follow-up: NotchHub has no user-discoverable normal-quit path today (no Dock icon, no Quit menu item, Cmd+Q is a no-op).
+
+PR #58 squash-merged as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Full evidence: `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`. Published release remains `v0.1.0`.
+
 ### M6.6 — PR #33 + corrective runtime work
 
 Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.

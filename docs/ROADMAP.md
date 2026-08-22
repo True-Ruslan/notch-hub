@@ -72,6 +72,16 @@ Physical acceptance on `Mac16,8 / macOS 26.6.2` with an external monitor connect
 
 PR #56 squash-merged as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed. Published release remains immutable `v0.1.0`.
 
+## M6.7 — live media timeline and live Compact display
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+
+Deliberately reverses two prior accepted invariants: the shipping media runtime now runs for the app's whole lifetime instead of only while settled Expanded, so Compact reflects live Now Playing state; and one narrowly-scoped, reviewed bounded-lifecycle `Timer` (`MediaTimelineTicker`) extrapolates a real-time-ticking progress position while settled Peek/Expanded and playing. `scripts/performance_policy.py`'s runtime audit gained a fail-closed, schema-validated reviewed-exception manifest for exactly this one timer. A real pre-existing hazard was also found and fixed: the one-shot peek probe could clobber an already-live authoritative presentation on hover.
+
+Physical acceptance on `Mac16,8 / macOS 26.6.2` — 7/7 PASS, including live-ticking timeline in Peek/Expanded, correct pause/resume freezing, live Compact reflecting external track/pause changes, verified `0.0%` CPU from the ticker while settled Compact, clean post-Quit teardown under a normal quit, and a fresh P1-style Idle/Hover/Stability resource bundle with all direct gates passing despite the adapter now running continuously. Full checklist and evidence: `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`.
+
+PR #58 squash-merged as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Published release remains immutable `v0.1.0`. Physical acceptance also surfaced a non-blocking follow-up: NotchHub has no user-discoverable normal-quit path (no Dock icon, no Quit menu item, Cmd+Q is a no-op) — Force Quit is the only option today and skips process cleanup.
+
 ## Repository governance
 
 Issue #42 remains open because `main` is intended to be protected but GitHub currently reports it unprotected. Restoring branch governance remains a repository-quality priority and should be completed when repository capabilities permit. Do not treat the current unprotected state as accepted architecture.
@@ -88,6 +98,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. M1 active-display/multi-monitor migration is accepted; select and specify the next bounded product-hardening slice or module (e.g. remaining fullscreen/Spaces/notchless hardening, or the next M2+ product module) rather than speculative resource optimization.
+2. M1 active-display/multi-monitor migration and M6.7 live media timeline/Compact display are both accepted; select and specify the next bounded product-hardening slice or module (e.g. remaining fullscreen/Spaces/notchless hardening, a discoverable normal-quit path, or the next M2+ product module) rather than speculative resource optimization.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
 4. Keep the published Personal Release at immutable `v0.1.0` until an explicit release decision.
