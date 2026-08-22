@@ -3,7 +3,7 @@ import Testing
 
 struct M66HoverPeekSizeBudgetPolicyTests {
     @Test
-    func hoverPeekBudgetRemainsHistoricalWhileM6_7BudgetIsActive() throws {
+    func hoverPeekBudgetRemainsHistoricalWhileM6_8BudgetIsActive() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -51,7 +51,7 @@ struct M66HoverPeekSizeBudgetPolicyTests {
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
-                "--feature-budget performance/m6-7-live-media-timeline-and-compact-size-budget.json"
+                "--feature-budget performance/m6-8-compact-live-equalizer-size-budget.json"
             )
         )
         #expect(
