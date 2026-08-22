@@ -4,13 +4,13 @@
     {
       "id": "NH-MEDIA-LIVE-003",
       "source": "docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md",
-      "status": "pending",
+      "status": "accepted",
       "coverage": [
         {"layer":"policy","test":"NotchHubCoreTests.MediaCompactEqualizerPolicyTests.equalizerAnimationIsDeclarativeAndArmedOnlyWhilePlaying"},
         {"layer":"policy","test":"NotchHubCoreTests.MediaCompactEqualizerPolicyTests.compactMediaContentUsesTheEqualizerInsteadOfAStaticGlyph"},
         {"layer":"physical","test":null}
       ],
-      "physicalOnlyReason": "Requires target-Mac verification that the equalizer visibly and smoothly animates out of phase while playing, settles to a static flat pose on pause, restarts correctly on resume, and introduces no jank to Compact's existing interaction responsiveness, per docs/superpowers/specs/2026-08-22-compact-live-equalizer-design.md."
+      "physicalOnlyReason": "Physically accepted on Mac16,8/macOS 26.6.2 on exact source a6691e4d1ba89a2d10bb3bc86188f05c8475b653: bars animate smoothly out of phase while playing, settle flat on pause and restart on resume, 0.0% CPU sampled while settled Compact with media playing, no interaction jank. Found and fixed a real freeze-after-swipe bug by switching from .repeatForever to PhaseAnimator."
     },
     {
       "id": "NH-MEDIA-LIVE-001",

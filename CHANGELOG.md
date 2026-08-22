@@ -109,6 +109,18 @@ Physical acceptance also confirmed Force Quit (Activity Monitor) leaves an orpha
 
 PR #58 squash-merged as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Full evidence: `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`. Published release remains `v0.1.0`.
 
+### M6.8 — compact live equalizer
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+
+Competitive review of `TheBoredTeam/boring.notch` (open source, same `MediaRemoteAdapter`) and NotchNook found one concrete, low-risk UX improvement worth borrowing: both replace a static play/pause glyph in Compact with a small animated equalizer/spectrum that visibly pulses while something is playing. PR #60 adds `MediaCompactEqualizerView`, replacing `MediaNotchRootView.compactMediaContent`'s static SF Symbol with 3 bars driven by SwiftUI's `PhaseAnimator`, armed only while `playbackState == .playing`, settling to a flat static pose on pause. No timer primitive, no new `performance/reviewed-runtime-timers.json` entry needed — confirmed by `scripts/performance_policy.py audit Sources` staying green.
+
+Physical acceptance on exact `Mac16,8 / macOS 26.6.2` — all items PASS: bars visibly animate out of phase while playing; settle flat on pause and restart correctly on resume; `ps` CPU sampling across 5 samples while settled Compact with media playing showed `0.0%`; no jank introduced to existing hover-for-Peek/click-for-Expanded interaction; clean post-Quit process teardown under a normal quit.
+
+A real bug was found and fixed during acceptance: the initial implementation drove the bars with `.animation(...repeatForever...)`, which froze mid-animation after the horizontal next/previous swipe gesture — the swipe's own `withAnimation` transaction interrupted the bars' implicit repeating loop, a documented SwiftUI gotcha, only recovering after expand+collapse force-recreated the view. Fixed by switching to `PhaseAnimator`, which owns its own animation timeline and is not vulnerable to an ancestor's unrelated explicit animation transaction — the documented reason Apple introduced it as the modern replacement for perpetual `repeatForever` loops. Re-verified: repeated next/previous swipes no longer freeze the equalizer.
+
+PR #60 squash-merged as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Full evidence: `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`. Published release remains `v0.1.0`. Other competitive-review ideas surfaced but explicitly deferred: album-art color tinting, `matchedGeometryEffect` cross-state artwork morphing, marquee text for overflowing titles.
+
 ### M6.6 — PR #33 + corrective runtime work
 
 Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
