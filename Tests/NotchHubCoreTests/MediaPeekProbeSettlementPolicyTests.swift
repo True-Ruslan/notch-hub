@@ -33,6 +33,32 @@ struct MediaPeekProbeSettlementPolicyTests {
     }
 
     @Test
+    func boundedPeekProbeNeverOverwritesAnAlreadyLiveAuthoritativePresentation() throws {
+        // M6.7's always-on runtime means a live authoritative presentation
+        // can already exist by the time Peek settles. The bounded one-shot
+        // probe must not run (and therefore cannot clobber it with a stale
+        // .noSession result) when that is the case; it exists only to
+        // enrich a genuinely empty presentation. See
+        // docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md.
+        let sessionSource = try sourceText(
+            relativePath: "Sources/NotchHubApp/MediaPeekSession.swift"
+        )
+        let settledSection = try sourceSection(
+            sessionSource,
+            from: "func handleSettledPeek",
+            to: "func cancel()"
+        )
+
+        #expect(settledSection.contains("presentationModel.presentation == nil"))
+
+        let guardRange = try #require(
+            settledSection.range(of: "presentationModel.presentation == nil")
+        )
+        let acquireRange = try #require(settledSection.range(of: "probe.acquire"))
+        #expect(guardRange.lowerBound < acquireRange.lowerBound)
+    }
+
+    @Test
     func boundedPeekCancellationUsesNonblockingProcessTeardown() throws {
         let probeSource = try sourceText(
             relativePath: "Sources/NotchHubMediaCore/ShippingMediaPeekProbe.swift"

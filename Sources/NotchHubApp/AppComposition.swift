@@ -4,6 +4,7 @@ import NotchHubMediaCore
 struct AppComposition {
     let makeMediaRuntime: (ShippingMediaPresentationModel) -> any MediaRuntimeSession
     let makeMediaPeekProbe: () -> any MediaPeekProbing
+    let makeMediaTimelineTicker: () -> MediaTimelineTicker
 
     static func shipping() -> Self {
         Self(
@@ -12,15 +13,32 @@ struct AppComposition {
             },
             makeMediaPeekProbe: {
                 ShippingMediaPeekProbe()
+            },
+            makeMediaTimelineTicker: {
+                MediaTimelineTicker()
             }
         )
     }
 
     #if NOTCHHUB_UI_TESTING
         static func uiTesting(configuration: UITestConfiguration) -> Self {
+            // A real repeating Timer interferes with XCUITest's app
+            // quiescence synchronization, so every UI-testing fixture uses a
+            // ticker whose scheduler never actually fires. The ticker's real
+            // extrapolation/lifecycle logic is covered by
+            // MediaTimelineTickerTests; real on-device ticking behavior is a
+            // physical-acceptance concern, not a UI-automation one.
+            let makeNonFiringTicker = {
+                MediaTimelineTicker(makeHandle: { _ in UITestNoOpTickerHandle() })
+            }
+
             switch configuration.fixture {
             case .shippingSmoke:
-                return shipping()
+                return Self(
+                    makeMediaRuntime: shipping().makeMediaRuntime,
+                    makeMediaPeekProbe: shipping().makeMediaPeekProbe,
+                    makeMediaTimelineTicker: makeNonFiringTicker
+                )
 
             case .noMediaHover:
                 return Self(
@@ -29,7 +47,8 @@ struct AppComposition {
                     },
                     makeMediaPeekProbe: {
                         UITestMediaPeekProbe(result: .noSession)
-                    }
+                    },
+                    makeMediaTimelineTicker: makeNonFiringTicker
                 )
 
             case .mediaStandard:
@@ -42,7 +61,8 @@ struct AppComposition {
                     },
                     makeMediaPeekProbe: {
                         UITestMediaPeekProbe(result: .noSession)
-                    }
+                    },
+                    makeMediaTimelineTicker: makeNonFiringTicker
                 )
 
             case .mediaUnsupported:
@@ -55,7 +75,8 @@ struct AppComposition {
                     },
                     makeMediaPeekProbe: {
                         UITestMediaPeekProbe(result: .noSession)
-                    }
+                    },
+                    makeMediaTimelineTicker: makeNonFiringTicker
                 )
             }
         }

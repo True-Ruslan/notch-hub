@@ -69,7 +69,7 @@ struct MediaSeekAppCompositionPolicyTests {
     }
 
     @Test
-    func appWiresSeekWhilePersistentRuntimeRemainsExpandedOnly() throws {
+    func appWiresSeekAndOptimisticallyReanchorsTheAlwaysActiveRuntimeTimeline() throws {
         let appSource = try sourceText(
             relativePath: "Sources/NotchHubApp/AppDelegate.swift"
         )
@@ -81,13 +81,13 @@ struct MediaSeekAppCompositionPolicyTests {
         #expect(appSource.contains("mediaGestureSession?.beginSeek()"))
         #expect(appSource.contains("onSeekCommitted:"))
         #expect(appSource.contains("mediaGestureSession?.commitSeek(to:"))
+        #expect(appSource.contains("self?.mediaTimelineTicker.applyOptimisticSeek(to: positionSeconds)"))
         #expect(appSource.contains("onSeekCancelled:"))
         #expect(appSource.contains("mediaGestureSession?.cancelSeek()"))
-        #expect(appSource.contains("case .expanded:"))
         #expect(appSource.contains("composition.makeMediaRuntime(mediaPresentationModel)"))
         #expect(compositionSource.contains("static func shipping() -> Self"))
         #expect(compositionSource.contains("ShippingMediaRuntime(presentationModel: $0)"))
-        #expect(appSource.contains("case .compact, .peek:"))
+        #expect(appSource.contains("mediaRuntime.start()"))
         #expect(appSource.contains("mediaRuntime?.stop()"))
     }
 

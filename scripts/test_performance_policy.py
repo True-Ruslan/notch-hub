@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import math
 import pathlib
 import tempfile
@@ -14,6 +15,7 @@ from performance_policy import (
     compare_summary_to_budget,
     count_ps_thread_rows,
     find_runtime_policy_violations,
+    load_reviewed_timer_exceptions,
     main,
     parse_ps_sample,
     summarize_samples,
@@ -75,6 +77,114 @@ class RuntimePerformancePolicyTests(unittest.TestCase):
             (root / "A.swift").write_text("while true { }\n", encoding="utf-8")
             violations = find_runtime_policy_violations(root)
         self.assertEqual(sorted(violations), violations)
+
+    def test_missing_reviewed_exceptions_file_grants_no_exceptions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir)
+            self.assertEqual(frozenset(), load_reviewed_timer_exceptions(root / "absent.json"))
+
+    def test_reviewed_exception_suppresses_exactly_its_own_file_and_rule(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir) / "Sources"
+            root.mkdir()
+            (root / "Ticker.swift").write_text(
+                'Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in tick() }\n',
+                encoding="utf-8",
+            )
+            (root / "Other.swift").write_text("while true { }\n", encoding="utf-8")
+            exceptions_path = pathlib.Path(temp_dir) / "performance" / "reviewed-runtime-timers.json"
+            exceptions_path.parent.mkdir()
+            exceptions_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "entries": [
+                            {
+                                "file": "Ticker.swift",
+                                "rule": "scheduled Timer",
+                                "justification": "bounded timeline ticker",
+                                "boundedLifecycle": "armed only while Peek/Expanded and playing",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            violations = find_runtime_policy_violations(root, exceptions_path=exceptions_path)
+
+        self.assertEqual(["Other.swift:1: unbounded busy loop"], violations)
+
+    def test_reviewed_exception_does_not_suppress_a_different_file_or_rule(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = pathlib.Path(temp_dir) / "Sources"
+            root.mkdir()
+            (root / "Ticker.swift").write_text(
+                'Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in tick() }\n'
+                "while true { }\n",
+                encoding="utf-8",
+            )
+            exceptions_path = pathlib.Path(temp_dir) / "reviewed-runtime-timers.json"
+            exceptions_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "entries": [
+                            {
+                                "file": "Ticker.swift",
+                                "rule": "scheduled Timer",
+                                "justification": "bounded timeline ticker",
+                                "boundedLifecycle": "armed only while Peek/Expanded and playing",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            violations = find_runtime_policy_violations(root, exceptions_path=exceptions_path)
+
+        self.assertEqual(["Ticker.swift:2: unbounded busy loop"], violations)
+
+    def test_reviewed_exceptions_manifest_is_fail_closed_on_malformed_schema(self):
+        malformed_payloads = [
+            "not json",
+            json.dumps({"schemaVersion": 2, "entries": []}),
+            json.dumps({"schemaVersion": 1, "entries": []}),
+            json.dumps({"schemaVersion": 1, "entries": [{"file": "x.swift"}]}),
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "entries": [
+                        {
+                            "file": "x.swift",
+                            "rule": "not a real rule",
+                            "justification": "j",
+                            "boundedLifecycle": "b",
+                        }
+                    ],
+                }
+            ),
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "entries": [
+                        {
+                            "file": "x.swift",
+                            "rule": "scheduled Timer",
+                            "justification": "",
+                            "boundedLifecycle": "b",
+                        }
+                    ],
+                }
+            ),
+        ]
+        for payload in malformed_payloads:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                path = pathlib.Path(temp_dir) / "reviewed-runtime-timers.json"
+                path.write_text(payload, encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    load_reviewed_timer_exceptions(path)
 
     def test_audit_cli_returns_success_for_clean_sources_and_failure_for_violation(self):
         with tempfile.TemporaryDirectory() as temp_dir:

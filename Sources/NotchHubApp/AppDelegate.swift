@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AppComposition.shipping()
         #endif
     }()
+    private lazy var mediaTimelineTicker = composition.makeMediaTimelineTicker()
 
     #if NOTCHHUB_UI_TESTING
         private let uiTestHapticRecorder = UITestHapticRecorder()
@@ -29,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         let mediaPresentationModel = mediaPresentationModel
+        let mediaTimelineTicker = mediaTimelineTicker
         let mediaGestureVisualModel = mediaGestureVisualModel
         let sourceApplicationIconResolver = sourceApplicationIconResolver
 
@@ -85,12 +87,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onSeekBegan: { [weak mediaGestureSession] in
                     mediaGestureSession?.beginSeek() ?? false
                 },
-                onSeekCommitted: { [weak mediaGestureSession] positionSeconds in
+                onSeekCommitted: { [weak self, weak mediaGestureSession] positionSeconds in
+                    self?.mediaTimelineTicker.applyOptimisticSeek(to: positionSeconds)
                     mediaGestureSession?.commitSeek(to: positionSeconds)
                 },
                 onSeekCancelled: { [weak mediaGestureSession] in
                     mediaGestureSession?.cancelSeek()
-                }
+                },
+                timelineTicker: mediaTimelineTicker
             )
 
             #if NOTCHHUB_UI_TESTING
@@ -151,10 +155,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             mediaPeekSession?.handleHoverRequest(request)
         }
 
-        mediaPresentationModel.presentationDidChange = { [weak panelController] presentation in
+        mediaPresentationModel.presentationDidChange = { [weak self, weak panelController] presentation in
             panelController?.setCompactHorizontalExtension(
                 presentation == nil ? 0 : Self.mediaCompactWingWidth
             )
+            self?.mediaTimelineTicker.apply(presentation: presentation)
         }
 
         panelController.settledPresentationHandler = { [weak self, weak mediaPeekSession] presentation in
@@ -166,9 +171,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     mediaPeekSession.cancel()
                 }
             }
-            self?.updateMediaRuntime(for: presentation)
+            self?.mediaTimelineTicker.setArmed(presentation == .peek || presentation == .expanded)
         }
+
         panelController.show()
+
+        let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)
+        self.mediaRuntime = mediaRuntime
+        mediaRuntime.start()
     }
 
     func applicationDidResignActive(_: Notification) {
@@ -188,6 +198,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mediaGestureSession?.invalidate()
         mediaGestureSession = nil
 
+        mediaTimelineTicker.invalidate()
+
         mediaRuntime?.stop()
         mediaRuntime = nil
 
@@ -197,22 +209,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         false
-    }
-
-    private func updateMediaRuntime(for presentation: NotchPresentation) {
-        switch presentation {
-        case .expanded:
-            guard mediaRuntime == nil else {
-                return
-            }
-
-            let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)
-            self.mediaRuntime = mediaRuntime
-            mediaRuntime.start()
-
-        case .compact, .peek:
-            mediaRuntime?.stop()
-            mediaRuntime = nil
-        }
     }
 }

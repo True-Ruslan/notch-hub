@@ -6,7 +6,12 @@ REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
 class ShippingMediaIdleLifecycleTests(unittest.TestCase):
-    def test_shipping_media_runtime_is_scoped_to_settled_expanded_presentation(self):
+    def test_shipping_media_runtime_runs_for_the_apps_whole_lifetime(self):
+        # M6.7 reverses the prior "zero-adapter compact" invariant: the
+        # shipping runtime now starts once at launch and stops once at Quit,
+        # rather than starting/stopping on every Compact<->Expanded
+        # transition, so Compact reflects live state. See
+        # docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md.
         app_delegate = (
             REPOSITORY_ROOT / "Sources" / "NotchHubApp" / "AppDelegate.swift"
         ).read_text(encoding="utf-8")
@@ -26,22 +31,27 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
         )[1].split("func applicationDidResignActive", 1)[0]
         self.assertNotIn("ShippingMediaRuntime()", did_finish)
         self.assertNotIn("ShippingMediaRuntime(presentationModel:", did_finish)
-        self.assertNotIn("mediaRuntime.start()", did_finish)
+        self.assertIn("mediaRuntime.start()", did_finish)
+        self.assertIn(
+            "let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)",
+            did_finish,
+        )
+
+        will_terminate = app_delegate.split(
+            "func applicationWillTerminate", 1
+        )[1].split("func applicationShouldTerminateAfterLastWindowClosed", 1)[0]
+        self.assertIn("mediaRuntime?.stop()", will_terminate)
+        self.assertIn("mediaRuntime = nil", will_terminate)
+
+        self.assertNotIn("func updateMediaRuntime", app_delegate)
 
         required_app_fragments = (
             "private let mediaPresentationModel = ShippingMediaPresentationModel()",
+            "private lazy var mediaTimelineTicker = composition.makeMediaTimelineTicker()",
             "private let composition:",
             "AppComposition.shipping()",
             "panelController.settledPresentationHandler",
-            "updateMediaRuntime(for: presentation)",
-            "private func updateMediaRuntime(for presentation: NotchPresentation)",
-            "case .expanded:",
-            "guard mediaRuntime == nil else",
-            "let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)",
-            "mediaRuntime.start()",
-            "case .compact, .peek:",
-            "mediaRuntime?.stop()",
-            "mediaRuntime = nil",
+            "self?.mediaTimelineTicker.setArmed(presentation == .peek || presentation == .expanded)",
         )
         for fragment in required_app_fragments:
             with self.subTest(fragment=fragment):
@@ -52,13 +62,6 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
             "ShippingMediaRuntime(presentationModel: $0)",
             app_composition,
         )
-
-        update_runtime = app_delegate.split(
-            "private func updateMediaRuntime(for presentation: NotchPresentation)", 1
-        )[1]
-        compact_peek_branch = update_runtime.split("case .compact, .peek:", 1)[1]
-        self.assertNotIn("ShippingMediaRuntime(", compact_peek_branch)
-        self.assertNotIn("mediaRuntime.start()", compact_peek_branch)
 
         self.assertIn(
             "public var settledPresentationHandler:",

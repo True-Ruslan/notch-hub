@@ -10,6 +10,31 @@
       "id": "NH-HOVER-001",
       "supersededBy": "NH-MEDIA-PEEK-001",
       "decisionSource": "docs/superpowers/specs/2026-08-12-hover-peek-media-interaction-design.md"
+    },
+    {
+      "id": "NH-MEDIA-SHIP-001",
+      "supersededBy": "NH-MEDIA-LIVE-001",
+      "decisionSource": "docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md"
+    },
+    {
+      "id": "NH-MEDIA-SHIP-006",
+      "supersededBy": "NH-MEDIA-LIVE-001",
+      "decisionSource": "docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md"
+    },
+    {
+      "id": "NH-MEDIA-UI-001",
+      "supersededBy": "NH-MEDIA-LIVE-001",
+      "decisionSource": "docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md"
+    },
+    {
+      "id": "NH-MEDIA-UI-008",
+      "supersededBy": "NH-MEDIA-LIVE-001",
+      "decisionSource": "docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md"
+    },
+    {
+      "id": "NH-MEDIA-UI-006",
+      "supersededBy": "NH-MEDIA-LIVE-002",
+      "decisionSource": "docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md"
     }
   ]
 }

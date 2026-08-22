@@ -38,7 +38,8 @@ final class MediaPeekSession {
         guard
             !isInvalidated,
             let request = activeRequest,
-            probingRequest != request
+            probingRequest != request,
+            presentationModel.presentation == nil
         else {
             return
         }
