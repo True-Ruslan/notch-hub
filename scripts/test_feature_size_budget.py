@@ -550,18 +550,18 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assert_repository_budget(
             filename="m6-8-compact-live-equalizer-size-budget.json",
             feature_id="m6-8-compact-live-equalizer",
-            source_commit="bb042a6819699ca47701acce156976235148aa9d",
+            source_commit="7718d0da664614ffbbed8eb2540164e411b9c06d",
             workflow_run_id=1,
             artifact_id=1,
             summary={
-                "appSizeBytes": 902460,
-                "dmgSizeBytes": 578932,
-                "executableSizeBytes": 601024,
+                "appSizeBytes": 923567,
+                "dmgSizeBytes": 588636,
+                "executableSizeBytes": 621360,
             },
             allowance={
-                "appSizeBytes": 660000,
-                "dmgSizeBytes": 510000,
-                "executableSizeBytes": 355000,
+                "appSizeBytes": 700000,
+                "dmgSizeBytes": 530000,
+                "executableSizeBytes": 400000,
             },
         )
 

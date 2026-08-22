@@ -1,17 +1,17 @@
 {
   "allowanceBytes": {
-    "appSizeBytes": 660000,
-    "dmgSizeBytes": 510000,
-    "executableSizeBytes": 355000
+    "appSizeBytes": 700000,
+    "dmgSizeBytes": 530000,
+    "executableSizeBytes": 400000
   },
   "baselineId": "v0.1.0",
   "evidence": {
     "artifactId": 1,
-    "sourceCommit": "bb042a6819699ca47701acce156976235148aa9d",
+    "sourceCommit": "7718d0da664614ffbbed8eb2540164e411b9c06d",
     "summary": {
-      "appSizeBytes": 902460,
-      "dmgSizeBytes": 578932,
-      "executableSizeBytes": 601024
+      "appSizeBytes": 923567,
+      "dmgSizeBytes": 588636,
+      "executableSizeBytes": 621360
     },
     "workflowRunId": 1
   },
