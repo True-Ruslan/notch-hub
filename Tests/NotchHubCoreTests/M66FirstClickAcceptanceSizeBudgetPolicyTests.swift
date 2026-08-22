@@ -109,7 +109,7 @@ struct M66FirstClickAcceptanceSizeBudgetPolicyTests {
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
-                "--feature-budget performance/m6-7-live-media-timeline-and-compact-size-budget.json"
+                "--feature-budget performance/m6-8-compact-live-equalizer-size-budget.json"
             )
         )
         #expect(

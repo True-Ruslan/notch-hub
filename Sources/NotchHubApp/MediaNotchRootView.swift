@@ -174,14 +174,7 @@ struct MediaNotchRootView: View {
 
             Color.clear.frame(width: hardwareNotchWidth)
 
-            Image(
-                systemName: presentation.playbackState == .playing
-                    ? "waveform"
-                    : "pause.fill"
-            )
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.white.opacity(presentation.playbackState == .playing ? 0.9 : 0.6))
-            .frame(width: 36, height: 32)
+            MediaCompactEqualizerView(isPlaying: presentation.playbackState == .playing)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
