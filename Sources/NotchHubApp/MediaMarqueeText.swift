@@ -9,8 +9,8 @@ import SwiftUI
 /// Overflow/timing math lives in the pure, unit-tested
 /// `MediaMarqueeCalculator`. The scroll animation itself is driven by
 /// SwiftUI's `PhaseAnimator`, the same self-contained, ancestor-transaction-immune
-/// mechanism `MediaCompactEqualizerView` uses, rather than a `Timer` or
-/// `TimelineView`.
+/// mechanism `MediaCompactEqualizerView` uses, rather than a repeating-timer
+/// or periodic-timeline-driven primitive.
 struct MediaMarqueeText: View {
     let text: String
     let font: Font
