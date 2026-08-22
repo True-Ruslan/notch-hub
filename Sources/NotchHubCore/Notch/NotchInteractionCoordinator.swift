@@ -173,6 +173,16 @@ final class NotchInteractionCoordinator {
         invalidateHoverActivation()
     }
 
+    func resetPointerStateForDisplayMigration() {
+        guard !isInvalidated else {
+            return
+        }
+
+        invalidateHoverActivation()
+        cancelPendingCollapse()
+        latestPointer = nil
+    }
+
     func invalidate() {
         guard !isInvalidated else {
             return

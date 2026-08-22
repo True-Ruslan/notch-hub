@@ -3,12 +3,12 @@ import Testing
 
 struct M66FirstClickAcceptanceSizeBudgetPolicyTests {
     @Test
-    func firstClickBudgetIsTightProvenancedAndActiveInCI() throws {
+    func firstClickAndHardwareBudgetsRemainTightProvenancedHistoricalEvidence() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let currentBudgetURL = repositoryRoot.appendingPathComponent(
+        let hardwareBudgetURL = repositoryRoot.appendingPathComponent(
             "performance/m6-6-hardware-notch-screen-selection-size-budget.json"
         )
         let budgetURL = repositoryRoot.appendingPathComponent(
@@ -22,16 +22,16 @@ struct M66FirstClickAcceptanceSizeBudgetPolicyTests {
         )
 
         let budgetExists = FileManager.default.fileExists(atPath: budgetURL.path)
-        let currentBudgetExists = FileManager.default.fileExists(atPath: currentBudgetURL.path)
+        let hardwareBudgetExists = FileManager.default.fileExists(atPath: hardwareBudgetURL.path)
         #expect(budgetExists)
-        #expect(currentBudgetExists)
-        guard budgetExists, currentBudgetExists else {
+        #expect(hardwareBudgetExists)
+        guard budgetExists, hardwareBudgetExists else {
             return
         }
 
-        let currentBudget = try JSONDecoder().decode(
+        let hardwareBudget = try JSONDecoder().decode(
             FeatureBudget.self,
-            from: Data(contentsOf: currentBudgetURL)
+            from: Data(contentsOf: hardwareBudgetURL)
         )
         let budget = try JSONDecoder().decode(
             FeatureBudget.self,
@@ -73,42 +73,47 @@ struct M66FirstClickAcceptanceSizeBudgetPolicyTests {
         #expect(budget.allowanceBytes.dmgSizeBytes.isMultiple(of: 4_096))
         #expect(budget.allowanceBytes.executableSizeBytes.isMultiple(of: 4_096))
 
-        #expect(currentBudget.schemaVersion == 1)
-        #expect(currentBudget.featureId == "m6.6-hardware-notch-screen-selection")
-        #expect(currentBudget.baselineId == "v0.1.0")
+        #expect(hardwareBudget.schemaVersion == 1)
+        #expect(hardwareBudget.featureId == "m6.6-hardware-notch-screen-selection")
+        #expect(hardwareBudget.baselineId == "v0.1.0")
         #expect(
-            currentBudget.evidence.sourceCommit
+            hardwareBudget.evidence.sourceCommit
                 == "46f069e57997eab060c79c3d9e279da944d6e263"
         )
-        #expect(currentBudget.evidence.workflowRunId == 32_226_544_212)
-        #expect(currentBudget.evidence.artifactId == 9_355_827_331)
+        #expect(hardwareBudget.evidence.workflowRunId == 32_226_544_212)
+        #expect(hardwareBudget.evidence.artifactId == 9_355_827_331)
         #expect(
-            currentBudget.evidence.summary
+            hardwareBudget.evidence.summary
                 == SizeSummary(
                     appSizeBytes: 882_911,
                     dmgSizeBytes: 561_421,
                     executableSizeBytes: 580_704
                 )
         )
-        #expect(currentBudget.allowanceBytes.appSizeBytes == budget.allowanceBytes.appSizeBytes)
+        #expect(hardwareBudget.allowanceBytes.appSizeBytes == budget.allowanceBytes.appSizeBytes)
         #expect(
-            currentBudget.allowanceBytes.executableSizeBytes
+            hardwareBudget.allowanceBytes.executableSizeBytes
                 == budget.allowanceBytes.executableSizeBytes
         )
         #expect(
-            currentBudget.allowanceBytes.dmgSizeBytes
+            hardwareBudget.allowanceBytes.dmgSizeBytes
                 == budget.allowanceBytes.dmgSizeBytes + 4_096
         )
-        #expect(currentBudget.allowanceBytes.appSizeBytes == 614_400)
-        #expect(currentBudget.allowanceBytes.dmgSizeBytes == 475_136)
-        #expect(currentBudget.allowanceBytes.executableSizeBytes == 315_392)
-        #expect(currentBudget.allowanceBytes.appSizeBytes.isMultiple(of: 4_096))
-        #expect(currentBudget.allowanceBytes.dmgSizeBytes.isMultiple(of: 4_096))
-        #expect(currentBudget.allowanceBytes.executableSizeBytes.isMultiple(of: 4_096))
+        #expect(hardwareBudget.allowanceBytes.appSizeBytes == 614_400)
+        #expect(hardwareBudget.allowanceBytes.dmgSizeBytes == 475_136)
+        #expect(hardwareBudget.allowanceBytes.executableSizeBytes == 315_392)
+        #expect(hardwareBudget.allowanceBytes.appSizeBytes.isMultiple(of: 4_096))
+        #expect(hardwareBudget.allowanceBytes.dmgSizeBytes.isMultiple(of: 4_096))
+        #expect(hardwareBudget.allowanceBytes.executableSizeBytes.isMultiple(of: 4_096))
 
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
+                "--feature-budget performance/m1-active-display-migration-size-budget.json"
+            )
+        )
+        #expect(
+            !workflow.contains(
                 "--feature-budget performance/m6-6-hardware-notch-screen-selection-size-budget.json"
             )
         )

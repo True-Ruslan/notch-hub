@@ -58,6 +58,33 @@ struct NotchPanelAnimationDriverTests {
     }
 
     @Test
+    func settledPresentationInterruptsPriorAnimationAndAppliesExactEndpointSynchronously() {
+        let fixture = makeFixture()
+        let oldTarget = CGRect(x: 240, y: 650, width: 520, height: 250)
+        let migratedTarget = CGRect(x: 900, y: 700, width: 180, height: 32)
+
+        animateNotchPanel(
+            panel: fixture.panel,
+            chromeView: fixture.chromeView,
+            frame: oldTarget,
+            cornerRadius: 22,
+            duration: 0.20,
+            completion: {}
+        )
+
+        applySettledNotchPanelPresentation(
+            panel: fixture.panel,
+            chromeView: fixture.chromeView,
+            frame: migratedTarget,
+            cornerRadius: 12
+        )
+
+        #expect(fixture.panel.frame == migratedTarget)
+        #expect(fixture.chromeView.layer?.cornerRadius == 12)
+        #expect(fixture.chromeView.layer?.animation(forKey: notchCornerAnimationKey) == nil)
+    }
+
+    @Test
     func thirtyTwoImmediateCyclesPreserveAppKitChromeAndExactFrames() {
         let fixture = makeFixture()
         let compact = CGRect(x: 410, y: 868, width: 180, height: 32)

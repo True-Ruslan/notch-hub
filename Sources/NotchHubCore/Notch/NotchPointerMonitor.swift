@@ -76,6 +76,14 @@ final class NotchPointerMonitor {
         disarmGlobalEscapeMonitorIfPointerExited(pointer)
     }
 
+    func resetInteractionEscapeMonitoring() {
+        guard isStarted else {
+            return
+        }
+
+        disarmGlobalEscapeMonitor()
+    }
+
     func invalidate() {
         guard isStarted else {
             return

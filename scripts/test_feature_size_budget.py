@@ -504,7 +504,26 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_first_click_physical_acceptance_budget_over_immutable_baseline(self):
+    def test_repository_m1_active_display_migration_budget_is_provenanced_tight_and_self_validating(self):
+        self.assert_repository_budget(
+            filename="m1-active-display-migration-size-budget.json",
+            feature_id="m1-active-display-migration",
+            source_commit="7b0d686acb9c45521090b0963e992dd817e4bc95",
+            workflow_run_id=32514576639,
+            artifact_id=9458436704,
+            summary={
+                "appSizeBytes": 901551,
+                "dmgSizeBytes": 570958,
+                "executableSizeBytes": 599344,
+            },
+            allowance={
+                "appSizeBytes": 634880,
+                "dmgSizeBytes": 483328,
+                "executableSizeBytes": 335872,
+            },
+        )
+
+    def test_ci_uses_active_display_migration_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -512,10 +531,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-6-hardware-notch-screen-selection-size-budget.json",
+            "--feature-budget performance/m1-active-display-migration-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-6-hardware-notch-screen-selection-size-budget.json",
             "m6-6-physical-acceptance-20260816-first-click-size-budget.json",
             "m6-6-physical-acceptance-20260815-repair-size-budget.json",
             "m6-6-regression-foundation-integration-size-budget.json",

@@ -15,7 +15,11 @@ struct NotchHostingViewFactoryTests {
     @Test
     func hostingViewDoesNotOwnWindowSizing() {
         let model = NotchPanelModel()
-        let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
+        let layoutModel = NotchPanelLayoutModel(baseLayout: layout)
+        let hostingView = NotchHostingViewFactory.make(
+            model: model,
+            layoutModel: layoutModel
+        )
 
         #expect(hostingView.sizingOptions == [])
     }
@@ -23,7 +27,11 @@ struct NotchHostingViewFactoryTests {
     @Test
     func hostingViewTracksPanelBoundsInBothDimensions() {
         let model = NotchPanelModel()
-        let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
+        let layoutModel = NotchPanelLayoutModel(baseLayout: layout)
+        let hostingView = NotchHostingViewFactory.make(
+            model: model,
+            layoutModel: layoutModel
+        )
 
         #expect(hostingView.autoresizingMask.contains(.width))
         #expect(hostingView.autoresizingMask.contains(.height))
@@ -32,7 +40,11 @@ struct NotchHostingViewFactoryTests {
     @Test
     func hostingViewStartsWithStableCompactAppKitChrome() {
         let model = NotchPanelModel()
-        let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
+        let layoutModel = NotchPanelLayoutModel(baseLayout: layout)
+        let hostingView = NotchHostingViewFactory.make(
+            model: model,
+            layoutModel: layoutModel
+        )
 
         #expect(hostingView.wantsLayer)
         #expect(hostingView.layer?.masksToBounds == true)
@@ -58,7 +70,11 @@ struct NotchHostingViewFactoryTests {
     @Test
     func hostingViewAcceptsFirstMouseForNonactivatingPanelInteraction() {
         let model = NotchPanelModel()
-        let hostingView = NotchHostingViewFactory.make(model: model, layout: layout)
+        let layoutModel = NotchPanelLayoutModel(baseLayout: layout)
+        let hostingView = NotchHostingViewFactory.make(
+            model: model,
+            layoutModel: layoutModel
+        )
 
         #expect(hostingView.acceptsFirstMouse(for: nil))
     }
