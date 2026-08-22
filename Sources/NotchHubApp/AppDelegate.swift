@@ -9,7 +9,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelController: NotchPanelController?
     private var mediaRuntime: (any MediaRuntimeSession)?
     private let mediaPresentationModel = ShippingMediaPresentationModel()
-    private let mediaTimelineTicker = MediaTimelineTicker()
     private let mediaGestureVisualModel = MediaGestureVisualModel()
     private let sourceApplicationIconResolver = SourceApplicationIconResolver()
     private var mediaGestureSession: MediaGestureSession?
@@ -21,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AppComposition.shipping()
         #endif
     }()
+    private lazy var mediaTimelineTicker = composition.makeMediaTimelineTicker()
 
     #if NOTCHHUB_UI_TESTING
         private let uiTestHapticRecorder = UITestHapticRecorder()

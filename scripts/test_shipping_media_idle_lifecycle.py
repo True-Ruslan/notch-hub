@@ -47,7 +47,7 @@ class ShippingMediaIdleLifecycleTests(unittest.TestCase):
 
         required_app_fragments = (
             "private let mediaPresentationModel = ShippingMediaPresentationModel()",
-            "private let mediaTimelineTicker = MediaTimelineTicker()",
+            "private lazy var mediaTimelineTicker = composition.makeMediaTimelineTicker()",
             "private let composition:",
             "AppComposition.shipping()",
             "panelController.settledPresentationHandler",
