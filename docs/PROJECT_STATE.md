@@ -1,13 +1,14 @@
 # Project state
 
-Last updated: 2026-08-21
+Last updated: 2026-08-22
 Published version: `0.1.0` Personal Release
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
 Branch governance: `main` is intended to be protected; GitHub currently reports it unprotected and issue #42 tracks restoration
 Accepted P1 measured runtime: `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`
 Accepted P1 measurement/evidence tooling: `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`
-Active development: P1 accepted; next product hardening may proceed without speculative resource optimization
+Accepted M1 active-display migration runtime: `c7d2bdb9cae744d439d240f22acd14140bacedd3`
+Active development: M1 active-display/multi-monitor migration accepted/merged; next product hardening may proceed
 
 ## Product state
 
@@ -15,7 +16,9 @@ NotchHub is a native, local-first macOS productivity hub built around the physic
 
 Published state remains immutable `v0.1.0`. M6.6, its hardware-notch screen-selection correction, the compositor settlement repair and the bounded pointer-monitor correction are accepted/merged source work but remain unreleased.
 
-P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization. Broader active-display/multi-monitor hardening or the next product module may now proceed, while issue #42 still tracks restoration of intended `main` branch governance.
+P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization.
+
+M1 event-driven active-display/multi-monitor migration is implemented, automated-tested (392 Swift tests, CI #1344 3/3 GREEN) and physically accepted on exact `Mac16,8 / macOS 26.6.2` with an external monitor connected, then merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`. The next product module may now proceed, while issue #42 still tracks restoration of intended `main` branch governance.
 
 ## Merged foundations
 
@@ -39,6 +42,7 @@ P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macO
 - P1 compositor endpoint settlement repair — physically accepted/tested/merged via PR #51 as `1f56c3e5da8a46509a3472a52da12a1abfb16a8c`.
 - P1 bounded pointer monitoring / rapid-exit repair — TDD-tested, physically accepted and merged via PR #53 as accepted measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`.
 - P1 whole-app target-Mac resource review — accepted on Mac16,8/macOS 26.6.2; issue #38 closed completed.
+- M1 event-driven active-display/multi-monitor migration — implemented/automated-tested/physically accepted/merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed completed.
 
 ## M6.6 original acceptance and merge provenance
 
@@ -85,6 +89,30 @@ The accepted pointer-monitor design keeps system-wide mouse observation absent i
 - rapid pointer exit during an interaction is recovered through bounded escape observation without persistent system-wide mouse monitoring;
 - normal Quit leaves no owned media adapter process.
 
+## M1 active-display/multi-monitor migration — accepted
+
+PR #56 implements event-driven display-topology migration: observing `NSApplication.didChangeScreenParametersNotification`, resolving `NSScreen.screens` fresh on topology changes while preserving hardware-notch-first selection and the accepted `NSScreen.main`/first-screen fallback, migrating stable Compact/Peek/Expanded endpoints to the newly resolved display through one shared `NotchPanelLayoutModel`, retargeting in-flight programmatic and interactive transitions by generation, and resetting the bounded pointer-escape monitor across migration. No new dependency, permission, entitlement, networking, timer, display link or persistent global input monitoring was added.
+
+Automated verification: exact candidate `dd945dc3ca009f8d9429ad044d50a01a2ea1bb62`; CI #1344 / run `32527603794` 3/3 GREEN; full coverage-instrumented Swift suite passed 392 tests; formatting, acceptance-traceability, source performance policy, security baseline, warnings-as-errors builds, shipping-media preflight, codesign, Hardened Runtime, exact sandbox-only entitlement, DMG verification and the active `performance/m1-active-display-migration-size-budget.json` size gate all passed.
+
+Physical acceptance on exact `Mac16,8 / macOS 26.6.2` with the built-in hardware-notch display plus an external monitor (2560x1440) connected — **11/11 PASS**:
+
+1. Compact connect/disconnect/reconfigure — PASS.
+2. Peek connect/disconnect/reconfigure — PASS.
+3. Expanded connect/disconnect/reconfigure with media continuity — PASS.
+4. Disconnect/reconfigure during programmatic Compact -> Expanded — PASS, no frozen intermediate state.
+5. Disconnect/reconfigure during programmatic Expanded -> Compact — PASS.
+6. Disconnect/reconfigure during partial interactive expansion — PASS, cancels cleanly to Compact, no unintended haptic/commit.
+7. Disconnect/reconfigure during partial interactive collapse — PASS, cancels cleanly to Expanded.
+8. No-notch fallback — PASS.
+9. Repeated migration cycles (5-10x) — PASS, no jitter, duplicate observers or accumulating lag.
+10. Post-migration pointer/hover behavior — PASS, hover scoped to the current hardware-notch screen only, rapid pointer exit correctly collapses Peek.
+11. No new macOS permission prompts across the run — PASS.
+
+Post-Quit `pgrep -lf 'mediaremote-adapter\.pl' || true` empty; clean shutdown confirmed. Squash merge `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed.
+
+M1 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
+
 ## Security and resource invariants
 
 - App Sandbox-only entitlement and Hardened Runtime remain mandatory.
@@ -128,15 +156,16 @@ Published release is still `v0.1.0`; P1 acceptance is not a release claim.
 ## Next optimal step
 
 1. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
-2. Proceed to the next bounded product-hardening slice now that P1 is accepted. The preferred technical direction is event-driven active-display/multi-monitor migration handling: correctly move/settle NotchHub when display topology or the relevant hardware-notch screen changes, without polling or private display APIs.
-3. Start that slice with a written invariant/spec and RED tests for display add/remove/main-screen/topology transitions, preserving the accepted hardware-notch-first selection fallback and exact transition settlement behavior.
-4. Require target-Mac physical acceptance with an external monitor for any shipping display-migration change; distinguish implementation, automated testing, physical acceptance, merge and release.
-5. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
-6. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
+2. M1 active-display/multi-monitor migration is now accepted/merged. Select and specify the next bounded product-hardening slice with a written invariant/spec and RED tests before implementation — for example remaining fullscreen/Spaces/notchless hardening, or the next M2+ product module — rather than jumping ahead speculatively.
+3. Require target-Mac physical acceptance with an external monitor for any shipping change whose behavior CI cannot honestly prove; distinguish implementation, automated testing, physical acceptance, merge and release.
+4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
+5. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
 
 See:
 
 - `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`;
 - `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`;
+- `docs/superpowers/specs/2026-08-21-active-display-multi-monitor-migration-design.md`;
 - closed issue #38 for the complete P1 evidence/acceptance trail;
+- closed issue #55 for the M1 display-migration acceptance trail;
 - issue #42 for repository branch-protection restoration.

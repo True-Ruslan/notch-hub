@@ -70,6 +70,18 @@ Issue #38 was closed completed after review. Earlier 26.6.1, pre-settlement and 
 
 No speculative runtime optimization is justified by the accepted evidence. P1 acceptance is not a release event; published release remains `v0.1.0`.
 
+### M1 — event-driven active-display / multi-monitor migration
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+
+PR #56 adds event-driven display-topology migration: observes `NSApplication.didChangeScreenParametersNotification`, resolves `NSScreen.screens` fresh on topology change while preserving hardware-notch-first selection and the accepted `NSScreen.main`/first-screen fallback, migrates stable Compact/Peek/Expanded endpoints to the newly resolved display through one shared `NotchPanelLayoutModel`, retargets in-flight programmatic and interactive transitions by generation so stale animation completions cannot move the new screen endpoint, cancels interrupted interactive transitions back to their origin presentation, reconciles the physical settled frame/corner synchronously across migration, and resets the bounded pointer-escape monitor. No new dependency, permission, entitlement, networking, telemetry, timer, display link or persistent global input monitoring was added.
+
+Automated verification: exact candidate `dd945dc3ca009f8d9429ad044d50a01a2ea1bb62`; CI #1344 / run `32527603794` 3/3 GREEN across `macOS 26 compatibility`, `macOS UI regression` (including external-app XCUI smoke) and `Build, test and package`; full coverage-instrumented Swift suite passed 392 tests; formatting, acceptance-traceability, source performance policy, security baseline, warnings-as-errors builds, shipping-media preflight, codesign, Hardened Runtime, exact sandbox-only entitlement, system-library/provenance checks, DMG verification and the active `performance/m1-active-display-migration-size-budget.json` size gate all passed.
+
+Physical acceptance on exact `Mac16,8 / macOS 26.6.2`, built-in hardware-notch display plus an external monitor (2560x1440) connected — **11/11 PASS**: Compact/Peek/Expanded connect-disconnect-reconfigure (including media continuity in Expanded); interruption of programmatic Compact->Expanded and Expanded->Compact transitions with no frozen intermediate state; interruption of partial interactive expansion and collapse gestures, cancelling cleanly without unintended haptic/commit; no-notch first-screen fallback; 5-10x repeated migration cycles with no jitter, duplicate observers or accumulating lag; post-migration pointer/hover scoped only to the current hardware-notch screen with correct rapid-exit Peek collapse; and no new macOS permission prompts across the run. Post-Quit `pgrep -lf 'mediaremote-adapter\.pl' || true` empty.
+
+PR #56 squash-merged as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed completed. Design/invariants: `docs/superpowers/specs/2026-08-21-active-display-multi-monitor-migration-design.md`. Published release remains `v0.1.0`.
+
 ### M6.6 — PR #33 + corrective runtime work
 
 Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.

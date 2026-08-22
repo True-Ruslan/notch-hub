@@ -22,13 +22,12 @@ Current development state:
 - M6.5 compact + expanded Media-first UI — accepted/merged;
 - **M6.6 gestures, haptics, interactive notch, seek and Hover Peek — implemented, automated-tested, physically accepted and merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; not released.**
 - **M6.6 hardware-notch screen-selection correction — physically accepted on exact runtime `46f069e57997eab060c79c3d9e279da944d6e263`, CI-verified and merged via PR #40 as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`; not released.**
-- **P1 whole-app target-Mac performance/resource review — runtime frozen at `e8d77968...`; current locale-stable measurement tooling merged via PR #47 as `28965561f81c71ea58a352301fbe08554c644044`; complete target-Mac evidence recollection pending.**
+- **P1 whole-app target-Mac performance/resource review — accepted on exact `Mac16,8 / macOS 26.6.2`, measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`, tooling `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`, merged via PR #53/#54; all direct Idle/Hover/Stability/wakeup/energy/compositor gates PASS; not released.**
+- **M1 event-driven active-display/multi-monitor migration — implemented, automated-tested (392 Swift tests, CI #1344 3/3 GREEN), physically accepted on exact `Mac16,8 / macOS 26.6.2` with an external monitor (11/11 PASS), merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; not released.**
 
-The published `v0.1.0` release predates the M1/P0.1/M6 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
+The published `v0.1.0` release predates the M1/P0.1/M6/P1 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
 
-The current priority is P1 target collection: measure exact corrected merged runtime `e8d77968...` on exact `Mac16,8` hardware in the macOS 26.6 patch family, currently `26.6.1`, using frozen measurement tooling `28965561...`. Every final evidence file must preserve the exact patch version and one exact tooling SHA. CPU/RSS/threads/wakeups/energy/compositor behavior is reviewed before any optimization. Broader multi-monitor hardening and new product modules remain after this resource gate.
-
-An earlier Idle report on tooling `99a75dbe...` remains diagnostic evidence, including `threadMax=7` against the direct Idle gate `<=6`, but it cannot be mixed with the final bundle after the tooling refreeze. The complete Idle/Hover/Stability set is recollected on `28965561...`; this is provenance-driven recollection, not permission to rerun until a favorable value appears.
+P1 whole-app resource acceptance is complete and does not justify speculative runtime optimization. M1 active-display/multi-monitor migration is now accepted/merged: NotchHub correctly moves/settles Compact, Peek and Expanded when display topology changes, preserving hardware-notch-first selection, with no polling, private display APIs or new permissions. The current priority is selecting and specifying the next bounded product-hardening slice or module.
 
 ## Universal Media
 
