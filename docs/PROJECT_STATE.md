@@ -9,7 +9,8 @@ Accepted P1 measured runtime: `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`
 Accepted P1 measurement/evidence tooling: `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`
 Accepted M1 active-display migration runtime: `c7d2bdb9cae744d439d240f22acd14140bacedd3`
 Accepted M6.7 live media timeline/Compact runtime: `bd48037baff85d8eb3354fbf3792c5db016ff4a1`
-Active development: M6.7 live media timeline/Compact accepted/merged; next product hardening may proceed
+Accepted M6.8 compact live equalizer runtime: `4cbb01d7d5f57f26c40162c8149faf27691c2e06`
+Active development: M6.8 compact live equalizer accepted/merged; next product hardening may proceed
 
 ## Product state
 
@@ -47,6 +48,7 @@ M6.7 live media timeline and live Compact display is implemented, automated-test
 - P1 whole-app target-Mac resource review — accepted on Mac16,8/macOS 26.6.2; issue #38 closed completed.
 - M1 event-driven active-display/multi-monitor migration — implemented/automated-tested/physically accepted/merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed completed.
 - M6.7 live media timeline and live Compact display — implemented/automated-tested/physically accepted/merged via PR #58 as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`, superseding the "zero-adapter compact" and "no periodic worker" invariants it deliberately reverses.
+- M6.8 compact live equalizer — implemented/automated-tested/physically accepted/merged via PR #60 as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`; competitive-review-driven (boring.notch/NotchNook).
 
 ## M6.6 original acceptance and merge provenance
 
@@ -125,6 +127,14 @@ Physical acceptance on exact `Mac16,8 / macOS 26.6.2` — **7/7 PASS**: live-tic
 
 Squash merge `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Full evidence: `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`. This bundle supersedes the prior "zero-adapter compact" Idle baseline in `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`, which remains immutable historical evidence for the source it measured. M6.7 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
 
+## M6.8 compact live equalizer — accepted
+
+Competitive review of `TheBoredTeam/boring.notch` (open source, same `MediaRemoteAdapter`) and NotchNook found one concrete, low-risk UX improvement worth borrowing: both replace a static play/pause glyph in Compact with a small animated equalizer/spectrum. PR #60 replaces `MediaNotchRootView.compactMediaContent`'s static SF Symbol with `MediaCompactEqualizerView`, 3 bars animated via SwiftUI's `PhaseAnimator`, armed only while `playbackState == .playing`, settling to a flat static pose on pause. No timer primitive, no new `performance/reviewed-runtime-timers.json` entry needed.
+
+Physical acceptance on exact `Mac16,8 / macOS 26.6.2` — all items PASS: bars visibly animate out of phase while playing; settle flat on pause and restart on resume; `0.0%` CPU while settled Compact with media playing; no interaction jank; clean post-Quit teardown. Acceptance also found and fixed a real bug: the first implementation used `.animation(...repeatForever...)`, which froze after the horizontal next/previous swipe gesture (an ancestor `withAnimation` transaction interrupting the implicit repeating loop) — fixed by switching to `PhaseAnimator`, which owns its own animation timeline and is immune to that class of interference.
+
+Squash merge `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Full evidence: `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`. M6.8 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
+
 ## Security and resource invariants
 
 - App Sandbox-only entitlement and Hardened Runtime remain mandatory.
@@ -168,7 +178,7 @@ Published release is still `v0.1.0`; P1 acceptance is not a release claim.
 ## Next optimal step
 
 1. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
-2. M1 active-display/multi-monitor migration and M6.7 live media timeline/Compact display are now both accepted/merged. Select and specify the next bounded product-hardening slice with a written invariant/spec and RED tests before implementation — for example remaining fullscreen/Spaces/notchless hardening, a discoverable normal-quit path (physical acceptance for M6.7 surfaced that NotchHub currently has no user-reachable Quit action besides Force Quit), or the next M2+ product module — rather than jumping ahead speculatively.
+2. M1 active-display/multi-monitor migration, M6.7 live media timeline/Compact display and M6.8 compact live equalizer are now all accepted/merged. Select and specify the next bounded product-hardening slice with a written invariant/spec and RED tests before implementation — for example remaining fullscreen/Spaces/notchless hardening, a discoverable normal-quit path (physical acceptance for M6.7 surfaced that NotchHub currently has no user-reachable Quit action besides Force Quit), further competitive-review-driven Compact/Peek UX borrowing (album-art color tinting, `matchedGeometryEffect` cross-state artwork morphing, marquee text for overflowing titles — all explicitly deferred out of M6.8), or the next M2+ product module — rather than jumping ahead speculatively.
 3. Require target-Mac physical acceptance for any shipping change whose behavior CI cannot honestly prove; distinguish implementation, automated testing, physical acceptance, merge and release.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
 5. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
@@ -179,7 +189,9 @@ See:
 - `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`;
 - `docs/superpowers/specs/2026-08-21-active-display-multi-monitor-migration-design.md`;
 - `docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md`;
+- `docs/superpowers/specs/2026-08-22-compact-live-equalizer-design.md`;
 - `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`;
+- `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`;
 - closed issue #38 for the complete P1 evidence/acceptance trail;
 - closed issue #55 for the M1 display-migration acceptance trail;
 - issue #42 for repository branch-protection restoration.

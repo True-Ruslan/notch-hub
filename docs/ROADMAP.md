@@ -82,6 +82,16 @@ Physical acceptance on `Mac16,8 / macOS 26.6.2` — 7/7 PASS, including live-tic
 
 PR #58 squash-merged as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Published release remains immutable `v0.1.0`. Physical acceptance also surfaced a non-blocking follow-up: NotchHub has no user-discoverable normal-quit path (no Dock icon, no Quit menu item, Cmd+Q is a no-op) — Force Quit is the only option today and skips process cleanup.
 
+## M6.8 — compact live equalizer
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+
+Competitive-review-driven: replaces Compact's static play/pause glyph with a small animated equalizer, borrowing a UX detail found in both `TheBoredTeam/boring.notch` (open source, same MediaRemoteAdapter) and NotchNook's compact-mode presentation. `MediaCompactEqualizerView` animates 3 bars via SwiftUI's `PhaseAnimator`, armed only while playing, settling flat on pause. No timer primitive; no new reviewed-exception entry needed.
+
+Physical acceptance on `Mac16,8 / macOS 26.6.2` — all items PASS. Acceptance found and fixed a real bug: the initial `.repeatForever`-based animation froze after the horizontal next/previous swipe gesture (an ancestor `withAnimation` transaction interrupting the implicit loop); fixed by switching to `PhaseAnimator`, immune to that class of interference. Full evidence: `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`.
+
+PR #60 squash-merged as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Published release remains immutable `v0.1.0`. Other competitive-review ideas (album-art color tinting, `matchedGeometryEffect` cross-state artwork morphing, marquee text for overflowing titles) remain explicitly deferred to future slices.
+
 ## Repository governance
 
 Issue #42 remains open because `main` is intended to be protected but GitHub currently reports it unprotected. Restoring branch governance remains a repository-quality priority and should be completed when repository capabilities permit. Do not treat the current unprotected state as accepted architecture.
@@ -98,6 +108,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. M1 active-display/multi-monitor migration and M6.7 live media timeline/Compact display are both accepted; select and specify the next bounded product-hardening slice or module (e.g. remaining fullscreen/Spaces/notchless hardening, a discoverable normal-quit path, or the next M2+ product module) rather than speculative resource optimization.
+2. M1 active-display/multi-monitor migration, M6.7 live media timeline/Compact display and M6.8 compact live equalizer are all accepted; select and specify the next bounded product-hardening slice or module (e.g. remaining fullscreen/Spaces/notchless hardening, a discoverable normal-quit path, further competitive-review-driven Compact/Peek UX borrowing, or the next M2+ product module) rather than speculative resource optimization.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
 4. Keep the published Personal Release at immutable `v0.1.0` until an explicit release decision.
