@@ -544,7 +544,28 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_live_media_timeline_and_compact_budget_over_immutable_baseline(self):
+    def test_repository_m6_8_compact_live_equalizer_budget_is_provenanced_tight_and_self_validating(
+        self,
+    ):
+        self.assert_repository_budget(
+            filename="m6-8-compact-live-equalizer-size-budget.json",
+            feature_id="m6-8-compact-live-equalizer",
+            source_commit="bb042a6819699ca47701acce156976235148aa9d",
+            workflow_run_id=1,
+            artifact_id=1,
+            summary={
+                "appSizeBytes": 902460,
+                "dmgSizeBytes": 578932,
+                "executableSizeBytes": 601024,
+            },
+            allowance={
+                "appSizeBytes": 660000,
+                "dmgSizeBytes": 510000,
+                "executableSizeBytes": 355000,
+            },
+        )
+
+    def test_ci_uses_compact_live_equalizer_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -552,10 +573,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-7-live-media-timeline-and-compact-size-budget.json",
+            "--feature-budget performance/m6-8-compact-live-equalizer-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-7-live-media-timeline-and-compact-size-budget.json",
             "m1-active-display-migration-size-budget.json",
             "m6-6-hardware-notch-screen-selection-size-budget.json",
             "m6-6-physical-acceptance-20260816-first-click-size-budget.json",

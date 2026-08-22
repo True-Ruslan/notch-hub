@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 660000,
+    "dmgSizeBytes": 510000,
+    "executableSizeBytes": 355000
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 1,
+    "sourceCommit": "bb042a6819699ca47701acce156976235148aa9d",
+    "summary": {
+      "appSizeBytes": 902460,
+      "dmgSizeBytes": 578932,
+      "executableSizeBytes": 601024
+    },
+    "workflowRunId": 1
+  },
+  "featureId": "m6-8-compact-live-equalizer",
+  "schemaVersion": 1
+}
