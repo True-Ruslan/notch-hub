@@ -52,7 +52,73 @@ class ProcessSample:
     thread_count: int
 
 
-def find_runtime_policy_violations(root: pathlib.Path) -> list[str]:
+_RUNTIME_RULE_NAMES = frozenset(name for name, _ in _RUNTIME_RULES)
+_REVIEWED_TIMER_EXCEPTION_SCHEMA_VERSION = 1
+_REVIEWED_TIMER_EXCEPTION_TOP_LEVEL_KEYS = {"schemaVersion", "entries"}
+_REVIEWED_TIMER_EXCEPTION_ENTRY_KEYS = {"file", "rule", "justification", "boundedLifecycle"}
+
+
+def load_reviewed_timer_exceptions(path: pathlib.Path) -> frozenset[tuple[str, str]]:
+    """Load a fail-closed, schema-validated manifest of reviewed (file, rule)
+    exceptions to the runtime policy audit. A missing file means no
+    exceptions are granted; a present-but-malformed file is a hard error
+    rather than a silently ignored one, matching this project's fail-closed
+    evidence conventions elsewhere (P1, size budgets)."""
+    if not path.exists():
+        return frozenset()
+    if not path.is_file():
+        raise ValueError(f"reviewed timer exceptions path is not a file: {path}")
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"reviewed timer exceptions file is not valid JSON: {path}") from error
+
+    if not isinstance(data, dict) or set(data) != _REVIEWED_TIMER_EXCEPTION_TOP_LEVEL_KEYS:
+        raise ValueError(
+            "reviewed timer exceptions manifest must contain exactly "
+            f"{sorted(_REVIEWED_TIMER_EXCEPTION_TOP_LEVEL_KEYS)}"
+        )
+
+    schema_version = data["schemaVersion"]
+    if isinstance(schema_version, bool) or schema_version != _REVIEWED_TIMER_EXCEPTION_SCHEMA_VERSION:
+        raise ValueError(
+            "reviewed timer exceptions schemaVersion must be "
+            f"{_REVIEWED_TIMER_EXCEPTION_SCHEMA_VERSION}"
+        )
+
+    entries = data["entries"]
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("reviewed timer exceptions entries must be a non-empty array")
+
+    exceptions: set[tuple[str, str]] = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != _REVIEWED_TIMER_EXCEPTION_ENTRY_KEYS:
+            raise ValueError(
+                "reviewed timer exception entry must contain exactly "
+                f"{sorted(_REVIEWED_TIMER_EXCEPTION_ENTRY_KEYS)}"
+            )
+        for key in _REVIEWED_TIMER_EXCEPTION_ENTRY_KEYS:
+            value = entry[key]
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"reviewed timer exception field {key} must be a non-empty string")
+
+        rule = entry["rule"]
+        if rule not in _RUNTIME_RULE_NAMES:
+            raise ValueError(f"reviewed timer exception rule is unknown: {rule}")
+
+        key_pair = (entry["file"], rule)
+        if key_pair in exceptions:
+            raise ValueError(f"reviewed timer exception is duplicated: {key_pair}")
+        exceptions.add(key_pair)
+
+    return frozenset(exceptions)
+
+
+def find_runtime_policy_violations(
+    root: pathlib.Path,
+    exceptions_path: pathlib.Path | None = None,
+) -> list[str]:
     root = root.resolve()
     violations: list[str] = []
 
@@ -61,6 +127,10 @@ def find_runtime_policy_violations(root: pathlib.Path) -> list[str]:
     if not root.is_dir():
         raise ValueError(f"runtime source root is not a directory: {root}")
 
+    if exceptions_path is None:
+        exceptions_path = root.parent / "performance" / "reviewed-runtime-timers.json"
+    exceptions = load_reviewed_timer_exceptions(exceptions_path)
+
     for path in sorted(root.rglob("*.swift")):
         if not path.is_file():
             continue
@@ -68,6 +138,8 @@ def find_runtime_policy_violations(root: pathlib.Path) -> list[str]:
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for rule_name, pattern in _RUNTIME_RULES:
                 if pattern.search(line):
+                    if (str(relative), rule_name) in exceptions:
+                        continue
                     violations.append(f"{relative}:{line_number}: {rule_name}")
 
     return sorted(violations)

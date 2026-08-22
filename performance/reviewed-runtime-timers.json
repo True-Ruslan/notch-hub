@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "file": "NotchHubMediaCore/MediaTimelineTicker.swift",
+      "rule": "scheduled Timer",
+      "justification": "Extrapolates the displayed Now Playing position between authoritative system events so the progress bar visibly advances while the user watches it, per docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md. Reviewed and explicitly accepted as a bounded, narrowly-scoped exception to the no-repeating-timer invariant.",
+      "boundedLifecycle": "Armed only while the settled panel presentation is .peek or .expanded and the authoritative presentation reports playbackState == .playing with known position/duration; torn down immediately on collapse to Compact, on pause, on session loss, and on app quit. Never runs while Compact or Idle."
+    }
+  ]
+}
