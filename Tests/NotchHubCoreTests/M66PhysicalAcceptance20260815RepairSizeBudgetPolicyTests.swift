@@ -54,7 +54,7 @@ struct M66PhysicalAcceptance20260815RepairSizeBudgetPolicyTests {
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
-                "--feature-budget performance/m6-8-compact-live-equalizer-size-budget.json"
+                "--feature-budget performance/m6-9-media-marquee-text-size-budget.json"
             )
         )
         #expect(
