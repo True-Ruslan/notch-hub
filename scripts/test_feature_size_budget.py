@@ -529,13 +529,13 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assert_repository_budget(
             filename="m6-7-live-media-timeline-and-compact-size-budget.json",
             feature_id="m6-7-live-media-timeline-and-compact",
-            source_commit="32751c51547e1128d609604c6fb391859e6b8410",
-            workflow_run_id=1,
-            artifact_id=1,
+            source_commit="4f97beb690e615e64929d5b44bcdfa6f3703f9a1",
+            workflow_run_id=32571015088,
+            artifact_id=9475351981,
             summary={
-                "appSizeBytes": 901644,
-                "dmgSizeBytes": 571583,
-                "executableSizeBytes": 600208,
+                "appSizeBytes": 906143,
+                "dmgSizeBytes": 583002,
+                "executableSizeBytes": 603936,
             },
             allowance={
                 "appSizeBytes": 680000,
