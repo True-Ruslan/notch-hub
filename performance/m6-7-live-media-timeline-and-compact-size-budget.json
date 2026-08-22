@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 680000,
+    "dmgSizeBytes": 510000,
+    "executableSizeBytes": 385000
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 1,
+    "sourceCommit": "32751c51547e1128d609604c6fb391859e6b8410",
+    "summary": {
+      "appSizeBytes": 901644,
+      "dmgSizeBytes": 571583,
+      "executableSizeBytes": 600208
+    },
+    "workflowRunId": 1
+  },
+  "featureId": "m6-7-live-media-timeline-and-compact",
+  "schemaVersion": 1
+}
