@@ -94,11 +94,11 @@ PR #60 squash-merged as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Published re
 
 ## M6.9 — media marquee text for overflowing titles
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED LOCALLY / NOT YET PHYSICALLY ACCEPTED / NOT MERGED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / CANONICAL CI GREEN / NOT YET PHYSICALLY ACCEPTED / NOT MERGED**.
 
 Deferred from M6.8: Peek and Expanded title/artist/album previously hard-truncated overflowing text. `MediaMarqueeCalculator` (pure, unit-tested) decides overflow/timing; `MediaMarqueeText` renders static truncated text when content fits and otherwise scrolls a continuous conveyor loop via SwiftUI's `PhaseAnimator`, gated off entirely by `accessibilityReduceMotion`. Compact is unaffected (no title/artist text there). No new timer-policy exception needed. Design/invariants: `docs/superpowers/specs/2026-08-22-media-marquee-text-design.md`.
 
-Local build and policy/size-budget script checks pass; the new Swift test suite requires canonical CI (no local Xcode/`swift-testing` toolchain in the authoring environment). Physical acceptance on `Mac16,8`/macOS `26.6.x` and the feature size-budget evidence file remain outstanding before merge.
+PR #62, canonical CI GREEN 3/3 on exact head `4dbea149d14c7007ecebd86905323f38f3d9b596`, including the full Swift test suite and the release size gate against real evidence in `performance/m6-9-media-marquee-text-size-budget.json`. Target-Mac physical acceptance (`Mac16,8`/macOS `26.6.x`) is the only remaining gate before merge.
 
 ## Repository governance
 
@@ -116,6 +116,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. M6.9 media marquee text is implemented and locally verified; it needs canonical CI, the feature size-budget evidence file and target-Mac physical acceptance before merge. After it lands, continue finishing the Universal Media UI/UX (e.g. further competitive-review-driven Compact/Peek borrowing, a discoverable normal-quit path, remaining fullscreen/Spaces/notchless hardening) before starting the Settings (M7) module, per current product priority.
+2. M6.9 media marquee text (PR #62) is implemented, automated-tested and canonical-CI-green; it needs only target-Mac physical acceptance before merge. After it lands, continue finishing the Universal Media UI/UX (e.g. further competitive-review-driven Compact/Peek borrowing, a discoverable normal-quit path, remaining fullscreen/Spaces/notchless hardening) before starting the Settings (M7) module, per current product priority.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
 4. Keep the published Personal Release at immutable `v0.1.0` until an explicit release decision.
