@@ -4,18 +4,18 @@
     {
       "id": "NH-MEDIA-LIVE-001",
       "source": "docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md",
-      "status": "pending",
+      "status": "accepted",
       "coverage": [
         {"layer":"policy","test":"NotchHubCoreTests.MediaPeekSecurityPerformancePolicyTests.mediaRuntimeStartsOnceAtLaunchAndStopsOnlyAtQuit"},
         {"layer":"policy","test":"scripts.ShippingMediaIdleLifecycleTests.test_shipping_media_runtime_runs_for_the_apps_whole_lifetime"},
         {"layer":"physical","test":null}
       ],
-      "physicalOnlyReason": "Requires target-Mac verification that Compact reflects a track change/pause/play-pause toggle performed outside NotchHub without re-expansion, and a fresh P1-style Idle/Hover/Stability resource measurement bundle, per docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md."
+      "physicalOnlyReason": "Physically accepted on Mac16,8/macOS 26.6.2 on exact source 3cee40c9650d50254f25e633a3e0e5163124df07: Compact reflects a track change/pause/play-pause toggle performed outside NotchHub without re-expansion; post-Quit pgrep for mediaremote-adapter.pl empty under normal quit; fresh P1-style Idle/Hover/Stability resource bundle collected with all direct gates PASS."
     },
     {
       "id": "NH-MEDIA-LIVE-002",
       "source": "docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md",
-      "status": "pending",
+      "status": "accepted",
       "coverage": [
         {"layer":"unit","test":"NotchHubMediaCoreTests.MediaTimelineTickerTests.tickExtrapolatesFromAnchorAndClampsToDuration"},
         {"layer":"unit","test":"NotchHubMediaCoreTests.MediaTimelineTickerTests.timerNeverArmsWhileCompactEvenIfPlaying"},
@@ -24,7 +24,7 @@
         {"layer":"policy","test":"NotchHubCoreTests.MediaSeekAppCompositionPolicyTests.appWiresSeekAndOptimisticallyReanchorsTheAlwaysActiveRuntimeTimeline"},
         {"layer":"physical","test":null}
       ],
-      "physicalOnlyReason": "Requires target-Mac verification that the timeline visibly ticks in real time in Peek/Expanded while playing, freezes on pause, and is verifiably absent (no residual CPU) while Compact, per docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md."
+      "physicalOnlyReason": "Physically accepted on Mac16,8/macOS 26.6.2 on exact source 3cee40c9650d50254f25e633a3e0e5163124df07: timeline visibly ticked in real time in Peek/Expanded while playing, froze exactly on pause with no drift, resumed correctly; ps CPU sampling across 5 samples while settled Compact showed 0.0% CPU."
     },
     {
       "id": "NH-HOVER-DELAY-002",

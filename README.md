@@ -24,10 +24,11 @@ Current development state:
 - **M6.6 hardware-notch screen-selection correction — physically accepted on exact runtime `46f069e57997eab060c79c3d9e279da944d6e263`, CI-verified and merged via PR #40 as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`; not released.**
 - **P1 whole-app target-Mac performance/resource review — accepted on exact `Mac16,8 / macOS 26.6.2`, measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`, tooling `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`, merged via PR #53/#54; all direct Idle/Hover/Stability/wakeup/energy/compositor gates PASS; not released.**
 - **M1 event-driven active-display/multi-monitor migration — implemented, automated-tested (392 Swift tests, CI #1344 3/3 GREEN), physically accepted on exact `Mac16,8 / macOS 26.6.2` with an external monitor (11/11 PASS), merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; not released.**
+- **M6.7 live media timeline and live Compact display — implemented, automated-tested, physically accepted on exact `Mac16,8 / macOS 26.6.2` (7/7 PASS, including a fresh P1-style Idle/Hover/Stability resource bundle), merged via PR #58 as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`; not released.**
 
-The published `v0.1.0` release predates the M1/P0.1/M6/P1 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
+The published `v0.1.0` release predates the M1/P0.1/M6/P1/M6.7 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
 
-P1 whole-app resource acceptance is complete and does not justify speculative runtime optimization. M1 active-display/multi-monitor migration is now accepted/merged: NotchHub correctly moves/settles Compact, Peek and Expanded when display topology changes, preserving hardware-notch-first selection, with no polling, private display APIs or new permissions. The current priority is selecting and specifying the next bounded product-hardening slice or module.
+P1 whole-app resource acceptance is complete and does not justify speculative runtime optimization. M1 active-display/multi-monitor migration is accepted/merged: NotchHub correctly moves/settles Compact, Peek and Expanded when display topology changes, preserving hardware-notch-first selection, with no polling, private display APIs or new permissions. M6.7 is also accepted/merged: the shipping media runtime now runs for the app's whole lifetime so Compact reflects live Now Playing state, and one narrowly-scoped, reviewed bounded-lifecycle timer makes the Peek/Expanded progress bar tick in real time. The current priority is selecting and specifying the next bounded product-hardening slice or module.
 
 ## Universal Media
 
@@ -42,8 +43,8 @@ Accepted source behavior now includes:
 - public AppKit haptic feedback for supported qualifying gesture arms;
 - capability-driven previous/play-pause/next and draggable seek;
 - source-app badge/fallback and identity-locked seek cancellation;
-- presentation-scoped system-media runtime: zero persistent adapter while settled compact/Peek, runtime only in settled expanded;
-- trustworthy event-driven static progress without a one-second polling loop;
+- the shipping media runtime runs for the app's whole lifetime (M6.7), so Compact reflects live Now Playing state without re-expanding;
+- real-time-ticking progress in Peek/Expanded while playing, via one narrowly-scoped, reviewed bounded-lifecycle timer armed only while settled Peek/Expanded and playing (M6.7);
 - typed, bounded system-media command/process boundary;
 - no listening-history persistence or production metadata logging.
 

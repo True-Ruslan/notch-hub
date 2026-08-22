@@ -8,7 +8,8 @@ Branch governance: `main` is intended to be protected; GitHub currently reports 
 Accepted P1 measured runtime: `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`
 Accepted P1 measurement/evidence tooling: `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`
 Accepted M1 active-display migration runtime: `c7d2bdb9cae744d439d240f22acd14140bacedd3`
-Active development: M1 active-display/multi-monitor migration accepted/merged; next product hardening may proceed
+Accepted M6.7 live media timeline/Compact runtime: `bd48037baff85d8eb3354fbf3792c5db016ff4a1`
+Active development: M6.7 live media timeline/Compact accepted/merged; next product hardening may proceed
 
 ## Product state
 
@@ -18,7 +19,9 @@ Published state remains immutable `v0.1.0`. M6.6, its hardware-notch screen-sele
 
 P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization.
 
-M1 event-driven active-display/multi-monitor migration is implemented, automated-tested (392 Swift tests, CI #1344 3/3 GREEN) and physically accepted on exact `Mac16,8 / macOS 26.6.2` with an external monitor connected, then merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`. The next product module may now proceed, while issue #42 still tracks restoration of intended `main` branch governance.
+M1 event-driven active-display/multi-monitor migration is implemented, automated-tested (392 Swift tests, CI #1344 3/3 GREEN) and physically accepted on exact `Mac16,8 / macOS 26.6.2` with an external monitor connected, then merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`.
+
+M6.7 live media timeline and live Compact display is implemented, automated-tested and physically accepted on exact `Mac16,8 / macOS 26.6.2`, including a fresh P1-style Idle/Hover/Stability resource bundle superseding the prior zero-adapter-compact Idle baseline, then merged via PR #58 as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. The next product module may now proceed, while issue #42 still tracks restoration of intended `main` branch governance.
 
 ## Merged foundations
 
@@ -43,6 +46,7 @@ M1 event-driven active-display/multi-monitor migration is implemented, automated
 - P1 bounded pointer monitoring / rapid-exit repair — TDD-tested, physically accepted and merged via PR #53 as accepted measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`.
 - P1 whole-app target-Mac resource review — accepted on Mac16,8/macOS 26.6.2; issue #38 closed completed.
 - M1 event-driven active-display/multi-monitor migration — implemented/automated-tested/physically accepted/merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed completed.
+- M6.7 live media timeline and live Compact display — implemented/automated-tested/physically accepted/merged via PR #58 as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`, superseding the "zero-adapter compact" and "no periodic worker" invariants it deliberately reverses.
 
 ## M6.6 original acceptance and merge provenance
 
@@ -76,7 +80,7 @@ The accepted pointer-monitor design keeps system-wide mouse observation absent i
 - stable `compact <-> peek <-> expanded` under one transition authority;
 - hover dwell exactly 120 ms; Peek exit grace exactly 140 ms;
 - generic Peek works without usable media; optional media enrichment begins only after authoritative Peek settlement;
-- settled compact and Peek own zero persistent media observer; only settled expanded owns the presentation-scoped shipping runtime;
+- the shipping media runtime runs for the app's whole lifetime (M6.7 reversal of the prior "settled expanded only" scoping), so Compact reflects live Now Playing state without re-expanding;
 - explicit click remains one stable SwiftUI tap path;
 - physical DOWN expands; physical UP collapses; exact top-screen/panel `maxY` remains inside the interaction region;
 - expanded pointer exit returns non-haptically to exact compact;
@@ -113,13 +117,21 @@ Post-Quit `pgrep -lf 'mediaremote-adapter\.pl' || true` empty; clean shutdown co
 
 M1 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
 
+## M6.7 live media timeline and live Compact display — accepted
+
+PR #58 deliberately reverses two prior accepted invariants: the shipping media runtime (`ShippingMediaRuntime`) now starts once at launch and stops once at Quit instead of being scoped to settled `.expanded`, so Compact's artwork/play-pause icon stays live; and one narrowly-scoped, reviewed `Timer.scheduledTimer` (`MediaTimelineTicker`) extrapolates displayed position at ~300ms while settled Peek/Expanded and actively playing, torn down on collapse/pause/session-loss/quit. `scripts/performance_policy.py`'s runtime audit gained a fail-closed, schema-validated reviewed-exception manifest (`performance/reviewed-runtime-timers.json`) scoped to exactly this one `(file, rule)` pair rather than weakening the blanket scan. Along the way, a real pre-existing hazard was found and fixed: `MediaPeekSession`'s one-shot peek probe could clobber an already-live authoritative presentation on hover, now guarded by skipping the probe when live data already exists.
+
+Physical acceptance on exact `Mac16,8 / macOS 26.6.2` — **7/7 PASS**: live-ticking timeline in Peek and Expanded; correct freeze/resume on pause/play; Compact reflecting a track/pause change made outside NotchHub without re-expanding; verified `0.0%` CPU while settled Compact (ticker torn down); clean post-Quit process teardown under a normal quit; and a fresh P1-style Idle/Hover/Stability resource bundle with all direct gates passing against the previously accepted thresholds despite the adapter now running continuously (Idle threadMax `5<=6`; Hover CPU median `0.0%<=8.0%`, threadMax `5<=9`; Stability RSS delta `-11,744<=+8192`, threadMax `7<=9`, thread delta `0<=+2`).
+
+Squash merge `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Full evidence: `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`. This bundle supersedes the prior "zero-adapter compact" Idle baseline in `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`, which remains immutable historical evidence for the source it measured. M6.7 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
+
 ## Security and resource invariants
 
 - App Sandbox-only entitlement and Hardened Runtime remain mandatory.
 - No Accessibility, Input Monitoring, Automation, Screen Recording, networking, telemetry, history persistence or arbitrary command authority is added.
 - Universal Media retains the reviewed fixed `/usr/bin/perl` + pinned adapter/framework boundary.
-- Settled compact and Peek own zero persistent adapter; settled expanded owns the expected presentation-scoped runtime.
-- Gesture/Peek/transition/screen-selection/pointer hot paths add no polling, repeating timer, display link, event tap, per-event subprocess creation or production logging.
+- The shipping media adapter now runs for the app's whole lifetime (M6.7); normal Quit still leaves no owned adapter process.
+- Gesture/Peek/transition/screen-selection/pointer hot paths remain free of polling, display link, event tap, per-event subprocess creation or production logging. Exactly one bounded-lifecycle repeating timer exists in the whole codebase (`MediaTimelineTicker`), armed only while settled Peek/Expanded and actively playing, and is the sole entry in `performance/reviewed-runtime-timers.json`.
 - Global `.mouseMoved` observation is no longer persistently armed in idle; the final bounded escape monitor is active only during an actual NotchHub interaction and tears down after outside escape delivery.
 - UI fixtures and diagnostics remain compile-time test-only.
 
@@ -156,8 +168,8 @@ Published release is still `v0.1.0`; P1 acceptance is not a release claim.
 ## Next optimal step
 
 1. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
-2. M1 active-display/multi-monitor migration is now accepted/merged. Select and specify the next bounded product-hardening slice with a written invariant/spec and RED tests before implementation — for example remaining fullscreen/Spaces/notchless hardening, or the next M2+ product module — rather than jumping ahead speculatively.
-3. Require target-Mac physical acceptance with an external monitor for any shipping change whose behavior CI cannot honestly prove; distinguish implementation, automated testing, physical acceptance, merge and release.
+2. M1 active-display/multi-monitor migration and M6.7 live media timeline/Compact display are now both accepted/merged. Select and specify the next bounded product-hardening slice with a written invariant/spec and RED tests before implementation — for example remaining fullscreen/Spaces/notchless hardening, a discoverable normal-quit path (physical acceptance for M6.7 surfaced that NotchHub currently has no user-reachable Quit action besides Force Quit), or the next M2+ product module — rather than jumping ahead speculatively.
+3. Require target-Mac physical acceptance for any shipping change whose behavior CI cannot honestly prove; distinguish implementation, automated testing, physical acceptance, merge and release.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
 5. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
 
@@ -166,6 +178,8 @@ See:
 - `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`;
 - `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`;
 - `docs/superpowers/specs/2026-08-21-active-display-multi-monitor-migration-design.md`;
+- `docs/superpowers/specs/2026-08-22-live-media-timeline-and-compact-design.md`;
+- `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`;
 - closed issue #38 for the complete P1 evidence/acceptance trail;
 - closed issue #55 for the M1 display-migration acceptance trail;
 - issue #42 for repository branch-protection restoration.
