@@ -174,11 +174,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.mediaTimelineTicker.setArmed(presentation == .peek || presentation == .expanded)
         }
 
+        panelController.show()
+
         let mediaRuntime = composition.makeMediaRuntime(mediaPresentationModel)
         self.mediaRuntime = mediaRuntime
         mediaRuntime.start()
-
-        panelController.show()
     }
 
     func applicationDidResignActive(_: Notification) {
