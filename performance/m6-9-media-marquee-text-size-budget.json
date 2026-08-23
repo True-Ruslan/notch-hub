@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 720000,
+    "dmgSizeBytes": 550000,
+    "executableSizeBytes": 415000
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9481604471,
+    "sourceCommit": "f968cd6ea479bf5f04582f572472d27947490b62",
+    "summary": {
+      "appSizeBytes": 944735,
+      "dmgSizeBytes": 604187,
+      "executableSizeBytes": 642528
+    },
+    "workflowRunId": 32596022564
+  },
+  "featureId": "m6-9-media-marquee-text",
+  "schemaVersion": 1
+}

@@ -421,7 +421,7 @@ jobs:
           python3 scripts/performance_policy.py check-size-feature-budget \
             --summary build/perf-size.json \
             --baseline performance/baseline-v0.1.0.json \
-            --feature-budget performance/m6-8-compact-live-equalizer-size-budget.json
+            --feature-budget performance/m6-9-media-marquee-text-size-budget.json
 
       - name: Performance harness compatibility smoke
         run: |

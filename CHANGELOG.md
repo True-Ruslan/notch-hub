@@ -121,6 +121,20 @@ A real bug was found and fixed during acceptance: the initial implementation dro
 
 PR #60 squash-merged as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Full evidence: `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`. Published release remains `v0.1.0`. Other competitive-review ideas surfaced but explicitly deferred: album-art color tinting, `matchedGeometryEffect` cross-state artwork morphing, marquee text for overflowing titles.
 
+### M6.9 — media marquee text for overflowing titles
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / CANONICAL CI GREEN / NOT YET PHYSICALLY ACCEPTED / NOT MERGED**.
+
+Deferred from M6.8's competitive review: Peek and Expanded title/artist/album previously hard-truncated with `.lineLimit(1)` + `.truncationMode(.tail)`, silently hiding overflow. A new pure `MediaMarqueeCalculator` (`Sources/NotchHubMediaCore/MediaMarqueeCalculator.swift`) decides whether content overflows its available width and how long one scroll cycle takes at a fixed speed; a new `MediaMarqueeText` view (`Sources/NotchHubApp/MediaMarqueeText.swift`) renders exactly today's static truncated text when content fits (or measurement hasn't completed), and otherwise scrolls two duplicated copies of the content in a continuous conveyor loop driven by SwiftUI's `PhaseAnimator` — the same self-contained, ancestor-transaction-immune mechanism `MediaCompactEqualizerView` uses, not a `Timer`/`CADisplayLink`/`TimelineView`. `accessibilityReduceMotion` gates straight to the static fallback. All 5 title/artist/album call sites in `MediaNotchRootView.peekMediaContent`/`expandedMediaContent` were swapped; Compact is unaffected (it never renders title/artist text). No new `performance/reviewed-runtime-timers.json` entry needed — confirmed by `scripts/performance_policy.py audit Sources`.
+
+Design/invariants: `docs/superpowers/specs/2026-08-22-media-marquee-text-design.md`.
+
+PR #62. Canonical CI is GREEN 3/3 (`Build, test and package`, `macOS 26 compatibility`, `macOS UI regression`) on exact head `4dbea149d14c7007ecebd86905323f38f3d9b596`, including the full Swift test suite (new `MediaMarqueeCalculatorTests`, pure/deterministic, and `MediaMarqueeTextPolicyTests`, source-scanning) and the release size gate against real evidence in `performance/m6-9-media-marquee-text-size-budget.json` (measured on candidate `f968cd6ea479bf5f04582f572472d27947490b62`: app `944,735` / DMG `604,187` / executable `642,528` bytes). `.github/workflows/ci.yml`'s size-gate reference now points at the M6.9 budget.
+
+Two real CI-only defects were found and fixed during this PR, neither reproducible in the authoring environment (no local Xcode/`swift-testing` toolchain): `MediaMarqueeText`'s own doc comment literally spelled out the banned substring `TimelineView`, tripping its own source-scanning policy test; and four pre-existing Swift policy tests (`M66HoverPeekSizeBudgetPolicyTests`, `RegressionUIFoundationSizeBudgetPolicyTests`, `M66PhysicalAcceptance20260815RepairSizeBudgetPolicyTests`, `M66FirstClickAcceptanceSizeBudgetPolicyTests`) hardcode an assertion that `ci.yml`'s active feature-budget reference matches the current slice, updated from `m6-8` to `m6-9`.
+
+Physical acceptance on `Mac16,8`/macOS `26.6.x` remains required before merge, per checklist in the design spec.
+
 ### M6.6 — PR #33 + corrective runtime work
 
 Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.

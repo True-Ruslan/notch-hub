@@ -190,18 +190,18 @@ struct MediaNotchRootView: View {
                     artwork(presentation, size: 40)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(presentation.title ?? "Playing")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .accessibilityIdentifier("media.title")
-                        Text(presentation.artist ?? "")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.68))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .accessibilityIdentifier("media.artist")
+                        MediaMarqueeText(
+                            text: presentation.title ?? "Playing",
+                            font: .subheadline.weight(.semibold),
+                            color: .white
+                        )
+                        .accessibilityIdentifier("media.title")
+                        MediaMarqueeText(
+                            text: presentation.artist ?? "",
+                            font: .caption,
+                            color: .white.opacity(0.68)
+                        )
+                        .accessibilityIdentifier("media.artist")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -238,24 +238,19 @@ struct MediaNotchRootView: View {
 
                 VStack(alignment: .leading, spacing: 5) {
                     if let title = presentation.title {
-                        Text(title)
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
+                        MediaMarqueeText(text: title, font: .headline, color: .white)
                             .accessibilityIdentifier("media.title")
                     }
                     if let artist = presentation.artist {
-                        Text(artist)
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.75))
-                            .lineLimit(1)
-                            .accessibilityIdentifier("media.artist")
+                        MediaMarqueeText(
+                            text: artist,
+                            font: .subheadline,
+                            color: .white.opacity(0.75)
+                        )
+                        .accessibilityIdentifier("media.artist")
                     }
                     if let album = presentation.album {
-                        Text(album)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.5))
-                            .lineLimit(1)
+                        MediaMarqueeText(text: album, font: .caption, color: .white.opacity(0.5))
                     }
 
                     Spacer(minLength: 0)
