@@ -6,30 +6,32 @@ NotchHub turns the area around the camera housing into a compact, event-driven p
 
 ## Status
 
-Current published version: **`0.1.0` — Personal build**.
+Current published version: **`0.2.0` — Personal build**. [Download the latest release](https://github.com/True-Ruslan/notch-hub/releases/latest).
 
 Current development state:
 
-- M0 Engineering Foundation — accepted/merged;
+- M0 Engineering Foundation — accepted/merged/released (`v0.1.0`);
 - R0.1 Personal Release `v0.1.0` — accepted/released;
-- P0 Performance Foundation — accepted/merged;
+- P0 Performance Foundation — accepted/merged/released (`v0.1.0`);
 - P0.1 Public Repository Readiness — accepted;
-- M1 interaction/transition slice — accepted/merged;
+- M1 interaction/transition slice — accepted/merged/released (`v0.1.0`);
 - M6.1 Universal Media transport feasibility — accepted;
-- M6.2 production media state/controller/bridge boundary — accepted/merged;
-- M6.3 concrete system-media transport — accepted/merged;
-- M6.4 shipping media composition — accepted/merged;
-- M6.5 compact + expanded Media-first UI — accepted/merged;
-- **M6.6 gestures, haptics, interactive notch, seek and Hover Peek — implemented, automated-tested, physically accepted and merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; not released.**
-- **M6.6 hardware-notch screen-selection correction — physically accepted on exact runtime `46f069e57997eab060c79c3d9e279da944d6e263`, CI-verified and merged via PR #40 as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`; not released.**
-- **P1 whole-app target-Mac performance/resource review — accepted on exact `Mac16,8 / macOS 26.6.2`, measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`, tooling `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`, merged via PR #53/#54; all direct Idle/Hover/Stability/wakeup/energy/compositor gates PASS; not released.**
-- **M1 event-driven active-display/multi-monitor migration — implemented, automated-tested (392 Swift tests, CI #1344 3/3 GREEN), physically accepted on exact `Mac16,8 / macOS 26.6.2` with an external monitor (11/11 PASS), merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; not released.**
-- **M6.7 live media timeline and live Compact display — implemented, automated-tested, physically accepted on exact `Mac16,8 / macOS 26.6.2` (7/7 PASS, including a fresh P1-style Idle/Hover/Stability resource bundle), merged via PR #58 as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`; not released.**
-- **M6.8 compact live equalizer — implemented, automated-tested, physically accepted on exact `Mac16,8 / macOS 26.6.2`, merged via PR #60 as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`; not released.**
+- M6.2 production media state/controller/bridge boundary — accepted/merged/released (`v0.1.0`);
+- M6.3 concrete system-media transport — accepted/merged/released (`v0.1.0`);
+- M6.4 shipping media composition — accepted/merged/released (`v0.1.0`);
+- M6.5 compact + expanded Media-first UI — accepted/merged/released (`v0.1.0`);
+- **M6.6 gestures, haptics, interactive notch, seek and Hover Peek — implemented, automated-tested, physically accepted and merged via PR #33 as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; released in `v0.2.0`.**
+- **M6.6 hardware-notch screen-selection correction — physically accepted on exact runtime `46f069e57997eab060c79c3d9e279da944d6e263`, CI-verified and merged via PR #40 as `e8d77968abd9ba7a5aaed6c63d108a67b8d8a251`; released in `v0.2.0`.**
+- **P1 whole-app target-Mac performance/resource review — accepted on exact `Mac16,8 / macOS 26.6.2`, measured runtime `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`, tooling `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`, merged via PR #53/#54; all direct Idle/Hover/Stability/wakeup/energy/compositor gates PASS; released in `v0.2.0`.**
+- **M1 event-driven active-display/multi-monitor migration — implemented, automated-tested (392 Swift tests, CI #1344 3/3 GREEN), physically accepted on exact `Mac16,8 / macOS 26.6.2` with an external monitor (11/11 PASS), merged via PR #56 as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; released in `v0.2.0`.**
+- **M6.7 live media timeline and live Compact display — implemented, automated-tested, physically accepted on exact `Mac16,8 / macOS 26.6.2` (7/7 PASS, including a fresh P1-style Idle/Hover/Stability resource bundle), merged via PR #58 as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`; released in `v0.2.0`.**
+- **M6.8 compact live equalizer — implemented, automated-tested, physically accepted on exact `Mac16,8 / macOS 26.6.2`, merged via PR #60 as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`; released in `v0.2.0`.**
+- **M6.9 media marquee text for overflowing titles — implemented, automated-tested, canonical CI GREEN, merged via PR #62 as `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703`; physical acceptance explicitly waived by the product owner (see `docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md`); released in `v0.2.0`.**
+- **M6.10 discoverable normal-quit path via menu bar status item — implemented, automated-tested, physically accepted, merged via PR #64 as `b911746077092bfffd60d93cd8072c268cb1df94`; released in `v0.2.0`.**
 
-The published `v0.1.0` release predates the M1/P0.1/M6/P1/M6.7/M6.8 work currently present in source. A new version is required before those changes can be published because existing tags/releases are immutable.
+`v0.2.0` publishes all M1/P0.1/M6/P1/M6.7-M6.10 work that had accumulated unreleased on top of the `v0.1.0` engineering-foundation release. See [`docs/releases/v0.2.0.md`](docs/releases/v0.2.0.md) for the full release notes.
 
-P1 whole-app resource acceptance is complete and does not justify speculative runtime optimization. M1 active-display/multi-monitor migration is accepted/merged: NotchHub correctly moves/settles Compact, Peek and Expanded when display topology changes, preserving hardware-notch-first selection, with no polling, private display APIs or new permissions. M6.7 is also accepted/merged: the shipping media runtime now runs for the app's whole lifetime so Compact reflects live Now Playing state, and one narrowly-scoped, reviewed bounded-lifecycle timer makes the Peek/Expanded progress bar tick in real time. M6.8 is also accepted/merged: Compact's static play/pause glyph is now a small live animated equalizer. The current priority is selecting and specifying the next bounded product-hardening slice or module.
+P1 whole-app resource acceptance is complete and does not justify speculative runtime optimization. M1 active-display/multi-monitor migration is accepted/merged: NotchHub correctly moves/settles Compact, Peek and Expanded when display topology changes, preserving hardware-notch-first selection, with no polling, private display APIs or new permissions. M6.7 is also accepted/merged: the shipping media runtime now runs for the app's whole lifetime so Compact reflects live Now Playing state, and one narrowly-scoped, reviewed bounded-lifecycle timer makes the Peek/Expanded progress bar tick in real time. M6.8 is also accepted/merged: Compact's static play/pause glyph is now a small live animated equalizer. M6.9 adds marquee scrolling for overflowing media text. M6.10 adds a discoverable menu-bar Quit path. The current priority is selecting and specifying the next bounded product-hardening slice or module.
 
 ## Universal Media
 

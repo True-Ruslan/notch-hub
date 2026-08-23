@@ -1,6 +1,6 @@
 # Roadmap
 
-Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.1.0`.
+Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.2.0` (`v0.1.0` remains published/immutable as historical evidence).
 
 States are explicit: **implemented -> automated-tested -> physically accepted -> merged -> released**. Green CI does not substitute for target-Mac acceptance when physical UI, permissions, third-party behavior or resources are part of the contract.
 
@@ -23,9 +23,9 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 
 ### M6.6 — gestures, haptics, interactive notch, seek and Hover Peek
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.2.0`**.
 
-Original full physical source acceptance remains permanently pinned to exact runtime `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`. PR #33 squash-merged as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; published release remains immutable `v0.1.0`.
+Original full physical source acceptance remains permanently pinned to exact runtime `8744b9e6239fa28a6d1094f6f4e7669e4ada25b3`. PR #33 squash-merged as `bb6df211699c5aef7bac7d50866f3e24b2fe165b`; released as part of `v0.2.0`.
 
 Later real target-Mac checks found and repaired three independent runtime defects while preserving the accepted interaction/security boundary:
 
@@ -58,11 +58,11 @@ Final evidence:
 
 Earlier 26.6.1 and pre-fix measurements remain historical diagnostic evidence and are not mixed with the accepted 26.6.2 bundle.
 
-P1 lifecycle is complete as an acceptance gate. It is not a release event; published version remains `v0.1.0`.
+P1 lifecycle is complete as an acceptance gate and is released as part of `v0.2.0`.
 
 ## M1 — active-display / multi-monitor migration
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.2.0`**.
 
 Event-driven display-topology migration: observes `NSApplication.didChangeScreenParametersNotification`, resolves `NSScreen.screens` fresh on topology change while preserving hardware-notch-first selection and the accepted `NSScreen.main`/first-screen fallback, migrates Compact/Peek/Expanded through one shared `NotchPanelLayoutModel`, retargets in-flight programmatic and interactive transitions by generation, and resets the bounded pointer-escape monitor across migration. No private display APIs, repeating timers, display links, telemetry or new permissions were added.
 
@@ -70,31 +70,31 @@ Automated candidate `dd945dc3ca009f8d9429ad044d50a01a2ea1bb62`; CI #1344 3/3 GRE
 
 Physical acceptance on `Mac16,8 / macOS 26.6.2` with an external monitor connected — 11/11 PASS, covering connect/disconnect/reconfigure across Compact/Peek/Expanded, interruption of programmatic and interactive transitions, no-notch fallback, repeated migration cycles, post-migration pointer/hover scoping and no new permission prompts. Full checklist recorded in PR #56.
 
-PR #56 squash-merged as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed. Published release remains immutable `v0.1.0`.
+PR #56 squash-merged as `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed. Released as part of `v0.2.0`.
 
 ## M6.7 — live media timeline and live Compact display
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.2.0`**.
 
 Deliberately reverses two prior accepted invariants: the shipping media runtime now runs for the app's whole lifetime instead of only while settled Expanded, so Compact reflects live Now Playing state; and one narrowly-scoped, reviewed bounded-lifecycle `Timer` (`MediaTimelineTicker`) extrapolates a real-time-ticking progress position while settled Peek/Expanded and playing. `scripts/performance_policy.py`'s runtime audit gained a fail-closed, schema-validated reviewed-exception manifest for exactly this one timer. A real pre-existing hazard was also found and fixed: the one-shot peek probe could clobber an already-live authoritative presentation on hover.
 
 Physical acceptance on `Mac16,8 / macOS 26.6.2` — 7/7 PASS, including live-ticking timeline in Peek/Expanded, correct pause/resume freezing, live Compact reflecting external track/pause changes, verified `0.0%` CPU from the ticker while settled Compact, clean post-Quit teardown under a normal quit, and a fresh P1-style Idle/Hover/Stability resource bundle with all direct gates passing despite the adapter now running continuously. Full checklist and evidence: `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`.
 
-PR #58 squash-merged as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Published release remains immutable `v0.1.0`. Physical acceptance also surfaced a non-blocking follow-up: NotchHub has no user-discoverable normal-quit path (no Dock icon, no Quit menu item, Cmd+Q is a no-op) — Force Quit is the only option today and skips process cleanup.
+PR #58 squash-merged as `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Released as part of `v0.2.0`. Physical acceptance also surfaced a non-blocking follow-up: NotchHub has no user-discoverable normal-quit path (no Dock icon, no Quit menu item, Cmd+Q is a no-op) — Force Quit is the only option today and skips process cleanup.
 
 ## M6.8 — compact live equalizer
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.2.0`**.
 
 Competitive-review-driven: replaces Compact's static play/pause glyph with a small animated equalizer, borrowing a UX detail found in both `TheBoredTeam/boring.notch` (open source, same MediaRemoteAdapter) and NotchNook's compact-mode presentation. `MediaCompactEqualizerView` animates 3 bars via SwiftUI's `PhaseAnimator`, armed only while playing, settling flat on pause. No timer primitive; no new reviewed-exception entry needed.
 
 Physical acceptance on `Mac16,8 / macOS 26.6.2` — all items PASS. Acceptance found and fixed a real bug: the initial `.repeatForever`-based animation froze after the horizontal next/previous swipe gesture (an ancestor `withAnimation` transaction interrupting the implicit loop); fixed by switching to `PhaseAnimator`, immune to that class of interference. Full evidence: `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`.
 
-PR #60 squash-merged as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Published release remains immutable `v0.1.0`. Other competitive-review ideas (album-art color tinting, `matchedGeometryEffect` cross-state artwork morphing) remain explicitly deferred to future slices; marquee text is now underway as M6.9 below.
+PR #60 squash-merged as `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Released as part of `v0.2.0`. Other competitive-review ideas (album-art color tinting, `matchedGeometryEffect` cross-state artwork morphing) remain explicitly deferred to future slices; marquee text is now underway as M6.9 below.
 
 ## M6.9 — media marquee text for overflowing titles
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / CANONICAL CI GREEN / MERGED / PHYSICAL ACCEPTANCE EXPLICITLY WAIVED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / CANONICAL CI GREEN / MERGED / PHYSICAL ACCEPTANCE EXPLICITLY WAIVED / RELEASED — `v0.2.0`**.
 
 Deferred from M6.8: Peek and Expanded title/artist/album previously hard-truncated overflowing text. `MediaMarqueeCalculator` (pure, unit-tested) decides overflow/timing; `MediaMarqueeText` renders static truncated text when content fits and otherwise scrolls a continuous conveyor loop via SwiftUI's `PhaseAnimator`, gated off entirely by `accessibilityReduceMotion`. Compact is unaffected (no title/artist text there). No new timer-policy exception needed. Design/invariants: `docs/superpowers/specs/2026-08-22-media-marquee-text-design.md`.
 
@@ -102,7 +102,7 @@ PR #62 squash-merged as `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703` after canonic
 
 ## M6.10 — discoverable normal-quit path
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.2.0`**.
 
 M6.7's physical acceptance found Force Quit was the only way to quit NotchHub, bypassing `applicationWillTerminate`'s existing, already-tested media-runtime cleanup and leaving an orphaned `mediaremote-adapter.pl` process. `AppDelegate` now installs a minimal `NSStatusItem` (stock SF Symbol, no custom asset) with a static "Quit NotchHub" menu action wired to `#selector(NSApplication.terminate(_:))`, routing through the existing cleanup path. No new entitlement, permission, or timer. Design/invariants: `docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md`.
 
@@ -126,4 +126,4 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 1. Keep issue #42 visible for branch-protection restoration.
 2. M6.9 media marquee text and M6.10 discoverable normal-quit path are both merged (M6.9 with physical acceptance explicitly waived by the product owner; M6.10 physically accepted). Select and specify the next bounded product-hardening slice — album-art tinting or `matchedGeometryEffect` artwork morphing (both now unblocked by completed P1 performance evidence) or remaining fullscreen/Spaces/notchless hardening — before starting the Settings (M7) module, per current product priority.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
-4. Keep the published Personal Release at immutable `v0.1.0` until an explicit release decision.
+4. Keep published releases (`v0.1.0`, `v0.2.0`) immutable; ship any future defect or feature as a new version.
