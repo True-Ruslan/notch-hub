@@ -13,10 +13,11 @@ enum NotchInteractionIntent {
 @MainActor
 final class NotchInteractionCoordinator {
     typealias Cancellation = @MainActor () -> Void
-    typealias Scheduler = @MainActor (
-        TimeInterval,
-        @escaping @MainActor () -> Void
-    ) -> Cancellation
+    typealias Scheduler =
+        @MainActor (
+            TimeInterval,
+            @escaping @MainActor () -> Void
+        ) -> Cancellation
 
     static let defaultDwellSeconds: TimeInterval = 0.12
     static let defaultPeekCollapseGraceSeconds: TimeInterval = 0.14

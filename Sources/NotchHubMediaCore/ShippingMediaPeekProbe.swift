@@ -18,10 +18,11 @@ public final class ShippingMediaPeekProbe: MediaPeekProbing {
     }
 
     typealias Cancellation = @MainActor () -> Void
-    typealias TimeoutScheduler = @MainActor (
-        TimeInterval,
-        @escaping @MainActor () -> Void
-    ) -> Cancellation
+    typealias TimeoutScheduler =
+        @MainActor (
+            TimeInterval,
+            @escaping @MainActor () -> Void
+        ) -> Cancellation
 
     private let makeTransport: @MainActor () -> (any SystemMediaTransport)?
     private let scheduleTimeout: TimeoutScheduler

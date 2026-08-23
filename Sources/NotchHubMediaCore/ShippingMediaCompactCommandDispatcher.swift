@@ -7,7 +7,8 @@ public enum ShippingMediaCompactCommandAction: Sendable, Equatable {
 
 @MainActor
 public final class ShippingMediaCompactCommandDispatcher {
-    typealias ProcessClientFactory = @MainActor (ShippingMediaBundlePaths) ->
+    typealias ProcessClientFactory =
+        @MainActor (ShippingMediaBundlePaths) ->
         any MediaRemoteProcessClientProtocol
 
     private let makeProcessClient: @MainActor () throws -> any MediaRemoteProcessClientProtocol
