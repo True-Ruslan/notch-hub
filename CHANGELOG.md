@@ -6,6 +6,16 @@ All notable changes to NotchHub are documented here. The active version is store
 
 Published release remains `v0.1.0`. Everything below is source work not yet published as a new version.
 
+### M6.10 — discoverable normal-quit path
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED LOCALLY / NOT MERGED**.
+
+M6.7's physical acceptance found that Force Quit was the only way to quit NotchHub (`LSUIElement`/`.accessory` means no Dock icon, no app menu bar, Cmd+Q is a no-op), and Force Quit's SIGKILL bypasses `applicationWillTerminate`'s existing, already-tested media-runtime cleanup — leaving an orphaned `mediaremote-adapter.pl` process. `AppDelegate` now installs a minimal `NSStatusItem` (stock SF Symbol icon, no custom asset) with a static menu: a disabled "NotchHub" title and a "Quit NotchHub" action wired to `#selector(NSApplication.terminate(_:))`, routing through the existing cleanup path rather than adding new termination logic. No new entitlement, permission, or timer — `Resources/NotchHub.entitlements` is unchanged (still exactly `com.apple.security.app-sandbox`), activation policy stays `.accessory`.
+
+Design/invariants: `docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md`.
+
+Local verification: `swift build -Xswiftc -warnings-as-errors` clean; `scripts/performance_policy.py audit Sources`, `test_acceptance_coverage.py --mode strict` and `security-audit.sh` all green. New `AppQuitMenuPolicyTests` (source-scanning) manually verified against the implementation but could not be executed via `swift test` in the authoring environment (no local Xcode/`swift-testing` toolchain) — canonical CI must confirm GREEN.
+
 ### P1 — target-Mac whole-app resource audit
 
 Status: **ACCEPTED — COMPLETE TARGET-MAC EVIDENCE / DIRECT GATES PASS / NOT RELEASED**.

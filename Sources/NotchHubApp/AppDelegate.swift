@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var panelController: NotchPanelController?
     private var mediaRuntime: (any MediaRuntimeSession)?
+    private var statusItem: NSStatusItem?
     private let mediaPresentationModel = ShippingMediaPresentationModel()
     private let mediaGestureVisualModel = MediaGestureVisualModel()
     private let sourceApplicationIconResolver = SourceApplicationIconResolver()
@@ -28,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        installStatusItem()
 
         let mediaPresentationModel = mediaPresentationModel
         let mediaTimelineTicker = mediaTimelineTicker
@@ -185,7 +187,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mediaGestureSession?.cancelSeek()
     }
 
+    /// Adds a discoverable, event-driven (click-to-open) menu bar entry so
+    /// the user has a normal way to quit besides Force Quit, which bypasses
+    /// `applicationWillTerminate` and its existing media-runtime cleanup.
+    /// See docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md.
+    private func installStatusItem() {
+        let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.button?.image = NSImage(
+            systemSymbolName: "rectangle.topthird.inset.filled",
+            accessibilityDescription: "NotchHub"
+        )
+        statusItem.button?.image?.isTemplate = true
+
+        let menu = NSMenu()
+        let titleItem = NSMenuItem(title: "NotchHub", action: nil, keyEquivalent: "")
+        titleItem.isEnabled = false
+        menu.addItem(titleItem)
+        menu.addItem(.separator())
+        let quitItem = NSMenuItem(
+            title: "Quit NotchHub",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        quitItem.target = NSApp
+        menu.addItem(quitItem)
+        statusItem.menu = menu
+
+        self.statusItem = statusItem
+    }
+
     func applicationWillTerminate(_: Notification) {
+        statusItem = nil
+
         panelController?.settledPresentationHandler = nil
         panelController?.hoverPeekRequestHandler = nil
         mediaPresentationModel.presentationDidChange = nil

@@ -3,7 +3,7 @@ import Testing
 
 struct RegressionUIFoundationSizeBudgetPolicyTests {
     @Test
-    func foundationBudgetRemainsProvenancedHistoricalEvidenceWhileM6_9BudgetIsActive() throws {
+    func foundationBudgetRemainsProvenancedHistoricalEvidenceWhileM6_10BudgetIsActive() throws {
         let repositoryRoot = repositoryRoot()
         let budgetURL =
             repositoryRoot
@@ -20,7 +20,7 @@ struct RegressionUIFoundationSizeBudgetPolicyTests {
         let ci = try String(contentsOf: ciURL, encoding: .utf8)
         #expect(
             ci.contains(
-                "--feature-budget performance/m6-9-media-marquee-text-size-budget.json"
+                "--feature-budget performance/m6-10-discoverable-quit-menu-size-budget.json"
             )
         )
         #expect(
