@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "entries": [
+    {"id":"NH-MEDIA-MARQUEE-001","source":"docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md","status":"deferred","coverage":[{"layer":"unit","test":"NotchHubMediaCoreTests.MediaMarqueeCalculatorTests.needsScrollingReturnsTrueWhenContentOverflows"},{"layer":"unit","test":"NotchHubMediaCoreTests.MediaMarqueeCalculatorTests.cycleDurationScalesWithOverflowDistanceAtFixedSpeed"},{"layer":"policy","test":"NotchHubCoreTests.MediaMarqueeTextPolicyTests.marqueeUsesPhaseAnimatorNotTimerOrRepeatForever"},{"layer":"policy","test":"NotchHubCoreTests.MediaMarqueeTextPolicyTests.marqueeChecksAccessibilityReduceMotion"},{"layer":"policy","test":"NotchHubCoreTests.MediaMarqueeTextPolicyTests.mediaNotchRootViewUsesMarqueeTextForAllFiveSites"}],"physicalOnlyReason":null},
     {
       "id": "NH-MEDIA-LIVE-003",
       "source": "docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md",
