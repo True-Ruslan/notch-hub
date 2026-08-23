@@ -1,6 +1,6 @@
 # Project state
 
-Last updated: 2026-08-22
+Last updated: 2026-08-23
 Published version: `0.1.0` Personal Release
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
@@ -10,7 +10,8 @@ Accepted P1 measurement/evidence tooling: `fc7562b0799faa4dd80e8c47263354a8bd16b
 Accepted M1 active-display migration runtime: `c7d2bdb9cae744d439d240f22acd14140bacedd3`
 Accepted M6.7 live media timeline/Compact runtime: `bd48037baff85d8eb3354fbf3792c5db016ff4a1`
 Accepted M6.8 compact live equalizer runtime: `4cbb01d7d5f57f26c40162c8149faf27691c2e06`
-Active development: M6.9 media marquee text implemented on branch `m6-9-media-marquee-text` (PR #62), canonical CI GREEN 3/3 with real feature size-budget evidence populated, awaiting target-Mac physical acceptance before merge
+M6.9 media marquee text merged runtime: `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703` (physical acceptance explicitly waived by product owner; see docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md)
+Active development: M6.10 discoverable normal-quit path implemented on branch `m6-10-discoverable-quit-menu`, locally verified, awaiting canonical CI before merge
 
 ## Product state
 
@@ -175,18 +176,24 @@ P1 therefore reached:
 
 Published release is still `v0.1.0`; P1 acceptance is not a release claim.
 
-## M6.9 media marquee text — CI green, pending physical acceptance
+## M6.9 media marquee text — merged, physical acceptance explicitly waived
 
-PR #62 (branch `m6-9-media-marquee-text`) adds `MediaMarqueeCalculator` (pure overflow/timing math, `Sources/NotchHubMediaCore/`) and `MediaMarqueeText` (SwiftUI view, `Sources/NotchHubApp/`), wired into all 5 title/artist/album sites in Peek/Expanded (`MediaNotchRootView.swift`); Compact is unaffected. Overflowing text scrolls in a continuous conveyor loop via SwiftUI's `PhaseAnimator` (same mechanism as M6.8's equalizer, no timer primitive); short text renders exactly as before; `accessibilityReduceMotion` disables scrolling unconditionally. Design/invariants: `docs/superpowers/specs/2026-08-22-media-marquee-text-design.md`.
+PR #62 added `MediaMarqueeCalculator` (pure overflow/timing math, `Sources/NotchHubMediaCore/`) and `MediaMarqueeText` (SwiftUI view, `Sources/NotchHubApp/`), wired into all 5 title/artist/album sites in Peek/Expanded (`MediaNotchRootView.swift`); Compact is unaffected. Overflowing text scrolls in a continuous conveyor loop via SwiftUI's `PhaseAnimator` (same mechanism as M6.8's equalizer, no timer primitive); short text renders exactly as before; `accessibilityReduceMotion` disables scrolling unconditionally. Design/invariants: `docs/superpowers/specs/2026-08-22-media-marquee-text-design.md`.
 
-Canonical CI is GREEN 3/3 on exact head `4dbea149d14c7007ecebd86905323f38f3d9b596`: full Swift test suite (new `MediaMarqueeCalculatorTests`, `MediaMarqueeTextPolicyTests`), `scripts/performance_policy.py audit Sources` (no new reviewed-timer-exception entry needed), and the release size gate against real evidence now in `performance/m6-9-media-marquee-text-size-budget.json` (measured on `f968cd6ea479bf5f04582f572472d27947490b62`). Two real CI-only defects were found and fixed: a doc comment self-triggering the timer-policy source scan by literally spelling out `TimelineView`, and four pre-existing Swift policy tests whose hardcoded "active feature budget" assertion needed updating from `m6-8` to `m6-9`. Target-Mac physical acceptance (`Mac16,8`/macOS `26.6.x`) is the only remaining gate before merge.
+Canonical CI was GREEN 3/3 before merge, including the release size gate against real evidence in `performance/m6-9-media-marquee-text-size-budget.json`. Squash-merged as `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703`. Unlike every prior milestone, the product owner was directly asked whether to physically test first, merge with the gate waived, or leave the PR open, and explicitly chose to waive physical acceptance and merge immediately. This is recorded honestly (not as a passed check) in `docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md`, including the specific residual risk: this exact class of custom `PhaseAnimator`/`GeometryReader` SwiftUI code has a direct precedent (M6.8) for hiding bugs only physical testing caught.
+
+## M6.10 discoverable normal-quit path — implemented, pending CI
+
+Branch `m6-10-discoverable-quit-menu` adds a minimal `NSStatusItem` to `AppDelegate` (stock SF Symbol icon, no custom asset) with a static menu: a disabled "NotchHub" title and a "Quit NotchHub" action wired to `#selector(NSApplication.terminate(_:))`. This fixes a real defect physical acceptance found during M6.7: Force Quit was the only way to quit, and its SIGKILL bypasses `applicationWillTerminate`'s existing, already-tested media-runtime cleanup, leaving an orphaned `mediaremote-adapter.pl` process. No new entitlement, permission, or timer — `Resources/NotchHub.entitlements` unchanged, activation policy stays `.accessory`. Design/invariants: `docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md`.
+
+Verified locally: `swift build -Xswiftc -warnings-as-errors` clean; `scripts/performance_policy.py audit Sources`, `test_acceptance_coverage.py --mode strict`, `security-audit.sh` all green; new `AppQuitMenuPolicyTests` assertions manually verified against the implementation but not yet run via `swift test` (no local Xcode/`swift-testing` toolchain in this environment) — canonical CI must confirm GREEN before merge.
 
 ## Next optimal step
 
-1. Perform target-Mac physical acceptance for PR #62 per the checklist in `docs/superpowers/specs/2026-08-22-media-marquee-text-design.md`, then merge M6.9.
+1. Push M6.10, open a PR, get canonical CI green, populate its feature size-budget evidence from that real run (same two-step sequence as M6.9), then ask the product owner whether to physically test or waive again before merging.
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
-3. After M6.9 lands, continue finishing the Universal Media UI/UX per current product priority before starting Settings (M7) — candidates include further competitive-review-driven Compact/Peek UX borrowing (album-art color tinting, `matchedGeometryEffect` cross-state artwork morphing, both still deferred), a discoverable normal-quit path (physical acceptance for M6.7 surfaced that NotchHub currently has no user-reachable Quit action besides Force Quit), or remaining fullscreen/Spaces/notchless hardening.
-4. Require target-Mac physical acceptance for any shipping change whose behavior CI cannot honestly prove; distinguish implementation, automated testing, physical acceptance, merge and release.
+3. After M6.10 lands, continue finishing the Universal Media UI/UX per current product priority before starting Settings (M7) — candidates include album-art color tinting and `matchedGeometryEffect` cross-state artwork morphing (both now unblocked by completed P1 performance evidence), or remaining fullscreen/Spaces/notchless hardening.
+4. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 5. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
 6. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
 
