@@ -1,7 +1,7 @@
 # Project state
 
 Last updated: 2026-08-23
-Published version: `0.1.0` Personal Release
+Published version: `0.2.0` Personal Release (`v0.1.0` remains published/immutable as historical evidence)
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
 Branch governance: `main` is intended to be protected; GitHub currently reports it unprotected and issue #42 tracks restoration
@@ -12,13 +12,14 @@ Accepted M6.7 live media timeline/Compact runtime: `bd48037baff85d8eb3354fbf3792
 Accepted M6.8 compact live equalizer runtime: `4cbb01d7d5f57f26c40162c8149faf27691c2e06`
 M6.9 media marquee text merged runtime: `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703` (physical acceptance explicitly waived by product owner; see docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md)
 Accepted M6.10 discoverable normal-quit path runtime: `b911746077092bfffd60d93cd8072c268cb1df94`
-Active development: M6.10 merged and accepted; next bounded slice not yet selected
+Personal Release `v0.2.0` published 2026-08-23 via PR #66/#67 and the `Personal Release` workflow (run 32636035043), source `59bbbebe70d18f43ebcabcb333c72b7c5791c241`, publishing everything through M6.10/P1 that had accumulated unreleased on top of `v0.1.0`; see `docs/releases/v0.2.0.md`.
+Active development: M6.10 merged and accepted, v0.2.0 released; next bounded slice not yet selected
 
 ## Product state
 
 NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-Published state remains immutable `v0.1.0`. M6.6, its hardware-notch screen-selection correction, the compositor settlement repair and the bounded pointer-monitor correction are accepted/merged source work but remain unreleased.
+Published state is now immutable `v0.2.0` (`v0.1.0` remains published/immutable as historical evidence and is not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work that is now released in `v0.2.0`.
 
 P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization.
 
@@ -119,7 +120,7 @@ Physical acceptance on exact `Mac16,8 / macOS 26.6.2` with the built-in hardware
 
 Post-Quit `pgrep -lf 'mediaremote-adapter\.pl' || true` empty; clean shutdown confirmed. Squash merge `c7d2bdb9cae744d439d240f22acd14140bacedd3`; issue #55 closed.
 
-M1 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
+M1 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.2.0`.
 
 ## M6.7 live media timeline and live Compact display — accepted
 
@@ -127,7 +128,7 @@ PR #58 deliberately reverses two prior accepted invariants: the shipping media r
 
 Physical acceptance on exact `Mac16,8 / macOS 26.6.2` — **7/7 PASS**: live-ticking timeline in Peek and Expanded; correct freeze/resume on pause/play; Compact reflecting a track/pause change made outside NotchHub without re-expanding; verified `0.0%` CPU while settled Compact (ticker torn down); clean post-Quit process teardown under a normal quit; and a fresh P1-style Idle/Hover/Stability resource bundle with all direct gates passing against the previously accepted thresholds despite the adapter now running continuously (Idle threadMax `5<=6`; Hover CPU median `0.0%<=8.0%`, threadMax `5<=9`; Stability RSS delta `-11,744<=+8192`, threadMax `7<=9`, thread delta `0<=+2`).
 
-Squash merge `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Full evidence: `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`. This bundle supersedes the prior "zero-adapter compact" Idle baseline in `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`, which remains immutable historical evidence for the source it measured. M6.7 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
+Squash merge `bd48037baff85d8eb3354fbf3792c5db016ff4a1`. Full evidence: `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`. This bundle supersedes the prior "zero-adapter compact" Idle baseline in `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`, which remains immutable historical evidence for the source it measured. M6.7 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.2.0`.
 
 ## M6.8 compact live equalizer — accepted
 
@@ -135,7 +136,7 @@ Competitive review of `TheBoredTeam/boring.notch` (open source, same `MediaRemot
 
 Physical acceptance on exact `Mac16,8 / macOS 26.6.2` — all items PASS: bars visibly animate out of phase while playing; settle flat on pause and restart on resume; `0.0%` CPU while settled Compact with media playing; no interaction jank; clean post-Quit teardown. Acceptance also found and fixed a real bug: the first implementation used `.animation(...repeatForever...)`, which froze after the horizontal next/previous swipe gesture (an ancestor `withAnimation` transaction interrupting the implicit repeating loop) — fixed by switching to `PhaseAnimator`, which owns its own animation timeline and is immune to that class of interference.
 
-Squash merge `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Full evidence: `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`. M6.8 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
+Squash merge `4cbb01d7d5f57f26c40162c8149faf27691c2e06`. Full evidence: `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`. M6.8 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.2.0`.
 
 ## Security and resource invariants
 
@@ -175,7 +176,7 @@ P1 therefore reached:
 
 **implemented -> tested -> physically accepted -> merged runtime measured -> accepted**.
 
-Published release is still `v0.1.0`; P1 acceptance is not a release claim.
+Released as part of `v0.2.0`.
 
 ## M6.9 media marquee text — merged, physical acceptance explicitly waived
 
@@ -187,7 +188,7 @@ Canonical CI was GREEN 3/3 before merge, including the release size gate against
 
 PR #64 adds a minimal `NSStatusItem` to `AppDelegate` (stock SF Symbol icon, no custom asset) with a static menu: a disabled "NotchHub" title and a "Quit NotchHub" action wired to `#selector(NSApplication.terminate(_:))`. This fixes a real defect physical acceptance found during M6.7: Force Quit was the only way to quit, and its SIGKILL bypasses `applicationWillTerminate`'s existing, already-tested media-runtime cleanup, leaving an orphaned `mediaremote-adapter.pl` process. No new entitlement, permission, or timer — `Resources/NotchHub.entitlements` unchanged, activation policy stays `.accessory`. Design/invariants: `docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md`.
 
-Canonical CI GREEN 3/3 on first try (the stale-active-budget-reference issue found during M6.9 was fixed proactively this time). Squash-merged as `b911746077092bfffd60d93cd8072c268cb1df94`. Physical acceptance performed by the product owner on their own Mac — all 7 checklist items PASS, including confirming `pgrep -lf 'mediaremote-adapter\.pl'` is empty after quitting via the menu. Full evidence: `docs/testing/M6_10_DISCOVERABLE_QUIT_ACCEPTANCE.md`. M6.10 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
+Canonical CI GREEN 3/3 on first try (the stale-active-budget-reference issue found during M6.9 was fixed proactively this time). Squash-merged as `b911746077092bfffd60d93cd8072c268cb1df94`. Physical acceptance performed by the product owner on their own Mac — all 7 checklist items PASS, including confirming `pgrep -lf 'mediaremote-adapter\.pl'` is empty after quitting via the menu. Full evidence: `docs/testing/M6_10_DISCOVERABLE_QUIT_ACCEPTANCE.md`. M6.10 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.2.0`.
 
 ## Next optimal step
 
@@ -195,10 +196,17 @@ Canonical CI GREEN 3/3 on first try (the stale-active-budget-reference issue fou
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
-5. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
+5. Keep `v0.1.0` and `v0.2.0` immutable; any future defect or feature ships as a new version rather than replacing a published release artifact.
+
+## Personal Release v0.2.0 — published
+
+Published 2026-08-23 via PR #66 (version bump/release notes/CHANGELOG reorg) and PR #67 (a real toolchain-drift fix: the release runner resolved Swift `6.3.3` against `6.1.2` on the identical commit's `ci.yml` run minutes earlier, and the newer `swift-format` rejected the wrapping of 3 pre-existing multi-line closure-type `typealias` declarations; fixed with a whitespace-only reformat, reverified GREEN under 6.3.3), then the `Personal Release` GitHub Actions workflow (run `32636035043`) on source `59bbbebe70d18f43ebcabcb333c72b7c5791c241`.
+
+Publishes everything accepted/merged since `v0.1.0`: M6.6 (original + hardware-notch/compositor/pointer-monitor corrections), P1 whole-app performance review, M1 multi-monitor migration, and M6.7-M6.10 Universal Media work. Ad-hoc signed, App Sandbox + Hardened Runtime verified, DMG integrity/checksum verified, not notarized. Full notes: `docs/releases/v0.2.0.md`. `v0.1.0` remains published and immutable as historical evidence; it is not superseded, only followed by `v0.2.0`.
 
 See:
 
+- `docs/releases/v0.2.0.md`;
 - `docs/testing/P1_TARGET_RESOURCE_ACCEPTANCE.md`;
 - `docs/superpowers/plans/2026-08-18-p1-target-mac-resource-audit.md`;
 - `docs/superpowers/specs/2026-08-21-active-display-multi-monitor-migration-design.md`;
@@ -206,6 +214,8 @@ See:
 - `docs/superpowers/specs/2026-08-22-compact-live-equalizer-design.md`;
 - `docs/testing/M6_7_LIVE_MEDIA_TIMELINE_AND_COMPACT_ACCEPTANCE.md`;
 - `docs/testing/M6_8_COMPACT_LIVE_EQUALIZER_ACCEPTANCE.md`;
+- `docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md`;
+- `docs/testing/M6_10_DISCOVERABLE_QUIT_ACCEPTANCE.md`;
 - closed issue #38 for the complete P1 evidence/acceptance trail;
 - closed issue #55 for the M1 display-migration acceptance trail;
 - issue #42 for repository branch-protection restoration.
