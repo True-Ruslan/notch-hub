@@ -586,7 +586,28 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_media_marquee_text_budget_over_immutable_baseline(self):
+    def test_repository_m6_10_discoverable_quit_menu_budget_is_provenanced_tight_and_self_validating(
+        self,
+    ):
+        self.assert_repository_budget(
+            filename="m6-10-discoverable-quit-menu-size-budget.json",
+            feature_id="m6-10-discoverable-quit-menu",
+            source_commit="edddd632b47fdb2f60667072e6fafee63e274460",
+            workflow_run_id=32629964007,
+            artifact_id=9490781181,
+            summary={
+                "appSizeBytes": 944927,
+                "dmgSizeBytes": 605501,
+                "executableSizeBytes": 642720,
+            },
+            allowance={
+                "appSizeBytes": 725000,
+                "dmgSizeBytes": 555000,
+                "executableSizeBytes": 420000,
+            },
+        )
+
+    def test_ci_uses_discoverable_quit_menu_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -594,10 +615,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-9-media-marquee-text-size-budget.json",
+            "--feature-budget performance/m6-10-discoverable-quit-menu-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-9-media-marquee-text-size-budget.json",
             "m6-8-compact-live-equalizer-size-budget.json",
             "m6-7-live-media-timeline-and-compact-size-budget.json",
             "m1-active-display-migration-size-budget.json",

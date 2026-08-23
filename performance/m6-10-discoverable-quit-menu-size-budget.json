@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 725000,
+    "dmgSizeBytes": 555000,
+    "executableSizeBytes": 420000
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9490781181,
+    "sourceCommit": "edddd632b47fdb2f60667072e6fafee63e274460",
+    "summary": {
+      "appSizeBytes": 944927,
+      "dmgSizeBytes": 605501,
+      "executableSizeBytes": 642720
+    },
+    "workflowRunId": 32629964007
+  },
+  "featureId": "m6-10-discoverable-quit-menu",
+  "schemaVersion": 1
+}
