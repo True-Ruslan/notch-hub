@@ -8,13 +8,13 @@ Published release remains `v0.1.0`. Everything below is source work not yet publ
 
 ### M6.10 — discoverable normal-quit path
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED LOCALLY / NOT MERGED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
 
 M6.7's physical acceptance found that Force Quit was the only way to quit NotchHub (`LSUIElement`/`.accessory` means no Dock icon, no app menu bar, Cmd+Q is a no-op), and Force Quit's SIGKILL bypasses `applicationWillTerminate`'s existing, already-tested media-runtime cleanup — leaving an orphaned `mediaremote-adapter.pl` process. `AppDelegate` now installs a minimal `NSStatusItem` (stock SF Symbol icon, no custom asset) with a static menu: a disabled "NotchHub" title and a "Quit NotchHub" action wired to `#selector(NSApplication.terminate(_:))`, routing through the existing cleanup path rather than adding new termination logic. No new entitlement, permission, or timer — `Resources/NotchHub.entitlements` is unchanged (still exactly `com.apple.security.app-sandbox`), activation policy stays `.accessory`.
 
 Design/invariants: `docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md`.
 
-Local verification: `swift build -Xswiftc -warnings-as-errors` clean; `scripts/performance_policy.py audit Sources`, `test_acceptance_coverage.py --mode strict` and `security-audit.sh` all green. New `AppQuitMenuPolicyTests` (source-scanning) manually verified against the implementation but could not be executed via `swift test` in the authoring environment (no local Xcode/`swift-testing` toolchain) — canonical CI must confirm GREEN.
+PR #64 squash-merged as `b911746077092bfffd60d93cd8072c268cb1df94` after canonical CI GREEN 3/3 (`swift test` confirmed the new `AppQuitMenuPolicyTests` GREEN; the authoring environment has no local Xcode/`swift-testing` toolchain, so this was the first real execution) and the release size gate against real evidence in `performance/m6-10-discoverable-quit-menu-size-budget.json`. Physical acceptance on the product owner's own Mac — all 7 checklist items PASS: status item appears, Quit menu works, post-quit `pgrep -lf 'mediaremote-adapter\.pl'` empty (the actual defect fixed), no Dock icon, no new permission prompt, notch panel unaffected. Full evidence: `docs/testing/M6_10_DISCOVERABLE_QUIT_ACCEPTANCE.md`.
 
 ### P1 — target-Mac whole-app resource audit
 

@@ -11,7 +11,8 @@ Accepted M1 active-display migration runtime: `c7d2bdb9cae744d439d240f22acd14140
 Accepted M6.7 live media timeline/Compact runtime: `bd48037baff85d8eb3354fbf3792c5db016ff4a1`
 Accepted M6.8 compact live equalizer runtime: `4cbb01d7d5f57f26c40162c8149faf27691c2e06`
 M6.9 media marquee text merged runtime: `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703` (physical acceptance explicitly waived by product owner; see docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md)
-Active development: M6.10 discoverable normal-quit path implemented on branch `m6-10-discoverable-quit-menu`, locally verified, awaiting canonical CI before merge
+Accepted M6.10 discoverable normal-quit path runtime: `b911746077092bfffd60d93cd8072c268cb1df94`
+Active development: M6.10 merged and accepted; next bounded slice not yet selected
 
 ## Product state
 
@@ -182,20 +183,19 @@ PR #62 added `MediaMarqueeCalculator` (pure overflow/timing math, `Sources/Notch
 
 Canonical CI was GREEN 3/3 before merge, including the release size gate against real evidence in `performance/m6-9-media-marquee-text-size-budget.json`. Squash-merged as `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703`. Unlike every prior milestone, the product owner was directly asked whether to physically test first, merge with the gate waived, or leave the PR open, and explicitly chose to waive physical acceptance and merge immediately. This is recorded honestly (not as a passed check) in `docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md`, including the specific residual risk: this exact class of custom `PhaseAnimator`/`GeometryReader` SwiftUI code has a direct precedent (M6.8) for hiding bugs only physical testing caught.
 
-## M6.10 discoverable normal-quit path — implemented, pending CI
+## M6.10 discoverable normal-quit path — accepted
 
-Branch `m6-10-discoverable-quit-menu` adds a minimal `NSStatusItem` to `AppDelegate` (stock SF Symbol icon, no custom asset) with a static menu: a disabled "NotchHub" title and a "Quit NotchHub" action wired to `#selector(NSApplication.terminate(_:))`. This fixes a real defect physical acceptance found during M6.7: Force Quit was the only way to quit, and its SIGKILL bypasses `applicationWillTerminate`'s existing, already-tested media-runtime cleanup, leaving an orphaned `mediaremote-adapter.pl` process. No new entitlement, permission, or timer — `Resources/NotchHub.entitlements` unchanged, activation policy stays `.accessory`. Design/invariants: `docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md`.
+PR #64 adds a minimal `NSStatusItem` to `AppDelegate` (stock SF Symbol icon, no custom asset) with a static menu: a disabled "NotchHub" title and a "Quit NotchHub" action wired to `#selector(NSApplication.terminate(_:))`. This fixes a real defect physical acceptance found during M6.7: Force Quit was the only way to quit, and its SIGKILL bypasses `applicationWillTerminate`'s existing, already-tested media-runtime cleanup, leaving an orphaned `mediaremote-adapter.pl` process. No new entitlement, permission, or timer — `Resources/NotchHub.entitlements` unchanged, activation policy stays `.accessory`. Design/invariants: `docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md`.
 
-Verified locally: `swift build -Xswiftc -warnings-as-errors` clean; `scripts/performance_policy.py audit Sources`, `test_acceptance_coverage.py --mode strict`, `security-audit.sh` all green; new `AppQuitMenuPolicyTests` assertions manually verified against the implementation but not yet run via `swift test` (no local Xcode/`swift-testing` toolchain in this environment) — canonical CI must confirm GREEN before merge.
+Canonical CI GREEN 3/3 on first try (the stale-active-budget-reference issue found during M6.9 was fixed proactively this time). Squash-merged as `b911746077092bfffd60d93cd8072c268cb1df94`. Physical acceptance performed by the product owner on their own Mac — all 7 checklist items PASS, including confirming `pgrep -lf 'mediaremote-adapter\.pl'` is empty after quitting via the menu. Full evidence: `docs/testing/M6_10_DISCOVERABLE_QUIT_ACCEPTANCE.md`. M6.10 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Published release is still `v0.1.0`; this acceptance is not a release claim.
 
 ## Next optimal step
 
-1. Push M6.10, open a PR, get canonical CI green, populate its feature size-budget evidence from that real run (same two-step sequence as M6.9), then ask the product owner whether to physically test or waive again before merging.
+1. Select and specify the next bounded product-hardening slice with a written spec + RED tests before implementation — candidates: album-art color tinting or `matchedGeometryEffect` cross-state artwork morphing (both now unblocked by completed P1 performance evidence), or remaining fullscreen/Spaces/notchless hardening — before starting Settings (M7), per current product priority.
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
-3. After M6.10 lands, continue finishing the Universal Media UI/UX per current product priority before starting Settings (M7) — candidates include album-art color tinting and `matchedGeometryEffect` cross-state artwork morphing (both now unblocked by completed P1 performance evidence), or remaining fullscreen/Spaces/notchless hardening.
-4. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
-5. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
-6. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
+3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
+4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
+5. Keep `v0.1.0` immutable until an explicit Personal Release decision is made.
 
 See:
 
