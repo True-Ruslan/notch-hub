@@ -102,9 +102,11 @@ PR #62 squash-merged as `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703` after canonic
 
 ## M6.10 — discoverable normal-quit path
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED LOCALLY / NOT MERGED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / NOT RELEASED**.
 
 M6.7's physical acceptance found Force Quit was the only way to quit NotchHub, bypassing `applicationWillTerminate`'s existing, already-tested media-runtime cleanup and leaving an orphaned `mediaremote-adapter.pl` process. `AppDelegate` now installs a minimal `NSStatusItem` (stock SF Symbol, no custom asset) with a static "Quit NotchHub" menu action wired to `#selector(NSApplication.terminate(_:))`, routing through the existing cleanup path. No new entitlement, permission, or timer. Design/invariants: `docs/superpowers/specs/2026-08-23-discoverable-quit-menu-design.md`.
+
+PR #64 squash-merged as `b911746077092bfffd60d93cd8072c268cb1df94` after canonical CI GREEN 3/3. Physical acceptance on the product owner's own Mac — all 7 checklist items PASS, including confirming `pgrep -lf 'mediaremote-adapter\.pl'` is empty after quitting via the menu (the actual defect fixed). Full evidence: `docs/testing/M6_10_DISCOVERABLE_QUIT_ACCEPTANCE.md`.
 
 ## Repository governance
 
@@ -122,6 +124,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. M6.9 media marquee text is merged (physical acceptance explicitly waived by the product owner). M6.10 discoverable normal-quit path is implemented and locally verified; it needs canonical CI before merge. After it lands, continue finishing the Universal Media UI/UX (e.g. album-art tinting or `matchedGeometryEffect` artwork morphing — both now unblocked by completed P1 performance evidence, remaining fullscreen/Spaces/notchless hardening) before starting the Settings (M7) module, per current product priority.
+2. M6.9 media marquee text and M6.10 discoverable normal-quit path are both merged (M6.9 with physical acceptance explicitly waived by the product owner; M6.10 physically accepted). Select and specify the next bounded product-hardening slice — album-art tinting or `matchedGeometryEffect` artwork morphing (both now unblocked by completed P1 performance evidence) or remaining fullscreen/Spaces/notchless hardening — before starting the Settings (M7) module, per current product priority.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
 4. Keep the published Personal Release at immutable `v0.1.0` until an explicit release decision.
