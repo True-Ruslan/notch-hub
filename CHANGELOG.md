@@ -4,7 +4,19 @@ All notable changes to NotchHub are documented here. The active version is store
 
 ## [Unreleased]
 
-No unreleased changes on top of `v0.2.0`.
+### M6.11 — album-art color tinting
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / AWAITING PHYSICAL ACCEPTANCE / NOT MERGED**.
+
+Deferred since M6.8's competitive review (`TheBoredTeam/boring.notch`, NotchNook): the panel background was flat `Color.black` in every presentation state. A new pure `MediaArtworkTintCalculator` (`Sources/NotchHubMediaCore/MediaArtworkTintCalculator.swift`) clamps a raw sampled artwork color into a subtle, legible tint (saturation capped at `0.55`, brightness kept within `0.05...0.34`, defensive against non-finite input); a new `MediaArtworkTintSampler` (`Sources/NotchHubMediaCore/MediaArtworkTintSampler.swift`) decodes artwork `Data` via `CoreGraphics`/`ImageIO` only (no `AppKit`), drawing it into a 1x1-pixel context for a fast average-color sample, then converts to HSB with a pure RGB->HSB conversion. Both live in `NotchHubMediaCore` rather than `NotchHubApp` specifically so they get real behavioral unit tests (`Tests/NotchHubMediaCoreTests/MediaArtworkTintCalculatorTests.swift`, `MediaArtworkTintSamplerTests.swift`, the latter synthesizing solid-color PNGs in memory) rather than the source-scanning-only coverage every `NotchHubApp`-only SwiftUI file is limited to (`NotchHubApp` has no test target at all).
+
+`MediaNotchRootView.mediaContent(_:)`'s shared `.background(Color.black)` (covering Compact, Peek and Expanded alike) becomes `.background(artworkTintColor)`, recomputed via `.onChange(of: presentation.artworkData, initial: true)` and crossfaded with a declarative `.animation(.easeInOut(duration: 0.4), value:)` — no new `Timer`/`CADisplayLink`/polling primitive, so no `performance/reviewed-runtime-timers.json` entry is needed. No artwork (or a fully transparent/undecodable image) falls back to `MediaArtworkTintCalculator.fallback`, which converts to exactly `Color(hue: 0, saturation: 0, brightness: 0)` — identical to the pre-slice flat black background.
+
+Design/invariants: `docs/superpowers/specs/2026-08-24-album-art-color-tinting-design.md`.
+
+Verified locally before any CI push: `swift build`, `swift build -Xswiftc -warnings-as-errors`, `swift format lint --recursive --strict`, `scripts/performance_policy.py audit Sources`, `scripts/security-audit.sh`, `plutil -lint`, and `bash -n scripts/*.sh` all pass on this authoring machine's real Swift 6.3.3/Xcode 26.6 toolchain (macOS 26.6.2) — the first slice in this project's history authored with local toolchain access. The sampler/calculator logic itself was also exercised directly against real decoded solid-color PNGs via a temporary scratch executable (not committed) before the permanent tests were written, confirming e.g. pure red/green/blue artwork samples to the expected hue and that saturation/brightness clamp correctly. The `Testing` framework itself is unavailable in this authoring environment (Command Line Tools only, no full Xcode.app), so `swift test` could not be run locally; canonical CI remains the first real execution of the new test files, matching this project's established precedent (e.g. M6.10's `AppQuitMenuPolicyTests`).
+
+Physical acceptance on exact `Mac16,8`/macOS `26.6.x` remains required before merge, per checklist in the design spec — this project's standing policy is that CI cannot honestly prove real visual/animation feel, and this slice is new custom-color/animation code with no direct hardware-verified precedent in this codebase.
 
 ## [0.2.0] - 2026-08-23
 
