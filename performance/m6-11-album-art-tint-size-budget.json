@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 725000,
+    "dmgSizeBytes": 565000,
+    "executableSizeBytes": 425000
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9509232876,
+    "sourceCommit": "984c31fcf8387f12f50bab15711a967975d015d2",
+    "summary": {
+      "appSizeBytes": 949791,
+      "dmgSizeBytes": 612975,
+      "executableSizeBytes": 647584
+    },
+    "workflowRunId": 32696922857
+  },
+  "featureId": "m6-11-album-art-tint",
+  "schemaVersion": 1
+}

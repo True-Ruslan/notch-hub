@@ -51,7 +51,7 @@ struct M66HoverPeekSizeBudgetPolicyTests {
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
-                "--feature-budget performance/m6-10-discoverable-quit-menu-size-budget.json"
+                "--feature-budget performance/m6-11-album-art-tint-size-budget.json"
             )
         )
         #expect(
