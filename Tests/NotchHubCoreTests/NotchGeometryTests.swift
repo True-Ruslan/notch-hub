@@ -18,6 +18,7 @@ struct NotchGeometryTests {
         #expect(layout.compactFrame.maxY == input.frame.maxY)
         #expect(layout.compactBackgroundOpacity == 1)
         #expect(layout.expandedContentTopInset == layout.compactFrame.height + 12)
+        #expect(layout.peekContentTopInset == layout.compactFrame.height + 4)
     }
 
     @Test
@@ -73,6 +74,16 @@ struct NotchGeometryTests {
         #expect(layout.peekFrame.midX == input.frame.midX)
         #expect(layout.compactBackgroundOpacity == 1)
         #expect(layout.expandedContentTopInset == 20)
+        #expect(layout.peekContentTopInset == 28)
+    }
+
+    @Test
+    func peekContentTopInsetAlwaysClearsThePhysicallyOpaqueNotchHeight() {
+        let layout = NotchGeometry.layout(for: hardwareInput())
+        // Peek content is horizontally centered on the notch the same way
+        // Compact is, so anything rendered above this inset would be
+        // physically unrenderable, not just visually cramped.
+        #expect(layout.peekContentTopInset >= layout.compactFrame.height)
     }
 
     @Test

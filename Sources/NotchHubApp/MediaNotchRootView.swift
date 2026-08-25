@@ -93,6 +93,10 @@ struct MediaNotchRootView: View {
         layoutModel.currentLayout.expandedContentTopInset
     }
 
+    private var peekContentTopInset: CGFloat {
+        layoutModel.currentLayout.peekContentTopInset
+    }
+
     private var isSeekSurfaceAvailable: Bool {
         let presentationAllowsSeek =
             panelModel.contentPresentation == .peek
@@ -240,7 +244,7 @@ struct MediaNotchRootView: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.top, 28)
+            .padding(.top, peekContentTopInset)
             .padding(.bottom, 10)
         }
     }

@@ -23,12 +23,23 @@ public final class MediaTimelineTicker: ObservableObject {
     private let now: () -> TimeInterval
     private let makeHandle: (@escaping @Sendable () -> Void) -> any MediaTimelineTickerHandle
 
+    /// How close an authoritative snapshot's position must land to a pending
+    /// optimistic seek target to count as confirming it.
+    private static let pendingSeekConfirmationToleranceSeconds: Double = 1.0
+
+    /// Safety net so a seek whose confirmation never precisely arrives (a
+    /// dropped/ignored transport command) does not suppress authoritative
+    /// updates forever.
+    private static let pendingSeekTimeoutSeconds: TimeInterval = 2.0
+
     private var anchorPositionSeconds: Double?
     private var anchorDurationSeconds: Double?
     private var anchorCapturedAt: TimeInterval?
     private var isPlaying = false
     private var isArmed = false
     private var handle: (any MediaTimelineTickerHandle)?
+    private var pendingSeekTargetSeconds: Double?
+    private var pendingSeekSetAt: TimeInterval?
 
     public init(
         now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
@@ -53,22 +64,47 @@ public final class MediaTimelineTicker: ObservableObject {
     }
 
     /// Applies a fresh authoritative snapshot, re-anchoring extrapolation.
+    ///
+    /// While a locally committed seek is still awaiting confirmation (see
+    /// `applyOptimisticSeek(to:)`), a snapshot captured before the seek took
+    /// effect on the transport can arrive after it — e.g. a concurrent
+    /// system Now Playing update racing the async seek command. Applying
+    /// such a stale snapshot unconditionally would visibly snap the bar back
+    /// to the pre-seek (or a transiently zero) position before the real
+    /// post-seek update corrects it. A snapshot is trusted immediately once
+    /// it reports a position close to the pending target, or once the
+    /// timeout safety net elapses.
     public func apply(presentation: ShippingMediaPresentation?) {
         isPlaying = presentation?.playbackState == .playing
 
-        if let presentation,
+        guard let presentation,
             let position = presentation.positionSeconds,
             let duration = presentation.durationSeconds
-        {
-            anchorPositionSeconds = position
-            anchorDurationSeconds = duration
-            anchorCapturedAt = now()
-        } else {
+        else {
             anchorPositionSeconds = nil
             anchorDurationSeconds = nil
             anchorCapturedAt = nil
+            clearPendingSeek()
+            displayedPositionSeconds = nil
+            reconcile()
+            return
         }
 
+        if let pendingSeekTargetSeconds, let pendingSeekSetAt {
+            let isConfirmed = abs(position - pendingSeekTargetSeconds) <= Self.pendingSeekConfirmationToleranceSeconds
+            let hasTimedOut = now() - pendingSeekSetAt >= Self.pendingSeekTimeoutSeconds
+            guard isConfirmed || hasTimedOut else {
+                // Stale pre-seek snapshot still in flight; keep extrapolating
+                // from the optimistic anchor instead of reverting to it.
+                reconcile()
+                return
+            }
+            clearPendingSeek()
+        }
+
+        anchorPositionSeconds = position
+        anchorDurationSeconds = duration
+        anchorCapturedAt = now()
         displayedPositionSeconds = anchorPositionSeconds
         reconcile()
     }
@@ -81,9 +117,17 @@ public final class MediaTimelineTicker: ObservableObject {
             return
         }
 
-        anchorPositionSeconds = min(positionSeconds, anchorDurationSeconds)
+        let clamped = min(positionSeconds, anchorDurationSeconds)
+        anchorPositionSeconds = clamped
         anchorCapturedAt = now()
         displayedPositionSeconds = anchorPositionSeconds
+        pendingSeekTargetSeconds = clamped
+        pendingSeekSetAt = anchorCapturedAt
+    }
+
+    private func clearPendingSeek() {
+        pendingSeekTargetSeconds = nil
+        pendingSeekSetAt = nil
     }
 
     public func invalidate() {
