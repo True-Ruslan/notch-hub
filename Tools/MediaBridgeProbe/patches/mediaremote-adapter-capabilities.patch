@@ -241,3 +241,28 @@ new file mode 100644
 +    CFRelease(bundle);
 +    printOut(serializeJsonDictionarySafe(result, false));
 +}
+diff --git a/src/adapter/keys.m b/src/adapter/keys.m
+--- a/src/adapter/keys.m
++++ b/src/adapter/keys.m
+@@ -56,11 +56,20 @@
+ NSString *kMRARadioStationHash = @"radioStationHash";
+ NSString *kMRAMediaType = @"mediaType";
+ 
+ NSArray<NSString *> *mandatoryPayloadKeys(void) {
+-    return @[ kMRAProcessIdentifier, kMRATitle, kMRAPlaying ];
++    // NotchHub development-only compatibility relaxation: upstream requires
++    // a non-empty title before emitting any payload at all, which silently
++    // discards an otherwise-valid active/playing session (PID + playing
++    // state) whenever the source app plays media without ever setting
++    // MediaSession metadata (no navigator.mediaSession.metadata), as some
++    // browser video sites do. Dropping the title requirement lets NotchHub
++    // surface basic transport controls for that session instead of nothing,
++    // matching how the system Control Center Now Playing widget already
++    // falls back to showing just the app name with playback controls.
++    return @[ kMRAProcessIdentifier, kMRAPlaying ];
+ }
+ 
+ bool allMandatoryPayloadKeysSet(NSDictionary *data) {
+     NSArray<NSString *> *keys = mandatoryPayloadKeys();
+     for (NSString *key in keys) {
+         if (data[key] == nil || data[key] == [NSNull null]) {

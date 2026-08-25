@@ -24,7 +24,7 @@ from performance_policy import (
 
 EXPECTED_SOURCE_COMMIT = "c63f39c40b90d647e48271b9dc1d5ffd6e612c0b"
 EXPECTED_ADAPTER_COMMIT = "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
-EXPECTED_PATCH_SHA256 = "f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974"
+EXPECTED_PATCH_SHA256 = "21730c7216814000213a3276777f2b471354f5d7f59019631da0a2917845545f"
 EXPECTED_BUNDLE_IDENTIFIER = "ru.trueruslan.notchhub.media-transport-candidate"
 EXPECTED_CAPABILITY_KEYS = frozenset(("previous", "next", "seek"))
 ALLOWED_CAPABILITY_VALUES = frozenset(("supported", "unsupported", "unknown"))

@@ -4,7 +4,7 @@ import Testing
 
 struct ShippingMediaBundlePathsTests {
     private let adapterCommit = "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
-    private let patchSHA256 = "f251ca3eb8bcd417eed526fc3e5efad29c2aa375d7aad7a2cb3a206857d51974"
+    private let patchSHA256 = "21730c7216814000213a3276777f2b471354f5d7f59019631da0a2917845545f"
 
     @Test
     func resolvesOnlyPinnedResourcesInsideShippingBundle() throws {
