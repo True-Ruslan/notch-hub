@@ -269,9 +269,29 @@ final class NotchPanelTransitionCoordinator {
                 origin: .expanded,
                 layout: layout
             )
-        case .compact, .peek, .expanded:
-            break
+        case .compact:
+            reconcileSettledFrame(for: .compact, layout: layout)
+        case .peek:
+            reconcileSettledFrame(for: .peek, layout: layout)
+        case .expanded:
+            reconcileSettledFrame(for: .expanded, layout: layout)
         }
+    }
+
+    /// Re-applies the exact settled frame/corner for `presentation` against a
+    /// freshly changed `layout`, without publishing a settlement or
+    /// animating. A settled panel is not otherwise guaranteed to already be
+    /// showing the frame this `layout` implies: `layoutModel`'s compact
+    /// horizontal extension (armed/disarmed as media availability changes)
+    /// can change the settled `.compact` layout while the panel sits idle in
+    /// that phase, and AppKit has been observed to independently resize the
+    /// panel's window (matching the new layout's width but not its
+    /// recentered origin) the first time SwiftUI's view tree switches into
+    /// media content — reconciling here, instantly, corrects either case
+    /// before the next real transition would otherwise visibly "snap."
+    private func reconcileSettledFrame(for presentation: NotchPresentation, layout: NotchLayout) {
+        let endpoint = Self.endpoint(for: presentation, layout: layout)
+        applySettledPresentation(endpoint.frame, endpoint.cornerRadius)
     }
 
     func displayLayoutDidChange(_ layout: NotchLayout) {

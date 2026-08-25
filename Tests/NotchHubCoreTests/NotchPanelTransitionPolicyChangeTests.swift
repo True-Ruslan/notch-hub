@@ -115,10 +115,58 @@ struct NotchPanelTransitionPolicyChangeTests {
         duration.value = 0
         coordinator.animationPolicyDidChange(layout: layout)
 
+        // No new animated transition starts merely because the layout was
+        // re-supplied unchanged while settled.
         #expect(driver.requests.isEmpty)
         #expect(driver.cancelCount == 0)
         #expect(feedbackCount == 0)
         #expect(coordinator.phase.isCompact)
+    }
+
+    @Test
+    func policyChangeWhileSettledReconcilesFrameWithoutAnimatingOrPublishingSettlement() {
+        // Regression test: a settled panel is not guaranteed to already be
+        // showing the frame its current layout implies. The compact
+        // horizontal extension (armed/disarmed as media availability
+        // changes) can change the settled `.compact` layout while the panel
+        // sits idle in that phase — and AppKit has independently been
+        // observed to resize the live panel window to match the new width
+        // without recentering its origin the first time SwiftUI's view tree
+        // switches into media content. Physical acceptance found this
+        // produced a visibly mispositioned Peek on cold launch, self-healing
+        // only once some later transition happened to reconcile the frame.
+        let model = NotchPanelModel()
+        let driver = PolicyChangeDriver()
+        var settlementCount = 0
+        let coordinator = NotchPanelTransitionCoordinator(
+            model: model,
+            animationDuration: { 0.20 },
+            animate: { frame, radius, seconds, completion in
+                driver.animate(frame: frame, radius: radius, duration: seconds, completion: completion)
+            },
+            cancelAnimation: { driver.cancel() },
+            performExpansionHaptic: {},
+            applySettledPresentation: { frame, radius in
+                driver.applySettled(frame: frame, radius: radius)
+            }
+        )
+        coordinator.settledPresentationHandler = { _ in settlementCount += 1 }
+
+        let extendedLayout = layout.withCompactHorizontalExtension(36)
+        coordinator.animationPolicyDidChange(layout: extendedLayout)
+
+        // Reconciled instantly against the new layout's compact frame...
+        #expect(driver.settledRequests.count == 1)
+        #expect(driver.settledRequests[0].frame == extendedLayout.compactFrame)
+        #expect(driver.settledRequests[0].radius == NotchPanelTransitionCoordinator.compactCornerRadius)
+        // ...without starting an animated transition or publishing a
+        // spurious settlement callback for a presentation that never
+        // actually changed.
+        #expect(driver.requests.isEmpty)
+        #expect(driver.cancelCount == 0)
+        #expect(settlementCount == 0)
+        #expect(coordinator.phase.isCompact)
+        #expect(model.contentPresentation == .compact)
     }
 }
 
@@ -158,8 +206,14 @@ private final class PolicyChangeDriver {
         let completion: @MainActor () -> Void
     }
 
+    struct SettledRequest {
+        let frame: CGRect
+        let radius: CGFloat
+    }
+
     private(set) var requests: [Request] = []
     private(set) var cancelCount = 0
+    private(set) var settledRequests: [SettledRequest] = []
 
     func animate(
         frame: CGRect,
@@ -176,5 +230,9 @@ private final class PolicyChangeDriver {
 
     func complete(index: Int) {
         requests[index].completion()
+    }
+
+    func applySettled(frame: CGRect, radius: CGFloat) {
+        settledRequests.append(SettledRequest(frame: frame, radius: radius))
     }
 }
