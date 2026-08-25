@@ -63,6 +63,42 @@ struct MediaRemoteWireTests {
     }
 
     @Test
+    func activeSessionWithoutTitleStillDecodes() throws {
+        // Some browser video sites register a playing MediaRemote session
+        // (bundleIdentifier + playing) without ever setting
+        // navigator.mediaSession.metadata, so title/artist/album arrive as
+        // empty strings rather than being omitted. The wire decoder must
+        // still surface this as an active, controllable session rather than
+        // collapsing it into "no session," matching the adapter's own
+        // relaxed mandatoryPayloadKeys (processIdentifier + playing only).
+        let line = Data(
+            #"""
+            {"type":"data","diff":false,"payload":{
+              "bundleIdentifier":"ru.yandex.desktop.yandex-browser",
+              "playing":true,
+              "title":"",
+              "artist":"",
+              "album":"",
+              "durationMicros":8150355000,
+              "elapsedTimeMicros":6980505579
+            }}
+            """#.utf8
+        )
+
+        let decoded = try MediaRemoteWireDecoder.decode(line: line)
+        let payload = try #require(decoded)
+
+        #expect(payload.bundleIdentifier == "ru.yandex.desktop.yandex-browser")
+        #expect(payload.playing)
+        // The wire decoder passes text fields through as-is; normalizing an
+        // empty string to nil happens one layer up, in
+        // ShippingMediaPresentationProjection.make.
+        #expect(payload.title == "")
+        #expect(payload.artist == "")
+        #expect(payload.album == "")
+    }
+
+    @Test
     func diffPayloadIsRejected() {
         let line = Data(
             #"{"type":"data","diff":true,"payload":{"bundleIdentifier":"player","playing":true,"title":"Track"}}"#.utf8
