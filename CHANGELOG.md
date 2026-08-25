@@ -4,6 +4,20 @@ All notable changes to NotchHub are documented here. The active version is store
 
 ## [Unreleased]
 
+### Panel positioning — cold-launch Peek could render mispositioned until the next transition
+
+Status: **IMPLEMENTED / PHYSICALLY ACCEPTED (fixed) / NOT MERGED**.
+
+Real defect found during ad-hoc physical testing on a cold launch: the very first time Peek appeared, the panel rendered visibly shifted right of the physical hardware notch, with an odd opening slide; any later transition (a normal hover/collapse cycle) silently self-corrected it, which made it look like "interaction fixes it" — a coincidence, not a cause.
+
+Root cause, found via targeted temporary instrumentation (`FileHandle.standardError` frame dumps at each panel-frame call site, removed before commit) rather than guesswork: `NotchPanelController` constructs its `NSPanel` at the un-extended `compactFrame` (e.g. width `220`, origin `x=790`). As soon as a media session is detected, `AppDelegate` calls `setCompactHorizontalExtension(36)`, which correctly updates `NotchPanelLayoutModel`'s `compactFrame` to a *symmetrically* widened, recentered rect (`width=292`, `origin x=754`) — but `NotchPanelTransitionCoordinator.animationPolicyDidChange(layout:)`'s settled-phase branch (`.compact`/`.peek`/`.expanded`) was a bare `break`: it never re-applied the panel's actual on-screen frame to match. Confirmed live via `NSWindow.didResizeNotification`: AppKit itself was independently resizing the panel's *width* to `292` (matching SwiftUI's new media content) while leaving its *origin* at the stale `790` — an asymmetric, off-center resize the settled-phase no-op then never corrected. The very next real transition (hover to Peek) computed its endpoint from the correctly-updated *model* layout, so it looked centered — but animated from the AppKit-corrupted stale `panel.frame` as its start point, producing the reported wrong-position-then-slide.
+
+Fix: `animationPolicyDidChange`'s settled-phase cases now reconcile the panel to the current layout's exact endpoint via the existing `applySettledPresentation` primitive (instant, no animation, no spurious settlement callback) instead of trusting the frame is already correct. This is a general correctness fix, not specific to any one root cause of staleness — it also covers the panel's `NotchPanelController.init()`-time base layout being briefly wrong on a cold launch before `NSScreen`'s notch-detection auxiliary rects settle (a second, narrower defensive fix also added: a single one-shot `DispatchQueue.main.async` re-check right after construction, reusing the same tested display-migration path — not a repeating timer/poll).
+
+New tests: `NotchPanelTransitionPolicyChangeTests.policyChangeWhileSettledReconcilesFrameWithoutAnimatingOrPublishingSettlement`; `NotchDisplayMigrationTests.controllerRechecksTopologyOnceOnColdLaunchInsteadOfTrustingFirstScreenRead`.
+
+Physical acceptance on exact `Mac16,8`/macOS `26.6.x`: reproduced the mispositioned cold-launch Peek on two separate cold-launch attempts before the fix (confirmed not browser-specific — a cold launch with Yandex Music reproduced identically); confirmed the corrected build renders Peek in the exact correct position on the very first hover after a cold launch — verified live by the product owner.
+
 ### Media transport — Now Playing sessions without title metadata were silently dropped
 
 Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / NOT MERGED**.
