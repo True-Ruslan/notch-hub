@@ -244,6 +244,26 @@ struct NotchDisplayMigrationTests {
     }
 
     @Test
+    func controllerRechecksTopologyOnceOnColdLaunchInsteadOfTrustingFirstScreenRead() throws {
+        // NSScreen's auxiliary safe-area rects are not always populated yet
+        // by the time the panel controller is first constructed during
+        // application launch, which can bake a wrong-centered/wrong-width
+        // base layout into the panel before AppKit's own screen topology
+        // has settled. A single deferred re-check (not a repeating timer)
+        // reuses the already-tested migration path instead of only relying
+        // on a later NSApplication.didChangeScreenParametersNotification
+        // that may not arrive until after real content is already visible.
+        let source = try sourceText(
+            relativePath: "Sources/NotchHubCore/Notch/NotchPanelController.swift"
+        )
+
+        #expect(source.contains("scheduleColdLaunchTopologyRecheck()"))
+        #expect(source.contains("func scheduleColdLaunchTopologyRecheck()"))
+        #expect(source.contains("DispatchQueue.main.async"))
+        #expect(source.contains("migrateToPreferredDisplayIfNeeded()"))
+    }
+
+    @Test
     func viewsObserveSharedLayoutModelInsteadOfOneTimeDisplayGeometry() throws {
         let appDelegate = try sourceText(relativePath: "Sources/NotchHubApp/AppDelegate.swift")
         let mediaRoot = try sourceText(relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift")

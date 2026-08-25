@@ -166,6 +166,24 @@ public final class NotchPanelController: NSObject {
         configurePanel()
         configureLocalPointerTracking(hostingView)
         configurePointerMonitoring()
+        scheduleColdLaunchTopologyRecheck()
+    }
+
+    /// `preferredBaseLayout()` above already ran synchronously during this
+    /// very initializer. On some cold launches `NSScreen.screens`' auxiliary
+    /// safe-area rects (used to detect the physical hardware notch) are not
+    /// yet populated at that point, producing a wrong-centered/wrong-width
+    /// base layout that would otherwise only self-correct once AppKit
+    /// happens to post a later `didChangeScreenParametersNotification` —
+    /// visibly, since by then real content may already be showing. Re-check
+    /// once on the very next run loop turn, reusing the same tested
+    /// migration path `displayParametersDidChange(_:)` already uses, whose
+    /// correction is an instant, non-animated settle rather than a visible
+    /// snap. A single one-shot dispatch, not a repeating timer/poll.
+    private func scheduleColdLaunchTopologyRecheck() {
+        DispatchQueue.main.async { [weak self] in
+            self?.migrateToPreferredDisplayIfNeeded()
+        }
     }
 
     public func show() {
