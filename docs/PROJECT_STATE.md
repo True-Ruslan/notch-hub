@@ -1,6 +1,6 @@
 # Project state
 
-Last updated: 2026-08-23
+Last updated: 2026-08-26
 Published version: `0.2.0` Personal Release (`v0.1.0` remains published/immutable as historical evidence)
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
@@ -13,7 +13,10 @@ Accepted M6.8 compact live equalizer runtime: `4cbb01d7d5f57f26c40162c8149faf276
 M6.9 media marquee text merged runtime: `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703` (physical acceptance explicitly waived by product owner; see docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md)
 Accepted M6.10 discoverable normal-quit path runtime: `b911746077092bfffd60d93cd8072c268cb1df94`
 Personal Release `v0.2.0` published 2026-08-23 via PR #66/#67 and the `Personal Release` workflow (run 32636035043), source `59bbbebe70d18f43ebcabcb333c72b7c5791c241`, publishing everything through M6.10/P1 that had accumulated unreleased on top of `v0.1.0`; see `docs/releases/v0.2.0.md`.
-Active development: M6.10 merged and accepted, v0.2.0 released; next bounded slice not yet selected
+Accepted M6.11 album-art color tinting runtime: `ad572cea5787ac8487308855f517395c8a3a23b2` (PR #69; not yet released, `v0.2.0` remains published)
+Accepted cold-launch panel-positioning fix runtime: `634fc5629218209a99649d8c1fc22981954fa4d4` (PR #71, unrelated to any milestone; not yet released)
+Accepted media-transport title-less-session fix runtime: `ed215290100becc1a54e46fec0b209682b539d32` (PR #70, unrelated to any milestone; not yet released)
+Active development: M6.11 merged and accepted along with two acceptance-found defect fixes (Peek notch clipping, seek reset) and two unrelated real-world defects found and fixed during ad-hoc physical testing (title-less Now Playing sessions silently dropped; cold-launch panel mispositioning); next bounded slice not yet selected
 
 ## Product state
 
@@ -190,9 +193,24 @@ PR #64 adds a minimal `NSStatusItem` to `AppDelegate` (stock SF Symbol icon, no 
 
 Canonical CI GREEN 3/3 on first try (the stale-active-budget-reference issue found during M6.9 was fixed proactively this time). Squash-merged as `b911746077092bfffd60d93cd8072c268cb1df94`. Physical acceptance performed by the product owner on their own Mac — all 7 checklist items PASS, including confirming `pgrep -lf 'mediaremote-adapter\.pl'` is empty after quitting via the menu. Full evidence: `docs/testing/M6_10_DISCOVERABLE_QUIT_ACCEPTANCE.md`. M6.10 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.2.0`.
 
+## M6.11 album-art color tinting — accepted
+
+PR #69 adds `MediaArtworkTintCalculator` and `MediaArtworkTintSampler` (both in `NotchHubMediaCore`, real unit-tested), replacing the panel's flat `Color.black` background with a subtle tint sampled from the current track's artwork across Compact/Peek/Expanded, crossfading declaratively on track change. Deferred since M6.8's competitive review, the last of the three deferred ideas after marquee text (M6.9); `matchedGeometryEffect` artwork morphing remains deferred. Design/invariants: `docs/superpowers/specs/2026-08-24-album-art-color-tinting-design.md`.
+
+Physical acceptance found and fixed two real, pre-existing UI defects in the same PR before merge: Peek title/artist text partially hidden under the physical hardware notch (`peekMediaContent` used a hardcoded top padding instead of real notch-geometry-derived inset), and seek-to-tap visibly resetting the timeline position to near-zero before animating to the clicked spot (a stale pre-seek snapshot racing the async transport seek command could clobber the optimistic-seek anchor). Both fixed and re-verified; full detail in `CHANGELOG.md`.
+
+Squash-merged as `ad572cea5787ac8487308855f517395c8a3a23b2`. M6.11 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet released; `v0.2.0` remains published.
+
+## Two unrelated real-world defects found and fixed during ad-hoc physical testing
+
+Neither tied to any milestone in flight; both found while physically testing M6.11 on real hardware and fixed/merged separately:
+
+- **Title-less Now Playing sessions were silently dropped** (PR #70, `ed215290100becc1a54e46fec0b209682b539d32`): the vendored, patched `MediaRemoteAdapter` required a non-empty title before emitting any payload at all, so a browser video playing without `navigator.mediaSession.metadata` (title/artist/album) showed nothing in NotchHub even though the OS's own Control Center Now Playing widget correctly showed it. Fixed by relaxing the adapter's `mandatoryPayloadKeys()` to require only process identifier and playing state, matching the system widget's own more permissive fallback; the Swift pipeline already handled a title-less session correctly once given one. Required updating `ShippingMediaBundlePaths.pinnedAdapterPatchSHA256` (a deliberate supply-chain integrity pin) in lockstep across all four hardcoded locations, since changing the patch changes its hash and the app correctly fail-closed refused to start the media runtime until the pin was corrected.
+- **Cold-launch Peek could render mispositioned until the next transition** (PR #71, `634fc5629218209a99649d8c1fc22981954fa4d4`): `NotchPanelTransitionCoordinator.animationPolicyDidChange(layout:)`'s settled-phase branch was a bare no-op, so when the compact horizontal extension changed while the panel sat idle in `.compact`, the live `NSPanel` frame could go stale (AppKit was observed independently resizing the panel's width to match new media content while leaving its origin uncorrected). Fixed by having settled phases reconcile the panel to the current layout's exact endpoint instead of trusting the frame was already correct; reproduced and confirmed fixed on two separate cold launches (not browser-specific — reproduced identically with Yandex Music).
+
 ## Next optimal step
 
-1. Select and specify the next bounded product-hardening slice with a written spec + RED tests before implementation — candidates: album-art color tinting or `matchedGeometryEffect` cross-state artwork morphing (both now unblocked by completed P1 performance evidence), or remaining fullscreen/Spaces/notchless hardening — before starting Settings (M7), per current product priority.
+1. Select and specify the next bounded product-hardening slice with a written spec + RED tests before implementation — candidates: `matchedGeometryEffect` cross-state artwork morphing (the only remaining deferred idea from the M6.8 competitive review), or remaining fullscreen/Spaces/notchless hardening — before starting Settings (M7), per current product priority.
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
