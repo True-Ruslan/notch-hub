@@ -15,6 +15,15 @@ public struct NotchLayout: Equatable, Sendable {
         hasHardwareNotch ? compactFrame.height + 12 : 20
     }
 
+    /// Top inset Peek content must clear so it never renders under the
+    /// physically opaque hardware-notch area, which spans the full width of
+    /// `compactFrame` at the very top of the panel regardless of how much
+    /// wider `peekFrame` is. Mirrors `expandedContentTopInset`'s reasoning
+    /// with a tighter buffer, matching Peek's more compact layout.
+    public var peekContentTopInset: CGFloat {
+        hasHardwareNotch ? compactFrame.height + 4 : 28
+    }
+
     public init(
         hasHardwareNotch: Bool,
         hardwareNotchWidth: CGFloat,

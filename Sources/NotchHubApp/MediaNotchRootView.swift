@@ -13,6 +13,7 @@ struct MediaNotchRootView: View {
     @State private var sourceApplicationIcon: NSImage?
     @State private var seekPreviewSeconds: Double?
     @State private var isSeekDragging = false
+    @State private var artworkTintColor = MediaNotchRootView.color(for: MediaArtworkTintCalculator.fallback)
 
     private let sourceApplicationIconResolver: SourceApplicationIconResolver
     private let onExplicitExpansion: () -> Void
@@ -92,6 +93,10 @@ struct MediaNotchRootView: View {
         layoutModel.currentLayout.expandedContentTopInset
     }
 
+    private var peekContentTopInset: CGFloat {
+        layoutModel.currentLayout.peekContentTopInset
+    }
+
     private var isSeekSurfaceAvailable: Bool {
         let presentationAllowsSeek =
             panelModel.contentPresentation == .peek
@@ -128,10 +133,15 @@ struct MediaNotchRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .offset(x: mediaGestureVisualModel.horizontalOffset)
-        .background(Color.black)
+        .background(artworkTintColor)
+        .animation(.easeInOut(duration: 0.4), value: artworkTintColor)
         .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(surfaceAccessibilityIdentifier)
+        .onChange(of: presentation.artworkData, initial: true) { _, artworkData in
+            let tint = MediaArtworkTintSampler.sample(artworkData: artworkData) ?? MediaArtworkTintCalculator.fallback
+            artworkTintColor = Self.color(for: tint)
+        }
         .onChange(of: presentation.sourceBundleIdentifier, initial: true) { _, bundleIdentifier in
             if panelModel.contentPresentation == .expanded {
                 sourceApplicationIcon = sourceApplicationIconResolver.icon(for: bundleIdentifier)
@@ -158,6 +168,14 @@ struct MediaNotchRootView: View {
         case .expanded:
             "notch.surface.expanded"
         }
+    }
+
+    /// Converts a `MediaArtworkTintCalculator.Tint` (already clamped to a
+    /// legible range) into a SwiftUI `Color`. `MediaArtworkTintCalculator.fallback`
+    /// converts to exactly `Color(hue: 0, saturation: 0, brightness: 0)`,
+    /// i.e. flat black — identical to the pre-tint background.
+    private static func color(for tint: MediaArtworkTintCalculator.Tint) -> Color {
+        Color(hue: tint.hue, saturation: tint.saturation, brightness: tint.brightness)
     }
 
     private func requestExplicitExpansionFromTap() {
@@ -226,7 +244,7 @@ struct MediaNotchRootView: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.top, 28)
+            .padding(.top, peekContentTopInset)
             .padding(.bottom, 10)
         }
     }
