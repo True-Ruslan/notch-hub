@@ -6,7 +6,7 @@ All notable changes to NotchHub are documented here. The active version is store
 
 ### M6.11 — album-art color tinting
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / AWAITING PHYSICAL ACCEPTANCE / NOT MERGED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED**.
 
 Deferred since M6.8's competitive review (`TheBoredTeam/boring.notch`, NotchNook): the panel background was flat `Color.black` in every presentation state. A new pure `MediaArtworkTintCalculator` (`Sources/NotchHubMediaCore/MediaArtworkTintCalculator.swift`) clamps a raw sampled artwork color into a subtle, legible tint (saturation capped at `0.55`, brightness kept within `0.05...0.34`, defensive against non-finite input); a new `MediaArtworkTintSampler` (`Sources/NotchHubMediaCore/MediaArtworkTintSampler.swift`) decodes artwork `Data` via `CoreGraphics`/`ImageIO` only (no `AppKit`), drawing it into a 1x1-pixel context for a fast average-color sample, then converts to HSB with a pure RGB->HSB conversion. Both live in `NotchHubMediaCore` rather than `NotchHubApp` specifically so they get real behavioral unit tests (`Tests/NotchHubMediaCoreTests/MediaArtworkTintCalculatorTests.swift`, `MediaArtworkTintSamplerTests.swift`, the latter synthesizing solid-color PNGs in memory) rather than the source-scanning-only coverage every `NotchHubApp`-only SwiftUI file is limited to (`NotchHubApp` has no test target at all).
 
@@ -18,7 +18,7 @@ Verified locally before any CI push: `swift build`, `swift build -Xswiftc -warni
 
 Canonical CI passed 3/3 GREEN on candidate `984c31fcf8387f12f50bab15711a967975d015d2` (run `32696922857`), including the first real execution of `MediaArtworkTintCalculatorTests`/`MediaArtworkTintSamplerTests`. Real measured artifact sizes from that run (`appSizeBytes=949791`, `dmgSizeBytes=612975`, `executableSizeBytes=647584`) became the evidence for a new `performance/m6-11-album-art-tint-size-budget.json`, which replaced `m6-10-discoverable-quit-menu-size-budget.json` as the active release size-budget reference in `ci.yml` and in the four/five hardcoded Swift and Python policy-test assertions of the active budget filename, matching the M6.9/M6.10 precedent of deriving the allowance from a real interim candidate's measured sizes rather than the eventual squash-merge SHA.
 
-Physical acceptance on exact `Mac16,8`/macOS `26.6.x` remains required before merge, per checklist in the design spec — this project's standing policy is that CI cannot honestly prove real visual/animation feel, and this slice is new custom-color/animation code with no direct hardware-verified precedent in this codebase.
+Physical acceptance on exact `Mac16,8`/macOS `26.6.x` — album-art tint checklist PASS across multiple tracks/artwork colors, crossfade smooth, no-artwork fallback unchanged, no jank; the two acceptance-found defects below fixed and re-verified in the same PR. PR #69 squash-merged as `ad572cea5787ac8487308855f517395c8a3a23b2`.
 
 ### Physical acceptance found two real, pre-existing defects (unrelated to the tint itself)
 
@@ -32,7 +32,7 @@ Both fixes were also exercised directly against real Swift execution via tempora
 
 ### Panel positioning — cold-launch Peek could render mispositioned until the next transition
 
-Status: **IMPLEMENTED / PHYSICALLY ACCEPTED (fixed) / NOT MERGED**.
+Status: **IMPLEMENTED / PHYSICALLY ACCEPTED / MERGED**.
 
 Real defect found during ad-hoc physical testing on a cold launch: the very first time Peek appeared, the panel rendered visibly shifted right of the physical hardware notch, with an odd opening slide; any later transition (a normal hover/collapse cycle) silently self-corrected it, which made it look like "interaction fixes it" — a coincidence, not a cause.
 
@@ -42,11 +42,11 @@ Fix: `animationPolicyDidChange`'s settled-phase cases now reconcile the panel to
 
 New tests: `NotchPanelTransitionPolicyChangeTests.policyChangeWhileSettledReconcilesFrameWithoutAnimatingOrPublishingSettlement`; `NotchDisplayMigrationTests.controllerRechecksTopologyOnceOnColdLaunchInsteadOfTrustingFirstScreenRead`.
 
-Physical acceptance on exact `Mac16,8`/macOS `26.6.x`: reproduced the mispositioned cold-launch Peek on two separate cold-launch attempts before the fix (confirmed not browser-specific — a cold launch with Yandex Music reproduced identically); confirmed the corrected build renders Peek in the exact correct position on the very first hover after a cold launch — verified live by the product owner.
+Physical acceptance on exact `Mac16,8`/macOS `26.6.x`: reproduced the mispositioned cold-launch Peek on two separate cold-launch attempts before the fix (confirmed not browser-specific — a cold launch with Yandex Music reproduced identically); confirmed the corrected build renders Peek in the exact correct position on the very first hover after a cold launch — verified live by the product owner. PR #71 squash-merged as `634fc5629218209a99649d8c1fc22981954fa4d4`.
 
 ### Media transport — Now Playing sessions without title metadata were silently dropped
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / NOT MERGED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED**.
 
 Real-world defect found during ad-hoc physical testing (unrelated to any single milestone in flight): playing a movie in a browser tab that never sets `navigator.mediaSession.metadata` (title/artist/album) made NotchHub show nothing at all — Compact stayed flat black, no Peek — even though the OS's own Control Center Now Playing widget correctly showed the session with playback controls and just the app's name as a fallback label.
 
@@ -56,7 +56,7 @@ Fix: extended the patch with a `src/adapter/keys.m` hunk dropping `kMRATitle` fr
 
 Changing the patch changes its SHA-256, which `ShippingMediaBundlePaths.pinnedAdapterPatchSHA256` deliberately pins as a supply-chain integrity check — `ShippingMediaRuntime` refuses to start the adapter at all if the built framework's patch hash doesn't match, which is exactly what happened on the first rebuild after the patch changed (correct, intended fail-closed behavior, not a new bug) until the pinned constant was updated to match, in lockstep, in all four places that hardcode it: `Sources/NotchHubMediaCore/ShippingMediaRuntime.swift`, `Tests/NotchHubMediaCoreTests/ShippingMediaBundlePathsTests.swift`, `scripts/shipping_media_acceptance.py`, `scripts/production_media_transport_acceptance.py`.
 
-Physical acceptance on exact `Mac16,8`/macOS `26.6.x`: confirmed the adapter emitted only `payload: {}` for an actively playing browser video session before the fix (matching the OS's own Control Center widget, which showed the session correctly); confirmed the same live session decoded correctly (`bundleIdentifier`, `playing`, `elapsedTimeMicros`, `durationMicros`) after patching; confirmed the rebuilt app was refused from starting the media runtime at all until the pinned hash was corrected (`resolveValidated` throwing `invalidProvenance`, silently swallowed by its `try?` call site — no child adapter process, no crash, no log output, by design given this project's no-production-logging policy); confirmed the rebuilt app with the corrected hash spawns the adapter and the notch now shows the browser session — verified live by the product owner.
+Physical acceptance on exact `Mac16,8`/macOS `26.6.x`: confirmed the adapter emitted only `payload: {}` for an actively playing browser video session before the fix (matching the OS's own Control Center widget, which showed the session correctly); confirmed the same live session decoded correctly (`bundleIdentifier`, `playing`, `elapsedTimeMicros`, `durationMicros`) after patching; confirmed the rebuilt app was refused from starting the media runtime at all until the pinned hash was corrected (`resolveValidated` throwing `invalidProvenance`, silently swallowed by its `try?` call site — no child adapter process, no crash, no log output, by design given this project's no-production-logging policy); confirmed the rebuilt app with the corrected hash spawns the adapter and the notch now shows the browser session — verified live by the product owner. PR #70 squash-merged as `ed215290100becc1a54e46fec0b209682b539d32`.
 
 ## [0.2.0] - 2026-08-23
 
