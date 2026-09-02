@@ -1,6 +1,6 @@
 # Roadmap
 
-Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.2.0` (`v0.1.0` remains published/immutable as historical evidence).
+Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.3.0` (`v0.1.0` and `v0.2.0` remain published/immutable as historical evidence).
 
 States are explicit: **implemented -> automated-tested -> physically accepted -> merged -> released**. Green CI does not substitute for target-Mac acceptance when physical UI, permissions, third-party behavior or resources are part of the contract.
 
@@ -110,13 +110,13 @@ PR #64 squash-merged as `b911746077092bfffd60d93cd8072c268cb1df94` after canonic
 
 ## M6.11 — album-art color tinting
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED — NOT RELEASED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.3.0`**.
 
 The last of the three ideas the M6.8 competitive review deferred (marquee text shipped as M6.9; `matchedGeometryEffect` artwork morphing remains deferred). Replaces the panel's flat `Color.black` background with a subtle tint sampled from the current track's artwork, crossfading on track change. `MediaArtworkTintCalculator`/`MediaArtworkTintSampler` live in `NotchHubMediaCore` (real unit tests, not source-scanning) rather than `NotchHubApp`. Design/invariants: `docs/superpowers/specs/2026-08-24-album-art-color-tinting-design.md`.
 
 Physical acceptance found and fixed two real, pre-existing UI defects in the same PR before merge: Peek title/artist text partially hidden under the physical hardware notch (missing notch-geometry-derived top inset), and seek-to-tap visibly resetting the timeline to near-zero before animating to the clicked spot (a stale pre-seek snapshot race). PR #69 squash-merged as `ad572cea5787ac8487308855f517395c8a3a23b2`.
 
-Two further real, unrelated defects were found and fixed during the same round of physical testing, neither tied to this or any other milestone: title-less Now Playing sessions (e.g. browser video without `navigator.mediaSession.metadata`) being silently dropped by the vendored `MediaRemoteAdapter`'s title-mandatory gate (PR #70, `ed215290100becc1a54e46fec0b209682b539d32`), and cold-launch Peek rendering mispositioned until the next transition due to a settled-phase no-op never reconciling the panel frame (PR #71, `634fc5629218209a99649d8c1fc22981954fa4d4`). Full detail in `CHANGELOG.md` and `docs/PROJECT_STATE.md`.
+Two further real, unrelated defects were found and fixed during the same round of physical testing, neither tied to this or any other milestone: title-less Now Playing sessions (e.g. browser video without `navigator.mediaSession.metadata`) being silently dropped by the vendored `MediaRemoteAdapter`'s title-mandatory gate (PR #70, `ed215290100becc1a54e46fec0b209682b539d32`), and cold-launch Peek rendering mispositioned until the next transition due to a settled-phase no-op never reconciling the panel frame (PR #71, `634fc5629218209a99649d8c1fc22981954fa4d4`). Full detail in `CHANGELOG.md` and `docs/PROJECT_STATE.md`. Released as part of `v0.3.0`, published 2026-09-02 via PR #73 and the `Personal Release` workflow (run `33652040573`) on source `7de4a41de0947f09bedf26fa3385cab566038475`; see `docs/releases/v0.3.0.md`.
 
 ## Repository governance
 
@@ -134,6 +134,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. M6.11 album-art tinting is merged and physically accepted, along with two acceptance-found UI defects (Peek notch clipping, seek reset) and two unrelated real-world defects (title-less Now Playing sessions, cold-launch panel mispositioning). Select and specify the next bounded product-hardening slice — `matchedGeometryEffect` artwork morphing (the only remaining deferred idea from the M6.8 competitive review) or remaining fullscreen/Spaces/notchless hardening — before starting the Settings (M7) module, per current product priority.
+2. M6.11 album-art tinting, along with two acceptance-found UI defects (Peek notch clipping, seek reset) and two unrelated real-world defects (title-less Now Playing sessions, cold-launch panel mispositioning), is merged, physically accepted and released as `v0.3.0`. Select and specify the next bounded product-hardening slice — `matchedGeometryEffect` artwork morphing (the only remaining deferred idea from the M6.8 competitive review) or remaining fullscreen/Spaces/notchless hardening — before starting the Settings (M7) module, per current product priority.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
-4. Keep published releases (`v0.1.0`, `v0.2.0`) immutable; ship any future defect or feature as a new version.
+4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`) immutable; ship any future defect or feature as a new version.

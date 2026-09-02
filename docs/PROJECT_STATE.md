@@ -1,7 +1,7 @@
 # Project state
 
-Last updated: 2026-08-26
-Published version: `0.2.0` Personal Release (`v0.1.0` remains published/immutable as historical evidence)
+Last updated: 2026-09-02
+Published version: `0.3.0` Personal Release (`v0.1.0` and `v0.2.0` remain published/immutable as historical evidence)
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
 Branch governance: `main` is intended to be protected; GitHub currently reports it unprotected and issue #42 tracks restoration
@@ -13,16 +13,17 @@ Accepted M6.8 compact live equalizer runtime: `4cbb01d7d5f57f26c40162c8149faf276
 M6.9 media marquee text merged runtime: `704bfbcdb1bd81774e8fc2d6a7d9f60a6672d703` (physical acceptance explicitly waived by product owner; see docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md)
 Accepted M6.10 discoverable normal-quit path runtime: `b911746077092bfffd60d93cd8072c268cb1df94`
 Personal Release `v0.2.0` published 2026-08-23 via PR #66/#67 and the `Personal Release` workflow (run 32636035043), source `59bbbebe70d18f43ebcabcb333c72b7c5791c241`, publishing everything through M6.10/P1 that had accumulated unreleased on top of `v0.1.0`; see `docs/releases/v0.2.0.md`.
-Accepted M6.11 album-art color tinting runtime: `ad572cea5787ac8487308855f517395c8a3a23b2` (PR #69; not yet released, `v0.2.0` remains published)
-Accepted cold-launch panel-positioning fix runtime: `634fc5629218209a99649d8c1fc22981954fa4d4` (PR #71, unrelated to any milestone; not yet released)
-Accepted media-transport title-less-session fix runtime: `ed215290100becc1a54e46fec0b209682b539d32` (PR #70, unrelated to any milestone; not yet released)
-Active development: M6.11 merged and accepted along with two acceptance-found defect fixes (Peek notch clipping, seek reset) and two unrelated real-world defects found and fixed during ad-hoc physical testing (title-less Now Playing sessions silently dropped; cold-launch panel mispositioning); next bounded slice not yet selected
+Accepted M6.11 album-art color tinting runtime: `ad572cea5787ac8487308855f517395c8a3a23b2` (PR #69; released in `v0.3.0`)
+Accepted cold-launch panel-positioning fix runtime: `634fc5629218209a99649d8c1fc22981954fa4d4` (PR #71, unrelated to any milestone; released in `v0.3.0`)
+Accepted media-transport title-less-session fix runtime: `ed215290100becc1a54e46fec0b209682b539d32` (PR #70, unrelated to any milestone; released in `v0.3.0`)
+Personal Release `v0.3.0` published 2026-09-02 via PR #73 (version bump/release notes/CHANGELOG reorg) and the `Personal Release` workflow (run `33652040573`), source `7de4a41de0947f09bedf26fa3385cab566038475`, publishing M6.11 and the PR #69-#71 defect fixes that had accumulated unreleased on top of `v0.2.0`; see `docs/releases/v0.3.0.md`.
+Active development: M6.11 merged, accepted and released along with two acceptance-found defect fixes (Peek notch clipping, seek reset) and two unrelated real-world defects found and fixed during ad-hoc physical testing (title-less Now Playing sessions silently dropped; cold-launch panel mispositioning); next bounded slice not yet selected
 
 ## Product state
 
 NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-Published state is now immutable `v0.2.0` (`v0.1.0` remains published/immutable as historical evidence and is not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work that is now released in `v0.2.0`.
+Published state is now immutable `v0.3.0` (`v0.1.0` and `v0.2.0` remain published/immutable as historical evidence and are not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work released in `v0.2.0`; M6.11 album-art tinting, the two acceptance-found UI defect fixes (Peek notch clipping, seek reset) and the two unrelated real-world defect fixes (title-less Now Playing sessions, cold-launch panel mispositioning) are now released in `v0.3.0`.
 
 P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization.
 
@@ -199,7 +200,7 @@ PR #69 adds `MediaArtworkTintCalculator` and `MediaArtworkTintSampler` (both in 
 
 Physical acceptance found and fixed two real, pre-existing UI defects in the same PR before merge: Peek title/artist text partially hidden under the physical hardware notch (`peekMediaContent` used a hardcoded top padding instead of real notch-geometry-derived inset), and seek-to-tap visibly resetting the timeline position to near-zero before animating to the clicked spot (a stale pre-seek snapshot racing the async transport seek command could clobber the optimistic-seek anchor). Both fixed and re-verified; full detail in `CHANGELOG.md`.
 
-Squash-merged as `ad572cea5787ac8487308855f517395c8a3a23b2`. M6.11 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet released; `v0.2.0` remains published.
+Squash-merged as `ad572cea5787ac8487308855f517395c8a3a23b2`. M6.11 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.3.0`.
 
 ## Two unrelated real-world defects found and fixed during ad-hoc physical testing
 
@@ -214,7 +215,7 @@ Neither tied to any milestone in flight; both found while physically testing M6.
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
-5. Keep `v0.1.0` and `v0.2.0` immutable; any future defect or feature ships as a new version rather than replacing a published release artifact.
+5. Keep `v0.1.0`, `v0.2.0` and `v0.3.0` immutable; any future defect or feature ships as a new version rather than replacing a published release artifact.
 
 ## Personal Release v0.2.0 — published
 
@@ -237,3 +238,14 @@ See:
 - closed issue #38 for the complete P1 evidence/acceptance trail;
 - closed issue #55 for the M1 display-migration acceptance trail;
 - issue #42 for repository branch-protection restoration.
+
+## Personal Release v0.3.0 — published
+
+Published 2026-09-02 via PR #73 (version bump/release notes/CHANGELOG reorg, mirroring the v0.2.0 release-prep pattern) then the `Personal Release` GitHub Actions workflow (run `33652040573`) on source `7de4a41de0947f09bedf26fa3385cab566038475`.
+
+Publishes everything accepted/merged since `v0.2.0`: M6.11 album-art color tinting (PR #69), the two acceptance-found UI defects fixed in the same PR (Peek notch clipping under the physical hardware notch, seek-to-tap timeline reset), and two unrelated real-world defects found during the same round of physical testing — title-less Now Playing sessions silently dropped (PR #70) and cold-launch Peek rendering mispositioned until the next transition (PR #71). Ad-hoc signed, App Sandbox + Hardened Runtime verified, DMG integrity/checksum verified (`dmgSHA256` `c682b4119aedc05ad6ca27371a9628c845a55ecc3da89008f03abbfa264089e8`), not notarized; build number `4`. Full notes: `docs/releases/v0.3.0.md`. `v0.1.0` and `v0.2.0` remain published and immutable as historical evidence; neither is superseded, only followed by `v0.3.0`.
+
+See:
+
+- `docs/releases/v0.3.0.md`;
+- `docs/superpowers/specs/2026-08-24-album-art-color-tinting-design.md`.
