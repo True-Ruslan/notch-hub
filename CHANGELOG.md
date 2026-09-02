@@ -4,9 +4,13 @@ All notable changes to NotchHub are documented here. The active version is store
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-02
+
+Published as `v0.3.0` — Personal build. See `docs/releases/v0.3.0.md` for the full release notes. Everything below was implemented, automated-tested, physically accepted and merged since `v0.2.0`.
+
 ### M6.11 — album-art color tinting
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.3.0`**.
 
 Deferred since M6.8's competitive review (`TheBoredTeam/boring.notch`, NotchNook): the panel background was flat `Color.black` in every presentation state. A new pure `MediaArtworkTintCalculator` (`Sources/NotchHubMediaCore/MediaArtworkTintCalculator.swift`) clamps a raw sampled artwork color into a subtle, legible tint (saturation capped at `0.55`, brightness kept within `0.05...0.34`, defensive against non-finite input); a new `MediaArtworkTintSampler` (`Sources/NotchHubMediaCore/MediaArtworkTintSampler.swift`) decodes artwork `Data` via `CoreGraphics`/`ImageIO` only (no `AppKit`), drawing it into a 1x1-pixel context for a fast average-color sample, then converts to HSB with a pure RGB->HSB conversion. Both live in `NotchHubMediaCore` rather than `NotchHubApp` specifically so they get real behavioral unit tests (`Tests/NotchHubMediaCoreTests/MediaArtworkTintCalculatorTests.swift`, `MediaArtworkTintSamplerTests.swift`, the latter synthesizing solid-color PNGs in memory) rather than the source-scanning-only coverage every `NotchHubApp`-only SwiftUI file is limited to (`NotchHubApp` has no test target at all).
 
@@ -32,7 +36,7 @@ Both fixes were also exercised directly against real Swift execution via tempora
 
 ### Panel positioning — cold-launch Peek could render mispositioned until the next transition
 
-Status: **IMPLEMENTED / PHYSICALLY ACCEPTED / MERGED**.
+Status: **IMPLEMENTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.3.0`**.
 
 Real defect found during ad-hoc physical testing on a cold launch: the very first time Peek appeared, the panel rendered visibly shifted right of the physical hardware notch, with an odd opening slide; any later transition (a normal hover/collapse cycle) silently self-corrected it, which made it look like "interaction fixes it" — a coincidence, not a cause.
 
@@ -46,7 +50,7 @@ Physical acceptance on exact `Mac16,8`/macOS `26.6.x`: reproduced the mispositio
 
 ### Media transport — Now Playing sessions without title metadata were silently dropped
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.3.0`**.
 
 Real-world defect found during ad-hoc physical testing (unrelated to any single milestone in flight): playing a movie in a browser tab that never sets `navigator.mediaSession.metadata` (title/artist/album) made NotchHub show nothing at all — Compact stayed flat black, no Peek — even though the OS's own Control Center Now Playing widget correctly showed the session with playback controls and just the app's name as a fallback label.
 
