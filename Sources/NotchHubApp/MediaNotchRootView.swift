@@ -14,6 +14,7 @@ struct MediaNotchRootView: View {
     @State private var seekPreviewSeconds: Double?
     @State private var isSeekDragging = false
     @State private var artworkTintColor = MediaNotchRootView.color(for: MediaArtworkTintCalculator.fallback)
+    @Namespace private var artworkNamespace
 
     private let sourceApplicationIconResolver: SourceApplicationIconResolver
     private let onExplicitExpansion: () -> Void
@@ -75,6 +76,10 @@ struct MediaNotchRootView: View {
             .easeInOut(duration: 0.12),
             value: mediaModel.presentation?.sessionIdentity
         )
+        .animation(
+            contentPresentationMorphAnimation,
+            value: panelModel.contentPresentation
+        )
         .onChange(of: isSeekSurfaceAvailable) { _, available in
             if !available {
                 cancelSeekPreview()
@@ -95,6 +100,19 @@ struct MediaNotchRootView: View {
 
     private var peekContentTopInset: CGFloat {
         layoutModel.currentLayout.peekContentTopInset
+    }
+
+    /// Drives the `matchedGeometryEffect` artwork morph on `panelModel.contentPresentation`
+    /// changes, kept in sync with the AppKit panel's own resize duration
+    /// (`notchAnimationDuration`) so the artwork frame interpolation and the actual
+    /// `NSPanel` frame animate over the same span. Reduce Motion disables the effect
+    /// entirely, matching the zero-duration AppKit side.
+    private var contentPresentationMorphAnimation: Animation? {
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard !reduceMotion else {
+            return nil
+        }
+        return .easeInOut(duration: notchAnimationDuration(reduceMotion: false))
     }
 
     private var isSeekSurfaceAvailable: Bool {
@@ -476,6 +494,7 @@ struct MediaNotchRootView: View {
                 style: .continuous
             )
         )
+        .matchedGeometryEffect(id: "media.artwork", in: artworkNamespace)
         .accessibilityIdentifier("media.artwork")
     }
 }
