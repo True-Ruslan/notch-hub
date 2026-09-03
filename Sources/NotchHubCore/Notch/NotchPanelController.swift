@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Dispatch
 import SwiftUI
 
@@ -23,6 +24,8 @@ public final class NotchPanelController: NSObject {
     private let layoutModel: NotchPanelLayoutModel
     private let hoverPeekRequestRelay: NotchHoverPeekRequestRelay
     private var reduceMotionEnabled: Bool
+    private let settingsStore: NotchHubSettingsStore?
+    private var settingsSubscription: AnyCancellable?
 
     public var settledPresentationHandler: (@MainActor @Sendable (NotchPresentation) -> Void)? {
         didSet {
@@ -45,13 +48,17 @@ public final class NotchPanelController: NSObject {
         }
     }
 
-    public convenience init(contentFactory: @escaping NotchPanelContentFactory) {
+    public convenience init(
+        contentFactory: @escaping NotchPanelContentFactory,
+        settingsStore: NotchHubSettingsStore? = nil
+    ) {
         let haptics = AppKitNotchHapticPerformer()
         self.init(
             contentFactory: contentFactory,
             performExpansionHaptic: {
                 haptics.performExpansionHaptic()
             },
+            settingsStore: settingsStore,
             internalInitialization: ()
         )
     }
@@ -59,11 +66,13 @@ public final class NotchPanelController: NSObject {
     #if NOTCHHUB_UI_TESTING
         public convenience init(
             contentFactory: @escaping NotchPanelContentFactory,
-            performExpansionHaptic: @escaping @MainActor () -> Void
+            performExpansionHaptic: @escaping @MainActor () -> Void,
+            settingsStore: NotchHubSettingsStore? = nil
         ) {
             self.init(
                 contentFactory: contentFactory,
                 performExpansionHaptic: performExpansionHaptic,
+                settingsStore: settingsStore,
                 internalInitialization: ()
             )
         }
@@ -72,9 +81,14 @@ public final class NotchPanelController: NSObject {
     private init(
         contentFactory: @escaping NotchPanelContentFactory,
         performExpansionHaptic: @escaping @MainActor () -> Void,
+        settingsStore: NotchHubSettingsStore?,
         internalInitialization _: Void
     ) {
-        guard let resolvedLayout = Self.preferredBaseLayout() else {
+        let manualDisplayOverride =
+            settingsStore?.settings.preferredDisplayOverride ?? .automatic
+        guard
+            let resolvedLayout = Self.preferredBaseLayout(manualOverride: manualDisplayOverride)
+        else {
             preconditionFailure("NotchHub requires at least one available screen")
         }
 
@@ -90,12 +104,18 @@ public final class NotchPanelController: NSObject {
         panel.contentView = hostingView
 
         let workspace = NSWorkspace.shared
-        let initialReduceMotion = workspace.accessibilityDisplayShouldReduceMotion
+        let initialReduceMotion = effectiveReduceMotion(
+            systemValue: workspace.accessibilityDisplayShouldReduceMotion,
+            override: settingsStore?.settings.reduceMotionOverride ?? .system
+        )
         let transitionCoordinator = NotchPanelTransitionCoordinator(
             model: model,
-            animationDuration: {
+            animationDuration: { [weak settingsStore] in
                 notchAnimationDuration(
-                    reduceMotion: workspace.accessibilityDisplayShouldReduceMotion
+                    reduceMotion: effectiveReduceMotion(
+                        systemValue: workspace.accessibilityDisplayShouldReduceMotion,
+                        override: settingsStore?.settings.reduceMotionOverride ?? .system
+                    )
                 )
             },
             animate: { frame, cornerRadius, duration, completion in
@@ -158,10 +178,12 @@ public final class NotchPanelController: NSObject {
         self.layoutModel = layoutModel
         self.hoverPeekRequestRelay = hoverPeekRequestRelay
         self.reduceMotionEnabled = initialReduceMotion
+        self.settingsStore = settingsStore
 
         super.init()
 
         configureAccessibilityObservation()
+        configureSettingsObservation()
         configureDisplayObservation()
         configurePanel()
         configureLocalPointerTracking(hostingView)
@@ -287,6 +309,7 @@ public final class NotchPanelController: NSObject {
     public func invalidate() {
         settledPresentationHandler = nil
         hoverPeekRequestHandler = nil
+        settingsSubscription = nil
         removeDisplayObserver()
         removeLocalPointerTracking()
         pointerMonitor.invalidate()
@@ -306,13 +329,7 @@ public final class NotchPanelController: NSObject {
     }
 
     @objc private func accessibilityDisplayOptionsDidChange(_: Notification) {
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        guard reduceMotion != reduceMotionEnabled else {
-            return
-        }
-
-        reduceMotionEnabled = reduceMotion
-        transitionCoordinator.animationPolicyDidChange(layout: layoutModel.currentLayout)
+        applyEffectiveReduceMotionIfChanged()
     }
 
     private func removeAccessibilityObserver() {
@@ -322,6 +339,29 @@ public final class NotchPanelController: NSObject {
             name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
             object: workspace
         )
+    }
+
+    private func configureSettingsObservation() {
+        guard let settingsStore else {
+            return
+        }
+        settingsSubscription = settingsStore.$settings.sink { [weak self] _ in
+            self?.applyEffectiveReduceMotionIfChanged()
+            self?.migrateToPreferredDisplayIfNeeded()
+        }
+    }
+
+    private func applyEffectiveReduceMotionIfChanged() {
+        let reduceMotion = effectiveReduceMotion(
+            systemValue: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+            override: settingsStore?.settings.reduceMotionOverride ?? .system
+        )
+        guard reduceMotion != reduceMotionEnabled else {
+            return
+        }
+
+        reduceMotionEnabled = reduceMotion
+        transitionCoordinator.animationPolicyDidChange(layout: layoutModel.currentLayout)
     }
 
     private func configureDisplayObservation() {
@@ -346,8 +386,10 @@ public final class NotchPanelController: NSObject {
     }
 
     private func migrateToPreferredDisplayIfNeeded() {
+        let manualDisplayOverride =
+            settingsStore?.settings.preferredDisplayOverride ?? .automatic
         guard
-            let newBaseLayout = Self.preferredBaseLayout(),
+            let newBaseLayout = Self.preferredBaseLayout(manualOverride: manualDisplayOverride),
             newBaseLayout != layoutModel.baseLayout
         else {
             return
@@ -363,7 +405,9 @@ public final class NotchPanelController: NSObject {
         _ = layoutModel.updateBaseLayout(newBaseLayout)
     }
 
-    private static func preferredBaseLayout() -> NotchLayout? {
+    private static func preferredBaseLayout(
+        manualOverride: NotchHubSettings.PreferredDisplayOverride = .automatic
+    ) -> NotchLayout? {
         let screens = NSScreen.screens
         guard !screens.isEmpty else {
             return nil
@@ -376,7 +420,8 @@ public final class NotchPanelController: NSObject {
         guard
             let selectedIndex = NotchScreenSelection.preferredIndex(
                 in: screenInputs,
-                fallbackIndex: fallbackIndex
+                fallbackIndex: fallbackIndex,
+                manualOverride: manualOverride
             ),
             screenInputs.indices.contains(selectedIndex)
         else {

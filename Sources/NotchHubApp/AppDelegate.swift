@@ -1,6 +1,7 @@
 import AppKit
 import NotchHubCore
 import NotchHubMediaCore
+import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -9,6 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelController: NotchPanelController?
     private var mediaRuntime: (any MediaRuntimeSession)?
     private var statusItem: NSStatusItem?
+    private var settingsWindow: NSWindow?
+    private let settingsStore = NotchHubSettingsStore()
     private let mediaPresentationModel = ShippingMediaPresentationModel()
     private let mediaGestureVisualModel = MediaGestureVisualModel()
     private let sourceApplicationIconResolver = SourceApplicationIconResolver()
@@ -34,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let mediaPresentationModel = mediaPresentationModel
         let mediaTimelineTicker = mediaTimelineTicker
         let mediaGestureVisualModel = mediaGestureVisualModel
+        let settingsStore = settingsStore
         let sourceApplicationIconResolver = sourceApplicationIconResolver
 
         let mediaGestureSession: MediaGestureSession
@@ -73,6 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 layoutModel: layoutModel,
                 mediaModel: mediaPresentationModel,
                 mediaGestureVisualModel: mediaGestureVisualModel,
+                settingsStore: settingsStore,
                 sourceApplicationIconResolver: sourceApplicationIconResolver,
                 onExplicitExpansion: { [weak self] in
                     self?.panelController?.requestExpansion()
@@ -127,10 +132,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 contentFactory: contentFactory,
                 performExpansionHaptic: {
                     panelHapticRecorder.performExpansionHaptic()
-                }
+                },
+                settingsStore: settingsStore
             )
         #else
-            panelController = NotchPanelController(contentFactory: contentFactory)
+            panelController = NotchPanelController(
+                contentFactory: contentFactory,
+                settingsStore: settingsStore
+            )
         #endif
         self.panelController = panelController
 
@@ -204,6 +213,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         titleItem.isEnabled = false
         menu.addItem(titleItem)
         menu.addItem(.separator())
+        let settingsItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        menu.addItem(.separator())
         let quitItem = NSMenuItem(
             title: "Quit NotchHub",
             action: #selector(NSApplication.terminate(_:)),
@@ -216,8 +233,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.statusItem = statusItem
     }
 
+    /// Opens (or brings forward) the Settings window from the menu-bar item.
+    /// This is an ordinary titled/closable NSWindow, not the borderless
+    /// notch-style NSPanel the media surfaces use — Settings has no gesture
+    /// system, no matchedGeometryEffect, no interaction with
+    /// NotchPanelTransitionCoordinator at all. NSApp.activate is required
+    /// because activationPolicy is `.accessory` (no Dock icon), so the
+    /// window would not otherwise reliably come to the front of other apps.
+    /// See docs/superpowers/specs/2026-09-04-m7-settings-shell-design.md.
+    @objc private func openSettings() {
+        if let settingsWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            settingsWindow.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "NotchHub Settings"
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.contentView = NSHostingView(
+            rootView: SettingsRootView(settingsStore: settingsStore)
+        )
+        settingsWindow = window
+
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+    }
+
     func applicationWillTerminate(_: Notification) {
         statusItem = nil
+        settingsWindow = nil
 
         panelController?.settledPresentationHandler = nil
         panelController?.hoverPeekRequestHandler = nil

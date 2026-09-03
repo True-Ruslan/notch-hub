@@ -26,6 +26,8 @@
     <string></string>
     <key>NHAdapterPatchSHA256</key>
     <string></string>
+    <key>NHReleasesURL</key>
+    <string>https://github.com/True-Ruslan/notch-hub/releases/latest</string>
     <key>NHSourceCommit</key>
     <string></string>
     <key>NSHighResolutionCapable</key>

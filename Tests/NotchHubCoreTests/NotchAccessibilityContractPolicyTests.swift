@@ -64,7 +64,8 @@ struct NotchAccessibilityContractPolicyTests {
 
         let shippingInitializer = try #require(
             controller.range(
-                of: "public convenience init(contentFactory: @escaping NotchPanelContentFactory)"
+                of:
+                    "    public convenience init(\n        contentFactory: @escaping NotchPanelContentFactory,\n        settingsStore: NotchHubSettingsStore? = nil\n    ) {"
             )
         )
         let shippingHaptic = try #require(
