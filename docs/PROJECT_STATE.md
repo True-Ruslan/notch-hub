@@ -18,7 +18,8 @@ Accepted cold-launch panel-positioning fix runtime: `634fc5629218209a99649d8c1fc
 Accepted media-transport title-less-session fix runtime: `ed215290100becc1a54e46fec0b209682b539d32` (PR #70, unrelated to any milestone; released in `v0.3.0`)
 Personal Release `v0.3.0` published 2026-09-02 via PR #73 (version bump/release notes/CHANGELOG reorg) and the `Personal Release` workflow (run `33652040573`), source `7de4a41de0947f09bedf26fa3385cab566038475`, publishing M6.11 and the PR #69-#71 defect fixes that had accumulated unreleased on top of `v0.2.0`; see `docs/releases/v0.3.0.md`.
 Accepted artwork morphing (matchedGeometryEffect) runtime: `8ac7a44cc0565893d363e917807a6dcbac38c3cb` (PR #75; not yet released)
-Active development: artwork morphing (the last of the three M6.8 competitive-review ideas — equalizer/M6.8, marquee text/M6.9, tinting/M6.11) implemented, automated-tested, physically accepted and merged via PR #75; not yet published in a Personal Release; next bounded slice not yet selected
+Accepted fullscreen/Spaces hardening runtime: `273126e54f93cd806eaf2be9fa5191f47092d416` (PR #77; not yet released)
+Active development: artwork morphing (PR #75) and fullscreen/Spaces panel-configuration hardening (PR #77) both merged, physically accepted; neither yet published in a Personal Release; next bounded slice not yet selected
 
 ## Product state
 
@@ -38,7 +39,7 @@ M6.7 live media timeline and live Compact display is implemented, automated-test
 - R0.1 Personal Release `v0.1.0` — accepted/released.
 - P0 Performance Foundation — accepted/merged; immutable baseline preserved.
 - P0.1 Public repository readiness — accepted.
-- M1 primary interaction/transition foundation — accepted/merged; active-display/fullscreen/Spaces/notchless/broader multi-monitor hardening remains deferred.
+- M1 primary interaction/transition foundation — accepted/merged; active-display/multi-monitor migration and fullscreen/Spaces panel-configuration hardening are both accepted/merged (PR #56, PR #77); notchless-display fallback verified as part of M1's matrix.
 - M6.1 transport feasibility — accepted.
 - M6.2 normalized media boundary — accepted/merged.
 - M6.3 production system transport — accepted/merged.
@@ -213,6 +214,14 @@ Physical acceptance on the product owner's own Mac — all 8 checklist items PAS
 
 Squash-merged as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`. Artwork morphing therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet published in a Personal Release.
 
+## Fullscreen / Spaces hardening — accepted
+
+PR #77 closes the last item M1 deliberately deferred: fullscreen-app and Spaces-switch behavior. `NotchPanelController.configurePanel()` already implemented Apple's documented recipe for a utility panel that survives both (`.canJoinAllSpaces`, `.fullScreenAuxiliary`, `.stationary`, `.level = .statusBar`, `styleMask [.borderless, .nonactivatingPanel]`) unchanged since M1, but nothing asserted it and neither scenario had been physically exercised. `NotchPanelSpacesFullscreenPolicyTests` constructs the real `NotchPanelController` and asserts these invariants on the actual `NSPanel` (real unit test, not source-scanning, since `NotchHubCore` is fully unit-tested). `panel` changed from `private` to internal (module-visible only) so `@testable import` can read it. Design/invariants: `docs/superpowers/specs/2026-09-03-fullscreen-spaces-notchless-hardening-design.md`.
+
+No production behavior changed and no real defect was found on physical testing — the existing recipe already held. Physical acceptance on the product owner's own Mac — all 7 checklist items PASS, including fullscreen-app interaction, Spaces switching across Compact/Peek/Expanded and mid-interaction Space switches. Full evidence: `docs/testing/FULLSCREEN_SPACES_HARDENING_ACCEPTANCE.md`.
+
+Squash-merged as `273126e54f93cd806eaf2be9fa5191f47092d416`. Fullscreen/Spaces hardening therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet published in a Personal Release.
+
 ## Two unrelated real-world defects found and fixed during ad-hoc physical testing
 
 Neither tied to any milestone in flight; both found while physically testing M6.11 on real hardware and fixed/merged separately:
@@ -222,7 +231,7 @@ Neither tied to any milestone in flight; both found while physically testing M6.
 
 ## Next optimal step
 
-1. Artwork morphing is merged/accepted (PR #75), completing every idea the M6.8 competitive review surfaced. Select and specify the next bounded product-hardening slice with a written spec + RED tests before implementation — the leading candidate is remaining fullscreen/Spaces/notchless hardening (extending M1) — before starting Settings (M7), per current product priority. Also consider whether accumulated unreleased work (artwork morphing) warrants a new Personal Release before starting the next slice.
+1. Artwork morphing (PR #75) and fullscreen/Spaces hardening (PR #77) are both merged/accepted, completing every idea the M6.8 competitive review surfaced and the last item M1 deliberately deferred. There is accumulated unreleased work on top of `v0.3.0`; consider a new Personal Release before starting the next bounded slice. If continuing feature work first, select and specify the next slice with a written spec + RED tests before implementation, per current product priority (Settings/M7 is next on the roadmap).
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.

@@ -10,7 +10,7 @@ States are explicit: **implemented -> automated-tested -> physically accepted ->
 - **R0.1 Personal Release — ACCEPTED / RELEASED**: immutable `v0.1.0`.
 - **P0 Performance Foundation — ACCEPTED / MERGED**.
 - **P0.1 Public repository readiness — ACCEPTED**.
-- **M1 primary interaction foundation — ACCEPTED / MERGED**; broader active-display/fullscreen/Spaces/notchless/multi-monitor hardening remains a later slice.
+- **M1 primary interaction foundation — ACCEPTED / MERGED**; active-display/multi-monitor migration (PR #56) and fullscreen/Spaces panel-configuration hardening (PR #77) are both accepted/merged; notchless-display fallback verified as part of M1's matrix.
 - **Regression/UI Automation Foundation — IMPLEMENTED / TESTED / MERGED** via PR #34 as `bd9566f690d314ed40fd6f3723a319291ceb4a58`.
 
 ## M6 — Universal Media / System Now Playing
@@ -128,6 +128,16 @@ Canonical CI GREEN 3/3; full Swift suite 450/450 tests GREEN. Physical acceptanc
 
 PR #75 squash-merged as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`.
 
+## Fullscreen / Spaces hardening
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED — not yet released**.
+
+Closes the last item M1 deliberately deferred: fullscreen-app and Spaces-switch behavior. `NotchPanelController.configurePanel()` already implemented Apple's documented recipe for a utility panel that survives both (`.canJoinAllSpaces`, `.fullScreenAuxiliary`, `.stationary`, `.level = .statusBar`) unchanged since M1, but no test asserted it and neither scenario had been physically exercised. `NotchPanelSpacesFullscreenPolicyTests` constructs the real `NotchPanelController` and asserts these invariants on the actual `NSPanel`. Design/invariants: `docs/superpowers/specs/2026-09-03-fullscreen-spaces-notchless-hardening-design.md`.
+
+No production behavior changed and no real defect was found. Canonical CI GREEN 3/3; full Swift suite 453/453 tests GREEN. Physical acceptance on the product owner's own Mac — all 7 checklist items PASS. Full evidence: `docs/testing/FULLSCREEN_SPACES_HARDENING_ACCEPTANCE.md`.
+
+PR #77 squash-merged as `273126e54f93cd806eaf2be9fa5191f47092d416`.
+
 ## Repository governance
 
 Issue #42 remains open because `main` is intended to be protected but GitHub currently reports it unprotected. Restoring branch governance remains a repository-quality priority and should be completed when repository capabilities permit. Do not treat the current unprotected state as accepted architecture.
@@ -144,6 +154,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. Artwork morphing (PR #75) is merged and physically accepted, completing every idea the M6.8 competitive review surfaced. Select and specify the next bounded product-hardening slice — remaining fullscreen/Spaces/notchless hardening is the leading candidate — before starting the Settings (M7) module, per current product priority. Consider whether a new Personal Release is warranted for the unreleased work now accumulated on top of `v0.3.0`.
+2. Artwork morphing (PR #75) and fullscreen/Spaces hardening (PR #77) are both merged and physically accepted, completing every idea the M6.8 competitive review surfaced and the last item M1 deferred. Unreleased work has accumulated on top of `v0.3.0`; a new Personal Release is a strong candidate before starting the next slice. If continuing feature work first, per current product priority the Settings (M7) module is next on the roadmap.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
 4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`) immutable; ship any future defect or feature as a new version.

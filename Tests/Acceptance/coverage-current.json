@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "NH-PANEL-SPACES-FULLSCREEN-001",
+      "source": "docs/testing/FULLSCREEN_SPACES_HARDENING_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer":"unit","test":"NotchHubCoreTests.NotchPanelSpacesFullscreenPolicyTests.panelJoinsAllSpacesAndRemainsAuxiliaryOverFullscreenApps"},
+        {"layer":"unit","test":"NotchHubCoreTests.NotchPanelSpacesFullscreenPolicyTests.panelStaysAtStatusBarLevelAndNeverHidesOnDeactivate"},
+        {"layer":"unit","test":"NotchHubCoreTests.NotchPanelSpacesFullscreenPolicyTests.panelStyleMaskIsBorderlessNonactivatingAndNeverAnOrdinaryActivatableWindow"},
+        {"layer":"physical","test":null}
+      ],
+      "physicalOnlyReason": "Physically accepted on the product owner's Mac on exact PR #77 head (squash-merged as 273126e54f93cd806eaf2be9fa5191f47092d416): a fullscreen app on the notch display left Compact visible with working hover-to-Peek/explicit-click-to-Expanded; Spaces switches across Compact/Peek/Expanded and mid-interaction did not lose, duplicate, misposition or crash the panel; no new permission prompt; no jank; clean post-Quit teardown. Spaces/fullscreen behavior is WindowServer-level and cannot be proven by CI."
+    },
+    {
       "id": "NH-MEDIA-ARTWORK-MORPH-001",
       "source": "docs/testing/ARTWORK_MORPHING_ACCEPTANCE.md",
       "status": "accepted",
