@@ -1,6 +1,6 @@
 # Project state
 
-Last updated: 2026-09-02
+Last updated: 2026-09-03
 Published version: `0.3.0` Personal Release (`v0.1.0` and `v0.2.0` remain published/immutable as historical evidence)
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
@@ -17,7 +17,8 @@ Accepted M6.11 album-art color tinting runtime: `ad572cea5787ac8487308855f517395
 Accepted cold-launch panel-positioning fix runtime: `634fc5629218209a99649d8c1fc22981954fa4d4` (PR #71, unrelated to any milestone; released in `v0.3.0`)
 Accepted media-transport title-less-session fix runtime: `ed215290100becc1a54e46fec0b209682b539d32` (PR #70, unrelated to any milestone; released in `v0.3.0`)
 Personal Release `v0.3.0` published 2026-09-02 via PR #73 (version bump/release notes/CHANGELOG reorg) and the `Personal Release` workflow (run `33652040573`), source `7de4a41de0947f09bedf26fa3385cab566038475`, publishing M6.11 and the PR #69-#71 defect fixes that had accumulated unreleased on top of `v0.2.0`; see `docs/releases/v0.3.0.md`.
-Active development: M6.11 merged, accepted and released along with two acceptance-found defect fixes (Peek notch clipping, seek reset) and two unrelated real-world defects found and fixed during ad-hoc physical testing (title-less Now Playing sessions silently dropped; cold-launch panel mispositioning); next bounded slice not yet selected
+Accepted artwork morphing (matchedGeometryEffect) runtime: `8ac7a44cc0565893d363e917807a6dcbac38c3cb` (PR #75; not yet released)
+Active development: artwork morphing (the last of the three M6.8 competitive-review ideas — equalizer/M6.8, marquee text/M6.9, tinting/M6.11) implemented, automated-tested, physically accepted and merged via PR #75; not yet published in a Personal Release; next bounded slice not yet selected
 
 ## Product state
 
@@ -202,6 +203,16 @@ Physical acceptance found and fixed two real, pre-existing UI defects in the sam
 
 Squash-merged as `ad572cea5787ac8487308855f517395c8a3a23b2`. M6.11 therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.3.0`.
 
+## Artwork morphing (matchedGeometryEffect) — accepted
+
+PR #75 adds the last of the three ideas the M6.8 competitive review deferred (equalizer shipped M6.8, marquee text M6.9, album-art tinting M6.11). A shared `@Namespace` + `matchedGeometryEffect(id: "media.artwork")` on the single `artwork(_:size:)` definition site lets SwiftUI interpolate the artwork's frame/position across Compact/Peek/Expanded instead of cross-fading a size "pop". The morph is driven by an explicit `.animation(value: panelModel.contentPresentation)` synced to the AppKit panel's own resize duration (`notchAnimationDuration`, made `public` in `NotchHubCore` for this reuse) and disabled under Reduce Motion. Design/invariants: `docs/superpowers/specs/2026-09-03-artwork-morphing-design.md`.
+
+No new pure/testable calculator module was needed (unlike M6.9/M6.11); coverage is RED-first source-scanning policy tests (`ArtworkMorphingPolicyTests`) plus the full existing Swift suite. No new timer primitive was introduced.
+
+Physical acceptance on the product owner's own Mac — all 8 checklist items PASS, including cross-state morphing via explicit tap, interactive drag expand/collapse (including a cancelled mid-drag), rapid repeated transitions, swipe independence, Reduce Motion fallback and clean post-Quit teardown. Full evidence: `docs/testing/ARTWORK_MORPHING_ACCEPTANCE.md`.
+
+Squash-merged as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`. Artwork morphing therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet published in a Personal Release.
+
 ## Two unrelated real-world defects found and fixed during ad-hoc physical testing
 
 Neither tied to any milestone in flight; both found while physically testing M6.11 on real hardware and fixed/merged separately:
@@ -211,7 +222,7 @@ Neither tied to any milestone in flight; both found while physically testing M6.
 
 ## Next optimal step
 
-1. Select and specify the next bounded product-hardening slice with a written spec + RED tests before implementation — candidates: `matchedGeometryEffect` cross-state artwork morphing (the only remaining deferred idea from the M6.8 competitive review), or remaining fullscreen/Spaces/notchless hardening — before starting Settings (M7), per current product priority.
+1. Artwork morphing is merged/accepted (PR #75), completing every idea the M6.8 competitive review surfaced. Select and specify the next bounded product-hardening slice with a written spec + RED tests before implementation — the leading candidate is remaining fullscreen/Spaces/notchless hardening (extending M1) — before starting Settings (M7), per current product priority. Also consider whether accumulated unreleased work (artwork morphing) warrants a new Personal Release before starting the next slice.
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.

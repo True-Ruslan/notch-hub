@@ -1,6 +1,18 @@
 {
   "schemaVersion": 1,
   "entries": [
+    {
+      "id": "NH-MEDIA-ARTWORK-MORPH-001",
+      "source": "docs/testing/ARTWORK_MORPHING_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer":"policy","test":"NotchHubCoreTests.ArtworkMorphingPolicyTests.mediaNotchRootViewSharesOneMatchedGeometryNamespaceForArtwork"},
+        {"layer":"policy","test":"NotchHubCoreTests.ArtworkMorphingPolicyTests.mediaNotchRootViewAnimatesContentPresentationSwitchWithoutNewTimerPrimitive"},
+        {"layer":"policy","test":"NotchHubCoreTests.ArtworkMorphingPolicyTests.notchAnimationDurationProviderIsPublicForCrossModuleReuse"},
+        {"layer":"physical","test":null}
+      ],
+      "physicalOnlyReason": "Physically accepted on the product owner's Mac on exact PR #75 head 58b2cb9e3d6b30a1d2e874559b3c8754d10372e1 (squash-merged as 8ac7a44cc0565893d363e917807a6dcbac38c3cb): artwork visually morphs frame/position across Compact/Peek/Expanded via explicit tap and interactive drag (including a cancelled mid-drag), rapid repeated transitions show no jitter/drift, LEFT/RIGHT swipe doesn't fight the morph, Reduce Motion pops as before, no hover/gesture jank, clean post-Quit teardown."
+    },
     {"id":"NH-APP-QUIT-001","source":"docs/testing/M6_10_DISCOVERABLE_QUIT_ACCEPTANCE.md","status":"accepted","coverage":[{"layer":"policy","test":"NotchHubCoreTests.AppQuitMenuPolicyTests.statusItemHostsADiscoverableQuitAction"},{"layer":"policy","test":"NotchHubCoreTests.AppQuitMenuPolicyTests.quitStillRunsExistingTerminationCleanup"},{"layer":"policy","test":"NotchHubCoreTests.AppQuitMenuPolicyTests.statusItemAddsNoNewEntitlementOrPermission"},{"layer":"policy","test":"NotchHubCoreTests.AppQuitMenuPolicyTests.appRemainsAccessoryWithNoDockIconRegression"},{"layer":"physical","test":null}],"physicalOnlyReason":"Physically accepted on the product owner's Mac on exact PR #64 head 06d0c40274cea1fa5d25c37d4213a3efb8e08355: status item appears in the menu bar, Quit action works, post-quit pgrep for mediaremote-adapter.pl returned empty (confirming applicationWillTerminate's existing cleanup ran, unlike Force Quit), no Dock icon appeared, no new permission prompt, notch panel unaffected."},
     {"id":"NH-MEDIA-MARQUEE-001","source":"docs/testing/M6_9_MEDIA_MARQUEE_ACCEPTANCE.md","status":"deferred","coverage":[{"layer":"unit","test":"NotchHubMediaCoreTests.MediaMarqueeCalculatorTests.needsScrollingReturnsTrueWhenContentOverflows"},{"layer":"unit","test":"NotchHubMediaCoreTests.MediaMarqueeCalculatorTests.cycleDurationScalesWithOverflowDistanceAtFixedSpeed"},{"layer":"policy","test":"NotchHubCoreTests.MediaMarqueeTextPolicyTests.marqueeUsesPhaseAnimatorNotTimerOrRepeatForever"},{"layer":"policy","test":"NotchHubCoreTests.MediaMarqueeTextPolicyTests.marqueeChecksAccessibilityReduceMotion"},{"layer":"policy","test":"NotchHubCoreTests.MediaMarqueeTextPolicyTests.mediaNotchRootViewUsesMarqueeTextForAllFiveSites"}],"physicalOnlyReason":null},
     {
