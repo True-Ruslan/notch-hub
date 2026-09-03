@@ -4,6 +4,26 @@ All notable changes to NotchHub are documented here. The active version is store
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-03
+
+Published as `v0.4.0` — Personal build. See `docs/releases/v0.4.0.md` for the full release notes. Everything below was implemented, automated-tested, physically accepted and merged since `v0.3.0`.
+
+### Artwork morphing — `matchedGeometryEffect` cross-state morph
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.4.0`**.
+
+The last of the three ideas the M6.8 competitive review deferred (the compact live equalizer shipped as M6.8, marquee text as M6.9, album-art color tinting as M6.11 in `v0.3.0`). `MediaNotchRootView` gained a shared `@Namespace` applied via `.matchedGeometryEffect(id: "media.artwork", in:)` at the single `artwork(_:size:)` definition site, so SwiftUI treats the artwork image as the same view across Compact/Peek/Expanded and interpolates its frame/position instead of cross-fading a size "pop". The morph is driven by an explicit `.animation(value: panelModel.contentPresentation)` kept in sync with the panel's own AppKit resize duration — `notchStandardAnimationDuration`/`notchAnimationDuration(reduceMotion:)` (`Sources/NotchHubCore/Notch/NotchAnimationDurationProvider.swift`) became `public` for this cross-module reuse — and is disabled entirely under Reduce Motion, matching the AppKit side's existing zero-duration behavior there. No new pure/testable calculator module was needed; coverage is a RED-first source-scanning policy test (`ArtworkMorphingPolicyTests`) locking the shared namespace, the single `matchedGeometryEffect` call site, the explicit animation wiring, and the absence of any new timer primitive. Design/invariants: `docs/superpowers/specs/2026-09-03-artwork-morphing-design.md`.
+
+Physical acceptance on exact `Mac16,8`/macOS `26.6.x` — all 8 checklist items PASS: smooth cross-state morphing via explicit tap; correct interactive drag expand/collapse including a cancelled mid-drag; no jitter across rapid repeated transitions; the morph doesn't fight the physical LEFT/RIGHT swipe gesture-visual offset; track-change tinting/cross-fade unaffected; Reduce Motion pops exactly as before; no hover/gesture jank; clean post-Quit teardown. Full evidence: `docs/testing/ARTWORK_MORPHING_ACCEPTANCE.md`. PR #75 squash-merged as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`.
+
+### Fullscreen / Spaces hardening
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.4.0`**.
+
+Closes the last item M1's active-display/multi-monitor migration (`v0.2.0`) deliberately deferred: fullscreen-app and Spaces-switch behavior. `NotchPanelController.configurePanel()` already implemented Apple's documented recipe for a utility panel that survives both (`.canJoinAllSpaces`, `.fullScreenAuxiliary`, `.stationary`, `.level = .statusBar`, `styleMask [.borderless, .nonactivatingPanel]`) unchanged since M1's original panel foundation, but nothing asserted it and neither scenario had ever been physically exercised — a real coverage gap where a future refactor could silently regress fullscreen/Spaces support with every existing test still green. New `NotchPanelSpacesFullscreenPolicyTests` constructs the real `NotchPanelController` and asserts `collectionBehavior`/`level`/`hidesOnDeactivate`/`styleMask` on the actual `NSPanel` object — a real unit test rather than source-scanning, since `NotchHubCore` (unlike the SwiftUI-only `NotchHubApp`) is fully unit-tested. `panel` changed from `private` to internal module visibility so `@testable import` can read it, matching this codebase's existing `@testable` convention; no new public API surface. Design/invariants: `docs/superpowers/specs/2026-09-03-fullscreen-spaces-notchless-hardening-design.md`.
+
+No production behavior changed and physical testing found no real defect — the existing recipe already held. Physical acceptance on exact `Mac16,8`/macOS `26.6.x` — all 7 checklist items PASS: Compact stayed visible and hover-to-Peek/click-to-Expanded kept working with another app fullscreen on the notch display; Space switches across Compact/Peek/Expanded and mid-interaction never lost, duplicated, or mispositioned the panel; no new permission prompt; no jank; clean post-Quit teardown. Full evidence: `docs/testing/FULLSCREEN_SPACES_HARDENING_ACCEPTANCE.md`. PR #77 squash-merged as `273126e54f93cd806eaf2be9fa5191f47092d416`.
+
 ## [0.3.0] - 2026-09-02
 
 Published as `v0.3.0` — Personal build. See `docs/releases/v0.3.0.md` for the full release notes. Everything below was implemented, automated-tested, physically accepted and merged since `v0.2.0`.
