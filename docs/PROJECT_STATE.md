@@ -1,7 +1,7 @@
 # Project state
 
 Last updated: 2026-09-03
-Published version: `0.3.0` Personal Release (`v0.1.0` and `v0.2.0` remain published/immutable as historical evidence)
+Published version: `0.4.0` Personal Release (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence)
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
 Branch governance: `main` is intended to be protected; GitHub currently reports it unprotected and issue #42 tracks restoration
@@ -17,15 +17,16 @@ Accepted M6.11 album-art color tinting runtime: `ad572cea5787ac8487308855f517395
 Accepted cold-launch panel-positioning fix runtime: `634fc5629218209a99649d8c1fc22981954fa4d4` (PR #71, unrelated to any milestone; released in `v0.3.0`)
 Accepted media-transport title-less-session fix runtime: `ed215290100becc1a54e46fec0b209682b539d32` (PR #70, unrelated to any milestone; released in `v0.3.0`)
 Personal Release `v0.3.0` published 2026-09-02 via PR #73 (version bump/release notes/CHANGELOG reorg) and the `Personal Release` workflow (run `33652040573`), source `7de4a41de0947f09bedf26fa3385cab566038475`, publishing M6.11 and the PR #69-#71 defect fixes that had accumulated unreleased on top of `v0.2.0`; see `docs/releases/v0.3.0.md`.
-Accepted artwork morphing (matchedGeometryEffect) runtime: `8ac7a44cc0565893d363e917807a6dcbac38c3cb` (PR #75; not yet released)
-Accepted fullscreen/Spaces hardening runtime: `273126e54f93cd806eaf2be9fa5191f47092d416` (PR #77; not yet released)
-Active development: artwork morphing (PR #75) and fullscreen/Spaces panel-configuration hardening (PR #77) both merged, physically accepted; neither yet published in a Personal Release; next bounded slice not yet selected
+Accepted artwork morphing (matchedGeometryEffect) runtime: `8ac7a44cc0565893d363e917807a6dcbac38c3cb` (PR #75; released in `v0.4.0`)
+Accepted fullscreen/Spaces hardening runtime: `273126e54f93cd806eaf2be9fa5191f47092d416` (PR #77; released in `v0.4.0`)
+Personal Release `v0.4.0` published 2026-09-03 via PR #79 (version bump/release notes/CHANGELOG reorg) and the `Personal Release` workflow (run `33805750172`), source `3f458a2aa25d4bc4f89aeff74c95a7efee693657`, publishing artwork morphing and fullscreen/Spaces hardening that had accumulated unreleased on top of `v0.3.0`; see `docs/releases/v0.4.0.md`.
+Active development: artwork morphing (PR #75) and fullscreen/Spaces panel-configuration hardening (PR #77) both merged, physically accepted and released; next bounded slice not yet selected
 
 ## Product state
 
 NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-Published state is now immutable `v0.3.0` (`v0.1.0` and `v0.2.0` remain published/immutable as historical evidence and are not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work released in `v0.2.0`; M6.11 album-art tinting, the two acceptance-found UI defect fixes (Peek notch clipping, seek reset) and the two unrelated real-world defect fixes (title-less Now Playing sessions, cold-launch panel mispositioning) are now released in `v0.3.0`.
+Published state is now immutable `v0.4.0` (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence and are not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work released in `v0.2.0`; M6.11 album-art tinting, the two acceptance-found UI defect fixes (Peek notch clipping, seek reset) and the two unrelated real-world defect fixes (title-less Now Playing sessions, cold-launch panel mispositioning) are released in `v0.3.0`; artwork morphing (`matchedGeometryEffect`) and fullscreen/Spaces panel-configuration hardening are now released in `v0.4.0`.
 
 P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization.
 
@@ -212,7 +213,7 @@ No new pure/testable calculator module was needed (unlike M6.9/M6.11); coverage 
 
 Physical acceptance on the product owner's own Mac — all 8 checklist items PASS, including cross-state morphing via explicit tap, interactive drag expand/collapse (including a cancelled mid-drag), rapid repeated transitions, swipe independence, Reduce Motion fallback and clean post-Quit teardown. Full evidence: `docs/testing/ARTWORK_MORPHING_ACCEPTANCE.md`.
 
-Squash-merged as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`. Artwork morphing therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet published in a Personal Release.
+Squash-merged as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`. Artwork morphing therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.4.0`.
 
 ## Fullscreen / Spaces hardening — accepted
 
@@ -220,7 +221,7 @@ PR #77 closes the last item M1 deliberately deferred: fullscreen-app and Spaces-
 
 No production behavior changed and no real defect was found on physical testing — the existing recipe already held. Physical acceptance on the product owner's own Mac — all 7 checklist items PASS, including fullscreen-app interaction, Spaces switching across Compact/Peek/Expanded and mid-interaction Space switches. Full evidence: `docs/testing/FULLSCREEN_SPACES_HARDENING_ACCEPTANCE.md`.
 
-Squash-merged as `273126e54f93cd806eaf2be9fa5191f47092d416`. Fullscreen/Spaces hardening therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet published in a Personal Release.
+Squash-merged as `273126e54f93cd806eaf2be9fa5191f47092d416`. Fullscreen/Spaces hardening therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.4.0`.
 
 ## Two unrelated real-world defects found and fixed during ad-hoc physical testing
 
@@ -231,11 +232,11 @@ Neither tied to any milestone in flight; both found while physically testing M6.
 
 ## Next optimal step
 
-1. Artwork morphing (PR #75) and fullscreen/Spaces hardening (PR #77) are both merged/accepted, completing every idea the M6.8 competitive review surfaced and the last item M1 deliberately deferred. There is accumulated unreleased work on top of `v0.3.0`; consider a new Personal Release before starting the next bounded slice. If continuing feature work first, select and specify the next slice with a written spec + RED tests before implementation, per current product priority (Settings/M7 is next on the roadmap).
+1. Artwork morphing (PR #75) and fullscreen/Spaces hardening (PR #77) are merged, physically accepted and released in `v0.4.0`, completing every idea the M6.8 competitive review surfaced and the last item M1 deliberately deferred. Select and specify the next bounded product-hardening slice with a written spec + RED tests before implementation, per current product priority (Settings/M7 is next on the roadmap).
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
-5. Keep `v0.1.0`, `v0.2.0` and `v0.3.0` immutable; any future defect or feature ships as a new version rather than replacing a published release artifact.
+5. Keep `v0.1.0`, `v0.2.0`, `v0.3.0` and `v0.4.0` immutable; any future defect or feature ships as a new version rather than replacing a published release artifact.
 
 ## Personal Release v0.2.0 — published
 
@@ -269,3 +270,17 @@ See:
 
 - `docs/releases/v0.3.0.md`;
 - `docs/superpowers/specs/2026-08-24-album-art-color-tinting-design.md`.
+
+## Personal Release v0.4.0 — published
+
+Published 2026-09-03 via PR #79 (version bump/release notes/CHANGELOG reorg, mirroring the v0.3.0 release-prep pattern) then the `Personal Release` GitHub Actions workflow (run `33805750172`) on source `3f458a2aa25d4bc4f89aeff74c95a7efee693657`.
+
+Publishes everything accepted/merged since `v0.3.0`: artwork morphing (`matchedGeometryEffect` cross-state morph, PR #75) and fullscreen/Spaces panel-configuration hardening (PR #77, the last item M1 deferred). Ad-hoc signed, App Sandbox + Hardened Runtime verified, DMG integrity/checksum verified (`dmgSHA256` `776650fde13ba012afa152fbca6c1aed71c1f2a305d9f3e4798d58157fcf18e9`), not notarized; build number `5`. Full notes: `docs/releases/v0.4.0.md`. `v0.1.0`, `v0.2.0` and `v0.3.0` remain published and immutable as historical evidence; none is superseded, only followed by `v0.4.0`.
+
+See:
+
+- `docs/releases/v0.4.0.md`;
+- `docs/superpowers/specs/2026-09-03-artwork-morphing-design.md`;
+- `docs/superpowers/specs/2026-09-03-fullscreen-spaces-notchless-hardening-design.md`;
+- `docs/testing/ARTWORK_MORPHING_ACCEPTANCE.md`;
+- `docs/testing/FULLSCREEN_SPACES_HARDENING_ACCEPTANCE.md`.

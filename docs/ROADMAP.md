@@ -1,6 +1,6 @@
 # Roadmap
 
-Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.3.0` (`v0.1.0` and `v0.2.0` remain published/immutable as historical evidence).
+Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.4.0` (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence).
 
 States are explicit: **implemented -> automated-tested -> physically accepted -> merged -> released**. Green CI does not substitute for target-Mac acceptance when physical UI, permissions, third-party behavior or resources are part of the contract.
 
@@ -120,7 +120,7 @@ Two further real, unrelated defects were found and fixed during the same round o
 
 ## Artwork morphing — `matchedGeometryEffect` cross-state morph
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED — not yet released**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.4.0`**.
 
 The last of the three ideas the M6.8 competitive review deferred (equalizer/M6.8, marquee text/M6.9, album-art tinting/M6.11). A shared `@Namespace` + `matchedGeometryEffect(id: "media.artwork")` on the single `artwork(_:size:)` definition site lets SwiftUI interpolate the artwork's frame/position across Compact/Peek/Expanded instead of cross-fading a size "pop", driven by an explicit `.animation(value: panelModel.contentPresentation)` synced to the AppKit panel's own resize duration (`notchAnimationDuration`, now `public` in `NotchHubCore`) and disabled under Reduce Motion. Design/invariants: `docs/superpowers/specs/2026-09-03-artwork-morphing-design.md`.
 
@@ -130,7 +130,7 @@ PR #75 squash-merged as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`.
 
 ## Fullscreen / Spaces hardening
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED — not yet released**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.4.0`**.
 
 Closes the last item M1 deliberately deferred: fullscreen-app and Spaces-switch behavior. `NotchPanelController.configurePanel()` already implemented Apple's documented recipe for a utility panel that survives both (`.canJoinAllSpaces`, `.fullScreenAuxiliary`, `.stationary`, `.level = .statusBar`) unchanged since M1, but no test asserted it and neither scenario had been physically exercised. `NotchPanelSpacesFullscreenPolicyTests` constructs the real `NotchPanelController` and asserts these invariants on the actual `NSPanel`. Design/invariants: `docs/superpowers/specs/2026-09-03-fullscreen-spaces-notchless-hardening-design.md`.
 
@@ -154,6 +154,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. Artwork morphing (PR #75) and fullscreen/Spaces hardening (PR #77) are both merged and physically accepted, completing every idea the M6.8 competitive review surfaced and the last item M1 deferred. Unreleased work has accumulated on top of `v0.3.0`; a new Personal Release is a strong candidate before starting the next slice. If continuing feature work first, per current product priority the Settings (M7) module is next on the roadmap.
+2. Artwork morphing (PR #75) and fullscreen/Spaces hardening (PR #77) are both merged, physically accepted and released as `v0.4.0`, completing every idea the M6.8 competitive review surfaced and the last item M1 deferred. Select and specify the next bounded product-hardening slice, per current product priority (Settings/M7 is next on the roadmap).
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
-4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`) immutable; ship any future defect or feature as a new version.
+4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0`) immutable; ship any future defect or feature as a new version.
