@@ -16,7 +16,7 @@ private final class NotchHoverPeekRequestRelay {
 
 @MainActor
 public final class NotchPanelController: NSObject {
-    private let panel: NSPanel
+    let panel: NSPanel
     private let interactionCoordinator: NotchInteractionCoordinator
     private let transitionCoordinator: NotchPanelTransitionCoordinator
     private let pointerMonitor: NotchPointerMonitor
