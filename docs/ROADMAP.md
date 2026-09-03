@@ -118,6 +118,16 @@ Physical acceptance found and fixed two real, pre-existing UI defects in the sam
 
 Two further real, unrelated defects were found and fixed during the same round of physical testing, neither tied to this or any other milestone: title-less Now Playing sessions (e.g. browser video without `navigator.mediaSession.metadata`) being silently dropped by the vendored `MediaRemoteAdapter`'s title-mandatory gate (PR #70, `ed215290100becc1a54e46fec0b209682b539d32`), and cold-launch Peek rendering mispositioned until the next transition due to a settled-phase no-op never reconciling the panel frame (PR #71, `634fc5629218209a99649d8c1fc22981954fa4d4`). Full detail in `CHANGELOG.md` and `docs/PROJECT_STATE.md`. Released as part of `v0.3.0`, published 2026-09-02 via PR #73 and the `Personal Release` workflow (run `33652040573`) on source `7de4a41de0947f09bedf26fa3385cab566038475`; see `docs/releases/v0.3.0.md`.
 
+## Artwork morphing — `matchedGeometryEffect` cross-state morph
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED — not yet released**.
+
+The last of the three ideas the M6.8 competitive review deferred (equalizer/M6.8, marquee text/M6.9, album-art tinting/M6.11). A shared `@Namespace` + `matchedGeometryEffect(id: "media.artwork")` on the single `artwork(_:size:)` definition site lets SwiftUI interpolate the artwork's frame/position across Compact/Peek/Expanded instead of cross-fading a size "pop", driven by an explicit `.animation(value: panelModel.contentPresentation)` synced to the AppKit panel's own resize duration (`notchAnimationDuration`, now `public` in `NotchHubCore`) and disabled under Reduce Motion. Design/invariants: `docs/superpowers/specs/2026-09-03-artwork-morphing-design.md`.
+
+Canonical CI GREEN 3/3; full Swift suite 450/450 tests GREEN. Physical acceptance on the product owner's own Mac — all 8 checklist items PASS. Full evidence: `docs/testing/ARTWORK_MORPHING_ACCEPTANCE.md`.
+
+PR #75 squash-merged as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`.
+
 ## Repository governance
 
 Issue #42 remains open because `main` is intended to be protected but GitHub currently reports it unprotected. Restoring branch governance remains a repository-quality priority and should be completed when repository capabilities permit. Do not treat the current unprotected state as accepted architecture.
@@ -134,6 +144,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. M6.11 album-art tinting, along with two acceptance-found UI defects (Peek notch clipping, seek reset) and two unrelated real-world defects (title-less Now Playing sessions, cold-launch panel mispositioning), is merged, physically accepted and released as `v0.3.0`. Select and specify the next bounded product-hardening slice — `matchedGeometryEffect` artwork morphing (the only remaining deferred idea from the M6.8 competitive review) or remaining fullscreen/Spaces/notchless hardening — before starting the Settings (M7) module, per current product priority.
+2. Artwork morphing (PR #75) is merged and physically accepted, completing every idea the M6.8 competitive review surfaced. Select and specify the next bounded product-hardening slice — remaining fullscreen/Spaces/notchless hardening is the leading candidate — before starting the Settings (M7) module, per current product priority. Consider whether a new Personal Release is warranted for the unreleased work now accumulated on top of `v0.3.0`.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
 4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`) immutable; ship any future defect or feature as a new version.
