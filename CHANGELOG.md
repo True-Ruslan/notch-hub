@@ -4,6 +4,36 @@ All notable changes to NotchHub are documented here. The active version is store
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-05
+
+Published as `v0.5.0` — Personal build. See `docs/releases/v0.5.0.md` for the full release notes. Everything below was implemented, automated-tested (where feasible), physically accepted (where a real system side effect required it) and merged since `v0.4.0`.
+
+### M7 — first bounded Settings slice
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.5.0`**.
+
+First scoped version of M7 "Product shell", with no prior spec before this slice. Four controls per product-owner scoping: **Launch at Login** (`SMAppService.mainApp`, the toggle only persists after a successful register/unregister, reverting with an inline error on failure), **Reduce Motion override** (System/Always On/Always Off, via a new pure `effectiveReduceMotion(systemValue:override:)` routed through all 4 existing `NSWorkspace.accessibilityDisplayShouldReduceMotion` read sites), **manual display override** (a stable `displayUUID` via `CGDisplayCreateUUIDFromDisplayID`; `NotchScreenSelection` gains an override-aware overload where a pinned-but-disconnected display silently falls back to the existing M1 automatic policy), and **About** (version + release link, the URL read from a new `NHReleasesURL` `Info.plist` key rather than a Swift source literal, since `scripts/security-audit.sh` forbids any `https?://` pattern in `Sources`). Entry point: a new "Settings…" item in the existing menu-bar status item (M6.10), opening one ordinary titled/closable `NSWindow`, not another notch-style `NSPanel`. First persisted state in the app: `NotchHubSettings`/`NotchHubSettingsStore`, one `Codable` value in one `UserDefaults.standard` key, falling back to `.default` on decode failure. No new entitlement. Design/invariants: `docs/superpowers/specs/2026-09-04-m7-settings-shell-design.md`.
+
+This was also the first change to `NotchPanelController` — the accepted/physically-tested core panel-transition/display-migration authority from M1/M6.6/M6.11 — since its last physical acceptance, wiring the new settings-driven inputs through its *existing* `animationPolicyDidChange`/`preferredBaseLayout()`/`migrateToPreferredDisplayIfNeeded()` paths rather than a new mechanism.
+
+Physical acceptance on the product owner's own Mac — all 8 checklist items PASS, including Settings window behavior, Launch at Login actually registering/unregistering, Reduce Motion override against live Accessibility state, display-pinning with disconnect fallback, and clean post-Quit teardown; no real defect found. Full evidence: `docs/testing/M7_SETTINGS_SHELL_ACCEPTANCE.md`. PR #81 squash-merged as `165cd9e925ae14b41e01a3adef3390116437ce47`.
+
+### M7 Settings — real XCUI coverage for the Settings window
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / MERGED / RELEASED — `v0.5.0`**.
+
+Follows up PR #81, whose only automated coverage was source-scanning. Adds real end-to-end UI-level coverage: `testSettingsWindowOpensFromMenuBarAndClosingDoesNotQuitApp` (opens Settings via the real status-item-click → menu-item-click path, asserts window title, that closing it leaves the accessory app running, and the notch panel is unaffected) and `testSettingsWindowExposesReduceMotionDisplayAndAboutControls` (asserts all four controls exist, deliberately never touching Launch at Login since `SMAppService` is a real system side effect this suite must never trigger on a CI runner). Adds stable accessibility identifiers to the status item, its menu item, the window, and each control.
+
+**Critical correctness fix alongside this**: the UI-test app bundle shares the shipping app's bundle identifier, so `NotchHubSettingsStore`'s default `UserDefaults.standard` would have made these tests read/write the real user's persisted NotchHub preferences on any machine that also runs the shipping app. `AppDelegate` now builds the store against an isolated, cleared `UserDefaults` suite under `#if NOTCHHUB_UI_TESTING`.
+
+A third planned test (verifying the Reduce Motion segmented control's selection persists across a Settings-window reopen) was dropped after two canonical-CI-confirmed failures to reliably observe an `NSSegmentedControl` segment's selection through XCUITest's accessibility tree (neither a native `isSelected` predicate nor an explicit `.accessibilityValue` on the container was reliably readable) — matching this project's standing preference for an honestly absent automated check over a fabricated/flaky one; Reduce Motion override behavior itself remains covered by PR #81's physical acceptance. PR #84 squash-merged as `a5cd96610d4dcb93ee1bdfa27f5bada0d5756243`.
+
+### Housekeeping — Info.plist version drift fix
+
+Status: **IMPLEMENTED / MERGED / RELEASED — `v0.5.0`**.
+
+`Resources/Info.plist`'s checked-in `CFBundleShortVersionString` had drifted to `0.1.0` while `VERSION` had advanced to `0.4.0` across four Personal Releases — explicitly flagged as deferred in the M7 Settings design spec. Real shipped builds were never affected (`scripts/build-app.sh` always overwrites this value from `VERSION` at build time), but the checked-in value is also what a local `swift build`/`swift run` shows, e.g. the new Settings About section. `scripts/test_release_policy.py` gained `test_info_plist_short_version_string_matches_version_file` to prevent recurrence. PR #83 squash-merged as `9d58ee91dd3ca37ac99d94785e94b30d0c774075`.
+
 ## [0.4.0] - 2026-09-03
 
 Published as `v0.4.0` — Personal build. See `docs/releases/v0.4.0.md` for the full release notes. Everything below was implemented, automated-tested, physically accepted and merged since `v0.3.0`.
