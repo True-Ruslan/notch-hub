@@ -11,7 +11,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mediaRuntime: (any MediaRuntimeSession)?
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
-    private let settingsStore = NotchHubSettingsStore()
+    /// UI-test builds use an isolated, cleared UserDefaults suite instead of
+    /// `.standard` so driving Settings controls from XCUITest (see
+    /// Tests/UITests/NotchHubUITests.swift) can never read or write the real
+    /// user's persisted app preferences — the UI test app bundle shares the
+    /// shipping app's bundle identifier and therefore its UserDefaults
+    /// domain by default.
+    private let settingsStore: NotchHubSettingsStore = {
+        #if NOTCHHUB_UI_TESTING
+            let suiteName = "ru.trueruslan.notchhub.ui-testing"
+            let defaults = UserDefaults(suiteName: suiteName) ?? .standard
+            defaults.removePersistentDomain(forName: suiteName)
+            return NotchHubSettingsStore(defaults: defaults)
+        #else
+            return NotchHubSettingsStore()
+        #endif
+    }()
     private let mediaPresentationModel = ShippingMediaPresentationModel()
     private let mediaGestureVisualModel = MediaGestureVisualModel()
     private let sourceApplicationIconResolver = SourceApplicationIconResolver()
@@ -207,6 +222,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             accessibilityDescription: "NotchHub"
         )
         statusItem.button?.image?.isTemplate = true
+        statusItem.button?.setAccessibilityIdentifier("notchhub.statusItem")
 
         let menu = NSMenu()
         let titleItem = NSMenuItem(title: "NotchHub", action: nil, keyEquivalent: "")
@@ -219,6 +235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyEquivalent: ","
         )
         settingsItem.target = self
+        settingsItem.setAccessibilityIdentifier("notchhub.menu.settings")
         menu.addItem(settingsItem)
         menu.addItem(.separator())
         let quitItem = NSMenuItem(
@@ -255,6 +272,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         window.title = "NotchHub Settings"
+        window.setAccessibilityIdentifier("settings.window")
         window.isReleasedWhenClosed = false
         window.center()
         window.contentView = NSHostingView(

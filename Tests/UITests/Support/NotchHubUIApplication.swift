@@ -137,6 +137,30 @@ struct NotchHubUIApplication {
         return true
     }
 
+    /// Opens the Settings window via the real menu-bar status item (click
+    /// the status item, then its "Settings…" menu item), the same path a
+    /// real user takes — not a direct programmatic window creation, so this
+    /// also exercises the status item/menu wiring itself.
+    func openSettingsWindow(timeout: TimeInterval = 2) -> Bool {
+        let statusItem = app.statusItems["notchhub.statusItem"]
+        guard NotchHubUIAssertions.waitUntilExists(statusItem, timeout: timeout) else {
+            return false
+        }
+        statusItem.click()
+
+        let settingsMenuItem = app.menuItems["notchhub.menu.settings"]
+        guard NotchHubUIAssertions.waitUntilExists(settingsMenuItem, timeout: timeout) else {
+            return false
+        }
+        settingsMenuItem.click()
+
+        return NotchHubUIAssertions.waitUntilExists(settingsWindow(), timeout: timeout)
+    }
+
+    func settingsWindow() -> XCUIElement {
+        app.windows["settings.window"]
+    }
+
     func movePointerOutside(_ element: XCUIElement) {
         let center = element.coordinate(
             withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)

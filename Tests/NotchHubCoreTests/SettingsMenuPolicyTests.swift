@@ -39,6 +39,40 @@ struct SettingsMenuPolicyTests {
     }
 
     @Test
+    func uiTestBuildsIsolateSettingsStoreFromTheRealUserDefaultsDomain() throws {
+        let source = try sourceText(relativePath: "Sources/NotchHubApp/AppDelegate.swift")
+
+        let settingsStoreDeclaration = try #require(
+            source.range(of: "private let settingsStore: NotchHubSettingsStore = {")
+        )
+        let remainder = source[settingsStoreDeclaration.upperBound...]
+        let declarationEnd =
+            remainder.range(of: "\n    }()")?.upperBound ?? remainder.endIndex
+        let body = remainder[remainder.startIndex..<declarationEnd]
+
+        #expect(body.contains("#if NOTCHHUB_UI_TESTING"))
+        #expect(body.contains("UserDefaults(suiteName:"))
+        #expect(body.contains("removePersistentDomain(forName:"))
+        #expect(body.contains(".standard"))
+    }
+
+    @Test
+    func settingsControlsExposeStableAccessibilityIdentifiersForUITesting() throws {
+        let statusItemMenu = try sourceText(relativePath: "Sources/NotchHubApp/AppDelegate.swift")
+        let settingsRoot = try sourceText(
+            relativePath: "Sources/NotchHubApp/Settings/SettingsRootView.swift"
+        )
+
+        #expect(statusItemMenu.contains("\"notchhub.statusItem\""))
+        #expect(statusItemMenu.contains("\"notchhub.menu.settings\""))
+        #expect(statusItemMenu.contains("\"settings.window\""))
+        #expect(settingsRoot.contains("\"settings.launchAtLogin\""))
+        #expect(settingsRoot.contains("\"settings.reduceMotion\""))
+        #expect(settingsRoot.contains("\"settings.display\""))
+        #expect(settingsRoot.contains("\"settings.about.version\""))
+    }
+
+    @Test
     func settingsAddsNoNewEntitlement() throws {
         let plist = try propertyList(relativePath: "Resources/NotchHub.entitlements")
 

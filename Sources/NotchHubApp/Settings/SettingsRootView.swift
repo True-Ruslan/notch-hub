@@ -15,10 +15,12 @@ struct SettingsRootView: View {
         Form {
             Section("General") {
                 Toggle("Launch at Login", isOn: launchAtLoginBinding)
+                    .accessibilityIdentifier("settings.launchAtLogin")
                 if let launchAtLoginErrorMessage {
                     Text(launchAtLoginErrorMessage)
                         .font(.caption)
                         .foregroundStyle(.red)
+                        .accessibilityIdentifier("settings.launchAtLoginError")
                 }
             }
 
@@ -30,6 +32,7 @@ struct SettingsRootView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .accessibilityIdentifier("settings.reduceMotion")
             }
 
             Section("Display") {
@@ -40,14 +43,17 @@ struct SettingsRootView: View {
                     }
                 }
                 .labelsHidden()
+                .accessibilityIdentifier("settings.display")
             }
 
             Section("About") {
                 Text("NotchHub \(appVersion)")
+                    .accessibilityIdentifier("settings.about.version")
                 if let releasesURL {
                     Button("View latest release on GitHub") {
                         NSWorkspace.shared.open(releasesURL)
                     }
+                    .accessibilityIdentifier("settings.about.releaseLink")
                 }
             }
         }

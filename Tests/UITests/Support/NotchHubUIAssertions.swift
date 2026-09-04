@@ -28,6 +28,19 @@ enum NotchHubUIAssertions {
     }
 
     @MainActor
+    static func waitUntilTitle(
+        _ element: XCUIElement,
+        equals expectedTitle: String,
+        timeout: TimeInterval
+    ) -> Bool {
+        wait(
+            for: NSPredicate(format: "title == %@", expectedTitle),
+            object: element,
+            timeout: timeout
+        )
+    }
+
+    @MainActor
     static func waitUntilValue(
         _ element: XCUIElement,
         equals expectedValue: String,
