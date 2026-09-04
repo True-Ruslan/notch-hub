@@ -138,6 +138,16 @@ No production behavior changed and no real defect was found. Canonical CI GREEN 
 
 PR #77 squash-merged as `273126e54f93cd806eaf2be9fa5191f47092d416`.
 
+## M7 — Product shell (first bounded Settings slice)
+
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED — not yet released**.
+
+First scoped version of M7, with no prior spec before this slice. Four controls per product-owner scoping: Launch at Login (`SMAppService.mainApp`), Reduce Motion override (System/Always On/Always Off, via a new pure `effectiveReduceMotion(systemValue:override:)`), manual display override (a stable `displayUUID`-keyed `NotchScreenSelection` overload, falling back to the existing M1 automatic policy if the pinned display disconnects), and About (version + release link). Entry point: a new "Settings…" menu-bar item opening one ordinary `NSWindow`. First persisted state in the app (`NotchHubSettings`/`NotchHubSettingsStore`, one `UserDefaults.standard` key). No new entitlement. Design/invariants: `docs/superpowers/specs/2026-09-04-m7-settings-shell-design.md`.
+
+First change to `NotchPanelController`'s core paths since its last physical acceptance (M1/M6.6/M6.11) — wires the new settings through the *existing* transition/migration mechanisms, no new one. Canonical CI GREEN 3/3, including a fresh `performance/m7-settings-shell-size-budget.json` derived from this PR's own measured candidate (the prior `m6-11-album-art-tint-size-budget.json` ceiling was too tight for the added feature). Full Swift suite 469/469 tests GREEN. Physical acceptance on the product owner's own Mac — all 8 checklist items PASS; no real defect found. Full evidence: `docs/testing/M7_SETTINGS_SHELL_ACCEPTANCE.md`.
+
+PR #81 squash-merged as `165cd9e925ae14b41e01a3adef3390116437ce47`.
+
 ## Repository governance
 
 Issue #42 remains open because `main` is intended to be protected but GitHub currently reports it unprotected. Restoring branch governance remains a repository-quality priority and should be completed when repository capabilities permit. Do not treat the current unprotected state as accepted architecture.
@@ -154,6 +164,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. Artwork morphing (PR #75) and fullscreen/Spaces hardening (PR #77) are both merged, physically accepted and released as `v0.4.0`, completing every idea the M6.8 competitive review surfaced and the last item M1 deferred. Select and specify the next bounded product-hardening slice, per current product priority (Settings/M7 is next on the roadmap).
+2. M7's first bounded Settings slice (PR #81: Launch at Login, Reduce Motion override, manual display override, About) is merged and physically accepted, not yet released. Unreleased work has accumulated on top of `v0.4.0`; a new Personal Release is a strong candidate before starting the next slice.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
 4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0`) immutable; ship any future defect or feature as a new version.

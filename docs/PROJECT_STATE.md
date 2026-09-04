@@ -1,6 +1,6 @@
 # Project state
 
-Last updated: 2026-09-03
+Last updated: 2026-09-04
 Published version: `0.4.0` Personal Release (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence)
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
@@ -20,13 +20,14 @@ Personal Release `v0.3.0` published 2026-09-02 via PR #73 (version bump/release 
 Accepted artwork morphing (matchedGeometryEffect) runtime: `8ac7a44cc0565893d363e917807a6dcbac38c3cb` (PR #75; released in `v0.4.0`)
 Accepted fullscreen/Spaces hardening runtime: `273126e54f93cd806eaf2be9fa5191f47092d416` (PR #77; released in `v0.4.0`)
 Personal Release `v0.4.0` published 2026-09-03 via PR #79 (version bump/release notes/CHANGELOG reorg) and the `Personal Release` workflow (run `33805750172`), source `3f458a2aa25d4bc4f89aeff74c95a7efee693657`, publishing artwork morphing and fullscreen/Spaces hardening that had accumulated unreleased on top of `v0.3.0`; see `docs/releases/v0.4.0.md`.
-Active development: artwork morphing (PR #75) and fullscreen/Spaces panel-configuration hardening (PR #77) both merged, physically accepted and released; next bounded slice not yet selected
+Accepted M7 Settings shell runtime: `165cd9e925ae14b41e01a3adef3390116437ce47` (PR #81; not yet released)
+Active development: M7 first bounded Settings slice (Launch at Login, Reduce Motion override, manual display override, About) merged and physically accepted via PR #81, not yet published in a Personal Release; next bounded slice not yet selected
 
 ## Product state
 
 NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-Published state is now immutable `v0.4.0` (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence and are not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work released in `v0.2.0`; M6.11 album-art tinting, the two acceptance-found UI defect fixes (Peek notch clipping, seek reset) and the two unrelated real-world defect fixes (title-less Now Playing sessions, cold-launch panel mispositioning) are released in `v0.3.0`; artwork morphing (`matchedGeometryEffect`) and fullscreen/Spaces panel-configuration hardening are now released in `v0.4.0`.
+Published state is now immutable `v0.4.0` (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence and are not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work released in `v0.2.0`; M6.11 album-art tinting, the two acceptance-found UI defect fixes (Peek notch clipping, seek reset) and the two unrelated real-world defect fixes (title-less Now Playing sessions, cold-launch panel mispositioning) are released in `v0.3.0`; artwork morphing (`matchedGeometryEffect`) and fullscreen/Spaces panel-configuration hardening are released in `v0.4.0`. M7's first bounded Settings slice (PR #81) is merged/accepted and not yet released.
 
 P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization.
 
@@ -223,6 +224,16 @@ No production behavior changed and no real defect was found on physical testing 
 
 Squash-merged as `273126e54f93cd806eaf2be9fa5191f47092d416`. Fullscreen/Spaces hardening therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.4.0`.
 
+## M7 — first bounded Settings slice — accepted
+
+PR #81 is the first scoped version of M7 "Product shell", the module after the media/performance foundation with no prior spec. Four controls per product-owner scoping: **Launch at Login** (`SMAppService.mainApp`, toggle only persists after a successful register/unregister, reverting with an inline error on failure), **Reduce Motion override** (System/Always On/Always Off, via a new pure `effectiveReduceMotion(systemValue:override:)` routed through all 4 existing `NSWorkspace.accessibilityDisplayShouldReduceMotion` read sites), **manual display override** (a stable `displayUUID` via `CGDisplayCreateUUIDFromDisplayID`; `NotchScreenSelection` gains an override-aware overload where a pinned-but-disconnected display silently falls back to the existing M1 automatic policy), and **About** (version + release link, the URL read from a new `NHReleasesURL` `Info.plist` key rather than a Swift source literal, since `scripts/security-audit.sh` forbids any `https?://` pattern in `Sources`). Entry point: a new "Settings…" item in the existing menu-bar status item (M6.10), opening one ordinary titled/closable `NSWindow`, not another notch-style `NSPanel`. First persisted state in the app: `NotchHubSettings`/`NotchHubSettingsStore`, one `Codable` value in one `UserDefaults.standard` key, falling back to `.default` on decode failure. No new entitlement. Design/invariants: `docs/superpowers/specs/2026-09-04-m7-settings-shell-design.md`.
+
+This PR also touched `NotchPanelController` — the accepted/physically-tested core panel-transition/display-migration authority from M1/M6.6/M6.11 — for the first time since its last physical acceptance, wiring the new settings-driven inputs through its *existing* `animationPolicyDidChange`/`preferredBaseLayout()`/`migrateToPreferredDisplayIfNeeded()` paths rather than a new mechanism. Canonical CI's release size gate initially failed against the stale `m6-11-album-art-tint-size-budget.json`; fixed by deriving a fresh `performance/m7-settings-shell-size-budget.json` from this PR's own measured CI candidate, matching the established M6.9/M6.10/M6.11 precedent.
+
+Physical acceptance on the product owner's own Mac — all 8 checklist items PASS, including Settings window behavior, Launch at Login actually registering/unregistering, Reduce Motion override against live Accessibility state, display-pinning with disconnect fallback, and clean post-Quit teardown; no real defect found. Full evidence: `docs/testing/M7_SETTINGS_SHELL_ACCEPTANCE.md`.
+
+Squash-merged as `165cd9e925ae14b41e01a3adef3390116437ce47`. M7's first slice therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet published in a Personal Release.
+
 ## Two unrelated real-world defects found and fixed during ad-hoc physical testing
 
 Neither tied to any milestone in flight; both found while physically testing M6.11 on real hardware and fixed/merged separately:
@@ -232,7 +243,7 @@ Neither tied to any milestone in flight; both found while physically testing M6.
 
 ## Next optimal step
 
-1. Artwork morphing (PR #75) and fullscreen/Spaces hardening (PR #77) are merged, physically accepted and released in `v0.4.0`, completing every idea the M6.8 competitive review surfaced and the last item M1 deliberately deferred. Select and specify the next bounded product-hardening slice with a written spec + RED tests before implementation, per current product priority (Settings/M7 is next on the roadmap).
+1. M7's first bounded Settings slice (PR #81) is merged and physically accepted, not yet released. There is now accumulated unreleased work on top of `v0.4.0`; consider a new Personal Release before starting the next slice. If continuing feature work first, select and specify it with a written spec + RED tests before implementation — either the next Settings increment or a different product-hardening slice, per current product priority.
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
