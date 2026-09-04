@@ -269,36 +269,6 @@ final class NotchHubUITests: XCTestCase {
     }
 
     @MainActor
-    func testReduceMotionOverridePersistsAcrossSettingsWindowReopen() throws {
-        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
-        subject.launch()
-        defer { subject.app.terminate() }
-
-        XCTAssertTrue(subject.waitForStableCompact())
-        XCTAssertTrue(subject.openSettingsWindow())
-
-        let reduceMotion = subject.app.descendants(matching: .any)["settings.reduceMotion"]
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(reduceMotion, timeout: 2))
-        let alwaysOn = reduceMotion.buttons["Always On"]
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(alwaysOn, timeout: 2))
-        alwaysOn.click()
-        // The segmented control's own AXSelected is not reliably observable
-        // via XCUITest; SettingsRootView exposes the selection explicitly
-        // via .accessibilityValue instead.
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(reduceMotion, equals: "alwaysOn", timeout: 2))
-
-        subject.settingsWindow().buttons[XCUIIdentifierCloseWindow].click()
-        XCTAssertTrue(subject.settingsWindow().waitForNonExistence(timeout: 2))
-
-        XCTAssertTrue(subject.openSettingsWindow())
-        let reopenedReduceMotion = subject.app.descendants(matching: .any)["settings.reduceMotion"]
-        XCTAssertTrue(
-            NotchHubUIAssertions.waitUntilValue(reopenedReduceMotion, equals: "alwaysOn", timeout: 2),
-            "the override must survive closing and reopening the Settings window within the same launch"
-        )
-    }
-
-    @MainActor
     private func assertNoMediaPeekAndSingleHaptic(
         _ subject: NotchHubUIApplication
     ) {

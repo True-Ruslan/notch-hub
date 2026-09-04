@@ -33,13 +33,6 @@ struct SettingsRootView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .accessibilityIdentifier("settings.reduceMotion")
-                // Native AXSelected on an NSSegmentedControl's individual
-                // segments is not reliably observable via XCUITest; expose
-                // the selection explicitly instead, matching this
-                // codebase's existing pattern for programmatically
-                // verifiable UI state (e.g. MediaNotchRootView's
-                // .accessibilityValue on the play/pause button).
-                .accessibilityValue(settingsStore.settings.reduceMotionOverride.rawValue)
             }
 
             Section("Display") {
