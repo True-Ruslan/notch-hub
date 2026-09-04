@@ -628,7 +628,28 @@ class FeatureSizeBudgetTests(unittest.TestCase):
             },
         )
 
-    def test_ci_uses_album_art_tint_budget_over_immutable_baseline(self):
+    def test_repository_m7_settings_shell_budget_is_provenanced_tight_and_self_validating(
+        self,
+    ):
+        self.assert_repository_budget(
+            filename="m7-settings-shell-size-budget.json",
+            feature_id="m7-settings-shell",
+            source_commit="d5d3e842ed41928a12a6ccfff345e09778063440",
+            workflow_run_id=33809801061,
+            artifact_id=9914523436,
+            summary={
+                "appSizeBytes": 1020676,
+                "dmgSizeBytes": 655446,
+                "executableSizeBytes": 718368,
+            },
+            allowance={
+                "appSizeBytes": 800000,
+                "dmgSizeBytes": 610000,
+                "executableSizeBytes": 495000,
+            },
+        )
+
+    def test_ci_uses_m7_settings_shell_budget_over_immutable_baseline(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
@@ -636,10 +657,11 @@ class FeatureSizeBudgetTests(unittest.TestCase):
         self.assertIn("check-size-feature-budget", workflow)
         self.assertIn("--baseline performance/baseline-v0.1.0.json", workflow)
         self.assertIn(
-            "--feature-budget performance/m6-11-album-art-tint-size-budget.json",
+            "--feature-budget performance/m7-settings-shell-size-budget.json",
             workflow,
         )
         for historical_budget in (
+            "m6-11-album-art-tint-size-budget.json",
             "m6-10-discoverable-quit-menu-size-budget.json",
             "m6-9-media-marquee-text-size-budget.json",
             "m6-8-compact-live-equalizer-size-budget.json",
