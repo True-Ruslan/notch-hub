@@ -1,6 +1,6 @@
 # Roadmap
 
-Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.4.0` (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence).
+Primary target: Mac16,8 / macOS 26.6.x. Current physical environment: macOS 26.6.2. Published Personal Release: `v0.5.0` (`v0.1.0`, `v0.2.0`, `v0.3.0` and `v0.4.0` remain published/immutable as historical evidence).
 
 States are explicit: **implemented -> automated-tested -> physically accepted -> merged -> released**. Green CI does not substitute for target-Mac acceptance when physical UI, permissions, third-party behavior or resources are part of the contract.
 
@@ -140,13 +140,18 @@ PR #77 squash-merged as `273126e54f93cd806eaf2be9fa5191f47092d416`.
 
 ## M7 — Product shell (first bounded Settings slice)
 
-Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED — not yet released**.
+Status: **IMPLEMENTED / AUTOMATED-TESTED / PHYSICALLY ACCEPTED / MERGED / RELEASED — `v0.5.0`**.
 
 First scoped version of M7, with no prior spec before this slice. Four controls per product-owner scoping: Launch at Login (`SMAppService.mainApp`), Reduce Motion override (System/Always On/Always Off, via a new pure `effectiveReduceMotion(systemValue:override:)`), manual display override (a stable `displayUUID`-keyed `NotchScreenSelection` overload, falling back to the existing M1 automatic policy if the pinned display disconnects), and About (version + release link). Entry point: a new "Settings…" menu-bar item opening one ordinary `NSWindow`. First persisted state in the app (`NotchHubSettings`/`NotchHubSettingsStore`, one `UserDefaults.standard` key). No new entitlement. Design/invariants: `docs/superpowers/specs/2026-09-04-m7-settings-shell-design.md`.
 
 First change to `NotchPanelController`'s core paths since its last physical acceptance (M1/M6.6/M6.11) — wires the new settings through the *existing* transition/migration mechanisms, no new one. Canonical CI GREEN 3/3, including a fresh `performance/m7-settings-shell-size-budget.json` derived from this PR's own measured candidate (the prior `m6-11-album-art-tint-size-budget.json` ceiling was too tight for the added feature). Full Swift suite 469/469 tests GREEN. Physical acceptance on the product owner's own Mac — all 8 checklist items PASS; no real defect found. Full evidence: `docs/testing/M7_SETTINGS_SHELL_ACCEPTANCE.md`.
 
 PR #81 squash-merged as `165cd9e925ae14b41e01a3adef3390116437ce47`.
+
+Two follow-up PRs, also released in `v0.5.0`:
+
+- **Real XCUI coverage for the Settings window** (PR #84, `a5cd96610d4dcb93ee1bdfa27f5bada0d5756243`): end-to-end tests open Settings through the real menu-bar path and verify the window/controls; also fixed a real gap where the UI-test build would have read/written the real user's persisted preferences (shared bundle identifier with the shipping app) by isolating the UI-test settings store onto a dedicated `UserDefaults` suite. One planned test was dropped after two canonical-CI-confirmed failures to reliably observe an `NSSegmentedControl` segment's selection via XCUITest.
+- **Info.plist version-drift fix** (PR #83, `9d58ee91dd3ca37ac99d94785e94b30d0c774075`, unrelated to any milestone): synced the checked-in `CFBundleShortVersionString` to `VERSION` and added a regression test.
 
 ## Repository governance
 
@@ -164,6 +169,6 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 ## Current priority
 
 1. Keep issue #42 visible for branch-protection restoration.
-2. M7's first bounded Settings slice (PR #81: Launch at Login, Reduce Motion override, manual display override, About) is merged and physically accepted, not yet released. Unreleased work has accumulated on top of `v0.4.0`; a new Personal Release is a strong candidate before starting the next slice.
+2. M7's first bounded Settings slice (PR #81), its XCUI coverage (PR #84) and the Info.plist drift fix (PR #83) are merged, physically accepted where applicable, and released as `v0.5.0`. Select and specify the next slice, per current product priority.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
-4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0`) immutable; ship any future defect or feature as a new version.
+4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0`, `v0.5.0`) immutable; ship any future defect or feature as a new version.
