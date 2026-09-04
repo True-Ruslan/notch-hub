@@ -2,6 +2,21 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "NH-M7-SETTINGS-001",
+      "source": "docs/testing/M7_SETTINGS_SHELL_ACCEPTANCE.md",
+      "status": "accepted",
+      "coverage": [
+        {"layer":"unit","test":"NotchHubCoreTests.NotchHubSettingsTests.settingsRoundTripThroughCodableForEveryReduceMotionOverride"},
+        {"layer":"unit","test":"NotchHubCoreTests.NotchHubSettingsStoreTests.updatePersistsAndIsVisibleToANewStoreOverTheSameDefaults"},
+        {"layer":"unit","test":"NotchHubCoreTests.EffectiveReduceMotionTests.systemOverrideFollowsTheLiveSystemValue"},
+        {"layer":"unit","test":"NotchHubCoreTests.NotchScreenSelectionTests.manualOverridePinnedToConnectedDisplayWinsOverHardwareNotch"},
+        {"layer":"unit","test":"NotchHubCoreTests.NotchScreenSelectionTests.manualOverridePinnedToDisconnectedDisplayFallsBackToAutomaticPolicy"},
+        {"layer":"policy","test":"NotchHubCoreTests.SettingsMenuPolicyTests.statusItemHostsADiscoverableSettingsAction"},
+        {"layer":"physical","test":null}
+      ],
+      "physicalOnlyReason": "Physically accepted on the product owner's Mac on exact PR #81 head (squash-merged as 165cd9e925ae14b41e01a3adef3390116437ce47): Settings window opens/focuses correctly and closing it does not quit the app; Launch at Login actually registered/unregistered in System Settings; Reduce Motion Always On/Always Off/System behaved correctly against live Accessibility state; display override moved the panel to the pinned display and fell back to automatic on disconnect without a crash; About showed the correct version and opened the release page; no new permission prompt; normal notch interaction unaffected; clean post-Quit teardown. SMAppService/real display pinning/live Accessibility interaction are real system side effects this project's honesty standard does not fabricate unit tests for."
+    },
+    {
       "id": "NH-PANEL-SPACES-FULLSCREEN-001",
       "source": "docs/testing/FULLSCREEN_SPACES_HARDENING_ACCEPTANCE.md",
       "status": "accepted",
