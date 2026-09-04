@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 800000,
+    "dmgSizeBytes": 610000,
+    "executableSizeBytes": 495000
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 9914523436,
+    "sourceCommit": "d5d3e842ed41928a12a6ccfff345e09778063440",
+    "summary": {
+      "appSizeBytes": 1020676,
+      "dmgSizeBytes": 655446,
+      "executableSizeBytes": 718368
+    },
+    "workflowRunId": 33809801061
+  },
+  "featureId": "m7-settings-shell",
+  "schemaVersion": 1
+}

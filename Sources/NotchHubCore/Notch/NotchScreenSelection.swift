@@ -15,4 +15,18 @@ enum NotchScreenSelection {
 
         return screens.indices.first
     }
+
+    static func preferredIndex(
+        in screens: [ScreenGeometryInput],
+        fallbackIndex: Int?,
+        manualOverride: NotchHubSettings.PreferredDisplayOverride
+    ) -> Int? {
+        if case .specific(let displayUUID) = manualOverride,
+            let manualIndex = screens.firstIndex(where: { $0.displayUUID == displayUUID })
+        {
+            return manualIndex
+        }
+
+        return preferredIndex(in: screens, fallbackIndex: fallbackIndex)
+    }
 }

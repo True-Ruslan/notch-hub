@@ -10,6 +10,7 @@ struct MediaNotchRootView: View {
     @ObservedObject private var mediaModel: ShippingMediaPresentationModel
     @ObservedObject private var timelineTicker: MediaTimelineTicker
     @ObservedObject private var mediaGestureVisualModel: MediaGestureVisualModel
+    @ObservedObject private var settingsStore: NotchHubSettingsStore
     @State private var sourceApplicationIcon: NSImage?
     @State private var seekPreviewSeconds: Double?
     @State private var isSeekDragging = false
@@ -30,6 +31,7 @@ struct MediaNotchRootView: View {
         layoutModel: NotchPanelLayoutModel,
         mediaModel: ShippingMediaPresentationModel,
         mediaGestureVisualModel: MediaGestureVisualModel,
+        settingsStore: NotchHubSettingsStore,
         sourceApplicationIconResolver: SourceApplicationIconResolver,
         onExplicitExpansion: @escaping () -> Void,
         onTogglePlayPause: @escaping () -> Void,
@@ -45,6 +47,7 @@ struct MediaNotchRootView: View {
         self.mediaModel = mediaModel
         self.timelineTicker = timelineTicker
         self.mediaGestureVisualModel = mediaGestureVisualModel
+        self.settingsStore = settingsStore
         self.sourceApplicationIconResolver = sourceApplicationIconResolver
         self.onExplicitExpansion = onExplicitExpansion
         self.onTogglePlayPause = onTogglePlayPause
@@ -108,7 +111,10 @@ struct MediaNotchRootView: View {
     /// `NSPanel` frame animate over the same span. Reduce Motion disables the effect
     /// entirely, matching the zero-duration AppKit side.
     private var contentPresentationMorphAnimation: Animation? {
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let reduceMotion = effectiveReduceMotion(
+            systemValue: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+            override: settingsStore.settings.reduceMotionOverride
+        )
         guard !reduceMotion else {
             return nil
         }

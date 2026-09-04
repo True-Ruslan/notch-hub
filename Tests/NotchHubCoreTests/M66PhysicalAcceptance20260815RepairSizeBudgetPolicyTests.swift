@@ -54,7 +54,7 @@ struct M66PhysicalAcceptance20260815RepairSizeBudgetPolicyTests {
         let workflow = try String(contentsOf: workflowURL, encoding: .utf8)
         #expect(
             workflow.contains(
-                "--feature-budget performance/m6-11-album-art-tint-size-budget.json"
+                "--feature-budget performance/m7-settings-shell-size-budget.json"
             )
         )
         #expect(
