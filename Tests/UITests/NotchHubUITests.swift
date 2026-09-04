@@ -226,7 +226,7 @@ final class NotchHubUITests: XCTestCase {
 
         let window = subject.settingsWindow()
         XCTAssertTrue(
-            NotchHubUIAssertions.waitUntilLabel(window, equals: "NotchHub Settings", timeout: 2)
+            NotchHubUIAssertions.waitUntilTitle(window, equals: "NotchHub Settings", timeout: 2)
         )
 
         window.buttons[XCUIIdentifierCloseWindow].click()
@@ -282,16 +282,18 @@ final class NotchHubUITests: XCTestCase {
         let alwaysOn = reduceMotion.buttons["Always On"]
         XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(alwaysOn, timeout: 2))
         alwaysOn.click()
-        XCTAssertTrue(NotchHubUIAssertions.waitUntilSelected(alwaysOn, equals: true, timeout: 2))
+        // The segmented control's own AXSelected is not reliably observable
+        // via XCUITest; SettingsRootView exposes the selection explicitly
+        // via .accessibilityValue instead.
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilValue(reduceMotion, equals: "alwaysOn", timeout: 2))
 
         subject.settingsWindow().buttons[XCUIIdentifierCloseWindow].click()
         XCTAssertTrue(subject.settingsWindow().waitForNonExistence(timeout: 2))
 
         XCTAssertTrue(subject.openSettingsWindow())
-        let reopenedAlwaysOn = subject.app.descendants(matching: .any)["settings.reduceMotion"]
-            .buttons["Always On"]
+        let reopenedReduceMotion = subject.app.descendants(matching: .any)["settings.reduceMotion"]
         XCTAssertTrue(
-            NotchHubUIAssertions.waitUntilSelected(reopenedAlwaysOn, equals: true, timeout: 2),
+            NotchHubUIAssertions.waitUntilValue(reopenedReduceMotion, equals: "alwaysOn", timeout: 2),
             "the override must survive closing and reopening the Settings window within the same launch"
         )
     }
