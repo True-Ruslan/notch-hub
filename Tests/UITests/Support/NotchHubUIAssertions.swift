@@ -28,6 +28,19 @@ enum NotchHubUIAssertions {
     }
 
     @MainActor
+    static func waitUntilSelected(
+        _ element: XCUIElement,
+        equals expectedSelected: Bool,
+        timeout: TimeInterval
+    ) -> Bool {
+        wait(
+            for: NSPredicate(format: "isSelected == %@", NSNumber(value: expectedSelected)),
+            object: element,
+            timeout: timeout
+        )
+    }
+
+    @MainActor
     static func waitUntilValue(
         _ element: XCUIElement,
         equals expectedValue: String,

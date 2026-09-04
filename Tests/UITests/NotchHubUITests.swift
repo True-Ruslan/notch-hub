@@ -216,6 +216,87 @@ final class NotchHubUITests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsWindowOpensFromMenuBarAndClosingDoesNotQuitApp() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.waitForStableCompact())
+        XCTAssertTrue(subject.openSettingsWindow())
+
+        let window = subject.settingsWindow()
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilLabel(window, equals: "NotchHub Settings", timeout: 2)
+        )
+
+        window.buttons[XCUIIdentifierCloseWindow].click()
+        XCTAssertTrue(window.waitForNonExistence(timeout: 2))
+        XCTAssertNotEqual(
+            subject.app.state,
+            .notRunning,
+            "closing the Settings window must not quit the accessory app"
+        )
+        XCTAssertTrue(
+            subject.waitForStableCompact(),
+            "the notch panel must remain unaffected by Settings opening/closing"
+        )
+    }
+
+    @MainActor
+    func testSettingsWindowExposesReduceMotionDisplayAndAboutControls() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.waitForStableCompact())
+        XCTAssertTrue(subject.openSettingsWindow())
+
+        let reduceMotion = subject.app.descendants(matching: .any)["settings.reduceMotion"]
+        let display = subject.app.descendants(matching: .any)["settings.display"]
+        let launchAtLogin = subject.app.descendants(matching: .any)["settings.launchAtLogin"]
+        let aboutVersion = subject.app.descendants(matching: .any)["settings.about.version"]
+
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(reduceMotion, timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(display, timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(launchAtLogin, timeout: 2))
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(aboutVersion, timeout: 2))
+
+        // Never automate the Launch at Login toggle itself: SMAppService is
+        // a real system side effect (registers/unregisters an actual login
+        // item), which this suite must never trigger on a CI runner or a
+        // developer's own Mac. See docs/superpowers/specs/2026-09-04-m7-settings-shell-design.md.
+        XCTAssertFalse(launchAtLogin.isSelected)
+    }
+
+    @MainActor
+    func testReduceMotionOverridePersistsAcrossSettingsWindowReopen() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.waitForStableCompact())
+        XCTAssertTrue(subject.openSettingsWindow())
+
+        let reduceMotion = subject.app.descendants(matching: .any)["settings.reduceMotion"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(reduceMotion, timeout: 2))
+        let alwaysOn = reduceMotion.buttons["Always On"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(alwaysOn, timeout: 2))
+        alwaysOn.click()
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilSelected(alwaysOn, equals: true, timeout: 2))
+
+        subject.settingsWindow().buttons[XCUIIdentifierCloseWindow].click()
+        XCTAssertTrue(subject.settingsWindow().waitForNonExistence(timeout: 2))
+
+        XCTAssertTrue(subject.openSettingsWindow())
+        let reopenedAlwaysOn = subject.app.descendants(matching: .any)["settings.reduceMotion"]
+            .buttons["Always On"]
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilSelected(reopenedAlwaysOn, equals: true, timeout: 2),
+            "the override must survive closing and reopening the Settings window within the same launch"
+        )
+    }
+
+    @MainActor
     private func assertNoMediaPeekAndSingleHaptic(
         _ subject: NotchHubUIApplication
     ) {
