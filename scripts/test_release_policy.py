@@ -62,6 +62,23 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertTrue(notes_path.is_file(), f"missing versioned release notes: {notes_path}")
         validate_personal_release_notes(notes_path.read_text(encoding="utf-8"), version)
 
+    def test_info_plist_short_version_string_matches_version_file(self):
+        import plistlib
+
+        version = (REPOSITORY_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        info_plist_path = REPOSITORY_ROOT / "Resources" / "Info.plist"
+        with info_plist_path.open("rb") as handle:
+            info_plist = plistlib.load(handle)
+
+        self.assertEqual(
+            version,
+            info_plist["CFBundleShortVersionString"],
+            "Resources/Info.plist's checked-in CFBundleShortVersionString has drifted from "
+            "VERSION; scripts/build-app.sh overwrites it for real shipped builds via plutil, "
+            "but the checked-in value is also what a local `swift build`/`swift run` shows "
+            "(e.g. in the Settings About section) without going through that build step.",
+        )
+
     def test_build_metadata_has_exact_personal_release_schema(self):
         metadata = build_metadata(
             version="0.1.0",
