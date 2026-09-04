@@ -1,7 +1,7 @@
 # Project state
 
 Last updated: 2026-09-04
-Published version: `0.4.0` Personal Release (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence)
+Published version: `0.5.0` Personal Release (`v0.1.0`, `v0.2.0`, `v0.3.0` and `v0.4.0` remain published/immutable as historical evidence)
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
 Branch governance: `main` is intended to be protected; GitHub currently reports it unprotected and issue #42 tracks restoration
@@ -20,14 +20,17 @@ Personal Release `v0.3.0` published 2026-09-02 via PR #73 (version bump/release 
 Accepted artwork morphing (matchedGeometryEffect) runtime: `8ac7a44cc0565893d363e917807a6dcbac38c3cb` (PR #75; released in `v0.4.0`)
 Accepted fullscreen/Spaces hardening runtime: `273126e54f93cd806eaf2be9fa5191f47092d416` (PR #77; released in `v0.4.0`)
 Personal Release `v0.4.0` published 2026-09-03 via PR #79 (version bump/release notes/CHANGELOG reorg) and the `Personal Release` workflow (run `33805750172`), source `3f458a2aa25d4bc4f89aeff74c95a7efee693657`, publishing artwork morphing and fullscreen/Spaces hardening that had accumulated unreleased on top of `v0.3.0`; see `docs/releases/v0.4.0.md`.
-Accepted M7 Settings shell runtime: `165cd9e925ae14b41e01a3adef3390116437ce47` (PR #81; not yet released)
-Active development: M7 first bounded Settings slice (Launch at Login, Reduce Motion override, manual display override, About) merged and physically accepted via PR #81, not yet published in a Personal Release; next bounded slice not yet selected
+Accepted M7 Settings shell runtime: `165cd9e925ae14b41e01a3adef3390116437ce47` (PR #81; released in `v0.5.0`)
+Accepted Settings XCUI coverage runtime: `a5cd96610d4dcb93ee1bdfa27f5bada0d5756243` (PR #84; released in `v0.5.0`)
+Accepted Info.plist version-drift fix runtime: `9d58ee91dd3ca37ac99d94785e94b30d0c774075` (PR #83, unrelated to any milestone; released in `v0.5.0`)
+Personal Release `v0.5.0` published 2026-09-04 via PR #85 (version bump/release notes/CHANGELOG reorg) and the `Personal Release` workflow (run `33922305388`), source `b8a7cce9844a53ace07e5b54c0605282dd63d8a4`, publishing M7's first Settings slice, its XCUI coverage and the Info.plist drift fix that had accumulated unreleased on top of `v0.4.0`; see `docs/releases/v0.5.0.md`.
+Active development: M7 first bounded Settings slice (Launch at Login, Reduce Motion override, manual display override, About) merged, physically accepted and released, along with real XCUI coverage for the Settings window; next bounded slice not yet selected
 
 ## Product state
 
 NotchHub is a native, local-first macOS productivity hub built around the physical MacBook notch. Security, privacy, performance, energy use and deterministic interaction behavior remain first-class constraints. Runtime work remains event-driven unless measured evidence justifies otherwise.
 
-Published state is now immutable `v0.4.0` (`v0.1.0`, `v0.2.0` and `v0.3.0` remain published/immutable as historical evidence and are not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work released in `v0.2.0`; M6.11 album-art tinting, the two acceptance-found UI defect fixes (Peek notch clipping, seek reset) and the two unrelated real-world defect fixes (title-less Now Playing sessions, cold-launch panel mispositioning) are released in `v0.3.0`; artwork morphing (`matchedGeometryEffect`) and fullscreen/Spaces panel-configuration hardening are released in `v0.4.0`. M7's first bounded Settings slice (PR #81) is merged/accepted and not yet released.
+Published state is now immutable `v0.5.0` (`v0.1.0`, `v0.2.0`, `v0.3.0` and `v0.4.0` remain published/immutable as historical evidence and are not superseded, only followed by a new version). M6.6, its hardware-notch screen-selection correction, the compositor settlement repair, the bounded pointer-monitor correction, M1, M6.7-M6.10 and P1 are accepted/merged source work released in `v0.2.0`; M6.11 album-art tinting, the two acceptance-found UI defect fixes (Peek notch clipping, seek reset) and the two unrelated real-world defect fixes (title-less Now Playing sessions, cold-launch panel mispositioning) are released in `v0.3.0`; artwork morphing (`matchedGeometryEffect`) and fullscreen/Spaces panel-configuration hardening are released in `v0.4.0`; M7's first bounded Settings slice (PR #81), its XCUI coverage (PR #84) and the Info.plist version-drift fix (PR #83) are now released in `v0.5.0`.
 
 P1 whole-app target-Mac resource acceptance is complete on exact `Mac16,8 / macOS 26.6.2`. The accepted evidence does not justify speculative runtime optimization.
 
@@ -232,7 +235,12 @@ This PR also touched `NotchPanelController` — the accepted/physically-tested c
 
 Physical acceptance on the product owner's own Mac — all 8 checklist items PASS, including Settings window behavior, Launch at Login actually registering/unregistering, Reduce Motion override against live Accessibility state, display-pinning with disconnect fallback, and clean post-Quit teardown; no real defect found. Full evidence: `docs/testing/M7_SETTINGS_SHELL_ACCEPTANCE.md`.
 
-Squash-merged as `165cd9e925ae14b41e01a3adef3390116437ce47`. M7's first slice therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Not yet published in a Personal Release.
+Squash-merged as `165cd9e925ae14b41e01a3adef3390116437ce47`. M7's first slice therefore reached: **implemented -> automated-tested -> physically accepted -> merged -> accepted**. Released as part of `v0.5.0`.
+
+Followed by two smaller PRs, also released in `v0.5.0`:
+
+- **Real XCUI coverage for the Settings window** (PR #84, `a5cd96610d4dcb93ee1bdfa27f5bada0d5756243`): adds end-to-end tests opening Settings through the real menu-bar path and verifying the window/controls, plus a critical fix isolating the UI-test settings store onto a dedicated `UserDefaults` suite so tests can never touch a real user's saved preferences (the UI-test app bundle shares the shipping app's bundle identifier). One planned test (verifying the Reduce Motion segment's selection persists across a window reopen) was dropped after two canonical-CI-confirmed failures to reliably observe an `NSSegmentedControl` segment's selection via XCUITest's accessibility tree — an honestly-absent check rather than a fabricated one; that behavior remains covered by PR #81's physical acceptance.
+- **Info.plist version-drift housekeeping fix** (PR #83, `9d58ee91dd3ca37ac99d94785e94b30d0c774075`, unrelated to any milestone): `Resources/Info.plist`'s checked-in `CFBundleShortVersionString` had drifted to `0.1.0` while `VERSION` advanced to `0.4.0`; real shipped builds were never affected (`scripts/build-app.sh` always overwrites it from `VERSION`), but the checked-in value is also what a local `swift build`/`swift run` shows, e.g. the new Settings About section. New `test_info_plist_short_version_string_matches_version_file` prevents recurrence.
 
 ## Two unrelated real-world defects found and fixed during ad-hoc physical testing
 
@@ -243,11 +251,11 @@ Neither tied to any milestone in flight; both found while physically testing M6.
 
 ## Next optimal step
 
-1. M7's first bounded Settings slice (PR #81) is merged and physically accepted, not yet released. There is now accumulated unreleased work on top of `v0.4.0`; consider a new Personal Release before starting the next slice. If continuing feature work first, select and specify it with a written spec + RED tests before implementation — either the next Settings increment or a different product-hardening slice, per current product priority.
+1. M7's first bounded Settings slice (PR #81), its XCUI coverage (PR #84) and the Info.plist drift fix (PR #83) are merged, physically accepted (where applicable) and released as `v0.5.0`. Select and specify the next slice with a written spec + RED tests before implementation — either the next Settings increment (e.g. the remaining explicitly-deferred item: additional preferences) or a different product-hardening slice, per current product priority.
 2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
-5. Keep `v0.1.0`, `v0.2.0`, `v0.3.0` and `v0.4.0` immutable; any future defect or feature ships as a new version rather than replacing a published release artifact.
+5. Keep `v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0` and `v0.5.0` immutable; any future defect or feature ships as a new version rather than replacing a published release artifact.
 
 ## Personal Release v0.2.0 — published
 
@@ -295,3 +303,15 @@ See:
 - `docs/superpowers/specs/2026-09-03-fullscreen-spaces-notchless-hardening-design.md`;
 - `docs/testing/ARTWORK_MORPHING_ACCEPTANCE.md`;
 - `docs/testing/FULLSCREEN_SPACES_HARDENING_ACCEPTANCE.md`.
+
+## Personal Release v0.5.0 — published
+
+Published 2026-09-04 via PR #85 (version bump/release notes/CHANGELOG reorg, mirroring the v0.4.0 release-prep pattern) then the `Personal Release` GitHub Actions workflow (run `33922305388`) on source `b8a7cce9844a53ace07e5b54c0605282dd63d8a4`.
+
+Publishes everything accepted/merged since `v0.4.0`: M7's first bounded Settings slice (Launch at Login, Reduce Motion override, manual display override, About — PR #81), real XCUI coverage for the Settings window (PR #84), and the Info.plist version-drift housekeeping fix (PR #83, unrelated to any milestone). Ad-hoc signed, App Sandbox + Hardened Runtime verified, DMG integrity/checksum verified (`dmgSHA256` `b97db4a1b7bc9cf1c0f9cfb83e83a489abf1f8bcd0b4b761e54342ab54310c5f`), not notarized; build number `6`. Full notes: `docs/releases/v0.5.0.md`. `v0.1.0`, `v0.2.0`, `v0.3.0` and `v0.4.0` remain published and immutable as historical evidence; none is superseded, only followed by `v0.5.0`.
+
+See:
+
+- `docs/releases/v0.5.0.md`;
+- `docs/superpowers/specs/2026-09-04-m7-settings-shell-design.md`;
+- `docs/testing/M7_SETTINGS_SHELL_ACCEPTANCE.md`.

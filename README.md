@@ -6,7 +6,7 @@ NotchHub turns the area around the camera housing into a compact, event-driven p
 
 ## Status
 
-Current published version: **`0.4.0` — Personal build**. [Download the latest release](https://github.com/True-Ruslan/notch-hub/releases/latest).
+Current published version: **`0.5.0` — Personal build**. [Download the latest release](https://github.com/True-Ruslan/notch-hub/releases/latest).
 
 Current development state:
 
@@ -31,10 +31,11 @@ Current development state:
 - **M6.11 album-art color tinting — implemented, automated-tested, physically accepted, merged via PR #69 as `ad572cea5787ac8487308855f517395c8a3a23b2`; also fixed two acceptance-found UI defects (Peek notch clipping, seek-to-tap reset) in the same PR, plus two unrelated real-world defects found during the same round of physical testing (title-less Now Playing sessions dropped, cold-launch Peek mispositioning) via PR #70 and PR #71; released in `v0.3.0`.**
 - **Artwork morphing (`matchedGeometryEffect` cross-state morph) — implemented, automated-tested, physically accepted, merged via PR #75 as `8ac7a44cc0565893d363e917807a6dcbac38c3cb`; released in `v0.4.0`.**
 - **Fullscreen/Spaces hardening — implemented, automated-tested, physically accepted, merged via PR #77 as `273126e54f93cd806eaf2be9fa5191f47092d416`; released in `v0.4.0`.**
+- **M7 first bounded Settings slice (Launch at Login, Reduce Motion override, manual display override, About) — implemented, automated-tested, physically accepted, merged via PR #81 as `165cd9e925ae14b41e01a3adef3390116437ce47`; real XCUI coverage for the Settings window added via PR #84 as `a5cd96610d4dcb93ee1bdfa27f5bada0d5756243`; released in `v0.5.0`.**
 
-`v0.4.0` publishes artwork morphing and fullscreen/Spaces hardening above, on top of the `v0.3.0` release. See [`docs/releases/v0.4.0.md`](docs/releases/v0.4.0.md) for the full release notes.
+`v0.5.0` publishes M7's first Settings slice and its XCUI coverage above, plus an unrelated Info.plist version-drift housekeeping fix (PR #83), on top of the `v0.4.0` release. See [`docs/releases/v0.5.0.md`](docs/releases/v0.5.0.md) for the full release notes.
 
-P1 whole-app resource acceptance is complete and does not justify speculative runtime optimization. M1 active-display/multi-monitor migration is accepted/merged: NotchHub correctly moves/settles Compact, Peek and Expanded when display topology changes, preserving hardware-notch-first selection, with no polling, private display APIs or new permissions. M6.7 is also accepted/merged: the shipping media runtime now runs for the app's whole lifetime so Compact reflects live Now Playing state, and one narrowly-scoped, reviewed bounded-lifecycle timer makes the Peek/Expanded progress bar tick in real time. M6.8 is also accepted/merged: Compact's static play/pause glyph is now a small live animated equalizer. M6.9 adds marquee scrolling for overflowing media text. M6.10 adds a discoverable menu-bar Quit path. M6.11 replaces the flat black panel background with a subtle album-art-derived tint. Artwork now morphs smoothly between Compact/Peek/Expanded, and the panel's fullscreen/Spaces behavior is now regression-locked and physically verified. The current priority is selecting and specifying the next bounded product-hardening slice or module.
+P1 whole-app resource acceptance is complete and does not justify speculative runtime optimization. M1 active-display/multi-monitor migration is accepted/merged: NotchHub correctly moves/settles Compact, Peek and Expanded when display topology changes, preserving hardware-notch-first selection, with no polling, private display APIs or new permissions. M6.7 is also accepted/merged: the shipping media runtime now runs for the app's whole lifetime so Compact reflects live Now Playing state, and one narrowly-scoped, reviewed bounded-lifecycle timer makes the Peek/Expanded progress bar tick in real time. M6.8 is also accepted/merged: Compact's static play/pause glyph is now a small live animated equalizer. M6.9 adds marquee scrolling for overflowing media text. M6.10 adds a discoverable menu-bar Quit path. M6.11 replaces the flat black panel background with a subtle album-art-derived tint. Artwork now morphs smoothly between Compact/Peek/Expanded, and the panel's fullscreen/Spaces behavior is now regression-locked and physically verified. M7 adds NotchHub's first Settings window (Launch at Login, Reduce Motion override, manual display selection, About). The current priority is selecting and specifying the next bounded product-hardening slice or module.
 
 ## Universal Media
 
