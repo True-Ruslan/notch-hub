@@ -4,7 +4,7 @@ Last updated: 2026-09-04
 Published version: `0.5.0` Personal Release (`v0.1.0`, `v0.2.0`, `v0.3.0` and `v0.4.0` remain published/immutable as historical evidence)
 Primary physical target: Mac16,8 / macOS 26.6.x
 Current physical environment: Mac16,8 / macOS 26.6.2
-Branch governance: `main` is intended to be protected; GitHub currently reports it unprotected and issue #42 tracks restoration
+Branch governance: `main` is protected via GitHub branch protection (required PRs, required status checks `macOS 26 compatibility`/`Build, test and package`/`macOS UI regression`, enforce-admins, no force-push/deletion, linear history, required conversation resolution); restored 2026-09-05, closing issue #42
 Accepted P1 measured runtime: `11dad43364a969f4d5f8c1a92e1281b5b41c8a74`
 Accepted P1 measurement/evidence tooling: `fc7562b0799faa4dd80e8c47263354a8bd16bd6a`
 Accepted M1 active-display migration runtime: `c7d2bdb9cae744d439d240f22acd14140bacedd3`
@@ -252,10 +252,23 @@ Neither tied to any milestone in flight; both found while physically testing M6.
 ## Next optimal step
 
 1. M7's first bounded Settings slice (PR #81), its XCUI coverage (PR #84) and the Info.plist drift fix (PR #83) are merged, physically accepted (where applicable) and released as `v0.5.0`. Select and specify the next slice with a written spec + RED tests before implementation — either the next Settings increment (e.g. the remaining explicitly-deferred item: additional preferences) or a different product-hardening slice, per current product priority.
-2. Keep issue #42 visible: restore intended `main` branch governance when repository capabilities permit; do not treat an unprotected default branch as the desired steady state.
+2. Repository branch governance is restored (2026-09-05): `main` reports `protected: true`, closing issue #42.
 3. Prefer genuine target-Mac physical acceptance for shipping changes whose behavior CI cannot honestly prove; when the product owner explicitly waives it, record that decision and the residual risk honestly rather than fabricating a passed check.
 4. Do not introduce speculative CPU/RSS/wakeup optimizations unless new evidence establishes a material regression.
 5. Keep `v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0` and `v0.5.0` immutable; any future defect or feature ships as a new version rather than replacing a published release artifact.
+
+## Repository branch protection — restored
+
+Issue #42 tracked a real repository-governance discrepancy: documentation and release policy described `main` as protected, but the GitHub branch API reported `protected: false` after PR #41 merged on 2026-08-19. Restored 2026-09-05 via the GitHub REST branch-protection API (`PUT /repos/True-Ruslan/notch-hub/branches/main/protection`), configuring:
+
+- required status checks (`strict: true`, up to date with `main` before merge) for the three canonical CI job names: `macOS 26 compatibility`, `Build, test and package`, `macOS UI regression`;
+- `enforce_admins: true` — the rules apply to the repository owner too, no bypass;
+- required pull requests to merge into `main` (0 required approving reviews, since this is a single-contributor personal project; the PR + required-checks gate is still mandatory);
+- `allow_force_pushes: false`, `allow_deletions: false`;
+- `required_linear_history: true`, matching the existing squash-merge policy;
+- `required_conversation_resolution: true`.
+
+Verified via `GET /repos/True-Ruslan/notch-hub/branches/main` returning `protected: true` immediately after configuration. This is repository governance only; no runtime, entitlement, permission, or performance-policy change was made. Issue #42 closed as completed.
 
 ## Personal Release v0.2.0 — published
 
