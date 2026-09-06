@@ -155,7 +155,7 @@ Two follow-up PRs, also released in `v0.5.0`:
 
 ## Repository governance
 
-Issue #42 remains open because `main` is intended to be protected but GitHub currently reports it unprotected. Restoring branch governance remains a repository-quality priority and should be completed when repository capabilities permit. Do not treat the current unprotected state as accepted architecture.
+Issue #42 is closed: `main` branch protection is restored via the GitHub REST API (required PRs, required status checks for the three canonical CI jobs, `enforce_admins`, no force-push/deletion, linear history, required conversation resolution) and verified `protected: true` on 2026-09-05. See `docs/PROJECT_STATE.md` for full configuration detail.
 
 ## Product modules after media/performance foundation
 
@@ -168,7 +168,7 @@ Issue #42 remains open because `main` is intended to be protected but GitHub cur
 
 ## Current priority
 
-1. Keep issue #42 visible for branch-protection restoration.
+1. Repository branch governance restored (issue #42 closed, 2026-09-05); `main` reports `protected: true`.
 2. M7's first bounded Settings slice (PR #81), its XCUI coverage (PR #84) and the Info.plist drift fix (PR #83) are merged, physically accepted where applicable, and released as `v0.5.0`. Select and specify the next slice, per current product priority.
 3. Require target-Mac physical acceptance before any shipping behavior change that CI cannot honestly prove.
 4. Keep published releases (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0`, `v0.5.0`) immutable; ship any future defect or feature as a new version.

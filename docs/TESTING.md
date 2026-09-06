@@ -16,7 +16,7 @@ Canonical protected-branch-intended jobs:
 
 CI covers warnings-as-errors builds, Swift tests, exact external-app XCUI, acceptance-traceability policy, release/security/performance/media policy, strict formatting/plist/shell checks, Sandbox/Hardened Runtime/signing/system-library verification, shipping media preflight, deterministic artifact sizes, active provenance-backed feature budget, performance-harness schema smoke and artifacts.
 
-Repository-side enforcement for `main` is currently tracked separately in issue #42 because GitHub reports the branch unprotected. The CI requirements above remain the project contract and must not be weakened merely because repository protection is temporarily missing.
+Repository-side enforcement for `main` requiring these three checks is configured via GitHub branch protection (restored 2026-09-05, issue #42; see `docs/PROJECT_STATE.md`). The CI requirements above remain the project contract and must not be weakened.
 
 Do not weaken tests, security rules, production behavior or historical baselines merely to obtain green CI.
 

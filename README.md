@@ -155,7 +155,7 @@ See [`PERFORMANCE.md`](PERFORMANCE.md), [`docs/testing/P1_TARGET_RESOURCE_ACCEPT
 
 ### Personal Release — current
 
-Versioned builds are published through **Actions -> Personal Release** from `main` under the repository's intended protected-branch policy. GitHub currently reports `main` unprotected; issue #42 tracks restoration of repository-side enforcement before this can again be stated as an enforced guarantee.
+Versioned builds are published through **Actions -> Personal Release** from `main` under the repository's protected-branch policy. GitHub reports `main` protected (required PRs, required status checks, enforce-admins, no force-push/deletion) as of 2026-09-05; see `docs/PROJECT_STATE.md`.
 
 They are:
 
