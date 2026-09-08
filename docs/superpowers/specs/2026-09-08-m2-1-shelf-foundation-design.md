@@ -1,12 +1,14 @@
 # M2.1 Shelf Foundation Design
 
-Status: **APPROVED FOR IMPLEMENTATION**
+Status: **APPROVED FOR IMPLEMENTATION — AUTOMATION-FIRST ACCEPTANCE**
 
 ## Context
 
 M2 Shelf is the next product module after the media/performance/settings foundation. The implementation is informed by the observable product behavior and engineering lessons of `TheBoredTeam/boring.notch`, but NotchHub remains MIT-licensed while boring.notch is GPL-3.0. No boring.notch source code, tests, or implementation-specific code structure may be copied into NotchHub. This slice is a clean-room implementation against NotchHub's own architecture and requirements.
 
 The current app is local-first, sandboxed, event-driven, media-first in Compact/Peek, and deliberately strict about permissions and resource use. M2.1 must preserve those properties.
+
+On 2026-09-08 the product owner explicitly waived physical acceptance as a merge/release blocker for this personal-use application. From M2.1 onward, sufficiently strong automated acceptance is the authoritative gate unless a future feature explicitly reintroduces a required physical check.
 
 ## Goal
 
@@ -56,7 +58,7 @@ M2.1 does **not** include:
 - `NotchPanelController` and `NotchPanelTransitionCoordinator` remain the sole authorities for panel geometry and presentation transitions.
 - No Shelf code may directly set `NSPanel` frames or create a second notch panel.
 
-Expanded media gets one small Shelf action alongside its existing transport controls. Expanded Home turns the existing Shelf placeholder tile into a real button. Shelf provides an explicit Home/back action.
+The implementation uses a separate App-layer `ShelfRoutingRootView` around the existing media root. `MediaNotchRootView` remains unaware of `ShelfStore` and `NotchDestinationModel`. The router injects a bounded SwiftUI environment action for the existing Home Shelf tile and overlays one small `media.openShelf` action only while Expanded media is visible. While Shelf is selected, AppDelegate suppresses delivery of media scroll commands to the hidden media surface.
 
 ## Data model
 
@@ -71,7 +73,7 @@ No source path is logged. The security-scoped bookmark is the authoritative pers
 
 ## App Sandbox and least privilege
 
-Apple's App Sandbox requires the User Selected File capability for URLs selected through `NSOpenPanel`, and persistent re-access requires security-scoped bookmarks. M2.1 therefore adds exactly one new shipping entitlement:
+Apple's App Sandbox requires User Selected File access for URLs selected through `NSOpenPanel`, and persistent re-access requires security-scoped bookmarks. M2.1 therefore adds exactly one new shipping entitlement:
 
 - `com.apple.security.files.user-selected.read-only = true`.
 
@@ -82,7 +84,9 @@ The complete shipping entitlement set becomes exactly:
 
 No read-write, Downloads, Full Disk Access, Accessibility, Input Monitoring, Automation/Apple Events, Screen Recording, network, camera, microphone, Bluetooth, or executable-file entitlement is added.
 
-CI/release/security policy checks that previously asserted the exact sandbox-only shipping entitlement set must be updated to assert this exact two-key set. Development media probe/candidate entitlements remain unchanged where they describe separate binaries rather than the shipping NotchHub app.
+The development MediaBridgeProbe is intentionally split onto `Resources/MediaBridgeProbe.entitlements` and remains exactly sandbox-only. The Production Media Transport Candidate retains its existing separate entitlement policy. Shipping, probe, and candidate binaries therefore cannot accidentally inherit each other's entitlement expansion.
+
+CI/release/security policy checks assert these exact sets rather than merely checking for presence of individual keys.
 
 ## Security-scoped bookmark lifecycle
 
@@ -108,14 +112,16 @@ Removing an item only removes the persisted Shelf reference. It must not call Fi
 
 `ShelfPersistenceRepository` is an actor so JSON file I/O is not performed on the main actor.
 
-- Default file location: Application Support inside the app sandbox, under a `NotchHub/Shelf/items.json` path.
-- JSON is version-independent at M2.1 because the persisted payload is the Codable `[ShelfItem]` array and the schema is intentionally minimal.
+- Default file location: Application Support inside the app sandbox, under `NotchHub/Shelf/items.json`.
+- The persisted payload is the minimal Codable `[ShelfItem]` array.
 - Writes use atomic replacement.
 - Missing store => empty Shelf.
 - Corrupt/unreadable store => empty Shelf, fail closed, no crash.
-- Save failures may leave the current in-memory view intact but must be surfaced as a bounded store error flag; they must never trigger fallback filesystem scanning.
+- Save failures may leave the current in-memory view intact but surface a bounded store error flag; they never trigger fallback filesystem scanning.
 
 Bookmark creation/resolution and resource-value lookup run off the main actor during explicit user operations. There is no timer, polling loop, or background scanner.
+
+UI-test builds use an isolated per-process temporary Shelf persistence path so the real user's Shelf can never be read or mutated by automated UI regression tests.
 
 ## Duplicate policy
 
@@ -141,8 +147,9 @@ Header:
 
 Empty state:
 
-- `tray` icon;
-- short `Drop files here or choose Add Files…` instruction;
+- tray/download icon;
+- short drop instruction;
+- explicit statement that only a read-only reference is stored;
 - local file-URL drop target.
 
 Populated state:
@@ -154,7 +161,7 @@ Populated state:
 - Show in Finder;
 - Remove.
 
-Stable accessibility identifiers are required for the Shelf surface and primary controls so macOS UI regression tests can exercise the real panel.
+Stable accessibility identifiers cover the Shelf surface, primary controls, per-item actions, Home entry, and Expanded-media entry.
 
 ## Performance constraints
 
@@ -163,39 +170,63 @@ Stable accessibility identifiers are required for the Shelf surface and primary 
 - zero clipboard polling;
 - zero global event monitors added by M2.1;
 - persistence and bookmark preparation are explicit-event driven;
-- main-thread work is limited to SwiftUI state updates, `NSOpenPanel` presentation, and `NSWorkspace` user actions;
-- no third-party runtime dependency is added.
+- main-thread work is limited to SwiftUI state updates, native picker presentation, and `NSWorkspace` user actions;
+- no third-party runtime dependency is added;
+- hidden media scroll commands are suppressed while Shelf is selected.
 
-## Testing and acceptance
+## Automated acceptance
 
-Automated coverage must include:
+Physical acceptance is intentionally **not** required for M2.1. The merge gate is the combined automated evidence below.
+
+### Core behavioral evidence
 
 - `ShelfItem` Codable round-trip;
 - missing/corrupt persistence fallback;
 - atomic persistence round-trip;
-- duplicate suppression;
-- multi-file add order;
-- removal only mutates the collection;
-- stale bookmark refresh updates the stored bookmark;
+- duplicate suppression and first-seen ordering;
+- multi-file add behavior;
+- removal mutates only the Shelf collection;
+- stale bookmark refresh updates persisted bookmark bytes;
 - invalid bookmark isolation;
-- destination starts Home, selects Shelf, and resets to Home when leaving Expanded;
-- source-policy assertions for read-only entitlement, no read-write entitlement, no new global monitor/polling, and no file-delete/move authority in Shelf source;
-- UI-source/accessibility contract tests;
-- existing unit/media/security/performance/release tests remain green;
-- macOS 26 compatibility job remains green;
-- real UI regression job exercises opening Expanded Shelf and the empty-state controls without touching real user defaults/files.
+- persistence failure produces bounded error state;
+- destination starts Home, selects Shelf, and resets Home.
 
-Physical acceptance on the primary target is required before merge/release for:
+### Security/policy evidence
 
-- select one file and one folder using `Add Files…`;
-- relaunch and confirm persistence;
-- Open and Show in Finder;
-- Remove and confirm the original source remains untouched;
-- drag one/multiple Finder items onto visible Shelf;
-- duplicate add does not duplicate;
-- collapse/re-expand returns to Home;
-- media continues working in Compact/Peek and Shelf can explicitly override Expanded media;
-- no unexpected privacy permission prompts;
-- CPU remains quiescent in idle Shelf/Home states.
+- shipping entitlements are exactly sandbox + user-selected read-only;
+- read-write, Downloads, broad file, network, Automation, camera/mic/Bluetooth entitlements are absent;
+- MediaBridgeProbe remains exact sandbox-only on a separate entitlement file;
+- Shelf sources contain no delete/move/trash authority, timer, global event monitor, URLSession, or network primitive;
+- explicit Open/Reveal actions contain balanced start/stop security-scope calls;
+- Store never holds security scope during idle;
+- existing source-level security audit remains green.
 
-Status progression remains: **implemented → automated-tested → physically-accepted → merged → released**.
+### Real UI evidence
+
+The exact external UI-test application on macOS 26 must automatically exercise:
+
+- Expanded Home → Shelf → Home;
+- presence of Shelf surface/Add/empty-state accessibility contracts;
+- Expanded Media → Shelf → Media with hidden media controls unavailable while Shelf is active;
+- collapse from Shelf → Compact → re-expand, proving destination resets to Home;
+- all pre-existing hover/media/settings UI regressions.
+
+Automated UI tests deliberately do not click the system `NSOpenPanel` or mutate arbitrary runner files. File/bookmark semantics are covered deterministically below the UI layer; this avoids flaky system-dialog/TCC automation while retaining exact signed-package entitlement verification.
+
+### Package/release evidence
+
+- macOS 26 build with warnings-as-errors;
+- complete Swift test suite and coverage-instrumented suite;
+- real external-app XCUI regression suite;
+- security audit and workflow policy tests;
+- effective signed shipping entitlement exact-set verification;
+- Hardened Runtime and codesign verification;
+- media helper/candidate isolation and provenance checks;
+- system-library-only shipping executable check;
+- DMG verification;
+- feature-size/performance gates;
+- no unresolved PR review defects.
+
+Status progression from M2.1 onward is:
+
+**implemented → automated-accepted → merged → released**.
