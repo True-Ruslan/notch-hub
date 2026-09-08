@@ -1,342 +1,211 @@
 # M2.1 Shelf Foundation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Acceptance policy changed 2026-09-08 by product owner:** NotchHub is personal-use only. Physical acceptance is no longer a merge/release blocker. The authoritative gate is strong automated acceptance.
 
 **Goal:** Implement the first persistent, read-only, security-scoped file Shelf and bounded Home/Shelf routing inside the existing NotchHub panel.
 
-**Architecture:** Keep panel geometry and media lifecycle unchanged. Add a pure first-party destination model in `NotchHubCore`, an actor-backed Shelf persistence layer plus security-scoped bookmark codec/store, and an App-layer SwiftUI `ShelfView`. Explicit selection may replace Expanded media content, but Compact/Peek remain media-first. All file access is user-selected, read-only, short-lived, and event-driven.
+**Architecture:** Preserve panel geometry and media lifecycle. Add a first-party destination model in `NotchHubCore`, actor-backed Shelf persistence plus security-scoped bookmark codec/store, and App-layer SwiftUI `ShelfView`. A separate `ShelfRoutingRootView` wraps the unchanged media root so Compact/Peek remain media-first and Shelf can replace only Expanded content. All file access is user-selected, read-only, short-lived, and event-driven.
 
-**Tech Stack:** Swift 6, SwiftUI, AppKit (`NSOpenPanel`, `NSWorkspace`), Foundation security-scoped bookmarks, Swift Testing, existing GitHub Actions/macOS packaging pipeline.
+**Tech Stack:** Swift 6, SwiftUI, AppKit (`NSOpenPanel`, `NSWorkspace`), Foundation security-scoped bookmarks, Swift Testing, XCUITest, existing GitHub Actions/macOS packaging pipeline.
 
 **Spec:** `docs/superpowers/specs/2026-09-08-m2-1-shelf-foundation-design.md`
 
-## Global Constraints
+## Global constraints
 
 - Primary target: macOS 26.6; package deployment floor remains macOS 14.
 - NotchHub remains MIT; do not copy GPL-3.0 boring.notch source/tests/implementation-specific structures.
-- Shipping entitlements become exactly `com.apple.security.app-sandbox=true` plus `com.apple.security.files.user-selected.read-only=true`.
+- Shipping entitlements are exactly `com.apple.security.app-sandbox=true` plus `com.apple.security.files.user-selected.read-only=true`.
+- MediaBridgeProbe uses its own exact sandbox-only entitlement file.
 - Do not add read-write file access, Accessibility, Input Monitoring, Automation, Screen Recording, network, Bluetooth, camera, microphone, global drag/keyboard/scroll monitors, or dynamic code loading.
-- Do not add polling/timers/background filesystem scanners for Shelf.
+- Do not add Shelf polling/timers/background filesystem scanners.
 - `NotchPanelController` / `NotchPanelTransitionCoordinator` remain sole geometry/transition authorities.
 - Remove from Shelf never deletes/moves/renames the source file.
 - Bookmark/persistence filesystem work stays off the main actor; UI state changes stay on the main actor.
 
 ---
 
-### Task 1: Lock the core Shelf contracts with failing tests
+## Task 1 — Lock core contracts with RED tests
 
 **Files:**
-- Create: `Tests/NotchHubCoreTests/ShelfItemTests.swift`
-- Create: `Tests/NotchHubCoreTests/ShelfPersistenceRepositoryTests.swift`
-- Create: `Tests/NotchHubCoreTests/ShelfStoreTests.swift`
-- Create: `Tests/NotchHubCoreTests/NotchDestinationModelTests.swift`
+- `Tests/NotchHubCoreTests/ShelfItemTests.swift`
+- `Tests/NotchHubCoreTests/ShelfPersistenceRepositoryTests.swift`
+- `Tests/NotchHubCoreTests/ShelfStoreTests.swift`
+- `Tests/NotchHubCoreTests/NotchDestinationModelTests.swift`
 
-**Interfaces:**
-- Consumes: existing `Testing` + `Foundation` test stack.
-- Produces expected contracts for `ShelfItem`, `ShelfPersistenceRepository`, `ShelfBookmarkCoding`, `ShelfBookmarkResolution`, `ShelfStore`, `NotchDestination`, and `NotchDestinationModel`.
+- [x] Add tests before production types.
+- [x] Capture compile RED from missing M2.1 symbols in CI.
+- [x] Add compile-only skeletons.
+- [x] Capture behavioral RED for empty persistence/store implementations.
 
-- [ ] **Step 1: Write the failing tests**
-
-Tests require these exact behaviors:
-
-```swift
-let item = ShelfItem(id: id, bookmarkData: Data([1, 2, 3]), displayName: "Report.pdf", isDirectory: false)
-let data = try JSONEncoder().encode(item)
-#expect(try JSONDecoder().decode(ShelfItem.self, from: data) == item)
-```
-
-```swift
-let repository = ShelfPersistenceRepository(fileURL: tempURL)
-#expect(await repository.load() == [])
-try await repository.save([item])
-#expect(await repository.load() == [item])
-try Data("not-json".utf8).write(to: tempURL)
-#expect(await repository.load() == [])
-```
-
-`ShelfStoreTests` uses a test `ShelfBookmarkCoding` implementation mapping bookmark bytes to URLs and asserts:
-
-- adding `[A, B, A]` produces `[A, B]` in first-seen order;
-- adding A again after reload remains deduplicated;
-- one unresolvable existing bookmark does not block a valid new URL;
-- `remove(id:)` only removes the item from the store/persistence;
-- resolving a stale bookmark replaces the stored bookmark bytes with refreshed bytes;
-- persistence failure sets a bounded `hasPersistenceError` state instead of crashing.
-
-`NotchDestinationModelTests` asserts default `.home`, explicit `.shelf`, and `reset()` -> `.home`.
-
-- [ ] **Step 2: Push tests before production types exist**
-
-Expected CI result: compile failure limited to the intentionally missing M2.1 symbols. This proves the new test target is active before implementation.
-
-- [ ] **Step 3: Add only compile skeletons**
-
-Create the production files from Tasks 2–4 with signatures only and deliberately minimal behavior (`load -> []`, no additions, destination methods wired) until the test suite compiles and fails on behavior rather than missing symbols.
-
-- [ ] **Step 4: Re-run CI**
-
-Expected: tests compile; at least persistence/store behavior tests FAIL for expected assertions.
+Evidence: CI history on PR #88 contains both compile RED and behavioral RED before GREEN implementation.
 
 ---
 
-### Task 2: Implement the security-scoped Shelf data model and bookmark codec
+## Task 2 — Security-scoped data model and codec
 
 **Files:**
-- Create: `Sources/NotchHubCore/Shelf/ShelfItem.swift`
-- Create: `Sources/NotchHubCore/Shelf/ShelfBookmarkCodec.swift`
-- Test: `Tests/NotchHubCoreTests/ShelfItemTests.swift`
-- Test: `Tests/NotchHubCoreTests/ShelfStoreTests.swift`
+- `Sources/NotchHubCore/Shelf/ShelfItem.swift`
+- `Sources/NotchHubCore/Shelf/ShelfBookmarkCodec.swift`
 
-**Interfaces:**
-- Produces:
-  - `public struct ShelfItem: Identifiable, Codable, Equatable, Sendable`
-  - `public struct ShelfBookmarkResolution: Equatable, Sendable`
-  - `public protocol ShelfBookmarkCoding: Sendable`
-  - `public struct SecurityScopedShelfBookmarkCodec: ShelfBookmarkCoding`
-
-- [ ] **Step 1: Implement `ShelfItem`**
-
-Exact stored fields: `id`, `bookmarkData`, `displayName`, `isDirectory`. No source path field.
-
-- [ ] **Step 2: Implement bookmark creation**
-
-```swift
-try url.bookmarkData(
-    options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
-    includingResourceValuesForKeys: nil,
-    relativeTo: nil
-)
-```
-
-- [ ] **Step 3: Implement bookmark resolution and stale refresh**
-
-Resolve using `.withSecurityScope`; when stale, recreate a read-only security-scoped bookmark and return it as `refreshedBookmarkData`.
-
-- [ ] **Step 4: Run tests**
-
-Expected: `ShelfItemTests` green; store tests still red until Tasks 3–4.
+- [x] Implement minimal `ShelfItem` (`id`, bookmark bytes, display name, directory flag).
+- [x] Create bookmarks with `.withSecurityScope` + `.securityScopeAllowOnlyReadAccess`.
+- [x] Resolve with `.withSecurityScope`.
+- [x] Return refreshed bookmark bytes when stale.
+- [x] Keep source paths out of persisted model/logging.
 
 ---
 
-### Task 3: Implement actor-backed atomic persistence
+## Task 3 — Actor-backed atomic persistence
 
 **Files:**
-- Create: `Sources/NotchHubCore/Shelf/ShelfPersistenceRepository.swift`
-- Test: `Tests/NotchHubCoreTests/ShelfPersistenceRepositoryTests.swift`
+- `Sources/NotchHubCore/Shelf/ShelfPersistenceRepository.swift`
 
-**Interfaces:**
-- Produces:
-  - `public actor ShelfPersistenceRepository`
-  - `init(fileURL: URL)`
-  - `func load() -> [ShelfItem]`
-  - `func save(_ items: [ShelfItem]) throws`
-  - `static func defaultFileURL(fileManager: FileManager = .default) -> URL`
-
-- [ ] **Step 1: Implement default container location**
-
-Use `.applicationSupportDirectory` and append `NotchHub/Shelf/items.json`.
-
-- [ ] **Step 2: Implement fail-closed load**
-
-Missing/unreadable/corrupt JSON returns `[]` and never scans the filesystem.
-
-- [ ] **Step 3: Implement atomic save**
-
-Create the parent directory as needed, encode `[ShelfItem]`, write using `.atomic`.
-
-- [ ] **Step 4: Run repository tests**
-
-Expected: missing/corrupt/round-trip tests PASS.
+- [x] Default Application Support location under `NotchHub/Shelf/items.json`.
+- [x] Missing/corrupt store fails closed to empty collection.
+- [x] Atomic JSON writes.
+- [x] No fallback filesystem scan.
 
 ---
 
-### Task 4: Implement the event-driven `ShelfStore`
+## Task 4 — Event-driven ShelfStore
 
 **Files:**
-- Create: `Sources/NotchHubCore/Shelf/ShelfStore.swift`
-- Test: `Tests/NotchHubCoreTests/ShelfStoreTests.swift`
+- `Sources/NotchHubCore/Shelf/ShelfStore.swift`
 
-**Interfaces:**
-- Produces `@MainActor public final class ShelfStore: ObservableObject` with:
-  - `@Published public private(set) var items: [ShelfItem]`
-  - `@Published public private(set) var hasPersistenceError: Bool`
-  - `func loadIfNeeded() async`
-  - `func add(urls: [URL]) async`
-  - `func remove(id: UUID) async`
-  - `func resolve(_ item: ShelfItem) async -> ShelfBookmarkResolution?`
-
-- [ ] **Step 1: Implement one-shot loading**
-
-`loadIfNeeded()` calls actor persistence only once per store instance.
-
-- [ ] **Step 2: Implement off-main explicit add preparation**
-
-Use `Task.detached(priority: .userInitiated)` with the Sendable bookmark codec and value snapshots. Resolve existing bookmarks, build standardized URL identity set, preserve first-seen order, obtain `localizedName`/`isDirectory` resource values, create bookmarks, and return additions.
-
-- [ ] **Step 3: Implement serial persistence after mutations**
-
-After updating main-actor `items`, await the actor repository save. Catch save errors and set `hasPersistenceError=true`; a later successful save clears it.
-
-- [ ] **Step 4: Implement stale refresh**
-
-`resolve(_:)` performs bookmark resolution off-main. If refreshed bytes are returned, replace only that item's bookmark and persist the updated collection before returning the resolution.
-
-- [ ] **Step 5: Run store tests**
-
-Expected: dedup/order/invalid-item/removal/stale-refresh/error-state tests PASS.
+- [x] One-shot load.
+- [x] Explicit-event add preparation off main actor.
+- [x] Duplicate suppression by resolved standardized URLs.
+- [x] Preserve first-seen order.
+- [x] Invalid bookmark isolation.
+- [x] Serial persistence after mutations.
+- [x] Bounded persistence-error state.
+- [x] Stale bookmark replacement/persistence.
+- [x] Remove only changes Shelf collection.
 
 ---
 
-### Task 5: Add bounded first-party destination state
+## Task 5 — Bounded first-party destination model
 
 **Files:**
-- Create: `Sources/NotchHubCore/UI/NotchDestinationModel.swift`
-- Test: `Tests/NotchHubCoreTests/NotchDestinationModelTests.swift`
+- `Sources/NotchHubCore/UI/NotchDestinationModel.swift`
 
-**Interfaces:**
-- Produces:
-  - `public enum NotchDestination: Equatable, Sendable { case home, shelf }`
-  - `@MainActor public final class NotchDestinationModel: ObservableObject`
-  - `public private(set) var destination: NotchDestination`
-  - `public func select(_:)`
-  - `public func reset()`
-
-- [ ] **Step 1: Implement exact state transitions**
-
-Default Home; selecting Shelf changes only destination; reset always returns Home.
-
-- [ ] **Step 2: Run destination tests**
-
-Expected: PASS.
+- [x] `.home` / `.shelf` only.
+- [x] Default Home.
+- [x] Explicit selection.
+- [x] Reset to Home.
 
 ---
 
-### Task 6: Add the App-layer Shelf surface and explicit resource actions
+## Task 6 — App-layer Shelf surface and routing
 
 **Files:**
-- Create: `Sources/NotchHubApp/Shelf/ShelfView.swift`
-- Modify: `Sources/NotchHubCore/UI/NotchRootView.swift`
-- Modify: `Sources/NotchHubApp/MediaNotchRootView.swift`
-- Modify: `Sources/NotchHubApp/AppDelegate.swift`
-- Create: `Tests/NotchHubCoreTests/ShelfUIPolicyTests.swift`
+- `Sources/NotchHubApp/Shelf/ShelfView.swift`
+- `Sources/NotchHubApp/Shelf/ShelfRoutingRootView.swift`
+- `Sources/NotchHubCore/UI/NotchRootView.swift`
+- `Sources/NotchHubApp/AppDelegate.swift`
+- `Tests/NotchHubCoreTests/ShelfUIPolicyTests.swift`
 
-**Interfaces:**
-- Consumes `ShelfStore`, `NotchDestinationModel`, existing Expanded presentation/layout.
-- Produces accessibility identifiers:
-  - `shelf.surface`
-  - `shelf.addFiles`
-  - `shelf.emptyDropZone`
-  - `shelf.home`
-  - `media.openShelf`
-  - `home.openShelf`
+Implementation refinement versus the initial plan: `MediaNotchRootView` is intentionally **not modified**. A separate routing layer wraps it, reducing media regression risk and making the isolation machine-checkable.
 
-- [ ] **Step 1: Write UI source-policy tests first**
-
-Assert the stable identifiers exist, `NSOpenPanel` allows files + directories + multiple selection, Shelf source does not contain `removeItem`, `trashItem`, `moveItem`, periodic timers, or global NSEvent monitors.
-
-- [ ] **Step 2: Make the Home Shelf tile actionable**
-
-Add an optional `onSelectShelf` closure to `NotchRootView` (default no-op for existing factory compatibility) and make only the Shelf tile a plain button with `home.openShelf`.
-
-- [ ] **Step 3: Implement `ShelfView`**
-
-Use the approved header/empty/list layout. `Add Files…` uses nonblocking `NSOpenPanel.begin`; local drag/drop uses SwiftUI `dropDestination(for: URL.self)` and accepts only file URLs. No global observer.
-
-- [ ] **Step 4: Implement explicit actions with balanced security scope**
-
-For Open / Show in Finder: await `store.resolve`, call `startAccessingSecurityScopedResource`, invoke `NSWorkspace`, and defer `stopAccessingSecurityScopedResource` only when start returned true. Remove only calls `store.remove(id:)`.
-
-- [ ] **Step 5: Route only Expanded to Shelf**
-
-`MediaNotchRootView` renders Shelf iff presentation is Expanded and destination is `.shelf`; otherwise existing media/Home logic remains. Add a small Shelf button to Expanded media controls. On any change away from Expanded call `destinationModel.reset()`.
-
-- [ ] **Step 6: Compose one store/model in `AppDelegate`**
-
-Create long-lived `NotchDestinationModel` and `ShelfStore`, pass them to the media root, and call `loadIfNeeded()` asynchronously after launch.
-
-- [ ] **Step 7: Run all Swift tests**
-
-Expected: PASS.
+- [x] Capture UI-policy RED while `ShelfView`/routing do not exist.
+- [x] Implement stable accessibility identifiers.
+- [x] Make existing Home Shelf tile actionable through a bounded environment action.
+- [x] Add `NSOpenPanel` configured for files, folders and multi-selection.
+- [x] Add local SwiftUI URL drop target only.
+- [x] Add Open / Show in Finder / Remove actions.
+- [x] Balance `startAccessingSecurityScopedResource` / stop only for explicit Open/Reveal actions.
+- [x] Add `ShelfRoutingRootView` to replace content only in Expanded + Shelf destination.
+- [x] Add small Expanded-media Shelf action in the router overlay.
+- [x] Suppress hidden-media scroll handling while Shelf is selected.
+- [x] Reset destination when leaving Expanded.
+- [x] Isolate UI-test Shelf persistence from real user data.
 
 ---
 
-### Task 7: Add the least-privilege entitlement and update exact policy gates
+## Task 7 — Least-privilege entitlement and exact policy gates
 
 **Files:**
-- Modify: `Resources/NotchHub.entitlements`
-- Modify: `scripts/security-audit.sh`
-- Modify: `scripts/shipping_media_acceptance.py`
-- Modify: `.github/workflows/ci.yml`
-- Modify: `.github/workflows/personal-release.yml`
-- Modify: `.github/workflows/trusted-release.yml`
-- Create: `Tests/NotchHubCoreTests/ShelfSecurityPolicyTests.swift`
-- Modify as required: tests that intentionally assert the shipping app's old one-key entitlement set.
+- `Resources/NotchHub.entitlements`
+- `Resources/MediaBridgeProbe.entitlements`
+- `scripts/build-media-bridge-probe-app.sh`
+- `scripts/security-audit.sh`
+- `scripts/shipping_media_acceptance.py`
+- `.github/workflows/ci.yml`
+- `.github/workflows/personal-release.yml`
+- `.github/workflows/trusted-release.yml`
+- `Tests/NotchHubCoreTests/ShelfSecurityPolicyTests.swift`
+- legacy feature-policy tests that assert the shared shipping entitlement baseline
 
-**Interfaces:**
-- Shipping exact entitlement set becomes `{app-sandbox: true, files.user-selected.read-only: true}`.
-- Media probe/candidate helper binaries retain their existing exact entitlement policies.
-
-- [ ] **Step 1: Write security policy tests first**
-
-Parse `Resources/NotchHub.entitlements` source and assert read-only user-selected access is present while read-write/Downloads/all-files are absent. Assert security/release CI files know the exact two-key shipping set.
-
-- [ ] **Step 2: Add read-only entitlement**
-
-Add only `com.apple.security.files.user-selected.read-only = true` next to app sandbox.
-
-- [ ] **Step 3: Update exact shipping entitlement checks**
-
-Change shipping app assertions in security audit, shipping acceptance, ordinary CI packaging, Personal Release, and Trusted Release to the exact two-key dictionary. Do not change separate probe/candidate entitlement checks.
-
-- [ ] **Step 4: Run security/release tests and CI**
-
-Expected: all existing security gates pass with the new explicitly reviewed least-privilege entitlement and continue to reject unexpected additional keys.
+- [x] Add security RED requiring exact shipping two-key set and negative entitlement assertions.
+- [x] Add user-selected read-only to shipping app only.
+- [x] Split MediaBridgeProbe to a dedicated exact sandbox-only entitlement file.
+- [x] Keep production media candidate policy separate.
+- [x] Update security audit exact dictionaries.
+- [x] Update CI signed-package exact dictionary.
+- [x] Update Personal Release exact dictionary.
+- [x] Update Trusted Release exact dictionary.
+- [x] Update shipping preflight collector exact dictionary.
+- [x] Preserve negative checks for read-write/network/Automation/broad file authority.
 
 ---
 
-### Task 8: Document implementation state and physical acceptance protocol
+## Task 8 — Automation-first UI acceptance
 
 **Files:**
-- Create: `docs/testing/M2_1_SHELF_FOUNDATION_ACCEPTANCE.md`
-- Modify: `docs/PROJECT_STATE.md`
-- Modify: `docs/ROADMAP.md`
-- Modify: `CHANGELOG.md`
-- Modify: `SECURITY.md`
-- Modify: `docs/ARCHITECTURE.md`
+- `Tests/UITests/NotchHubUITests.swift`
+- `docs/testing/M2_1_SHELF_FOUNDATION_ACCEPTANCE.md`
 
-**Interfaces:**
-- Records implementation/automated-test status without claiming physical acceptance, merge, or release before they occur.
+- [x] Add real external-app XCUI test: Expanded Home → Shelf → Home.
+- [x] Add real external-app XCUI test: Expanded Media → Shelf → Media.
+- [x] Verify hidden media transport controls disappear while Shelf owns Expanded.
+- [x] Add real external-app XCUI collapse → Compact → re-expand destination-reset test.
+- [ ] Confirm all new and existing XCUI tests GREEN on macOS 26 final SHA.
+- [ ] Record exact final CI/run evidence in acceptance document.
 
-- [ ] **Step 1: Add acceptance checklist**
-
-Document the exact physical cases from the spec, including persistence after relaunch, source-file survival after Remove, duplicate handling, drag/drop, media coexistence, permissions, and idle CPU observation.
-
-- [ ] **Step 2: Update architecture/security docs**
-
-Record Shelf actor/store/bookmark boundaries and the exact new read-only entitlement justification.
-
-- [ ] **Step 3: Update state/roadmap/changelog conservatively**
-
-Mark M2.1 **IMPLEMENTED / AUTOMATED-TESTED / AWAITING PHYSICAL ACCEPTANCE** only after required CI is green. Do not mark accepted/merged/released.
+System picker/file mutations are deliberately not automated at UI level. Bookmark/persistence/file-mutation semantics remain deterministic core/security tests; exact signed package entitlements are verified separately. This gives stronger signal than flaky system-dialog/TCC UI automation.
 
 ---
 
-### Task 9: Final PR verification
+## Task 9 — Performance and package regression gate
 
-**Files:** none unless verification finds defects.
+- [ ] Confirm warnings-as-errors build GREEN on macOS 26 final SHA.
+- [ ] Confirm full Swift test suite GREEN.
+- [ ] Confirm security audit GREEN.
+- [ ] Confirm probe/candidate builds and entitlement isolation GREEN.
+- [ ] Confirm release DMG builds and codesign/Hardened Runtime checks GREEN.
+- [ ] Confirm shipping preflight/provenance/system-library checks GREEN.
+- [ ] Confirm active feature-size budget still passes; if M2.1 legitimately exceeds the previous M7 feature budget, add a measured/provenanced M2.1 budget rather than weakening the global baseline.
+- [ ] Confirm performance harness smoke GREEN.
 
-- [ ] **Step 1: Review PR diff against the design spec**
+---
 
-Check every spec requirement maps to code/test/docs and verify no boring.notch implementation text/code was copied.
+## Task 10 — Documentation and repository state
 
-- [ ] **Step 2: Inspect all required GitHub Actions**
+**Files:**
+- `docs/testing/M2_1_SHELF_FOUNDATION_ACCEPTANCE.md`
+- `docs/PROJECT_STATE.md`
+- `docs/ROADMAP.md`
+- `CHANGELOG.md`
+- `SECURITY.md`
+- `docs/ARCHITECTURE.md`
 
-Required checks: `Build, test and package`, `macOS 26 compatibility`, `macOS UI regression`; also inspect security/release-policy steps inside the build job.
+- [ ] Document exact read-only Shelf boundary and probe entitlement isolation.
+- [ ] Record product-owner automation-first acceptance decision.
+- [ ] Record final test/CI evidence only after the final SHA is green.
+- [ ] Mark M2.1 `IMPLEMENTED / AUTOMATED-ACCEPTED` before merge, never `MERGED` before GitHub confirms merge.
 
-- [ ] **Step 3: Fix any failures test-first**
+---
 
-For a defect, add/adjust the smallest failing regression test before changing production code, then re-run CI.
+## Task 11 — Final PR verification and merge
 
-- [ ] **Step 4: Stop before merge**
+- [ ] Review complete PR diff against design spec and clean-room licensing constraint.
+- [ ] Inspect all final required GitHub Actions on exact head SHA.
+- [ ] Inspect review threads/comments for unresolved defects.
+- [ ] Fix any defect test-first and obtain fresh final GREEN CI.
+- [ ] Mark PR ready for review.
+- [ ] Merge only with the exact verified head SHA and required checks green.
+- [ ] After merge, verify `main` CI before describing M2.1 as merged/accepted.
 
-Leave the PR open for the required target-Mac physical acceptance. Merge/release only after the product owner reports the physical checklist PASS.
+Final lifecycle for M2.1 and subsequent personal-use slices:
+
+**implemented → automated-accepted → merged → released**.
