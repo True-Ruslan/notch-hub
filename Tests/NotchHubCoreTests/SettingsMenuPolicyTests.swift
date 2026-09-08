@@ -73,7 +73,7 @@ struct SettingsMenuPolicyTests {
     }
 
     @Test
-    func settingsAddsNoEntitlementBeyondTheSharedShippingBaseline() throws {
+    func settingsAddsNoNewEntitlement() throws {
         let plist = try propertyList(relativePath: "Resources/NotchHub.entitlements")
 
         #expect(
