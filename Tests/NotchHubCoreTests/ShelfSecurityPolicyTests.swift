@@ -4,7 +4,7 @@ import Testing
 struct ShelfSecurityPolicyTests {
     private let expectedShippingEntitlements: Set<String> = [
         "com.apple.security.app-sandbox",
-        "com.apple.security.files.user-selected.read-only",
+        "com.apple.security.files.user-selected.read-only"
     ]
 
     @Test
@@ -29,7 +29,7 @@ struct ShelfSecurityPolicyTests {
             "com.apple.security.automation.apple-events",
             "com.apple.security.device.camera",
             "com.apple.security.device.microphone",
-            "com.apple.security.device.bluetooth",
+            "com.apple.security.device.bluetooth"
         ]
 
         for key in forbidden {
@@ -51,15 +51,25 @@ struct ShelfSecurityPolicyTests {
     }
 
     @Test
-    func shelfResourceActionsBalanceSecurityScopeAndDoNotAcquireItDuringIdle() throws {
+    func shelfResourceActionsFailClosedAndDoNotAcquireScopeDuringIdle() throws {
         let shelf = try sourceText(relativePath: "Sources/NotchHubApp/Shelf/ShelfView.swift")
         let store = try sourceText(relativePath: "Sources/NotchHubCore/Shelf/ShelfStore.swift")
 
         #expect(shelf.contains("startAccessingSecurityScopedResource()"))
         #expect(shelf.contains("stopAccessingSecurityScopedResource()"))
-        #expect(shelf.contains("if didStartAccess"))
+        #expect(shelf.contains("guard didStartAccess else"))
         #expect(!store.contains("startAccessingSecurityScopedResource"))
         #expect(!store.contains("stopAccessingSecurityScopedResource"))
+    }
+
+    @Test
+    func staleBookmarkRefreshUsesShortLivedSecurityScope() throws {
+        let codec = try sourceText(relativePath: "Sources/NotchHubCore/Shelf/ShelfBookmarkCodec.swift")
+
+        #expect(codec.contains("if isStale"))
+        #expect(codec.contains("startAccessingSecurityScopedResource()"))
+        #expect(codec.contains("stopAccessingSecurityScopedResource()"))
+        #expect(codec.contains("guard didStartAccess else"))
     }
 
     private func propertyList(relativePath: String) throws -> [String: Any] {
