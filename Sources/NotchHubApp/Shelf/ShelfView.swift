@@ -7,15 +7,18 @@ struct ShelfView: View {
     @ObservedObject private var store: ShelfStore
     @State private var unavailableItemIDs: Set<UUID> = []
 
+    private let quickLookController: ShelfQuickLookController
     private let topInset: CGFloat
     private let onHome: () -> Void
 
     init(
         store: ShelfStore,
+        quickLookController: ShelfQuickLookController,
         topInset: CGFloat,
         onHome: @escaping () -> Void
     ) {
         self.store = store
+        self.quickLookController = quickLookController
         self.topInset = topInset
         self.onHome = onHome
     }
@@ -135,6 +138,16 @@ struct ShelfView: View {
             Spacer(minLength: 8)
 
             Button {
+                Task { await preview(item) }
+            } label: {
+                Image(systemName: "eye")
+            }
+            .buttonStyle(.plain)
+            .help("Preview")
+            .accessibilityLabel("Preview \(item.displayName)")
+            .accessibilityIdentifier("shelf.item.\(item.id.uuidString).preview")
+
+            Button {
                 Task { await open(item) }
             } label: {
                 Image(systemName: "arrow.up.forward.app")
@@ -208,6 +221,19 @@ struct ShelfView: View {
             await store.add(urls: fileURLs)
         }
         return true
+    }
+
+    private func preview(_ item: ShelfItem) async {
+        guard let resolution = await store.resolve(item) else {
+            unavailableItemIDs.insert(item.id)
+            return
+        }
+
+        guard quickLookController.present(url: resolution.url) else {
+            unavailableItemIDs.insert(item.id)
+            return
+        }
+        unavailableItemIDs.remove(item.id)
     }
 
     private func open(_ item: ShelfItem) async {
