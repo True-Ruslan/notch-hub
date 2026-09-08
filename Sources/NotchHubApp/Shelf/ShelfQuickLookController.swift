@@ -3,9 +3,9 @@ import NotchHubCore
 import QuickLookUI
 
 @MainActor
-final class ShelfQuickLookController: NSObject, @MainActor QLPreviewPanelDataSource, QLPreviewPanelDelegate {
+final class ShelfQuickLookController: NSObject, QLPreviewPanelDelegate {
     private let accessSession: ShelfPreviewAccessSession
-    private var previewURL: URL?
+    private let dataSource = ShelfQuickLookDataSource()
     private weak var panel: QLPreviewPanel?
 
     init(accessSession: ShelfPreviewAccessSession = ShelfPreviewAccessSession()) {
@@ -23,9 +23,9 @@ final class ShelfQuickLookController: NSObject, @MainActor QLPreviewPanelDataSou
             return false
         }
 
-        previewURL = url
+        dataSource.setPreviewURL(url)
         self.panel = panel
-        panel.dataSource = self
+        panel.dataSource = dataSource
         panel.delegate = self
         panel.currentPreviewItemIndex = 0
         panel.reloadData()
@@ -37,26 +37,12 @@ final class ShelfQuickLookController: NSObject, @MainActor QLPreviewPanelDataSou
 
     func close() {
         let activePanel = panel
-        previewURL = nil
+        dataSource.setPreviewURL(nil)
         accessSession.end()
         activePanel?.dataSource = nil
         activePanel?.delegate = nil
         activePanel?.orderOut(nil)
         panel = nil
-    }
-
-    func numberOfPreviewItems(in _: QLPreviewPanel!) -> Int {
-        previewURL == nil ? 0 : 1
-    }
-
-    func previewPanel(
-        _: QLPreviewPanel!,
-        previewItemAt index: Int
-    ) -> (any QLPreviewItem)! {
-        guard index == 0, let previewURL else {
-            return nil
-        }
-        return previewURL as NSURL
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -66,10 +52,39 @@ final class ShelfQuickLookController: NSObject, @MainActor QLPreviewPanelDataSou
             return
         }
 
-        previewURL = nil
+        dataSource.setPreviewURL(nil)
         accessSession.end()
         closingPanel.dataSource = nil
         closingPanel.delegate = nil
         panel = nil
+    }
+}
+
+private final class ShelfQuickLookDataSource: NSObject, QLPreviewPanelDataSource {
+    private let lock = NSLock()
+    private var previewURL: NSURL?
+
+    func setPreviewURL(_ url: URL?) {
+        lock.lock()
+        defer { lock.unlock() }
+        previewURL = url.map { $0 as NSURL }
+    }
+
+    func numberOfPreviewItems(in _: QLPreviewPanel!) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return previewURL == nil ? 0 : 1
+    }
+
+    func previewPanel(
+        _: QLPreviewPanel!,
+        previewItemAt index: Int
+    ) -> (any QLPreviewItem)! {
+        lock.lock()
+        defer { lock.unlock() }
+        guard index == 0 else {
+            return nil
+        }
+        return previewURL
     }
 }
