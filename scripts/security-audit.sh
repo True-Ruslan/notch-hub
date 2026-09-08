@@ -103,20 +103,33 @@ if git grep -nEI -- \
     fail "possible credential or private key material found in tracked files"
 fi
 
-# 4. Sandbox/entitlement contract is intentionally minimal.
+# 4. Shipping sandbox/entitlement contract is intentionally exact and read-only.
 ENTITLEMENTS_JSON="$(mktemp)"
-trap 'rm -f "$DEPS_JSON" "$ENTITLEMENTS_JSON"' EXIT
+PROBE_ENTITLEMENTS_JSON="$(mktemp)"
+trap 'rm -f "$DEPS_JSON" "$ENTITLEMENTS_JSON" "$PROBE_ENTITLEMENTS_JSON"' EXIT
 plutil -convert json -o "$ENTITLEMENTS_JSON" Resources/NotchHub.entitlements
-python3 - "$ENTITLEMENTS_JSON" <<'PY'
+plutil -convert json -o "$PROBE_ENTITLEMENTS_JSON" Resources/MediaBridgeProbe.entitlements
+python3 - "$ENTITLEMENTS_JSON" "$PROBE_ENTITLEMENTS_JSON" <<'PY'
 import json
 import sys
 
 with open(sys.argv[1], encoding="utf-8") as handle:
     actual = json.load(handle)
 
-expected = {"com.apple.security.app-sandbox": True}
+expected = {
+    "com.apple.security.app-sandbox": True,
+    "com.apple.security.files.user-selected.read-only": True,
+}
 if actual != expected:
-    raise SystemExit(f"Unexpected entitlements. Expected {expected!r}, got {actual!r}")
+    raise SystemExit(f"Unexpected shipping entitlements. Expected {expected!r}, got {actual!r}")
+
+with open(sys.argv[2], encoding="utf-8") as handle:
+    probe_actual = json.load(handle)
+probe_expected = {"com.apple.security.app-sandbox": True}
+if probe_actual != probe_expected:
+    raise SystemExit(
+        f"Unexpected probe entitlements. Expected {probe_expected!r}, got {probe_actual!r}"
+    )
 PY
 
 # 5. High-risk Hardened Runtime exceptions must never be silently introduced.
@@ -235,6 +248,8 @@ for required in \
     [[ -e "$required" ]] || fail "missing reviewed media boundary file: $required"
 done
 
+grep -Fq 'Resources/MediaBridgeProbe.entitlements' "$PROBE_BUILD" || \
+    fail "media bridge probe must use its isolated sandbox-only entitlement file"
 grep -Fq "readonly ADAPTER_REPO=\"$PROBE_REPO\"" "$BOOTSTRAP" || \
     fail "media bridge probe upstream repository is not fixed"
 grep -Fq "readonly ADAPTER_COMMIT=\"$PROBE_COMMIT\"" "$BOOTSTRAP" || \

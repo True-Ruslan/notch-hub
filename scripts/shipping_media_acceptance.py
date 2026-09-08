@@ -26,6 +26,10 @@ from production_media_transport_acceptance import (
 EXPECTED_BUNDLE_IDENTIFIER = "ru.trueruslan.notchhub"
 EXPECTED_ADAPTER_COMMIT = "3ac3d4bdf862c7b5399b4fba4df5689f5c38609a"
 EXPECTED_PATCH_SHA256 = "21730c7216814000213a3276777f2b471354f5d7f59019631da0a2917845545f"
+EXPECTED_SHIPPING_ENTITLEMENTS = {
+    "com.apple.security.app-sandbox": True,
+    "com.apple.security.files.user-selected.read-only": True,
+}
 
 _STEADY_WARMUP_SECONDS = 10.0
 _STEADY_DURATION_SECONDS = 60.0
@@ -315,8 +319,10 @@ def collect_preflight(app: pathlib.Path, source_commit: str) -> dict[str, Any]:
     )
     if not _codesign_has_runtime(app):
         raise ValueError("shipping Hardened Runtime flag is missing")
-    if _effective_entitlements(app) != {"com.apple.security.app-sandbox": True}:
-        raise ValueError("shipping effective entitlements are not exactly sandbox-only")
+    if _effective_entitlements(app) != EXPECTED_SHIPPING_ENTITLEMENTS:
+        raise ValueError(
+            "shipping effective entitlements are not exactly sandbox plus user-selected read-only"
+        )
     if not _development_tools_absent(app):
         raise ValueError("development media tooling is present in shipping app")
     if not _system_libraries_only(executable):

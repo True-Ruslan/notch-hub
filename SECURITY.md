@@ -28,7 +28,7 @@ These properties hold unless an explicit reviewed security decision changes them
 5. **No dynamic private-code loading inside the NotchHub process.** No `dlopen`, `dlsym`, `CFBundleGetFunctionPointerForName`, direct `MRMediaRemote*` resolution, downloaded executable code, unsigned plugin, JIT or self-modifying code. The pinned adapter loads its framework only inside the separately owned external compatibility process.
 6. **No broad global input capture.** Current global observation is restricted to `.mouseMoved` for notch interaction. Keyboard, modifiers, buttons, drag and scroll remain prohibited unless a later reviewed feature explicitly changes policy.
 7. **No input-history persistence.** Pointer events/coordinates/history are not persisted or used as telemetry.
-8. **User-selected file access only.** Future Shelf work uses sandbox-compatible user-selected/security-scoped access; removing a Shelf reference must never imply deleting its source file.
+8. **User-selected file access only.** M2.1 Shelf uses read-only security-scoped bookmarks for files/folders explicitly selected or locally dropped by the user. Shipping file authority is exactly `com.apple.security.files.user-selected.read-only`; no read-write, Downloads or broad filesystem entitlement is permitted. Removing a Shelf reference never deletes, moves or renames its source file.
 9. **No bundled secrets.** API keys, passwords, certificates, private keys, tokens and signing credentials do not enter the repository/app bundle.
 10. **Immutable CI dependencies.** External GitHub Actions are pinned to full commit SHAs; privileged PR triggers such as `pull_request_target` are prohibited.
 11. **Third-party runtime assets require explicit review.** The MediaRemote adapter/framework is the one accepted pinned external runtime asset and is not a Swift package dependency. Any additional third-party runtime dependency requires security/supply-chain/license review.
@@ -37,6 +37,32 @@ These properties hold unless an explicit reviewed security decision changes them
 14. **No hidden updater.** GitHub Releases remain the deliberate update source until an authenticated updater is separately designed.
 15. **Performance measurement is development tooling, not runtime telemetry.** Performance scripts/reports must never be bundled or invoked as a shipped background monitoring channel.
 16. **Untrusted public PRs are unprivileged.** Ordinary PR CI remains read-only, secret-free, GitHub-hosted, without OIDC/write authority or persisted checkout credentials.
+17. **Security-scoped access is short-lived.** Shelf bookmark resolution may occur during explicit user operations, but `startAccessingSecurityScopedResource()` is used only around an explicit Open/Show in Finder action and is immediately balanced when it succeeds. No idle scope is intentionally held.
+
+## M2.1 Shelf file-access boundary
+
+Shelf is the first feature that intentionally expands the shipping App Sandbox entitlement set. The change is narrowly scoped and machine-enforced.
+
+Shipping NotchHub entitlements are exactly:
+
+- `com.apple.security.app-sandbox = true`;
+- `com.apple.security.files.user-selected.read-only = true`.
+
+The development MediaBridgeProbe now uses `Resources/MediaBridgeProbe.entitlements` and remains exactly sandbox-only. The Production Media Transport Candidate retains its separate reviewed entitlement file. This prevents a shipping file-access capability from accidentally widening development helper binaries.
+
+Shelf stores only UUID, read-only security-scoped bookmark bytes, display name and file/folder presentation metadata. It does not persist an additional raw path field for browsing or indexing. Persistence is local, atomic and actor-backed under the sandbox Application Support container.
+
+Explicit Shelf actions are intentionally limited to:
+
+- Add via native user selection;
+- local file/folder drop onto the visible Shelf surface;
+- Open;
+- Show in Finder;
+- Remove reference.
+
+There is no source-file delete/move/rename/copy authority in M2.1, no background filesystem crawler, no global drag monitor, and no Shelf network path.
+
+Automated security acceptance checks the exact shipping entitlement dictionary, absence of read-write/network/Automation/broad-file authority, balanced security-scope source contract, package effective entitlements, security audit, and release workflow entitlement assertions.
 
 ## Universal Media production boundary
 
@@ -63,7 +89,7 @@ The production media mechanism must retain all of these properties:
 - no direct private-framework resolution in `Sources/**`;
 - metadata/artwork treated as untrusted;
 - listening history not persisted or logged;
-- no Accessibility, Input Monitoring, Automation/Apple Events, Screen Recording, synthetic input, network authority or new entitlement;
+- no Accessibility, Input Monitoring, Automation/Apple Events, Screen Recording, synthetic input or network authority;
 - controller restart bounded to one controlled retry before fail-closed terminal unavailability.
 
 If these requirements cannot be maintained, the media capability must be rejected/redesigned rather than made to pass by weakening the security baseline.
@@ -85,7 +111,7 @@ Security-relevant acceptance confirms:
 - no Screen Recording prompt;
 - no networking/telemetry/listening-history persistence was added;
 - no global scroll monitor was added;
-- no new entitlement was added.
+- no new entitlement was added by M6.5 itself.
 
 Detailed evidence: `docs/testing/MEDIA_UI_ACCEPTANCE.md`.
 
@@ -121,7 +147,7 @@ PR/main CI produces an ad-hoc signed DMG with App Sandbox and Hardened Runtime. 
 Required properties:
 
 - ad-hoc application signature;
-- App Sandbox with the reviewed entitlement set;
+- App Sandbox with the exact reviewed shipping entitlement set;
 - Hardened Runtime;
 - complete correctness/security CI baseline;
 - system-library-only application executable linkage;
@@ -156,8 +182,8 @@ Performance work cannot justify wider security authority.
 - development samplers may query `/bin/ps` outside the shipping app;
 - shipping process authority remains limited to the exact Universal Media exception above;
 - performance tooling is absent from the packaged app;
-- shared-runner runtime magnitudes are not treated as target-hardware acceptance;
-- feature-size growth is handled by reviewed provenance-backed budgets rather than silently rewriting immutable baselines.
+- feature-size growth is handled by reviewed provenance-backed budgets rather than silently rewriting immutable baselines;
+- Shelf remains explicit-event driven and may not add an idle filesystem sampler or timer.
 
 ## Reportable security findings
 
@@ -167,6 +193,8 @@ Treat as security findings, among others:
 - `Process()` outside the one allowlisted production file;
 - arbitrary media executable/argument paths;
 - broad or undocumented file access;
+- read-write Shelf authority without explicit redesign;
+- source-file mutation from Remove;
 - credential/secret leakage;
 - hidden network/telemetry/listening-history persistence;
 - sensitive input collection;
@@ -187,9 +215,8 @@ Repository-local checks are defense-in-depth and do not prove absence of vulnera
 - Personal/CI artifacts are ad-hoc signed and lack Apple Developer identity/notarization trust.
 - The current global `NSEvent` monitor observes only `.mouseMoved`; P1 will compare it with a reliable window-local/`NSTrackingArea` design and replace it only if correctness and resource evidence are equal-or-better.
 - The external MediaRemote compatibility process relies on a pinned third-party adapter/private framework interface; it remains tightly isolated, provenance-verified and fail-closed but is still an accepted private-API compatibility risk.
-- Apple Music, Spotify and additional-player compatibility is not yet physically verified.
-- Local media gestures/haptics/draggable seek are not implemented yet; the future gesture slice must not add global scroll capture.
+- Older media slices include historical physical-acceptance evidence; from M2.1 onward the product owner has explicitly chosen automation-first acceptance for personal-use development unless a later feature says otherwise.
 
 ## Validation
 
-Every PR runs deterministic release policy, public-CI boundary, performance policy/audit, media policy, `scripts/security-audit.sh`, compile/test/package, entitlement/signature, provenance, feature-size and macOS 26 compatibility checks. Personal Release repeats the release/security baseline before publication. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
+Every PR runs deterministic release policy, public-CI boundary, performance policy/audit, media policy, `scripts/security-audit.sh`, compile/test/package, entitlement/signature, provenance, feature-size and macOS 26 compatibility checks. M2.1 additionally adds real external-app Shelf routing/reset XCUITests and exact read-only file-entitlement policy tests. Personal Release repeats the release/security baseline before publication. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.

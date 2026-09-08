@@ -25,8 +25,14 @@ struct AppQuitMenuPolicyTests {
     func statusItemAddsNoNewEntitlementOrPermission() throws {
         let plist = try propertyList(relativePath: "Resources/NotchHub.entitlements")
 
-        #expect(Set(plist.keys) == ["com.apple.security.app-sandbox"])
+        #expect(
+            Set(plist.keys) == [
+                "com.apple.security.app-sandbox",
+                "com.apple.security.files.user-selected.read-only"
+            ]
+        )
         #expect(plist["com.apple.security.app-sandbox"] as? Bool == true)
+        #expect(plist["com.apple.security.files.user-selected.read-only"] as? Bool == true)
     }
 
     @Test

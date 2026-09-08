@@ -256,10 +256,30 @@ jobs:
         run: (cd scripts && python3 -m unittest -v test_release_policy.py)
 
       - name: Performance policy tests
-        run: >-
-          (cd scripts && python3 -m unittest -v
-          test_performance_policy.py
-          test_feature_size_budget.py)
+        run: |
+          (cd scripts && python3 -m unittest -v \
+            test_performance_policy.py \
+            test_feature_size_budget.py \
+            test_m2_1_shelf_size_budget.py)
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          budget = json.loads(
+              Path('performance/m7-settings-shell-size-budget.json').read_text(encoding='utf-8')
+          )
+          output = Path('build/m7-settings-shell-size-evidence.json')
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(
+              json.dumps(budget['evidence']['summary'], sort_keys=True, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          python3 scripts/performance_policy.py check-size-feature-budget \
+            --summary build/m7-settings-shell-size-evidence.json \
+            --baseline performance/baseline-v0.1.0.json \
+            --feature-budget performance/m7-settings-shell-size-budget.json
 
       - name: Media bridge probe policy tests
         run: >-
@@ -276,7 +296,7 @@ jobs:
       - name: Validate sources, scripts and security baseline
         run: |
           swift format lint --recursive --strict --configuration .swift-format Sources Tools Tests Package.swift
-          plutil -lint Resources/Info.plist Resources/NotchHub.entitlements Resources/ProductionMediaTransportCandidate.entitlements
+          plutil -lint Resources/Info.plist Resources/NotchHub.entitlements Resources/MediaBridgeProbe.entitlements Resources/ProductionMediaTransportCandidate.entitlements
           bash -n scripts/*.sh
           ./scripts/security-audit.sh
 
@@ -336,7 +356,10 @@ jobs:
           with Path('build/effective-entitlements.plist').open('rb') as handle:
               entitlements = plistlib.load(handle)
 
-          expected = {'com.apple.security.app-sandbox': True}
+          expected = {
+              'com.apple.security.app-sandbox': True,
+              'com.apple.security.files.user-selected.read-only': True,
+          }
           if entitlements != expected:
               raise SystemExit(f'Unexpected effective entitlements: {entitlements!r}')
           PY
@@ -421,7 +444,7 @@ jobs:
           python3 scripts/performance_policy.py check-size-feature-budget \
             --summary build/perf-size.json \
             --baseline performance/baseline-v0.1.0.json \
-            --feature-budget performance/m7-settings-shell-size-budget.json
+            --feature-budget performance/m2-1-shelf-foundation-size-budget.json
 
       - name: Performance harness compatibility smoke
         run: |

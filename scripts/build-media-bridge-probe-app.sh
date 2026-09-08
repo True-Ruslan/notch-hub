@@ -15,7 +15,7 @@ readonly APP="$ROOT_DIR/build/MediaBridgeProbe.app"
 readonly CONTENTS="$APP/Contents"
 readonly MACOS_DIR="$CONTENTS/MacOS"
 readonly RESOURCES_DIR="$CONTENTS/Resources"
-readonly ENTITLEMENTS="$ROOT_DIR/Resources/NotchHub.entitlements"
+readonly ENTITLEMENTS="$ROOT_DIR/Resources/MediaBridgeProbe.entitlements"
 
 SOURCE_COMMIT="${SOURCE_COMMIT:-$(git -C "$ROOT_DIR" rev-parse HEAD)}"
 if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then

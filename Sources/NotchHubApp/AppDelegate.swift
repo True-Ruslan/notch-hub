@@ -27,6 +27,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return NotchHubSettingsStore()
         #endif
     }()
+    private let shelfStore: ShelfStore = {
+        #if NOTCHHUB_UI_TESTING
+            let fileURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(
+                    "NotchHub-UITests-\(ProcessInfo.processInfo.processIdentifier)",
+                    isDirectory: true
+                )
+                .appendingPathComponent("Shelf", isDirectory: true)
+                .appendingPathComponent("items.json", isDirectory: false)
+        #else
+            let fileURL = ShelfPersistenceRepository.defaultFileURL()
+        #endif
+        return ShelfStore(
+            persistence: ShelfPersistenceRepository(fileURL: fileURL),
+            bookmarkCodec: SecurityScopedShelfBookmarkCodec()
+        )
+    }()
+    private let destinationModel = NotchDestinationModel()
     private let mediaPresentationModel = ShippingMediaPresentationModel()
     private let mediaGestureVisualModel = MediaGestureVisualModel()
     private let sourceApplicationIconResolver = SourceApplicationIconResolver()
@@ -53,6 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let mediaTimelineTicker = mediaTimelineTicker
         let mediaGestureVisualModel = mediaGestureVisualModel
         let settingsStore = settingsStore
+        let shelfStore = shelfStore
+        let destinationModel = destinationModel
         let sourceApplicationIconResolver = sourceApplicationIconResolver
 
         let mediaGestureSession: MediaGestureSession
@@ -118,22 +138,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 },
                 timelineTicker: mediaTimelineTicker
             )
+            let routedRoot = ShelfRoutingRootView(
+                panelModel: model,
+                layoutModel: layoutModel,
+                mediaModel: mediaPresentationModel,
+                destinationModel: destinationModel,
+                shelfStore: shelfStore
+            ) {
+                mediaRoot
+            }
 
             #if NOTCHHUB_UI_TESTING
                 return NotchHostingViewFactory.make(
                     rootView: UITestHapticDiagnosticsView(
                         recorder: hapticDiagnosticsRecorder
                     ) {
-                        mediaRoot
+                        routedRoot
                     },
                     onScrollWheel: { [weak mediaGestureSession] event in
+                        guard destinationModel.destination == .home else {
+                            return
+                        }
                         mediaGestureSession?.handleScrollWheel(event)
                     }
                 )
             #else
                 return NotchHostingViewFactory.make(
-                    rootView: mediaRoot,
+                    rootView: routedRoot,
                     onScrollWheel: { [weak mediaGestureSession] event in
+                        guard destinationModel.destination == .home else {
+                            return
+                        }
                         mediaGestureSession?.handleScrollWheel(event)
                     }
                 )
@@ -196,6 +231,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case .compact, .expanded:
                     mediaPeekSession.cancel()
                 }
+            }
+            if presentation != .expanded {
+                destinationModel.reset()
             }
             self?.mediaTimelineTicker.setArmed(presentation == .peek || presentation == .expanded)
         }

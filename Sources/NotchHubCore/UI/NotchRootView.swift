@@ -1,8 +1,33 @@
 import SwiftUI
 
+public struct NotchSelectShelfAction: Sendable {
+    private let action: @MainActor @Sendable () -> Void
+
+    public init(_ action: @escaping @MainActor @Sendable () -> Void) {
+        self.action = action
+    }
+
+    @MainActor
+    public func callAsFunction() {
+        action()
+    }
+}
+
+private struct NotchSelectShelfActionKey: EnvironmentKey {
+    static let defaultValue = NotchSelectShelfAction {}
+}
+
+public extension EnvironmentValues {
+    var notchSelectShelfAction: NotchSelectShelfAction {
+        get { self[NotchSelectShelfActionKey.self] }
+        set { self[NotchSelectShelfActionKey.self] = newValue }
+    }
+}
+
 public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
     @ObservedObject private var layoutModel: NotchPanelLayoutModel
+    @Environment(\.notchSelectShelfAction) private var onSelectShelf
     private let handlesExplicitExpansionTap: Bool
     private let onExplicitExpansion: () -> Void
 
@@ -83,7 +108,15 @@ public struct NotchRootView: View {
 
             HStack(spacing: 12) {
                 moduleTile("Music", systemImage: "music.note")
-                moduleTile("Shelf", systemImage: "tray.full")
+
+                Button {
+                    onSelectShelf()
+                } label: {
+                    moduleTile("Shelf", systemImage: "tray.full")
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.openShelf")
+
                 moduleTile("Snippets", systemImage: "text.badge.plus")
                 moduleTile("Calendar", systemImage: "calendar")
                 moduleTile("Translate", systemImage: "character.bubble")

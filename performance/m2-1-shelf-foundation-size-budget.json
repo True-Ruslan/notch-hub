@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 960000,
+    "dmgSizeBytes": 685000,
+    "executableSizeBytes": 660000
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 10071918570,
+    "sourceCommit": "892f33027e5c2deceede1b1ad5a97cb1b7272fc3",
+    "summary": {
+      "appSizeBytes": 1181524,
+      "dmgSizeBytes": 728679,
+      "executableSizeBytes": 879216
+    },
+    "workflowRunId": 34265655415
+  },
+  "featureId": "m2-1-shelf-foundation",
+  "schemaVersion": 1
+}
