@@ -43,6 +43,24 @@ struct ShelfQuickLookPolicyTests {
     }
 
     @Test
+    func replacementClosesPriorPreviewBeforeAcquiringNewSecurityScope() throws {
+        let controller = try sourceText(
+            relativePath: "Sources/NotchHubApp/Shelf/ShelfQuickLookController.swift"
+        )
+
+        #expect(controller.contains("if panel != nil {\n            close()\n        }"))
+        guard
+            let replacementCleanup = controller.range(
+                of: "if panel != nil {\n            close()\n        }"
+            ),
+            let newScope = controller.range(of: "guard accessSession.begin(url: url)")
+        else {
+            return
+        }
+        #expect(replacementCleanup.lowerBound < newScope.lowerBound)
+    }
+
+    @Test
     func quickLookAddsNoPollingNetworkingOrFileMutationAuthority() throws {
         let relativePath = "Sources/NotchHubApp/Shelf/ShelfQuickLookController.swift"
         let url = repositoryRoot().appendingPathComponent(relativePath)
