@@ -28,7 +28,7 @@ These properties hold unless an explicit reviewed security decision changes them
 5. **No dynamic private-code loading inside the NotchHub process.** No `dlopen`, `dlsym`, `CFBundleGetFunctionPointerForName`, direct `MRMediaRemote*` resolution, downloaded executable code, unsigned plugin, JIT or self-modifying code. The pinned adapter loads its framework only inside the separately owned external compatibility process.
 6. **No broad global input capture.** Current global observation is restricted to `.mouseMoved` for notch interaction. Keyboard, modifiers, buttons, drag and scroll remain prohibited unless a later reviewed feature explicitly changes policy.
 7. **No input-history persistence.** Pointer events/coordinates/history are not persisted or used as telemetry.
-8. **User-selected file access only.** M2.1 Shelf uses read-only security-scoped bookmarks for files/folders explicitly selected or locally dropped by the user. Shipping file authority is exactly `com.apple.security.files.user-selected.read-only`; no read-write, Downloads or broad filesystem entitlement is permitted. Removing a Shelf reference never deletes, moves or renames its source file.
+8. **User-selected file access only.** M2 Shelf uses read-only security-scoped bookmarks for files/folders explicitly selected or locally dropped by the user. Shipping file authority is exactly `com.apple.security.files.user-selected.read-only`; no read-write, Downloads or broad filesystem entitlement is permitted. Removing a Shelf reference never deletes, moves or renames its source file.
 9. **No bundled secrets.** API keys, passwords, certificates, private keys, tokens and signing credentials do not enter the repository/app bundle.
 10. **Immutable CI dependencies.** External GitHub Actions are pinned to full commit SHAs; privileged PR triggers such as `pull_request_target` are prohibited.
 11. **Third-party runtime assets require explicit review.** The MediaRemote adapter/framework is the one accepted pinned external runtime asset and is not a Swift package dependency. Any additional third-party runtime dependency requires security/supply-chain/license review.
@@ -37,7 +37,7 @@ These properties hold unless an explicit reviewed security decision changes them
 14. **No hidden updater.** GitHub Releases remain the deliberate update source until an authenticated updater is separately designed.
 15. **Performance measurement is development tooling, not runtime telemetry.** Performance scripts/reports must never be bundled or invoked as a shipped background monitoring channel.
 16. **Untrusted public PRs are unprivileged.** Ordinary PR CI remains read-only, secret-free, GitHub-hosted, without OIDC/write authority or persisted checkout credentials.
-17. **Security-scoped access is short-lived.** Shelf bookmark resolution may occur during explicit user operations, but `startAccessingSecurityScopedResource()` is used only around an explicit Open/Show in Finder action and is immediately balanced when it succeeds. No idle scope is intentionally held.
+17. **Security-scoped access is explicit, bounded and balanced.** Bookmark resolution happens only for explicit Shelf operations. Open/Show in Finder use short-lived scope immediately balanced after the operation. M2.2 Quick Look may hold exactly one read-only scope for the lifetime of an explicitly active native preview; panel close, replacement, controller close and application termination release it. No security scope is intentionally held while Shelf/Quick Look is idle.
 
 ## M2.1 Shelf file-access boundary
 
@@ -48,11 +48,11 @@ Shipping NotchHub entitlements are exactly:
 - `com.apple.security.app-sandbox = true`;
 - `com.apple.security.files.user-selected.read-only = true`.
 
-The development MediaBridgeProbe now uses `Resources/MediaBridgeProbe.entitlements` and remains exactly sandbox-only. The Production Media Transport Candidate retains its separate reviewed entitlement file. This prevents a shipping file-access capability from accidentally widening development helper binaries.
+The development MediaBridgeProbe uses `Resources/MediaBridgeProbe.entitlements` and remains exactly sandbox-only. The Production Media Transport Candidate retains its separate reviewed entitlement file. This prevents a shipping file-access capability from accidentally widening development helper binaries.
 
 Shelf stores only UUID, read-only security-scoped bookmark bytes, display name and file/folder presentation metadata. It does not persist an additional raw path field for browsing or indexing. Persistence is local, atomic and actor-backed under the sandbox Application Support container.
 
-Explicit Shelf actions are intentionally limited to:
+Explicit M2.1 Shelf actions are intentionally limited to:
 
 - Add via native user selection;
 - local file/folder drop onto the visible Shelf surface;
@@ -60,9 +60,36 @@ Explicit Shelf actions are intentionally limited to:
 - Show in Finder;
 - Remove reference.
 
-There is no source-file delete/move/rename/copy authority in M2.1, no background filesystem crawler, no global drag monitor, and no Shelf network path.
+There is no source-file delete/move/rename/copy authority, no background filesystem crawler, no global drag monitor, and no Shelf network path.
 
 Automated security acceptance checks the exact shipping entitlement dictionary, absence of read-write/network/Automation/broad-file authority, balanced security-scope source contract, package effective entitlements, security audit, and release workflow entitlement assertions.
+
+## M2.2 Shelf Quick Look security boundary
+
+M2.2 adds native Quick Look without expanding the entitlement set or persistence model.
+
+The security boundary is split deliberately:
+
+- `ShelfPreviewAccessSession` owns one testable security-scope lifecycle and balances every successful start with one stop;
+- `ShelfQuickLookController` owns the native `QLPreviewPanel` lifecycle on the main actor;
+- the Quick Look data source holds only the single active preview URL and is cleared on close/replacement;
+- `AppDelegate` owns the controller for application lifetime and closes it during normal termination.
+
+A preview request first resolves the existing read-only bookmark. If scope acquisition fails, no new panel content is installed. If a preview is already active, M2.2 closes/clears that preview **before** trying to acquire the replacement scope; this prevents a failed replacement from leaving stale Quick Look content visible after the previous file scope has been released.
+
+M2.2 adds no:
+
+- entitlement;
+- source-file write/delete/move/rename/copy authority;
+- network client or network entitlement;
+- Automation/Apple Events;
+- Accessibility/Input Monitoring/Screen Recording;
+- global input monitor;
+- polling/timer/filesystem scan;
+- persistence field for raw file paths;
+- third-party runtime dependency.
+
+Detailed automated evidence is recorded in `docs/testing/M2_2_SHELF_QUICK_LOOK_ACCEPTANCE.md`.
 
 ## Universal Media production boundary
 
@@ -194,7 +221,7 @@ Treat as security findings, among others:
 - arbitrary media executable/argument paths;
 - broad or undocumented file access;
 - read-write Shelf authority without explicit redesign;
-- source-file mutation from Remove;
+- source-file mutation from Shelf actions;
 - credential/secret leakage;
 - hidden network/telemetry/listening-history persistence;
 - sensitive input collection;
@@ -203,7 +230,7 @@ Treat as security findings, among others:
 - unbounded/unsanitized media payloads;
 - orphan/restart-storm helper processes;
 - capability spoofing;
-- stale source/artwork leakage across sessions;
+- stale source/artwork/preview leakage after authority is released;
 - release workflow privilege compromise;
 - mutable action references;
 - false Apple notarization/trust claims.
@@ -219,4 +246,4 @@ Repository-local checks are defense-in-depth and do not prove absence of vulnera
 
 ## Validation
 
-Every PR runs deterministic release policy, public-CI boundary, performance policy/audit, media policy, `scripts/security-audit.sh`, compile/test/package, entitlement/signature, provenance, feature-size and macOS 26 compatibility checks. M2.1 additionally adds real external-app Shelf routing/reset XCUITests and exact read-only file-entitlement policy tests. Personal Release repeats the release/security baseline before publication. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
+Every PR runs deterministic release policy, public-CI boundary, performance policy/audit, media policy, `scripts/security-audit.sh`, compile/test/package, entitlement/signature, provenance, feature-size and macOS 26 compatibility checks. M2 adds real external-app Shelf routing/reset XCUITests, exact read-only file-entitlement policy tests, balanced security-scope tests, and M2.2 Quick Look lifecycle/regression policy tests. Personal Release repeats the release/security baseline before publication. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
