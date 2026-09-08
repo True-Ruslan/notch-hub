@@ -10,6 +10,7 @@ struct ShelfRoutingRootView<HomeContent: View>: View {
     @ObservedObject private var destinationModel: NotchDestinationModel
     @ObservedObject private var shelfStore: ShelfStore
 
+    private let quickLookController: ShelfQuickLookController
     private let homeContent: HomeContent
 
     init(
@@ -18,6 +19,7 @@ struct ShelfRoutingRootView<HomeContent: View>: View {
         mediaModel: ShippingMediaPresentationModel,
         destinationModel: NotchDestinationModel,
         shelfStore: ShelfStore,
+        quickLookController: ShelfQuickLookController,
         @ViewBuilder homeContent: () -> HomeContent
     ) {
         self.panelModel = panelModel
@@ -25,6 +27,7 @@ struct ShelfRoutingRootView<HomeContent: View>: View {
         self.mediaModel = mediaModel
         self.destinationModel = destinationModel
         self.shelfStore = shelfStore
+        self.quickLookController = quickLookController
         self.homeContent = homeContent()
     }
 
@@ -35,6 +38,7 @@ struct ShelfRoutingRootView<HomeContent: View>: View {
             {
                 ShelfView(
                     store: shelfStore,
+                    quickLookController: quickLookController,
                     topInset: layoutModel.currentLayout.expandedContentTopInset,
                     onHome: destinationModel.reset
                 )
