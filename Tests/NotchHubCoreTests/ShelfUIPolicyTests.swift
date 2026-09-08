@@ -10,7 +10,7 @@ struct ShelfUIPolicyTests {
             "shelf.surface",
             "shelf.addFiles",
             "shelf.emptyDropZone",
-            "shelf.home",
+            "shelf.home"
         ] {
             #expect(shelf.contains("\"\(identifier)\""))
         }
@@ -35,7 +35,7 @@ struct ShelfUIPolicyTests {
             "Timer(",
             "DispatchSourceTimer",
             "addGlobalMonitorForEvents",
-            "URLSession",
+            "URLSession"
         ] {
             #expect(!combined.contains(forbidden))
         }

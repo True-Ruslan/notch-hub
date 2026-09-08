@@ -35,9 +35,21 @@ public struct SecurityScopedShelfBookmarkCodec: ShelfBookmarkCoding {
             bookmarkDataIsStale: &isStale
         )
 
+        var refreshedBookmarkData: Data?
+        if isStale {
+            let didStartAccess = url.startAccessingSecurityScopedResource()
+            guard didStartAccess else {
+                throw CocoaError(.fileReadNoPermission)
+            }
+            defer {
+                url.stopAccessingSecurityScopedResource()
+            }
+            refreshedBookmarkData = try makeBookmark(for: url)
+        }
+
         return ShelfBookmarkResolution(
             url: url,
-            refreshedBookmarkData: isStale ? try makeBookmark(for: url) : nil
+            refreshedBookmarkData: refreshedBookmarkData
         )
     }
 }

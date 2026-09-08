@@ -79,7 +79,7 @@ struct SettingsMenuPolicyTests {
         #expect(
             Set(plist.keys) == [
                 "com.apple.security.app-sandbox",
-                "com.apple.security.files.user-selected.read-only",
+                "com.apple.security.files.user-selected.read-only"
             ]
         )
         #expect(plist["com.apple.security.app-sandbox"] as? Bool == true)

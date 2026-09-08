@@ -216,10 +216,17 @@ struct ShelfView: View {
             return
         }
 
-        unavailableItemIDs.remove(item.id)
-        withSecurityScopedAccess(to: resolution.url) { url in
-            _ = NSWorkspace.shared.open(url)
+        guard
+            withSecurityScopedAccess(
+                to: resolution.url,
+                operation: { url in
+                    _ = NSWorkspace.shared.open(url)
+                })
+        else {
+            unavailableItemIDs.insert(item.id)
+            return
         }
+        unavailableItemIDs.remove(item.id)
     }
 
     private func reveal(_ item: ShelfItem) async {
@@ -228,22 +235,31 @@ struct ShelfView: View {
             return
         }
 
-        unavailableItemIDs.remove(item.id)
-        withSecurityScopedAccess(to: resolution.url) { url in
-            NSWorkspace.shared.activateFileViewerSelecting([url])
+        guard
+            withSecurityScopedAccess(
+                to: resolution.url,
+                operation: { url in
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                })
+        else {
+            unavailableItemIDs.insert(item.id)
+            return
         }
+        unavailableItemIDs.remove(item.id)
     }
 
     private func withSecurityScopedAccess(
         to url: URL,
         operation: (URL) -> Void
-    ) {
+    ) -> Bool {
         let didStartAccess = url.startAccessingSecurityScopedResource()
+        guard didStartAccess else {
+            return false
+        }
         defer {
-            if didStartAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
+            url.stopAccessingSecurityScopedResource()
         }
         operation(url)
+        return true
     }
 }

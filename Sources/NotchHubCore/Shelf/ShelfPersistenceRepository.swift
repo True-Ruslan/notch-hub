@@ -13,12 +13,14 @@ public actor ShelfPersistenceRepository: ShelfPersisting {
     }
 
     public static func defaultFileURL(fileManager: FileManager = .default) -> URL {
-        let baseURL = fileManager.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first ?? fileManager.temporaryDirectory
+        let baseURL =
+            fileManager.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first ?? fileManager.temporaryDirectory
 
-        return baseURL
+        return
+            baseURL
             .appendingPathComponent("NotchHub", isDirectory: true)
             .appendingPathComponent("Shelf", isDirectory: true)
             .appendingPathComponent("items.json", isDirectory: false)

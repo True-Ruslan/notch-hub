@@ -31,7 +31,7 @@ struct ShelfRoutingRootView<HomeContent: View>: View {
     var body: some View {
         ZStack {
             if panelModel.contentPresentation == .expanded,
-               destinationModel.destination == .shelf
+                destinationModel.destination == .shelf
             {
                 ShelfView(
                     store: shelfStore,
@@ -48,7 +48,7 @@ struct ShelfRoutingRootView<HomeContent: View>: View {
                     )
                     .overlay(alignment: .topTrailing) {
                         if panelModel.contentPresentation == .expanded,
-                           mediaModel.presentation != nil
+                            mediaModel.presentation != nil
                         {
                             Button {
                                 destinationModel.select(.shelf)

@@ -47,7 +47,8 @@ public final class ShelfStore: ObservableObject {
                 guard let bookmarkData = try? codec.makeBookmark(for: url) else { continue }
 
                 let values = try? url.resourceValues(forKeys: [.localizedNameKey, .isDirectoryKey])
-                let displayName = values?.localizedName.flatMap { $0.isEmpty ? nil : $0 }
+                let displayName =
+                    values?.localizedName.flatMap { $0.isEmpty ? nil : $0 }
                     ?? url.lastPathComponent
                 prepared.append(
                     ShelfItem(
@@ -83,7 +84,7 @@ public final class ShelfStore: ObservableObject {
 
         guard let resolution else { return nil }
         if let refreshedBookmarkData = resolution.refreshedBookmarkData,
-           let index = items.firstIndex(where: { $0.id == item.id })
+            let index = items.firstIndex(where: { $0.id == item.id })
         {
             items[index].bookmarkData = refreshedBookmarkData
             await persistCurrentItems()
