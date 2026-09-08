@@ -1,141 +1,138 @@
 # M2.1 Shelf Foundation — Automated Acceptance
 
-Status: **IN PROGRESS — final exact-head CI evidence pending**
+Status: **AUTOMATED-ACCEPTED / MERGED — RELEASE PENDING**
 
-Date: 2026-09-08
-PR: #88
-Branch: `feat/m2-1-shelf-foundation`
+Date: 2026-09-08  
+PR: #88  
+Feature branch: `feat/m2-1-shelf-foundation`  
+Final accepted PR head: `7f2a17cd39f15ec395560866c8d61e0c4cf9d5bf`  
+Squash merge on `main`: `b0c1cf2f1054e754174099c31b1684f1742a11b2`
 
 ## Acceptance policy
 
-The product owner explicitly waived physical acceptance as a merge/release blocker for NotchHub because the application is personal-use only. M2.1 therefore uses automation-first acceptance.
+The product owner explicitly chose automation-first acceptance because NotchHub is personal-use only. Physical acceptance is not a merge/release blocker unless a future specification explicitly makes a particular physical check mandatory.
 
-The required lifecycle is:
+M2.1 therefore uses the project state sequence:
 
 **implemented → automated-accepted → merged → released**
 
-`AUTOMATED-ACCEPTED` may be recorded only after every gate below is green on the exact final PR head SHA.
+Current state:
 
-## Core behavior gates
+- Implemented: **YES**
+- Automated-accepted: **YES**
+- Merged: **YES**
+- Released: **NO**
 
-Required deterministic Swift coverage:
+## Accepted scope
 
-- `ShelfItem` Codable round-trip;
-- missing persistence store => empty Shelf;
-- corrupt persistence => fail-closed empty Shelf;
-- atomic persistence round-trip;
-- duplicate add suppression;
-- first-seen multi-file ordering;
-- invalid existing bookmark isolation;
-- remove mutates only Shelf collection/persistence;
-- stale bookmark resolution refreshes stored bookmark bytes;
-- persistence failure produces bounded error state;
-- destination defaults Home, selects Shelf, resets Home.
+M2.1 adds a first-party file/folder Shelf with:
 
-## Security gates
+- Home ↔ Shelf routing in Expanded;
+- a Shelf entry point while active media is expanded;
+- collapse/reset back to Home semantics;
+- native `NSOpenPanel` file/folder multi-selection;
+- local SwiftUI file-URL drag/drop;
+- persistent security-scoped bookmarks;
+- duplicate suppression;
+- stale bookmark refresh;
+- Open and Show in Finder actions;
+- Remove-reference semantics that never delete or move the source file;
+- actor-backed atomic persistence;
+- no polling, global input monitors or network access.
 
-Required exact policy:
+Compact/Peek media-first behavior remains outside Shelf routing.
 
-- shipping app effective entitlements are exactly:
-  - `com.apple.security.app-sandbox = true`;
-  - `com.apple.security.files.user-selected.read-only = true`;
-- MediaBridgeProbe effective entitlements remain exactly sandbox-only using its separate plist;
-- production media candidate retains its separate reviewed entitlement contract;
-- no user-selected read-write entitlement;
-- no Downloads/broad file entitlement;
-- no network client/server entitlement;
-- no Automation/Apple Events entitlement;
-- no camera/microphone/Bluetooth entitlement;
-- no source-file delete/move/trash API in Shelf implementation;
-- no Shelf timer, polling loop, global event monitor, URLSession, or network primitive;
-- Open/Reveal use balanced short-lived security-scoped access;
-- `ShelfStore` never arms security-scoped access while idle;
-- security audit remains green.
+## Security contract
 
-## Real UI automation gates
+Shipping entitlements are exactly:
 
-The XCUITest suite launches the exact separately built UI-test application and must cover:
+- `com.apple.security.app-sandbox = true`;
+- `com.apple.security.files.user-selected.read-only = true`.
 
-1. **Home routing**
-   - launch shipping-smoke fixture;
-   - explicitly expand;
-   - `home.openShelf` exists;
-   - click Shelf;
-   - `shelf.surface`, `shelf.addFiles`, `shelf.emptyDropZone`, `shelf.home` exist;
-   - click Home;
-   - Expanded Home returns.
+M2.1 does **not** add read-write file access, network entitlements, Automation/Apple Events, Accessibility, Input Monitoring, Screen Recording, dynamic-code exceptions or source-file mutation.
 
-2. **Media routing**
-   - launch deterministic media fixture;
-   - explicitly expand;
-   - media title is authoritative;
-   - `media.openShelf` exists;
-   - click Shelf;
-   - Shelf surface exists;
-   - hidden media transport controls are unavailable while Shelf owns Expanded;
-   - click Home;
-   - authoritative media surface returns.
+Security-scoped access is short-lived and fail-closed:
 
-3. **Destination reset**
-   - open Shelf;
-   - collapse by leaving panel;
-   - wait for stable Compact;
-   - explicitly expand again;
-   - Shelf is absent and Home destination is restored.
+- Open/Reveal does not execute if scope acquisition fails;
+- stale bookmark refresh obtains and balances a temporary security scope;
+- stored bookmarks are resolved with security scope;
+- Remove only removes the persisted Shelf reference.
 
-All pre-existing media, hover, Settings and transition UI regression tests must remain green.
+MediaBridgeProbe and ProductionMediaTransportCandidate keep their separately reviewed narrower entitlement policies.
 
-### Why system file-picker interaction is not an XCUI gate
+## TDD evidence
 
-The automated suite intentionally does not manipulate the system `NSOpenPanel` or arbitrary runner files. System-dialog/TCC automation is comparatively flaky and can introduce real machine side effects. The file semantics are instead split into deterministic layers:
+The implementation was developed in RED → GREEN layers:
 
-- source-policy tests verify picker configuration (files + folders + multi-select) and local URL drop handling;
-- core fake-codec tests verify persistence/dedup/stale bookmark behavior;
-- source-policy tests prove Remove contains no filesystem mutation authority;
-- signed-package checks prove the exact read-only user-selected entitlement actually reaches the built app.
+1. missing Shelf contracts produced compile RED;
+2. compile skeletons exposed behavioral persistence/store RED;
+3. the core Shelf implementation turned those tests GREEN;
+4. missing Shelf UI/routing produced isolated UI-policy RED;
+5. Shelf UI/routing implementation turned that layer GREEN;
+6. entitlement/security policy tests preceded shipping entitlement expansion;
+7. security-scope hardening tests reproduced fail-open/stale-refresh defects before the final fix;
+8. a provenance-backed M2.1 size budget was introduced only after the previous M7 envelope correctly rejected the larger feature candidate.
 
-This keeps the automation hermetic while still testing the security boundary that matters.
+## Final exact-head CI evidence
 
-## macOS/package gates
+GitHub Actions run: `34267057068` (CI #1460)  
+Exact head: `7f2a17cd39f15ec395560866c8d61e0c4cf9d5bf`
 
-Required on final SHA:
+All required jobs succeeded:
 
-- macOS 26 warnings-as-errors build;
-- full Swift test suite;
-- coverage-instrumented Swift suite;
-- real external-app macOS UI regression suite;
-- Swift format strict lint;
-- shell syntax validation;
-- release/public-workflow policy tests;
-- security audit;
-- performance source audit;
-- MediaBridgeProbe build/verification and archive round-trip;
-- ProductionMediaTransportCandidate build/verification and archive round-trip;
-- release NotchHub DMG build;
-- exact source/media provenance checks;
-- `codesign --verify --deep --strict`;
-- Hardened Runtime flag;
-- exact shipping effective entitlement dictionary;
-- system-library-only executable check;
-- no development media/performance tooling in shipping app;
-- DMG verification;
-- shipping-media preflight collector;
-- deterministic artifact size collection;
-- active feature-size budget;
-- idle performance-harness compatibility smoke.
+### macOS 26 compatibility — SUCCESS
 
-## Final evidence
+- warnings-as-errors build;
+- MediaBridgeProbe CLI build;
+- Swift test suite;
+- MediaBridgeProbe candidate build/archive verification;
+- ProductionMediaTransportCandidate build/archive verification.
 
-To be filled only after the final PR head stops changing and its complete CI run is green:
+### macOS UI regression — SUCCESS
 
-- final PR head SHA: **PENDING**
-- CI run number/id: **PENDING**
-- macOS 26 compatibility: **PENDING**
-- Build, test and package: **PENDING**
-- macOS UI regression: **PENDING**
-- total Swift tests: **PENDING**
-- total XCUITests: **PENDING**
-- effective shipping entitlements: **PENDING exact-package verification**
-- feature-size gate: **PENDING**
+- UI project/fixture isolation policies;
+- strict acceptance traceability;
+- exact UI-test application build;
+- shipping-artifact fixture-marker exclusion;
+- external application XCUITest smoke, including Shelf routing/reset paths.
 
-Do not replace any `PENDING` value with a success claim until it is supported by the exact final GitHub Actions run.
+### Build, test and package — SUCCESS
+
+- release/performance/media policy tests;
+- strict acceptance traceability;
+- performance-policy audit;
+- strict formatter/plist/shell/security validation;
+- coverage-instrumented Swift tests;
+- release DMG build;
+- bundle/codesign/Hardened Runtime verification;
+- exact shipping entitlement verification;
+- shipping-media preflight/provenance;
+- deterministic artifact sizes;
+- active M2.1 feature-size budget;
+- performance harness compatibility smoke;
+- artifact uploads.
+
+At final PR verification there were no unresolved review threads and no submitted review defects, and GitHub reported the PR mergeable.
+
+## Size-budget evidence
+
+Active budget: `performance/m2-1-shelf-foundation-size-budget.json`
+
+Evidence candidate:
+
+- source commit: `892f33027e5c2deceede1b1ad5a97cb1b7272fc3`;
+- workflow run: `34265655415`;
+- artifact ID: `10071918570`;
+- app: `1,181,524` bytes;
+- DMG: `728,679` bytes;
+- executable: `879,216` bytes.
+
+The immutable baseline remains unchanged and earlier feature budgets, including M7, remain historical provenance evidence.
+
+## Physical/manual checks
+
+No physical check is required to keep M2.1 merged or to release it under the current personal-use policy. Manual use can still reveal subjective or hardware-specific defects; deterministic defects found later should become regression tests.
+
+## Release status
+
+M2.1 is merged but not yet represented by a published version/tag. Release state must be updated only after GitHub Release/tag evidence exists.
