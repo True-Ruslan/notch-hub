@@ -42,16 +42,19 @@ struct ShelfUIPolicyTests {
     }
 
     @Test
-    func expandedHomeAndMediaExposeShelfSelectionWithoutChangingCompactPeekSemantics() throws {
+    func expandedRoutingOwnsShelfSelectionWithoutModifyingMediaRenderingInternals() throws {
         let root = try sourceText(relativePath: "Sources/NotchHubCore/UI/NotchRootView.swift")
+        let routing = try sourceText(relativePath: "Sources/NotchHubApp/Shelf/ShelfRoutingRootView.swift")
         let media = try sourceText(relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift")
 
         #expect(root.contains("\"home.openShelf\""))
         #expect(root.contains("onSelectShelf"))
-        #expect(media.contains("\"media.openShelf\""))
-        #expect(media.contains("destinationModel.destination == .shelf"))
-        #expect(media.contains("panelModel.contentPresentation == .expanded"))
-        #expect(media.contains("destinationModel.reset()"))
+        #expect(routing.contains("\"media.openShelf\""))
+        #expect(routing.contains("destinationModel.destination == .shelf"))
+        #expect(routing.contains("panelModel.contentPresentation == .expanded"))
+        #expect(routing.contains("destinationModel.reset()"))
+        #expect(!media.contains("ShelfStore"))
+        #expect(!media.contains("NotchDestinationModel"))
     }
 
     private func sourceText(relativePath: String) throws -> String {
