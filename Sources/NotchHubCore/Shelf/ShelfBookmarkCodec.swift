@@ -18,11 +18,26 @@ public protocol ShelfBookmarkCoding: Sendable {
 public struct SecurityScopedShelfBookmarkCodec: ShelfBookmarkCoding {
     public init() {}
 
-    public func makeBookmark(for _: URL) throws -> Data {
-        throw CocoaError(.fileWriteUnknown)
+    public func makeBookmark(for url: URL) throws -> Data {
+        try url.bookmarkData(
+            options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
     }
 
-    public func resolve(_: Data) throws -> ShelfBookmarkResolution {
-        throw CocoaError(.fileReadUnknown)
+    public func resolve(_ bookmarkData: Data) throws -> ShelfBookmarkResolution {
+        var isStale = false
+        let url = try URL(
+            resolvingBookmarkData: bookmarkData,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )
+
+        return ShelfBookmarkResolution(
+            url: url,
+            refreshedBookmarkData: isStale ? try makeBookmark(for: url) : nil
+        )
     }
 }

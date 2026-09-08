@@ -12,9 +12,34 @@ public actor ShelfPersistenceRepository: ShelfPersisting {
         self.fileURL = fileURL
     }
 
-    public func load() async -> [ShelfItem] {
-        []
+    public static func defaultFileURL(fileManager: FileManager = .default) -> URL {
+        let baseURL = fileManager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first ?? fileManager.temporaryDirectory
+
+        return baseURL
+            .appendingPathComponent("NotchHub", isDirectory: true)
+            .appendingPathComponent("Shelf", isDirectory: true)
+            .appendingPathComponent("items.json", isDirectory: false)
     }
 
-    public func save(_: [ShelfItem]) async throws {}
+    public func load() async -> [ShelfItem] {
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return []
+        }
+
+        return (try? JSONDecoder().decode([ShelfItem].self, from: data)) ?? []
+    }
+
+    public func save(_ items: [ShelfItem]) async throws {
+        let directoryURL = fileURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(
+            at: directoryURL,
+            withIntermediateDirectories: true
+        )
+
+        let data = try JSONEncoder().encode(items)
+        try data.write(to: fileURL, options: .atomic)
+    }
 }
