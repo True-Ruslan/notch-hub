@@ -269,6 +269,83 @@ final class NotchHubUITests: XCTestCase {
     }
 
     @MainActor
+    func testExpandedHomeRoutesToShelfAndBackWithoutSystemFileSideEffects() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedExplicitly())
+        let openShelf = subject.app.buttons["home.openShelf"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(openShelf, timeout: 2))
+        openShelf.click()
+
+        let shelf = subject.app.groups["shelf.surface"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(shelf, timeout: 2))
+        XCTAssertTrue(subject.app.buttons["shelf.addFiles"].exists)
+        XCTAssertTrue(subject.app.descendants(matching: .any)["shelf.emptyDropZone"].exists)
+
+        let home = subject.app.buttons["shelf.home"]
+        XCTAssertTrue(home.exists)
+        home.click()
+
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(
+                subject.surface("notch.surface.expanded"),
+                timeout: 2
+            )
+        )
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(openShelf, timeout: 2))
+    }
+
+    @MainActor
+    func testExpandedMediaCanExplicitlyRouteToShelfAndReturnToMedia() throws {
+        let subject = try NotchHubUIApplication(mode: .mediaHappyPath)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedExplicitly())
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilValue(subject.titleElement(), equals: "Track A", timeout: 2)
+        )
+
+        let openShelf = subject.app.buttons["media.openShelf"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(openShelf, timeout: 2))
+        openShelf.click()
+
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(subject.app.groups["shelf.surface"], timeout: 2)
+        )
+        XCTAssertTrue(subject.app.buttons["media.playPause"].waitForNonExistence(timeout: 1))
+
+        subject.app.buttons["shelf.home"].click()
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilValue(subject.titleElement(), equals: "Track A", timeout: 2)
+        )
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(subject.app.buttons["media.playPause"], timeout: 2))
+    }
+
+    @MainActor
+    func testShelfDestinationResetsAfterCollapseBeforeNextExpansion() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedExplicitly())
+        subject.app.buttons["home.openShelf"].click()
+
+        let shelf = subject.app.groups["shelf.surface"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(shelf, timeout: 2))
+        subject.movePointerOutside(shelf)
+        XCTAssertTrue(subject.waitForStableCompact())
+
+        XCTAssertTrue(subject.openExpandedExplicitly())
+        XCTAssertTrue(shelf.waitForNonExistence(timeout: 1))
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(subject.app.buttons["home.openShelf"], timeout: 2)
+        )
+    }
+
+    @MainActor
     private func assertNoMediaPeekAndSingleHaptic(
         _ subject: NotchHubUIApplication
     ) {
