@@ -15,6 +15,9 @@ final class ShelfQuickLookController: NSObject, QLPreviewPanelDelegate {
 
     @discardableResult
     func present(url: URL) -> Bool {
+        if panel != nil {
+            close()
+        }
         guard accessSession.begin(url: url) else {
             return false
         }
