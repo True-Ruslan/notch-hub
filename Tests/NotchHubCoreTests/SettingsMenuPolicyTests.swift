@@ -73,11 +73,17 @@ struct SettingsMenuPolicyTests {
     }
 
     @Test
-    func settingsAddsNoNewEntitlement() throws {
+    func settingsAddsNoEntitlementBeyondTheSharedShippingBaseline() throws {
         let plist = try propertyList(relativePath: "Resources/NotchHub.entitlements")
 
-        #expect(Set(plist.keys) == ["com.apple.security.app-sandbox"])
+        #expect(
+            Set(plist.keys) == [
+                "com.apple.security.app-sandbox",
+                "com.apple.security.files.user-selected.read-only",
+            ]
+        )
         #expect(plist["com.apple.security.app-sandbox"] as? Bool == true)
+        #expect(plist["com.apple.security.files.user-selected.read-only"] as? Bool == true)
     }
 
     private func propertyList(relativePath: String) throws -> [String: Any] {
