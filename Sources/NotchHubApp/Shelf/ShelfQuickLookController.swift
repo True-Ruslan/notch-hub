@@ -3,7 +3,7 @@ import NotchHubCore
 import QuickLookUI
 
 @MainActor
-final class ShelfQuickLookController: NSObject, QLPreviewPanelDataSource, QLPreviewPanelDelegate {
+final class ShelfQuickLookController: NSObject, @MainActor QLPreviewPanelDataSource, QLPreviewPanelDelegate {
     private let accessSession: ShelfPreviewAccessSession
     private var previewURL: URL?
     private weak var panel: QLPreviewPanel?
