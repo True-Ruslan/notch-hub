@@ -2,7 +2,7 @@
 
 Primary product target: **native macOS / macOS 26.6**. NotchHub is a personal-use productivity hub centered on the MacBook notch.
 
-Current published Personal Release: **v0.5.0**. Historical releases remain immutable.
+Current published Personal Release: **v0.5.0**. Checked-in `VERSION` is **0.6.0** and v0.6.0 release preparation is merged, but publication is still pending. Historical releases remain immutable.
 
 From M2.1 onward the default lifecycle is:
 
@@ -32,6 +32,7 @@ Automation is the default acceptance gate. Physical checks are optional diagnost
 - **M1 Active-display / multi-monitor foundation — MERGED**
 - **M6 Media foundation and media-first UI — MERGED / RELEASED through `v0.4.0`**
 - **M7 Settings shell — RELEASED (`v0.5.0`)**
+- **v0.6.0 Shelf release preparation — MERGED / PUBLICATION PENDING**
 
 Detailed historical evidence remains in `docs/testing/`, `docs/superpowers/`, release notes and the changelog.
 
@@ -57,17 +58,37 @@ Implemented scope:
 
 Final automated acceptance: CI #1460 / run `34267057068` on PR head `7f2a17cd39f15ec395560866c8d61e0c4cf9d5bf`.
 
-#### M2.2 Shelf usability — NEXT DESIGN SLICE
+v0.6.0 release preparation for M2.1 was merged via PR #90 as `cc023e4720ae733770a8e9fe7926c514d0ab3fdf`; the GitHub Release/tag is still pending.
 
-Select the next small high-value Shelf increment rather than broadening the architecture all at once. Candidate capabilities to evaluate:
+#### M2.2 Shelf Quick Look — IMPLEMENTED / AUTOMATED-ACCEPTED / PR #91
 
-- Shelf item selection/multi-selection;
-- native Quick Look preview;
-- native Share services;
-- keyboard-accessible actions;
-- stronger unavailable/stale-item presentation.
+Bounded native usability slice:
 
-Constraints remain: no source-file mutation, no new broad entitlement, no polling/global input monitoring, no clipboard ownership in Shelf (text/URL snippets belong to M3).
+- one Preview action per Shelf item;
+- native macOS `QLPreviewPanel`;
+- one explicitly owned read-only security scope while preview is active;
+- scope cleanup on panel close, replacement, controller close and application termination;
+- failed replacement closes the previous preview before acquiring the next scope, preventing stale preview content without access authority;
+- existing bookmark resolution and unavailable-state handling reused;
+- no entitlement, persistence-schema, network, polling, global-input or source-file-mutation expansion.
+
+Automated acceptance on production head `6488e1f84cfad08c0fc557db4c811ae87c069dce`: CI #1473 / run `34284632091`, all three required jobs SUCCESS and all 497 Swift tests GREEN. Existing M2.1 size envelope remains sufficient.
+
+PR #91 is not merged/released until GitHub evidence says so.
+
+#### M2.3 Native Share / AirDrop — NEXT DESIGN SLICE
+
+Preferred next Shelf increment after M2.2 merge:
+
+- native macOS share services for one explicitly selected Shelf item;
+- AirDrop exposed through system share infrastructure where available;
+- reuse the existing bookmark/security-scope boundary;
+- keep source file read-only and untouched;
+- no custom network client or discovery protocol;
+- no broad entitlement expansion;
+- no multi-selection unless it is separately justified by the design.
+
+Defer broader Shelf selection/multi-selection, keyboard workflows and file-management operations until after the single-item daily-use path remains coherent and accepted.
 
 ### M3 Snippets — PLANNED
 
@@ -97,7 +118,7 @@ Do not batch unrelated features merely to reduce release count. Release frequenc
 
 ## Near-term sequence
 
-1. Sync governance/state documentation with the automation-first policy and M2.1 merge.
-2. Publish the first Shelf-containing Personal Release.
-3. Design and implement M2.2 as a small native Shelf usability slice.
+1. Finish PR #91 documentation/final verification and merge M2.2 after exact-head CI remains GREEN.
+2. Publish prepared `v0.6.0` from exact protected `main` through the manual Personal Release workflow if it has not already been published before that point.
+3. Design M2.3 as a bounded native Share/AirDrop slice.
 4. Continue M2 in small increments or start M3 when Shelf has a coherent minimal daily-use workflow.
