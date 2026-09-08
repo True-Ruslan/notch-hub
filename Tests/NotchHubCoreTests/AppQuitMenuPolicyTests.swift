@@ -22,7 +22,7 @@ struct AppQuitMenuPolicyTests {
     }
 
     @Test
-    func statusItemAddsNoEntitlementBeyondTheSharedShippingBaseline() throws {
+    func statusItemAddsNoNewEntitlementOrPermission() throws {
         let plist = try propertyList(relativePath: "Resources/NotchHub.entitlements")
 
         #expect(
