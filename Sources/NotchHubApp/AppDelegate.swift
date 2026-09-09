@@ -44,6 +44,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             bookmarkCodec: SecurityScopedShelfBookmarkCodec()
         )
     }()
+    private let snippetStore: SnippetStore = {
+        #if NOTCHHUB_UI_TESTING
+            let fileURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(
+                    "NotchHub-UITests-\(ProcessInfo.processInfo.processIdentifier)",
+                    isDirectory: true
+                )
+                .appendingPathComponent("Snippets", isDirectory: true)
+                .appendingPathComponent("snippets.json", isDirectory: false)
+        #else
+            let fileURL = SnippetPersistenceRepository.defaultFileURL()
+        #endif
+        return SnippetStore(
+            persistence: SnippetPersistenceRepository(fileURL: fileURL)
+        )
+    }()
+    private let snippetClipboardWriter = SystemSnippetClipboardWriter()
     private let destinationModel = NotchDestinationModel()
     private let shelfQuickLookController = ShelfQuickLookController()
     private let shelfShareController = ShelfShareController()
@@ -74,6 +91,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let mediaGestureVisualModel = mediaGestureVisualModel
         let settingsStore = settingsStore
         let shelfStore = shelfStore
+        let snippetStore = snippetStore
+        let snippetClipboardWriter = snippetClipboardWriter
         let destinationModel = destinationModel
         let shelfQuickLookController = shelfQuickLookController
         let shelfShareController = shelfShareController
@@ -142,15 +161,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 },
                 timelineTicker: mediaTimelineTicker
             )
-            let routedRoot = ShelfRoutingRootView(
+            let routedRoot = ProductRoutingRootView(
                 panelModel: model,
                 layoutModel: layoutModel,
                 mediaModel: mediaPresentationModel,
-                destinationModel: destinationModel,
-                shelfStore: shelfStore,
-                quickLookController: shelfQuickLookController,
-                shareController: shelfShareController
+                destinationModel: destinationModel
             ) {
+                ShelfView(
+                    store: shelfStore,
+                    quickLookController: shelfQuickLookController,
+                    shareController: shelfShareController,
+                    topInset: layoutModel.currentLayout.expandedContentTopInset,
+                    onHome: destinationModel.reset
+                )
+            } snippetsContent: {
+                SnippetsView(
+                    store: snippetStore,
+                    clipboardWriter: snippetClipboardWriter,
+                    topInset: layoutModel.currentLayout.expandedContentTopInset,
+                    onHome: destinationModel.reset
+                )
+            } homeContent: {
                 mediaRoot
             }
 
