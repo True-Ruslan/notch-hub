@@ -30,6 +30,21 @@ struct SnippetRoutingPolicyTests {
     }
 
     @Test
+    func appCompositionOwnsProcessIsolatedSnippetsStateAndInjectedWriter() throws {
+        let appDelegate = try sourceText(relativePath: "Sources/NotchHubApp/AppDelegate.swift")
+
+        #expect(appDelegate.contains("private let snippetStore: SnippetStore"))
+        #expect(appDelegate.contains("SnippetPersistenceRepository.defaultFileURL()"))
+        #expect(appDelegate.contains("\"NotchHub-UITests-\\(ProcessInfo.processInfo.processIdentifier)\""))
+        #expect(appDelegate.contains("\"Snippets\""))
+        #expect(appDelegate.contains("\"snippets.json\""))
+        #expect(appDelegate.contains("SystemSnippetClipboardWriter()"))
+        #expect(appDelegate.contains("ProductRoutingRootView("))
+        #expect(appDelegate.contains("SnippetsView("))
+        #expect(!appDelegate.contains("NSPasteboard"))
+    }
+
+    @Test
     func mediaRenderingInternalsRemainIndependentFromSnippetsRouting() throws {
         let media = try sourceText(
             relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift"

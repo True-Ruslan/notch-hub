@@ -346,6 +346,83 @@ final class NotchHubUITests: XCTestCase {
     }
 
     @MainActor
+    func testExpandedHomeRoutesToSnippetsAndBackWithoutClipboardSideEffects() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedExplicitly())
+        let openSnippets = subject.app.buttons["home.openSnippets"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(openSnippets, timeout: 2))
+        openSnippets.click()
+
+        let snippets = subject.app.groups["snippets.surface"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(snippets, timeout: 2))
+        XCTAssertTrue(subject.app.buttons["snippets.add"].exists)
+        XCTAssertTrue(subject.app.descendants(matching: .any)["snippets.empty"].exists)
+
+        let home = subject.app.buttons["snippets.home"]
+        XCTAssertTrue(home.exists)
+        home.click()
+
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(
+                subject.surface("notch.surface.expanded"),
+                timeout: 2
+            )
+        )
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(openSnippets, timeout: 2))
+    }
+
+    @MainActor
+    func testExpandedMediaCanExplicitlyRouteToSnippetsAndReturnToMedia() throws {
+        let subject = try NotchHubUIApplication(mode: .mediaHappyPath)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedExplicitly())
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilValue(subject.titleElement(), equals: "Track A", timeout: 2)
+        )
+
+        let openSnippets = subject.app.buttons["media.openSnippets"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(openSnippets, timeout: 2))
+        openSnippets.click()
+
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(subject.app.groups["snippets.surface"], timeout: 2)
+        )
+        XCTAssertTrue(subject.app.buttons["media.playPause"].waitForNonExistence(timeout: 1))
+
+        subject.app.buttons["snippets.home"].click()
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilValue(subject.titleElement(), equals: "Track A", timeout: 2)
+        )
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(subject.app.buttons["media.playPause"], timeout: 2))
+    }
+
+    @MainActor
+    func testSnippetsDestinationResetsAfterCollapseBeforeNextExpansion() throws {
+        let subject = try NotchHubUIApplication(mode: .shippingSmoke)
+        subject.launch()
+        defer { subject.app.terminate() }
+
+        XCTAssertTrue(subject.openExpandedExplicitly())
+        subject.app.buttons["home.openSnippets"].click()
+
+        let snippets = subject.app.groups["snippets.surface"]
+        XCTAssertTrue(NotchHubUIAssertions.waitUntilExists(snippets, timeout: 2))
+        subject.movePointerOutside(snippets)
+        XCTAssertTrue(subject.waitForStableCompact())
+
+        XCTAssertTrue(subject.openExpandedExplicitly())
+        XCTAssertTrue(snippets.waitForNonExistence(timeout: 1))
+        XCTAssertTrue(
+            NotchHubUIAssertions.waitUntilExists(subject.app.buttons["home.openSnippets"], timeout: 2)
+        )
+    }
+
+    @MainActor
     private func assertNoMediaPeekAndSingleHaptic(
         _ subject: NotchHubUIApplication
     ) {
