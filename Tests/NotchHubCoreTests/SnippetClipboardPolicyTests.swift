@@ -60,10 +60,12 @@ struct SnippetClipboardPolicyTests {
         let plist = try PropertyListSerialization.propertyList(from: data, format: nil)
         let dictionary = try #require(plist as? [String: Any])
 
-        #expect(Set(dictionary.keys) == [
-            "com.apple.security.app-sandbox",
-            "com.apple.security.files.user-selected.read-only"
-        ])
+        #expect(
+            Set(dictionary.keys) == [
+                "com.apple.security.app-sandbox",
+                "com.apple.security.files.user-selected.read-only"
+            ]
+        )
         #expect(dictionary["com.apple.security.app-sandbox"] as? Bool == true)
         #expect(dictionary["com.apple.security.files.user-selected.read-only"] as? Bool == true)
     }
