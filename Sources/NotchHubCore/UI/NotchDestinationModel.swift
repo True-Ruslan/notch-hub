@@ -3,6 +3,7 @@ import Combine
 public enum NotchDestination: Equatable, Sendable {
     case home
     case shelf
+    case snippets
 }
 
 @MainActor
