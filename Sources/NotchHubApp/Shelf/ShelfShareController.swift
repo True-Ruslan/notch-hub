@@ -2,9 +2,25 @@ import AppKit
 import NotchHubCore
 
 @MainActor
-final class ShelfShareController: NSObject, NSSharingServicePickerDelegate, NSSharingServiceDelegate {
+final class ShelfShareController: NSObject {
     private let accessSession: ShelfShareAccessSession
     private var picker: NSSharingServicePicker?
+
+    private lazy var sharingServiceDelegate = ShelfShareServiceDelegate(
+        onSuccess: { [weak self] in
+            self?.close()
+        },
+        onFailure: { [weak self] in
+            self?.close()
+        }
+    )
+
+    private lazy var pickerDelegate = ShelfSharePickerDelegate(
+        serviceDelegate: sharingServiceDelegate,
+        onCancellation: { [weak self] in
+            self?.close()
+        }
+    )
 
     init(accessSession: ShelfShareAccessSession = ShelfShareAccessSession()) {
         self.accessSession = accessSession
@@ -26,7 +42,7 @@ final class ShelfShareController: NSObject, NSSharingServicePickerDelegate, NSSh
 
         let picker = NSSharingServicePicker(items: [url as NSURL])
         self.picker = picker
-        picker.delegate = self
+        picker.delegate = pickerDelegate
 
         NSApp.activate(ignoringOtherApps: true)
         picker.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .minY)
@@ -41,12 +57,37 @@ final class ShelfShareController: NSObject, NSSharingServicePickerDelegate, NSSh
         accessSession.end()
     }
 
+    private func sharingAnchorView() -> NSView? {
+        NSApp.windows
+            .first { window in
+                window.isVisible && window.styleMask.contains(.nonactivatingPanel)
+            }?
+            .contentView
+    }
+}
+
+private final class ShelfSharePickerDelegate: NSObject, NSSharingServicePickerDelegate {
+    private let serviceDelegate: ShelfShareServiceDelegate
+    private let onCancellation: @MainActor @Sendable () -> Void
+
+    init(
+        serviceDelegate: ShelfShareServiceDelegate,
+        onCancellation: @escaping @MainActor @Sendable () -> Void
+    ) {
+        self.serviceDelegate = serviceDelegate
+        self.onCancellation = onCancellation
+        super.init()
+    }
+
     func sharingServicePicker(
         _: NSSharingServicePicker,
         didChoose service: NSSharingService?
     ) {
         if service == nil {
-            close()
+            let onCancellation = onCancellation
+            Task { @MainActor in
+                onCancellation()
+            }
         }
     }
 
@@ -54,29 +95,37 @@ final class ShelfShareController: NSObject, NSSharingServicePickerDelegate, NSSh
         _: NSSharingServicePicker,
         delegateFor sharingService: NSSharingService
     ) -> (any NSSharingServiceDelegate)? {
-        self
+        serviceDelegate
+    }
+}
+
+private final class ShelfShareServiceDelegate: NSObject, NSSharingServiceDelegate {
+    private let onSuccess: @MainActor @Sendable () -> Void
+    private let onFailure: @MainActor @Sendable () -> Void
+
+    init(
+        onSuccess: @escaping @MainActor @Sendable () -> Void,
+        onFailure: @escaping @MainActor @Sendable () -> Void
+    ) {
+        self.onSuccess = onSuccess
+        self.onFailure = onFailure
+        super.init()
     }
 
+    @MainActor
     func sharingService(
         _: NSSharingService,
         didShareItems _: [Any]
     ) {
-        close()
+        onSuccess()
     }
 
+    @MainActor
     func sharingService(
         _: NSSharingService,
         didFailToShareItems _: [Any],
         error _: any Error
     ) {
-        close()
-    }
-
-    private func sharingAnchorView() -> NSView? {
-        NSApp.windows
-            .first { window in
-                window.isVisible && window.styleMask.contains(.nonactivatingPanel)
-            }?
-            .contentView
+        onFailure()
     }
 }
