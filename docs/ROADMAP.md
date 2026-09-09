@@ -76,17 +76,25 @@ Automated acceptance on production head `6488e1f84cfad08c0fc557db4c811ae87c069dc
 
 PR #91 is not merged/released until GitHub evidence says so.
 
-#### M2.3 Native Share / AirDrop — NEXT DESIGN SLICE
+#### M2.3 Native Share / AirDrop — IMPLEMENTED / PRODUCTION CI GREEN / FINAL AUTOMATED ACCEPTANCE PENDING / PR #92
 
-Preferred next Shelf increment after M2.2 merge:
+Bounded single-item native sharing slice stacked on M2.2:
 
-- native macOS share services for one explicitly selected Shelf item;
-- AirDrop exposed through system share infrastructure where available;
-- reuse the existing bookmark/security-scope boundary;
-- keep source file read-only and untouched;
-- no custom network client or discovery protocol;
-- no broad entitlement expansion;
-- no multi-selection unless it is separately justified by the design.
+- one Share action per persisted Shelf item;
+- native macOS `NSSharingServicePicker` and system-provided sharing services, including AirDrop where available;
+- existing read-only bookmark/security-scope boundary reused;
+- exactly one explicitly owned read-only share scope at a time;
+- cleanup on picker cancellation, sharing success/failure, replacement, controller close and application termination;
+- previous picker/scope closed before replacement scope acquisition;
+- Swift 6.3-safe separation between nonisolated picker-delegate callbacks and main-actor UI/state ownership;
+- no `@preconcurrency` escape hatch;
+- no custom AirDrop/network client or discovery protocol;
+- no entitlement, persistence-schema, polling/timer, global-input, source-file-mutation or third-party-runtime expansion;
+- no multi-selection in this slice.
+
+Verified production candidate: `17d66ababca2a25c3c4294bd169ecbc46f8d1d25`, CI #1484 / run `34322638424`, all three required jobs SUCCESS. The existing M2.1 feature-size envelope remains sufficient.
+
+Final automated acceptance requires the complete CI matrix on the exact PR head containing the M2.3 design, acceptance, security and roadmap documentation. PR #92 remains stacked on #91 and is not merged/released until the release/dependency ordering is resolved.
 
 Defer broader Shelf selection/multi-selection, keyboard workflows and file-management operations until after the single-item daily-use path remains coherent and accepted.
 
@@ -118,7 +126,7 @@ Do not batch unrelated features merely to reduce release count. Release frequenc
 
 ## Near-term sequence
 
-1. Finish PR #91 documentation/final verification and merge M2.2 after exact-head CI remains GREEN.
-2. Publish prepared `v0.6.0` from exact protected `main` through the manual Personal Release workflow if it has not already been published before that point.
-3. Design M2.3 as a bounded native Share/AirDrop slice.
-4. Continue M2 in small increments or start M3 when Shelf has a coherent minimal daily-use workflow.
+1. Publish the prepared `v0.6.0` M2.1 release from exact protected `main` through the manual Personal Release workflow.
+2. Merge automated-accepted PR #91 (M2.2 Quick Look) after v0.6.0 exists, then verify protected `main`.
+3. Complete exact-head automated acceptance for PR #92 (M2.3 Share), retarget it to `main` after #91 merge, and reverify the changed merge base before merging.
+4. Reassess whether Shelf's coherent minimal daily-use workflow is complete enough to begin M3 Snippets or whether one more bounded M2 usability slice has higher value.
