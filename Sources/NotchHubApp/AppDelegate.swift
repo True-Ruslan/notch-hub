@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }()
     private let destinationModel = NotchDestinationModel()
     private let shelfQuickLookController = ShelfQuickLookController()
+    private let shelfShareController = ShelfShareController()
     private let mediaPresentationModel = ShippingMediaPresentationModel()
     private let mediaGestureVisualModel = MediaGestureVisualModel()
     private let sourceApplicationIconResolver = SourceApplicationIconResolver()
@@ -75,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let shelfStore = shelfStore
         let destinationModel = destinationModel
         let shelfQuickLookController = shelfQuickLookController
+        let shelfShareController = shelfShareController
         let sourceApplicationIconResolver = sourceApplicationIconResolver
 
         let mediaGestureSession: MediaGestureSession
@@ -146,7 +148,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 mediaModel: mediaPresentationModel,
                 destinationModel: destinationModel,
                 shelfStore: shelfStore,
-                quickLookController: shelfQuickLookController
+                quickLookController: shelfQuickLookController,
+                shareController: shelfShareController
             ) {
                 mediaRoot
             }
@@ -329,6 +332,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = nil
         settingsWindow = nil
         shelfQuickLookController.close()
+        shelfShareController.close()
 
         panelController?.settledPresentationHandler = nil
         panelController?.hoverPeekRequestHandler = nil
