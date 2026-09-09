@@ -71,11 +71,11 @@ struct SnippetPersistenceRepositoryTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let fileURL = directory.appendingPathComponent("snippets.json")
         let unsupported = """
-        {
-          "schemaVersion": 2,
-          "items": []
-        }
-        """
+            {
+              "schemaVersion": 2,
+              "items": []
+            }
+            """
         try Data(unsupported.utf8).write(to: fileURL)
         let repository = SnippetPersistenceRepository(fileURL: fileURL)
 
