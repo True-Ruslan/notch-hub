@@ -26,7 +26,7 @@ struct ShelfSharePolicyTests {
             "NSSharingServicePickerDelegate",
             "NSSharingServiceDelegate",
             "NSSharingServicePicker(items:",
-            "picker.delegate = self",
+            "picker.delegate = pickerDelegate",
             "picker.show(relativeTo:",
             "accessSession.begin(url:",
             "accessSession.end()",
@@ -37,6 +37,18 @@ struct ShelfSharePolicyTests {
         ] {
             #expect(controller.contains(required))
         }
+    }
+
+    @Test
+    func pickerDelegateUsesNonisolatedProxyInsteadOfPreconcurrencyEscapeHatch() throws {
+        let controller = try sourceText(
+            relativePath: "Sources/NotchHubApp/Shelf/ShelfShareController.swift"
+        )
+
+        #expect(controller.contains("private final class ShelfSharePickerDelegate"))
+        #expect(controller.contains("private final class ShelfShareServiceDelegate"))
+        #expect(!controller.contains("@preconcurrency"))
+        #expect(!controller.contains("ShelfShareController: NSObject, NSSharingServicePickerDelegate"))
     }
 
     @Test
