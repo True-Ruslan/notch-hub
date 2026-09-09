@@ -8,17 +8,20 @@ struct ShelfView: View {
     @State private var unavailableItemIDs: Set<UUID> = []
 
     private let quickLookController: ShelfQuickLookController
+    private let shareController: ShelfShareController
     private let topInset: CGFloat
     private let onHome: () -> Void
 
     init(
         store: ShelfStore,
         quickLookController: ShelfQuickLookController,
+        shareController: ShelfShareController,
         topInset: CGFloat,
         onHome: @escaping () -> Void
     ) {
         self.store = store
         self.quickLookController = quickLookController
+        self.shareController = shareController
         self.topInset = topInset
         self.onHome = onHome
     }
@@ -148,6 +151,16 @@ struct ShelfView: View {
             .accessibilityIdentifier("shelf.item.\(item.id.uuidString).preview")
 
             Button {
+                Task { await share(item) }
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .buttonStyle(.plain)
+            .help("Share")
+            .accessibilityLabel("Share \(item.displayName)")
+            .accessibilityIdentifier("shelf.item.\(item.id.uuidString).share")
+
+            Button {
                 Task { await open(item) }
             } label: {
                 Image(systemName: "arrow.up.forward.app")
@@ -230,6 +243,19 @@ struct ShelfView: View {
         }
 
         guard quickLookController.present(url: resolution.url) else {
+            unavailableItemIDs.insert(item.id)
+            return
+        }
+        unavailableItemIDs.remove(item.id)
+    }
+
+    private func share(_ item: ShelfItem) async {
+        guard let resolution = await store.resolve(item) else {
+            unavailableItemIDs.insert(item.id)
+            return
+        }
+
+        guard shareController.present(url: resolution.url) else {
             unavailableItemIDs.insert(item.id)
             return
         }

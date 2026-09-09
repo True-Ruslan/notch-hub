@@ -37,7 +37,7 @@ These properties hold unless an explicit reviewed security decision changes them
 14. **No hidden updater.** GitHub Releases remain the deliberate update source until an authenticated updater is separately designed.
 15. **Performance measurement is development tooling, not runtime telemetry.** Performance scripts/reports must never be bundled or invoked as a shipped background monitoring channel.
 16. **Untrusted public PRs are unprivileged.** Ordinary PR CI remains read-only, secret-free, GitHub-hosted, without OIDC/write authority or persisted checkout credentials.
-17. **Security-scoped access is explicit, bounded and balanced.** Bookmark resolution happens only for explicit Shelf operations. Open/Show in Finder use short-lived scope immediately balanced after the operation. M2.2 Quick Look may hold exactly one read-only scope for the lifetime of an explicitly active native preview; panel close, replacement, controller close and application termination release it. No security scope is intentionally held while Shelf/Quick Look is idle.
+17. **Security-scoped access is explicit, bounded and balanced.** Bookmark resolution happens only for explicit Shelf operations. Open/Show in Finder use short-lived scope immediately balanced after the operation. M2.2 Quick Look may hold exactly one read-only scope for the lifetime of an explicitly active native preview; panel close, replacement, controller close and application termination release it. M2.3 Share may likewise hold exactly one read-only scope for an explicitly active native sharing operation; picker cancellation, sharing success/failure, replacement, controller close and application termination release it. No security scope is intentionally held while Shelf/Quick Look/Share is idle.
 
 ## M2.1 Shelf file-access boundary
 
@@ -90,6 +90,41 @@ M2.2 adds no:
 - third-party runtime dependency.
 
 Detailed automated evidence is recorded in `docs/testing/M2_2_SHELF_QUICK_LOOK_ACCEPTANCE.md`.
+
+## M2.3 Shelf Share / AirDrop security boundary
+
+M2.3 adds an explicit single-item native Share action without widening the shipping entitlement set or Shelf persistence schema.
+
+The security boundary is deliberately split:
+
+- `ShelfShareAccessSession` owns exactly one testable read-only security-scope lifecycle and balances every successful start with one stop;
+- `ShelfShareController` owns the active `NSSharingServicePicker` and scope session on the main actor;
+- `ShelfSharePickerDelegate` is a narrow non-actor proxy for the Objective-C picker delegate boundary and forwards cancellation to main-actor cleanup;
+- `ShelfShareServiceDelegate` forwards native success/failure callbacks to the same main-actor cleanup path;
+- `AppDelegate` owns the controller for application lifetime and closes it during normal termination.
+
+A Share request first resolves the existing read-only bookmark. The controller discovers the visible NotchHub panel anchor before acquiring file authority. If no anchor exists or security-scope acquisition fails, no picker is installed and the operation fails closed. If another sharing operation is already active, its picker and scope are closed **before** acquiring the replacement scope.
+
+NotchHub passes the file URL to the native macOS sharing picker and lets the operating system provide applicable sharing services, including AirDrop where available. M2.3 does not implement AirDrop discovery, peer enumeration, transport, network fallback, or any custom sharing protocol.
+
+M2.3 adds no:
+
+- entitlement or broader filesystem authority;
+- application network client or network entitlement;
+- source-file write/delete/move/rename/copy authority;
+- Automation/Apple Events;
+- Accessibility/Input Monitoring/Screen Recording;
+- global input monitor;
+- timer/polling/filesystem scan/background worker loop;
+- persistence field or sharing history;
+- third-party runtime dependency;
+- concurrency-check suppression such as `@preconcurrency` for the picker delegate boundary.
+
+The system picker may consume the file asynchronously, so the read-only scope intentionally remains active until cancellation, sharing success/failure, replacement, controller close, or application termination. This is the minimum authority lifetime required by the explicit native sharing operation; no share scope is retained in idle.
+
+Canonical CI compiles the real AppKit integration, behaviorally tests scope balance/replacement/fail-closed semantics, verifies the delegate-isolation policy, runs external-application regression smoke, and rechecks packaging/effective entitlements/size/performance. CI intentionally does not choose a real external sharing target or AirDrop recipient because that would create nondeterministic system/device side effects.
+
+Detailed automated evidence is recorded in `docs/testing/M2_3_SHELF_SHARE_ACCEPTANCE.md`.
 
 ## Universal Media production boundary
 
@@ -230,7 +265,7 @@ Treat as security findings, among others:
 - unbounded/unsanitized media payloads;
 - orphan/restart-storm helper processes;
 - capability spoofing;
-- stale source/artwork/preview leakage after authority is released;
+- stale source/artwork/preview/share leakage after authority is released;
 - release workflow privilege compromise;
 - mutable action references;
 - false Apple notarization/trust claims.
@@ -246,4 +281,4 @@ Repository-local checks are defense-in-depth and do not prove absence of vulnera
 
 ## Validation
 
-Every PR runs deterministic release policy, public-CI boundary, performance policy/audit, media policy, `scripts/security-audit.sh`, compile/test/package, entitlement/signature, provenance, feature-size and macOS 26 compatibility checks. M2 adds real external-app Shelf routing/reset XCUITests, exact read-only file-entitlement policy tests, balanced security-scope tests, and M2.2 Quick Look lifecycle/regression policy tests. Personal Release repeats the release/security baseline before publication. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
+Every PR runs deterministic release policy, public-CI boundary, performance policy/audit, media policy, `scripts/security-audit.sh`, compile/test/package, entitlement/signature, provenance, feature-size and macOS 26 compatibility checks. M2 adds real external-app Shelf routing/reset XCUITests, exact read-only file-entitlement policy tests, balanced security-scope tests, M2.2 Quick Look lifecycle/regression policy tests, and M2.3 native Share lifecycle/delegate-isolation/forbidden-authority policy tests. Personal Release repeats the release/security baseline before publication. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
