@@ -260,7 +260,8 @@ jobs:
           (cd scripts && python3 -m unittest -v \
             test_performance_policy.py \
             test_feature_size_budget.py \
-            test_m2_1_shelf_size_budget.py)
+            test_m2_1_shelf_size_budget.py \
+            test_m3_1_snippets_size_budget.py)
 
           python3 - <<'PY'
           import json
@@ -280,6 +281,25 @@ jobs:
             --summary build/m7-settings-shell-size-evidence.json \
             --baseline performance/baseline-v0.1.0.json \
             --feature-budget performance/m7-settings-shell-size-budget.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          budget = json.loads(
+              Path('performance/m2-1-shelf-foundation-size-budget.json').read_text(encoding='utf-8')
+          )
+          output = Path('build/m2-1-shelf-foundation-size-evidence.json')
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(
+              json.dumps(budget['evidence']['summary'], sort_keys=True, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          python3 scripts/performance_policy.py check-size-feature-budget \
+            --summary build/m2-1-shelf-foundation-size-evidence.json \
+            --baseline performance/baseline-v0.1.0.json \
+            --feature-budget performance/m2-1-shelf-foundation-size-budget.json
 
       - name: Media bridge probe policy tests
         run: >-
@@ -444,7 +464,7 @@ jobs:
           python3 scripts/performance_policy.py check-size-feature-budget \
             --summary build/perf-size.json \
             --baseline performance/baseline-v0.1.0.json \
-            --feature-budget performance/m2-1-shelf-foundation-size-budget.json
+            --feature-budget performance/m3-1-snippets-foundation-size-budget.json
 
       - name: Performance harness compatibility smoke
         run: |
