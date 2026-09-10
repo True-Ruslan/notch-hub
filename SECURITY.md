@@ -38,6 +38,7 @@ These properties hold unless an explicit reviewed security decision changes them
 15. **Performance measurement is development tooling, not runtime telemetry.** Performance scripts/reports must never be bundled or invoked as a shipped background monitoring channel.
 16. **Untrusted public PRs are unprivileged.** Ordinary PR CI remains read-only, secret-free, GitHub-hosted, without OIDC/write authority or persisted checkout credentials.
 17. **Security-scoped access is explicit, bounded and balanced.** Bookmark resolution happens only for explicit Shelf operations. Open/Show in Finder use short-lived scope immediately balanced after the operation. M2.2 Quick Look may hold exactly one read-only scope for the lifetime of an explicitly active native preview; panel close, replacement, controller close and application termination release it. M2.3 Share may likewise hold exactly one read-only scope for an explicitly active native sharing operation; picker cancellation, sharing success/failure, replacement, controller close and application termination release it. No security scope is intentionally held while Shelf/Quick Look/Share is idle.
+18. **Snippet content is sensitive local data.** Snippet text may be persisted only in the app sandbox, copied only by an explicit user action, and must not be logged, telemetered, observed through clipboard history, or exported by background work.
 
 ## M2.1 Shelf file-access boundary
 
@@ -125,6 +126,44 @@ The system picker may consume the file asynchronously, so the read-only scope in
 Canonical CI compiles the real AppKit integration, behaviorally tests scope balance/replacement/fail-closed semantics, verifies the delegate-isolation policy, runs external-application regression smoke, and rechecks packaging/effective entitlements/size/performance. CI intentionally does not choose a real external sharing target or AirDrop recipient because that would create nondeterministic system/device side effects.
 
 Detailed automated evidence is recorded in `docs/testing/M2_3_SHELF_SHARE_ACCEPTANCE.md`.
+
+## M3.1 Snippets security boundary
+
+M3.1 adds sandbox-local text persistence and explicit Copy without widening NotchHub's entitlement or permission surface.
+
+Snippet text is treated as sensitive local user content. Production persistence is actor-backed, schema-versioned and atomic under the app's own container:
+
+```text
+Application Support/NotchHub/Snippets/snippets.json
+```
+
+The shipping entitlement set remains exactly:
+
+- `com.apple.security.app-sandbox = true`;
+- `com.apple.security.files.user-selected.read-only = true`.
+
+The user-selected read-only entitlement remains Shelf-specific authority. Snippets needs no additional filesystem entitlement because its database lives in sandbox Application Support.
+
+Clipboard access is isolated behind `SnippetClipboardWriting`. The shipping `SystemSnippetClipboardWriter` may obtain `NSPasteboard.general`, clear it, and write the explicitly requested string. It has no clipboard read API and no observation/history surface.
+
+Machine-enforced policy rejects Snippets production use of clipboard reads/history/monitoring (`string(forType:)`, `data(forType:)`, `propertyList(forType:)`, `pasteboardItems`, `readObjects(...)`, `changeCount`), timer/polling patterns, network/WebKit APIs, global input monitors, Accessibility checks, Apple Events and snippet-content logging.
+
+M3.1 adds no:
+
+- new entitlement or macOS permission;
+- clipboard read, history, notification observer, polling or auto-capture;
+- direct paste into another application;
+- Accessibility, Automation/Apple Events, Input Monitoring or Screen Recording;
+- application network client/server or WebKit path;
+- timer, polling loop, filesystem watcher or background retry;
+- new global input monitor;
+- subprocess or dynamic-code path;
+- telemetry, analytics or snippet-content logging;
+- third-party runtime dependency.
+
+UI-test Snippets persistence is redirected to `FileManager.default.temporaryDirectory/NotchHub-UITests-<pid>/Snippets/snippets.json`, and external XCUITest intentionally does not click Copy or enter sensitive snippet content. This prevents canonical automation from touching the user's real snippet database or real clipboard.
+
+Detailed automated evidence is recorded in `docs/testing/M3_1_SNIPPETS_FOUNDATION_ACCEPTANCE.md`.
 
 ## Universal Media production boundary
 
@@ -245,7 +284,8 @@ Performance work cannot justify wider security authority.
 - shipping process authority remains limited to the exact Universal Media exception above;
 - performance tooling is absent from the packaged app;
 - feature-size growth is handled by reviewed provenance-backed budgets rather than silently rewriting immutable baselines;
-- Shelf remains explicit-event driven and may not add an idle filesystem sampler or timer.
+- Shelf remains explicit-event driven and may not add an idle filesystem sampler or timer;
+- Snippets remains explicit/on-demand and may not add clipboard observation, polling, file watching or background retry.
 
 ## Reportable security findings
 
@@ -259,6 +299,8 @@ Treat as security findings, among others:
 - source-file mutation from Shelf actions;
 - credential/secret leakage;
 - hidden network/telemetry/listening-history persistence;
+- snippet-content logging or unexpected export;
+- clipboard reading/history/monitoring without an explicit reviewed feature decision;
 - sensitive input collection;
 - Sandbox/Hardened Runtime weakening;
 - direct private-framework loading/resolution inside NotchHub;
@@ -281,4 +323,4 @@ Repository-local checks are defense-in-depth and do not prove absence of vulnera
 
 ## Validation
 
-Every PR runs deterministic release policy, public-CI boundary, performance policy/audit, media policy, `scripts/security-audit.sh`, compile/test/package, entitlement/signature, provenance, feature-size and macOS 26 compatibility checks. M2 adds real external-app Shelf routing/reset XCUITests, exact read-only file-entitlement policy tests, balanced security-scope tests, M2.2 Quick Look lifecycle/regression policy tests, and M2.3 native Share lifecycle/delegate-isolation/forbidden-authority policy tests. Personal Release repeats the release/security baseline before publication. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.
+Every PR runs deterministic release policy, public-CI boundary, performance policy/audit, media policy, `scripts/security-audit.sh`, compile/test/package, entitlement/signature, provenance, feature-size and macOS 26 compatibility checks. M2 adds real external-app Shelf routing/reset XCUITests, exact read-only file-entitlement policy tests, balanced security-scope tests, M2.2 Quick Look lifecycle/regression policy tests, and M2.3 native Share lifecycle/delegate-isolation/forbidden-authority policy tests. M3.1 adds schema/persistence/store tests, write-only clipboard/source policy, generic routing policy, exact-entitlement checks, process-isolated UI-test storage and no-side-effect external Snippets routing/reset XCUITests. Personal Release repeats the release/security baseline before publication. Trusted Release, if deliberately configured in the future, additionally requires Developer ID/notarization/stapling/Gatekeeper gates.

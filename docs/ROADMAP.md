@@ -60,7 +60,7 @@ Final automated acceptance: CI #1460 / run `34267057068` on PR head `7f2a17cd39f
 
 v0.6.0 release preparation for M2.1 was merged via PR #90 as `cc023e4720ae733770a8e9fe7926c514d0ab3fdf`; the GitHub Release/tag is still pending.
 
-#### M2.2 Shelf Quick Look — IMPLEMENTED / AUTOMATED-ACCEPTED / PR #91
+#### M2.2 Shelf Quick Look — IMPLEMENTED / AUTOMATED-ACCEPTED / PR #91 / NOT MERGED / NOT RELEASED
 
 Bounded native usability slice:
 
@@ -72,11 +72,11 @@ Bounded native usability slice:
 - existing bookmark resolution and unavailable-state handling reused;
 - no entitlement, persistence-schema, network, polling, global-input or source-file-mutation expansion.
 
-Automated acceptance on production head `6488e1f84cfad08c0fc557db4c811ae87c069dce`: CI #1473 / run `34284632091`, all three required jobs SUCCESS and all 497 Swift tests GREEN. Existing M2.1 size envelope remains sufficient.
+Automated acceptance on production head `6488e1f84cfad08c0fc557db4c811ae87c069dce`: CI #1473 / run `34284632091`, all three required jobs SUCCESS and all 497 Swift tests GREEN. The current PR head may contain later acceptance/governance-only commits; merge status remains governed by fresh GitHub evidence.
 
-PR #91 is not merged/released until GitHub evidence says so.
+PR #91 is not merged/released until GitHub evidence says so and the prepared v0.6.0 dependency has been published.
 
-#### M2.3 Native Share / AirDrop — IMPLEMENTED / PRODUCTION CI GREEN / FINAL AUTOMATED ACCEPTANCE PENDING / PR #92
+#### M2.3 Native Share / AirDrop — IMPLEMENTED / AUTOMATED-ACCEPTED / PR #92 / NOT MERGED / NOT RELEASED
 
 Bounded single-item native sharing slice stacked on M2.2:
 
@@ -92,15 +92,34 @@ Bounded single-item native sharing slice stacked on M2.2:
 - no entitlement, persistence-schema, polling/timer, global-input, source-file-mutation or third-party-runtime expansion;
 - no multi-selection in this slice.
 
-Verified production candidate: `17d66ababca2a25c3c4294bd169ecbc46f8d1d25`, CI #1484 / run `34322638424`, all three required jobs SUCCESS. The existing M2.1 feature-size envelope remains sufficient.
+Final automated acceptance is recorded on exact PR head `250193b616522ca161b5116957497a26a6aac35d`: CI #1488 / run `34326086889`, all three required jobs SUCCESS. The existing M2.1 feature-size envelope remained sufficient for M2.3.
 
-Final automated acceptance requires the complete CI matrix on the exact PR head containing the M2.3 design, acceptance, security and roadmap documentation. PR #92 remains stacked on #91 and is not merged/released until the release/dependency ordering is resolved.
+PR #92 remains stacked on #91 and must be retargeted/reverified after #91 merges. It is not merged or released until fresh GitHub evidence says so.
 
 Defer broader Shelf selection/multi-selection, keyboard workflows and file-management operations until after the single-item daily-use path remains coherent and accepted.
 
-### M3 Snippets — PLANNED
+### M3 Snippets
 
-Own text/URL snippets, clipboard-oriented workflows and related persistence. Do not overload Shelf with M3 responsibilities.
+#### M3.1 Snippets Foundation — IMPLEMENTED / FINAL EXACT-HEAD CI PENDING / PR #93 / NOT MERGED / NOT RELEASED
+
+Bounded first Snippets slice stacked on automated-accepted M2.3:
+
+- first-class Expanded Home/media → Snippets routing;
+- one generic `ProductRoutingRootView` for Home/Shelf/Snippets, replacing the obsolete Shelf-only router;
+- schema-v1 actor-backed local persistence under sandbox Application Support;
+- Add / Edit / Delete with exact text preservation and bounded persistence errors;
+- explicit write-only Copy through injected `SnippetClipboardWriting`;
+- no clipboard read/history/monitoring or direct paste;
+- process-isolated UI-test Snippets storage;
+- external application XCUI routing/reset coverage without real clipboard side effects;
+- no new entitlement, permission, network/WebKit path, polling, file watcher, global input monitor, subprocess or third-party runtime dependency;
+- zero new recurring idle work.
+
+CI #1501 / run `34372146755` on `be46025ccfc4b4b9d6f33e78d294c6d186a9202c` passed macOS 26 and UI regression plus all package/security checks before size enforcement, including 532 Swift tests, DMG, Hardened Runtime and exact entitlements. Its only failure was the older M2.1 size envelope. Exact artifact evidence produced the dedicated `performance/m3-1-snippets-foundation-size-budget.json` with approximately 45–48 KB headroom per size metric while preserving historical budgets.
+
+Final automated acceptance requires the complete three-job CI matrix on the exact documented PR head. PR #93 must remain stacked until v0.6.0 → M2.2 → M2.3 integration is complete, then be retargeted/reverified before merge.
+
+Broader Snippets search, organization, history, global shortcuts, direct paste and sync remain separately scoped future decisions.
 
 ### M4 Calendar — PLANNED
 
@@ -127,6 +146,7 @@ Do not batch unrelated features merely to reduce release count. Release frequenc
 ## Near-term sequence
 
 1. Publish the prepared `v0.6.0` M2.1 release from exact protected `main` through the manual Personal Release workflow.
-2. Merge automated-accepted PR #91 (M2.2 Quick Look) after v0.6.0 exists, then verify protected `main`.
-3. Complete exact-head automated acceptance for PR #92 (M2.3 Share), retarget it to `main` after #91 merge, and reverify the changed merge base before merging.
-4. Reassess whether Shelf's coherent minimal daily-use workflow is complete enough to begin M3 Snippets or whether one more bounded M2 usability slice has higher value.
+2. Merge automated-accepted PR #91 (M2.2 Quick Look) after v0.6.0 exists and verify protected `main` on the resulting merge commit.
+3. Retarget automated-accepted PR #92 (M2.3 Share) to that `main`, reverify the changed merge base/effective diff, then merge and verify protected `main`.
+4. Finish final exact-head automated acceptance for PR #93 (M3.1 Snippets). After M2.3 is integrated, retarget #93 to the resulting `main`, re-evaluate the effective diff and obtain fresh required CI before merge.
+5. Only after M3.1 integration choose the next bounded Snippets usability slice from actual product value; search/history/direct paste/sync are not implicitly authorized by M3.1.

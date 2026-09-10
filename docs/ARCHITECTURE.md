@@ -15,7 +15,7 @@ Architecture priorities:
 - no telemetry/direct network dependency in the current product;
 - event-driven behavior instead of periodic polling;
 - graceful fallback on displays without a hardware notch;
-- primary physical acceptance on macOS 26.6 / `Mac16,8`.
+- primary product target macOS 26.6 / `Mac16,8`, with physical checks optional unless a feature explicitly elevates one to a gate.
 
 ## Technology
 
@@ -34,7 +34,7 @@ Minimum deployment target: macOS 14.
 ```text
 NotchHub product
   -> NotchHubApp                      # application composition root
-      -> NotchHubCore                 # notch geometry/interaction/transition ownership
+      -> NotchHubCore                 # notch geometry/interaction/product state boundaries
       -> NotchHubMediaCore            # normalized media state + shipping media runtime
 
 NotchHubCore
@@ -68,8 +68,12 @@ NotchHubApp.AppDelegate
 
 AppDelegate
   -> ShippingMediaPresentationModel          # App-owned UI projection survives runtime instance
-  -> ShippingMediaRuntime                    # exists only for settled expanded media lifecycle
-  -> MediaNotchRootView                      # App-level media-aware composition
+  -> ShippingMediaRuntime                    # shipping media lifecycle owner
+  -> MediaNotchRootView                      # App-level media-aware Home content
+  -> NotchDestinationModel                   # Home/Shelf/Snippets destination state
+  -> ProductRoutingRootView                  # single product routing seam
+  -> ShelfStore / Shelf controllers          # file-reference feature state/system integrations
+  -> SnippetStore / clipboard writer         # sandbox-local text feature state/explicit Copy
 ```
 
 Core rule: pointer input creates intent; one transition coordinator decides presentation; one AppKit boundary applies panel geometry/chrome. SwiftUI does not own the outer window frame.
@@ -146,7 +150,58 @@ The seam may replace panel content only. It does **not** transfer ownership of:
 - outer clipping/chrome;
 - haptic eligibility.
 
-The default Core path still creates `NotchRootView`. `NotchHubApp` injects `MediaNotchRootView` for the shipping application.
+The default Core path still creates `NotchRootView`. `NotchHubApp` injects `MediaNotchRootView` for shipping Home/media content.
+
+## Product routing seam — M2/M3
+
+`NotchDestinationModel` is the bounded content-destination authority and currently supports:
+
+- `.home`;
+- `.shelf`;
+- `.snippets`.
+
+M3.1 replaces the earlier Shelf-specific routing wrapper with one generic App-layer `ProductRoutingRootView`. The router can replace Expanded content with Shelf or Snippets while preserving the existing media-aware Home surface. It injects narrow Shelf/Snippets environment actions into Home/media content and exposes matching module navigation while Expanded media is visible.
+
+Routing rules:
+
+- Expanded + `.home` → existing media-aware/Home content;
+- Expanded + `.shelf` → `ShelfView`;
+- Expanded + `.snippets` → `SnippetsView`;
+- leaving Expanded resets the destination to `.home`;
+- hidden product modules do not receive media scroll commands;
+- `MediaNotchRootView` remains independent of `ShelfStore`, `SnippetStore` and `NotchDestinationModel`.
+
+The obsolete `ShelfRoutingRootView` implementation is removed. Panel presentation and geometry remain exclusively owned by the existing panel controller/transition coordinator; product routing cannot resize or create a second notch panel.
+
+## M3.1 Snippets architecture
+
+M3.1 is a local-only text subsystem split deliberately between deterministic Core state and a minimal AppKit system boundary.
+
+`NotchHubCore` owns:
+
+- `SnippetItem` — UUID, exact text, creation/update timestamps;
+- `SnippetPersistenceRepository` — actor-backed schema-v1 atomic JSON persistence;
+- `SnippetPersistenceLoad` / `SnippetPersisting` — bounded persistence contract;
+- `SnippetStore` — `@MainActor ObservableObject` for one-shot load and explicit Add/Edit/Delete;
+- `SnippetClipboardWriting` — write-only clipboard protocol with no read surface.
+
+`NotchHubApp` owns:
+
+- `SnippetsView` — native SwiftUI list/editor and explicit row actions;
+- `SystemSnippetClipboardWriter` — the sole AppKit clipboard adapter;
+- AppDelegate lifetime ownership/composition.
+
+Production persistence resolves to:
+
+```text
+Application Support/NotchHub/Snippets/snippets.json
+```
+
+UI-test builds instead use a process-scoped temporary path under `NotchHub-UITests-<pid>/Snippets/snippets.json`, preventing tests from touching the real user database.
+
+The clipboard writer may only clear and write the requested string to `NSPasteboard.general`. It does not read clipboard state, track `changeCount`, create history, poll, observe notifications, or paste into other applications.
+
+M3.1 introduces no timer, watcher, background retry, network/WebKit client, subprocess, global input monitor, telemetry, new entitlement or third-party dependency. Idle recurring work added by Snippets is zero.
 
 ## Universal Media domain and transport
 
@@ -216,13 +271,13 @@ M6.4 deliberately avoids an always-on media adapter.
 - stale/reversed transition completions cannot start media;
 - application termination stops runtime before panel teardown.
 
-Accepted physical behavior:
+Accepted physical behavior from the historical M6 acceptance stage:
 
 - compact owns zero adapter processes;
 - expanded owns exactly one expected adapter;
 - normal Quit leaves no orphan.
 
-This presentation-scoped lifecycle remains mandatory in M6.5 and future media UI work.
+This presentation-scoped lifecycle remains mandatory in later media UI work.
 
 ## Media presentation architecture — M6.5
 
@@ -236,7 +291,7 @@ This presentation-scoped lifecycle remains mandatory in M6.5 and future media UI
 - capability booleans;
 - validated/clamped timing.
 
-It does not own transport sequence ordering. `MediaSessionController` has already ordered provider events. This matters because the presentation model survives individual expanded-only runtime instances while each new runtime can restart its local sequence numbering.
+It does not own transport sequence ordering. `MediaSessionController` has already ordered provider events. This matters because the presentation model survives individual runtime instances while each new runtime can restart its local sequence numbering.
 
 ### Runtime -> presentation wiring
 
@@ -254,7 +309,7 @@ M6.5 UI click commands are only:
 - previous;
 - next.
 
-They forward through `MediaSessionController` and existing typed transport. Draggable seek is deferred.
+They forward through `MediaSessionController` and existing typed transport. Later media slices extend this only through reviewed typed boundaries.
 
 ### Media-aware SwiftUI root
 
@@ -266,9 +321,9 @@ If presentation exists:
 
 - compact renders left artwork wing + unchanged hardware-notch center + right status wing;
 - expanded renders supplied artwork/metadata/source and capability-driven controls;
-- trustworthy timing renders a static `ProgressView`;
+- trustworthy timing renders bounded progress UI;
 - missing metadata produces no fake/empty row;
-- unsupported/unknown previous/next controls remain disabled.
+- unsupported/unknown controls remain capability-gated.
 
 When media disappears while expanded, presentation clears and the existing Home view becomes visible while the panel itself remains expanded.
 
@@ -278,45 +333,44 @@ Runtime work is event-driven by default. Prefer OS notifications/callbacks and e
 
 Long-lived owners must have explicit teardown for observers, event monitors, processes, tasks/subscriptions and security-scoped resources. Collections/caches must remain bounded.
 
-M6.5 adds no repeating timer, display link, polling loop, global scroll monitor or compact media observer. Compact retained media may therefore be visually stale until the next expansion; this is an intentional tradeoff preserving the accepted zero-adapter compact resource invariant.
+Snippets adds no repeating timer, polling loop, clipboard observer, file watcher, global monitor or background retry. Its persistence work is one-shot/explicit-action driven.
 
 Performance validation is split into:
 
 1. deterministic CI invariants — source policy, state/lifecycle tests, package/signature/security/provenance and artifact-size checks;
-2. target-Mac evidence — CPU/RSS/threads/stability, real UI/player behavior and later energy/wakeup/compositor measurements.
+2. optional target-Mac diagnostics when a feature benefits from real-device evidence.
 
-The immutable P0 baseline remains historical evidence. M6.4 and M6.5 intentional shipping growth uses separate provenance-backed feature budgets rather than rewriting it.
+The immutable P0 baseline remains historical evidence. Intentional shipping growth uses separate provenance-backed feature budgets rather than rewriting it; M3.1 follows that rule after exact CI evidence exceeded the older M2.1 envelope.
 
 ## Security architecture
 
 The shipping application remains App Sandbox + Hardened Runtime with no dangerous exception entitlements.
 
-Current authority includes no direct app networking, no telemetry, no bundled secrets, no Accessibility/Input Monitoring/Automation/Screen Recording permission, and no broad input capture beyond the existing `.mouseMoved` fallback.
+Current authority includes no direct app networking, no telemetry, no bundled secrets, no Accessibility/Input Monitoring/Automation/Screen Recording permission, and no broad input capture beyond the existing reviewed pointer boundary.
 
-The Universal Media external process is the sole reviewed runtime subprocess exception. Security details and fail-closed constraints are authoritative in root `SECURITY.md`.
+The Universal Media external process is the sole reviewed runtime subprocess exception. Shelf owns explicit user-selected read-only file authority. Snippets uses only sandbox-local Application Support plus an explicit write-only clipboard adapter. Security details and fail-closed constraints are authoritative in root `SECURITY.md`.
 
-## Planned module boundaries
+## Product module boundaries
 
-Future modules remain isolated behind feature-specific services/adapters:
+Feature ownership remains isolated behind module-specific state/adapters:
 
-1. Shelf — sandbox-compatible user-selected/security-scoped file access.
-2. Snippets — sandbox-local store; copy baseline; direct paste only after separate Accessibility decision.
-3. Calendar — EventKit adapter with explicit permission states.
-4. Translator — Apple Translation where available; no direct network translation without review.
-5. Universal Media — next: local gestures/haptics/draggable seek, then P1 performance review.
-6. Product shell — settings/shortcuts/launch-at-login.
+1. **Shelf** — M2.1 merged foundation for user-selected read-only file references; M2.2 Quick Look and M2.3 native Share are automated-accepted stacked slices pending integration.
+2. **Snippets** — M3.1 implemented sandbox-local text persistence and explicit write-only Copy; search/history/direct paste remain separate future decisions.
+3. **Calendar** — planned EventKit adapter with explicit permission states.
+4. **Translator** — planned native Translation-first design; no direct network translation without review.
+5. **Universal Media** — existing typed event-driven media subsystem; future changes must preserve its bounded process/security lifecycle.
+6. **Product shell** — Settings and existing launch/display/motion controls; shortcuts remain separately scoped.
 
 ## Current next architecture slice
 
-After M6.5 integration, define the local media gesture/haptic/draggable-seek slice from the approved Universal Media design.
+First complete M3.1 exact-head automated acceptance and the existing release/dependency integration chain. After M3.1 is integrated, choose the next bounded Snippets usability slice from observed product value rather than implicitly expanding authority.
 
-Constraints before implementation:
+Any future search/history/direct-paste/sync work must preserve:
 
-- no global scroll monitor;
-- gesture state machine local to NotchHub;
-- haptic eligibility owned deterministically, not emitted directly by raw gesture callbacks;
-- seek only when authoritative capability is supported;
-- bounded typed seek values;
-- no periodic progress worker;
-- preserve presentation-scoped runtime and single panel-transition authority;
-- target-Mac acceptance before P1 optimization work.
+- no unreviewed clipboard reads or monitoring;
+- no Accessibility/direct-paste permission without a separate explicit security decision;
+- no background polling/watchers when event-driven or on-demand work is sufficient;
+- sandbox-local persistence by default;
+- one product routing authority;
+- media/domain isolation;
+- exact entitlement, resource and artifact-size gates.
