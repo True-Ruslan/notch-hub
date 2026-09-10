@@ -17,10 +17,32 @@ private struct NotchSelectShelfActionKey: EnvironmentKey {
     static let defaultValue = NotchSelectShelfAction {}
 }
 
+public struct NotchSelectSnippetsAction: Sendable {
+    private let action: @MainActor @Sendable () -> Void
+
+    public init(_ action: @escaping @MainActor @Sendable () -> Void) {
+        self.action = action
+    }
+
+    @MainActor
+    public func callAsFunction() {
+        action()
+    }
+}
+
+private struct NotchSelectSnippetsActionKey: EnvironmentKey {
+    static let defaultValue = NotchSelectSnippetsAction {}
+}
+
 public extension EnvironmentValues {
     var notchSelectShelfAction: NotchSelectShelfAction {
         get { self[NotchSelectShelfActionKey.self] }
         set { self[NotchSelectShelfActionKey.self] = newValue }
+    }
+
+    var notchSelectSnippetsAction: NotchSelectSnippetsAction {
+        get { self[NotchSelectSnippetsActionKey.self] }
+        set { self[NotchSelectSnippetsActionKey.self] = newValue }
     }
 }
 
@@ -28,6 +50,7 @@ public struct NotchRootView: View {
     @ObservedObject private var model: NotchPanelModel
     @ObservedObject private var layoutModel: NotchPanelLayoutModel
     @Environment(\.notchSelectShelfAction) private var onSelectShelf
+    @Environment(\.notchSelectSnippetsAction) private var onSelectSnippets
     private let handlesExplicitExpansionTap: Bool
     private let onExplicitExpansion: () -> Void
 
@@ -117,7 +140,14 @@ public struct NotchRootView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("home.openShelf")
 
-                moduleTile("Snippets", systemImage: "text.badge.plus")
+                Button {
+                    onSelectSnippets()
+                } label: {
+                    moduleTile("Snippets", systemImage: "text.badge.plus")
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.openSnippets")
+
                 moduleTile("Calendar", systemImage: "calendar")
                 moduleTile("Translate", systemImage: "character.bubble")
             }

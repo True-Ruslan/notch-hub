@@ -44,7 +44,7 @@ struct ShelfUIPolicyTests {
     @Test
     func expandedRoutingOwnsShelfSelectionWithoutModifyingMediaRenderingInternals() throws {
         let root = try sourceText(relativePath: "Sources/NotchHubCore/UI/NotchRootView.swift")
-        let routing = try sourceText(relativePath: "Sources/NotchHubApp/Shelf/ShelfRoutingRootView.swift")
+        let routing = try sourceText(relativePath: "Sources/NotchHubApp/ProductRoutingRootView.swift")
         let media = try sourceText(relativePath: "Sources/NotchHubApp/MediaNotchRootView.swift")
 
         #expect(root.contains("\"home.openShelf\""))
@@ -55,6 +55,10 @@ struct ShelfUIPolicyTests {
         #expect(routing.contains("destinationModel.reset()"))
         #expect(!media.contains("ShelfStore"))
         #expect(!media.contains("NotchDestinationModel"))
+
+        let legacyRouting = repositoryRoot()
+            .appendingPathComponent("Sources/NotchHubApp/Shelf/ShelfRoutingRootView.swift")
+        #expect(!FileManager.default.fileExists(atPath: legacyRouting.path))
     }
 
     private func sourceText(relativePath: String) throws -> String {

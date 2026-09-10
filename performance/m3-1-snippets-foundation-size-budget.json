@@ -1,0 +1,20 @@
+{
+  "allowanceBytes": {
+    "appSizeBytes": 1095000,
+    "dmgSizeBytes": 765000,
+    "executableSizeBytes": 795000
+  },
+  "baselineId": "v0.1.0",
+  "evidence": {
+    "artifactId": 10112663094,
+    "sourceCommit": "be46025ccfc4b4b9d6f33e78d294c6d186a9202c",
+    "summary": {
+      "appSizeBytes": 1318340,
+      "dmgSizeBytes": 807169,
+      "executableSizeBytes": 1016032
+    },
+    "workflowRunId": 34372146755
+  },
+  "featureId": "m3-1-snippets-foundation",
+  "schemaVersion": 1
+}

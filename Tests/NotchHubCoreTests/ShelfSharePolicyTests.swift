@@ -114,15 +114,11 @@ struct ShelfSharePolicyTests {
     @Test
     func appOwnsAndTerminatesShareController() throws {
         let appDelegate = try sourceText(relativePath: "Sources/NotchHubApp/AppDelegate.swift")
-        let routing = try sourceText(
-            relativePath: "Sources/NotchHubApp/Shelf/ShelfRoutingRootView.swift"
-        )
 
         #expect(appDelegate.contains("private let shelfShareController = ShelfShareController()"))
+        #expect(appDelegate.contains("ShelfView("))
         #expect(appDelegate.contains("shareController: shelfShareController"))
         #expect(appDelegate.contains("shelfShareController.close()"))
-        #expect(routing.contains("ShelfShareController"))
-        #expect(routing.contains("shareController:"))
     }
 
     private func sourceText(relativePath: String) throws -> String {
